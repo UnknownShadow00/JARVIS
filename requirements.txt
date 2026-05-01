@@ -1,0 +1,103 @@
+# ============================================================
+# JARVIS — Python Dependencies
+# Install: pip install -r requirements.txt
+# Windows + CUDA: ensure CUDA toolkit is installed first
+# Verify GPU: python -c "import torch; print(torch.cuda.is_available())"
+# ============================================================
+
+# ─── Core Backend ────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+websockets>=12.0
+pydantic>=2.0.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+httpx>=0.27.0
+aiofiles>=23.0.0
+
+# ─── Ollama Client ───────────────────────────────────────────
+ollama>=0.3.0
+
+# ─── Voice — STT ─────────────────────────────────────────────
+# faster-whisper needs CUDA toolkit installed separately
+# https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/
+faster-whisper>=1.0.0
+webrtcvad>=2.0.10
+sounddevice>=0.4.6
+numpy>=1.26.0
+
+# ─── Voice — Wake Word ───────────────────────────────────────
+# OpenWakeWord ships with pre-built "hey_jarvis" model
+openwakeword>=0.6.0
+
+# ─── Voice — TTS ─────────────────────────────────────────────
+# Piper: install binary separately from github.com/rhasspy/piper/releases
+# Then download ONNX model from huggingface.co/jgkawell/jarvis
+piper-tts>=1.2.0
+
+# Kokoro (upgrade path — install when switching from Piper)
+# kokoro>=0.7.0
+
+# Chatterbox (Phase 7 voice clone)
+# chatterbox-tts>=0.1.0
+
+# Audio playback
+pygame>=2.5.0
+pyaudio>=0.2.14
+
+# ─── Computer Vision & Control ───────────────────────────────
+opencv-python>=4.9.0
+mediapipe>=0.10.0
+mss>=9.0.0
+Pillow>=10.0.0
+pyautogui>=0.9.54
+keyboard>=0.13.5
+
+# ─── Object Detection (Phase 4 — YOLOE) ──────────────────────
+# ultralytics>=8.2.0
+
+# ─── Depth Estimation (Phase 4 — DepthAnything V2) ───────────
+# Install separately: github.com/DepthAnything/Depth-Anything-V2
+
+# ─── Open Interpreter (Phase 3) ──────────────────────────────
+# open-interpreter>=0.3.0
+
+# ─── Memory & Knowledge ──────────────────────────────────────
+# Mem0 (Phase 4)
+# mem0ai>=0.1.0
+
+# ChromaDB (Phase 4)
+# chromadb>=0.5.0
+
+# ─── Agent Framework ─────────────────────────────────────────
+# Hermes Agent — installed via curl script, not pip
+# See CLAUDE.md Section: Agent Architecture Layer 2
+
+# OpenJarvis — installed via git clone
+# See CLAUDE.md Section: Agent Architecture Layer 3
+
+# ─── Communications (Phase 5) ────────────────────────────────
+# discord.py
+# discord>=2.3.0
+
+# python-telegram-bot
+# python-telegram-bot>=21.0.0
+
+# ─── Web Search ──────────────────────────────────────────────
+duckduckgo-search>=6.0.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# ─── System Utilities ────────────────────────────────────────
+psutil>=5.9.0
+GPUtil>=1.4.0
+schedule>=1.2.0
+watchdog>=4.0.0
+
+# ─── Logging & Structured Data ───────────────────────────────
+structlog>=24.0.0
+rich>=13.0.0
+
+# ─── Testing ─────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

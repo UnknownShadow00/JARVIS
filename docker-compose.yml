@@ -1,0 +1,97 @@
+version: '3.8'
+
+# JARVIS — Docker Compose
+# Runs: Ollama, FastAPI backend, Mem0 (Phase 4)
+# Start: docker-compose up -d
+# Stop:  docker-compose down
+
+services:
+
+  # ─── Ollama — Local LLM server ─────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: jarvis_ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1
+      - OLLAMA_NUM_PARALLEL=2
+      # Uncomment to allow external connections
+      # - OLLAMA_HOST=0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── JARVIS FastAPI Backend ─────────────────────────────────
+  jarvis_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jarvis_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./assets:/app/assets
+      - ./projects:/app/projects
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Mem0 Memory Server (Phase 4 — uncomment when ready) ───
+  # mem0:
+  #   image: mem0ai/mem0:latest
+  #   container_name: jarvis_mem0
+  #   restart: always
+  #   ports:
+  #     - "8001:8000"
+  #   volumes:
+  #     - mem0_data:/app/data
+  #   environment:
+  #     - OPENAI_API_KEY=ollama
+  #     - OPENAI_API_BASE=http://ollama:11434/v1
+
+  # ─── ChromaDB Vector Store (Phase 4 — uncomment when ready) 
+  # chromadb:
+  #   image: chromadb/chroma:latest
+  #   container_name: jarvis_chroma
+  #   restart: always
+  #   ports:
+  #     - "8002:8000"
+  #   volumes:
+  #     - chroma_data:/chroma/chroma
+
+volumes:
+  ollama_data:
+    driver: local
+  # mem0_data:
+  #   driver: local
+  # chroma_data:
+  #   driver: local
+
+networks:
+  default:
+    name: jarvis_network

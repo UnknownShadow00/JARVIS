@@ -1,0 +1,193 @@
+"""FastAPI server — /health, /chat (REST), /ws (WebSocket)."""
+from __future__ import annotations
+
+import json
+import re
+import time
+from typing import Any
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from app.brain.direct_responder import try_direct_reply
+from app.brain.kill_switch import check_voice, is_active, start_hotkey_listener
+from app.brain.llm_client import OllamaConnectionError, llm_client
+from app.brain.prompts import build_prompt
+from app.brain.response_cleaner import clean, dry_run_narration
+from app.brain.router import router as intent_router
+from app.config import settings
+from app.logs.audit import audit
+from app.tools.registry import ToolError, registry
+
+app = FastAPI(title="JARVIS", version="0.1.0")
+_STARTED_AT = time.time()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.server.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    start_hotkey_listener()
+    audit.log("server_start", {"host": settings.server.host, "port": settings.server.port})
+
+
+# ------------------------------------------------------------------
+# REST
+# ------------------------------------------------------------------
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    intent: str
+    confidence: float
+    dry_run: bool
+    active: bool
+
+
+@app.get("/health")
+async def health() -> dict[str, Any]:
+    return {
+        "status": "ok",
+        "active": is_active(),
+        "dry_run": settings.safety.dry_run,
+        "main_model": settings.models.main,
+        "router_model": settings.models.router,
+        "uptime_seconds": round(time.time() - _STARTED_AT, 1),
+    }
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest) -> ChatResponse:
+    reply, intent_result = await _process(req.message)
+    return ChatResponse(
+        reply=reply,
+        intent=intent_result.intent,
+        confidence=intent_result.confidence,
+        dry_run=settings.safety.dry_run,
+        active=is_active(),
+    )
+
+
+# ------------------------------------------------------------------
+# WebSocket
+# ------------------------------------------------------------------
+
+
+@app.websocket(settings.server.websocket_path)
+async def ws_endpoint(websocket: WebSocket) -> None:
+    await websocket.accept()
+    audit.log("ws_connect", {"client": str(websocket.client)})
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                data = json.loads(raw)
+                message = data.get("message", raw)
+            except json.JSONDecodeError:
+                message = raw
+
+            reply, intent_result = await _process(message)
+
+            await websocket.send_json(
+                {
+                    "reply": reply,
+                    "intent": intent_result.intent,
+                    "confidence": intent_result.confidence,
+                    "dry_run": settings.safety.dry_run,
+                    "active": is_active(),
+                }
+            )
+    except WebSocketDisconnect:
+        audit.log("ws_disconnect", {"client": str(websocket.client)})
+
+
+# ------------------------------------------------------------------
+# Core pipeline
+# ------------------------------------------------------------------
+
+
+async def _process(message: str):  # type: ignore[return]
+    from app.brain.router import RouterResult
+
+    if check_voice(message):
+        return "Understood, sir. Standing by.", RouterResult("confirm_action", 1.0, "", "Kill switch activated.")
+
+    if not is_active():
+        return "Standing by, sir.", RouterResult("confirm_action", 1.0, "", "Kill switch is active.")
+
+    intent_result: RouterResult = intent_router.classify(message)
+
+    if intent_result.intent == "use_tool" and intent_result.suggested_tool:
+        tool_name = intent_result.suggested_tool
+        params = _tool_params(tool_name, message)
+
+        try:
+            result = registry.call(tool_name, params)
+            if result.dry_run:
+                return dry_run_narration(tool_name, params), intent_result
+            context = str(result.output)[:1000]
+        except ToolError as exc:
+            context = str(exc)
+
+        messages = build_prompt(message, context=context)
+        try:
+            raw_reply = await llm_client.chat(messages)
+        except OllamaConnectionError as exc:
+            raw_reply = f"Unable to reach Ollama, sir. {exc}"
+
+        return clean(str(raw_reply)), intent_result
+
+    if intent_result.intent == "confirm_action":
+        reply = f"That action requires your confirmation, sir. Shall I proceed with: {message}?"
+        return reply, intent_result
+
+    if intent_result.intent == "respond":
+        direct_reply = try_direct_reply(message)
+        if direct_reply:
+            return direct_reply, intent_result
+
+    # respond, retrieve_memory, vision — all go straight to LLM
+    messages = build_prompt(message)
+    try:
+        raw_reply = await llm_client.chat(messages)
+    except OllamaConnectionError as exc:
+        raw_reply = f"Unable to reach Ollama at the moment, sir. {exc}"
+
+    return clean(str(raw_reply)), intent_result
+
+
+def _tool_params(tool_name: str, message: str) -> dict[str, Any]:
+    """Map routed user text to concrete tool parameters."""
+    if tool_name == "system_stats":
+        return {}
+    if tool_name == "web_search":
+        query = re.sub(r"\b(search|web|google|duckduckgo|look up)\b", "", message, flags=re.IGNORECASE)
+        return {"query": query.strip(" .") or message, "max_results": 5}
+    if tool_name == "apps":
+        action = "close" if re.search(r"\b(close|quit|exit)\b", message, re.IGNORECASE) else "open"
+        return {"action": action, "app": _extract_app_name(message), "query": message}
+    if tool_name == "files":
+        lower = message.lower()
+        action = "read" if "read" in lower else "list"
+        path = settings.paths.downloads_dir if "download" in lower else settings.paths.projects_dir
+        return {"action": action, "path": path, "query": message}
+    return {"query": message}
+
+
+def _extract_app_name(message: str) -> str:
+    """Extract a likely app name from launch/close phrasing."""
+    text = message.lower().replace("visual studio code", "vscode")
+    text = re.sub(r"\b(open|launch|start|close|quit|exit)\b", "", text, flags=re.IGNORECASE)
+    return text.strip(" .")
