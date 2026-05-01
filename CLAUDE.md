@@ -428,18 +428,19 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        0 — COMPLETE (minus GitHub push)
-Last built:   app/server.py, app/brain/kill_switch.py, app/brain/response_cleaner.py,
-              app/tools/registry.py, app/tools/system_stats.py, app/tools/web_search.py,
-              app/tools/apps.py, app/tools/files.py
-Last tested:  tests/pipeline_test.py (4/4 PASS), tests/router_test.py (20/20 PASS),
-              tests/ollama_test.py (PASS)
+Phase:        1 — IN PROGRESS (voice + boot scaffold built; live hardware validation pending)
+Last built:   app/voice/tts.py, app/voice/sounds.py, app/voice/vad.py,
+              app/voice/stt.py, app/voice/wake_word.py, app/voice/audio_stream.py,
+              app/boot.py, scripts/setup_autostart.py
+Last tested:  tests/tts_test.py, tests/stt_test.py, tests/wake_word_test.py,
+              tests/boot_test.py, tests/router_test.py, tests/pipeline_test.py,
+              tests/safety_test.py, tests/ollama_test.py (PASS)
 Hardware:     4070 Ti active (5090 arriving soon)
 Active model: qwen3:14b (upgrade to qwen3:32b when 5090 arrives)
-Next:         Phase 1 — Voice + Boot (wake word, STT, TTS, streaming, boot sequence)
-              OR push Phase 0 to GitHub first (README + repo setup)
-Notes:        dry_run=true in config.yaml. Router ~8-12s/call on 4070 Ti (cold: ~37s).
-              duckduckgo_search renamed to ddgs — updated. think=False on all LLM calls.
+Next:         Install/verify Piper model files and live audio packages, then run real mic/TTS
+              acceptance: wake word, push-to-talk, STT, self-suppression, full voice loop.
+Notes:        dry_run=true in config.yaml. Phase 1 modules use lazy imports/fallbacks so tests
+              pass before hardware setup. Live qwen3:14b prompt latency remains high.
 ```
 
 > Update this section at the end of every Claude Code session.
