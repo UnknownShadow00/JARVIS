@@ -84,3 +84,9 @@
 - Files changed: tasks/loop-log.md
 - Result: Fail. `gh auth status` finds account `UnknownShadow00`, but the default token is invalid, so repo creation and push are still blocked.
 - Next: Re-authenticate with `& "C:\Program Files\GitHub CLI\gh.exe" auth login -h github.com`, then rerun `& "C:\Program Files\GitHub CLI\gh.exe" auth status`.
+
+## [2026-05-01 21:36:57 -05:00] Task Completed
+- Task: Created the public GitHub repository, renamed the local branch to `main`, committed the Phase 1 voice checkpoint, and pushed it to GitHub.
+- Files changed: tasks/todo.md, tasks/loop-log.md
+- Result: Pass. `UnknownShadow00/JARVIS` exists, `origin` points to `https://github.com/UnknownShadow00/JARVIS.git`, and `git push -u origin main` succeeded.
+- Next: Run the remaining full spoken live loop test before closing Phase 1 acceptance.
