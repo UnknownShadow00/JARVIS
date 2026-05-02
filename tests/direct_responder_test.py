@@ -36,5 +36,9 @@ def run() -> None:
     print(f"All {len(cases)} direct responder tests passed.")
 
 
+def test_direct_responder() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()

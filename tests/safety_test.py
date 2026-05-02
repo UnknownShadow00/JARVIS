@@ -100,5 +100,9 @@ def run() -> None:
     print("All safety tests passed.")
 
 
+def test_safety_gates_and_kill_switch() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()

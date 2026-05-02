@@ -5,6 +5,8 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -67,6 +69,11 @@ async def run() -> None:
             print(f"  - {f}")
         raise SystemExit(1)
     print(f"All {len(cases)} pipeline tests passed.")
+
+
+@pytest.mark.asyncio
+async def test_text_pipeline() -> None:
+    await run()
 
 
 if __name__ == "__main__":

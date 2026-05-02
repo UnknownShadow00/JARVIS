@@ -22,5 +22,9 @@ def run() -> None:
     print("Sound placeholder test passed.")
 
 
+def test_sound_placeholders_dispatch() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()

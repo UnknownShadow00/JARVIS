@@ -74,3 +74,7 @@ class SpeechToText:
 
 
 stt = SpeechToText()
+
+
+def transcribe(audio_bytes: bytes) -> str:
+    return stt.transcribe(audio_bytes)

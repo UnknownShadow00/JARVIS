@@ -22,5 +22,9 @@ def run() -> None:
     print("VAD WAV packaging test passed.")
 
 
+def test_vad_wav_packaging() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()

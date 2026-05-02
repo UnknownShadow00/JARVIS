@@ -75,7 +75,7 @@ Stanford SAIL. Trace logging from Phase 0. Optimization after 500+ real interact
 - Wake word: OpenWakeWord — `pip install openwakeword`
 - STT: faster-whisper — `pip install faster-whisper` (CUDA required)
 - VAD: webrtcvad — `pip install webrtcvad`
-- TTS starter: Piper TTS + jgkawell/jarvis ONNX model (HuggingFace)
+- TTS starter: Piper TTS + rhasspy/piper-voices en_US-lessac-high ONNX model (HuggingFace)
 - TTS upgrade: Kokoro-82M — `pip install kokoro`
 - Audio SFX: pygame — `pip install pygame`
 - Voice clone (Phase 7): Chatterbox TTS
@@ -228,7 +228,8 @@ voice:
   wake_word: "hey_jarvis"
   wake_word_sensitivity: 0.5
   tts_engine: "piper"        # piper | kokoro
-  piper_model: "jarvis"
+  piper_model_path: "./models/en_US-lessac-high.onnx"
+  piper_config_path: "./models/en_US-lessac-high.onnx.json"
   stt_model: "medium.en"
   push_to_talk_key: "ctrl+space"
 
@@ -431,16 +432,15 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 Phase:        1 — IN PROGRESS (voice + boot scaffold built; live hardware validation pending)
 Last built:   app/voice/tts.py, app/voice/sounds.py, app/voice/vad.py,
               app/voice/stt.py, app/voice/wake_word.py, app/voice/audio_stream.py,
-              app/boot.py, scripts/setup_autostart.py
-Last tested:  tests/tts_test.py, tests/stt_test.py, tests/wake_word_test.py,
-              tests/boot_test.py, tests/router_test.py, tests/pipeline_test.py,
-              tests/safety_test.py, tests/ollama_test.py (PASS)
+              app/boot.py, scripts/install_piper.py, scripts/setup_autostart.py
+Last tested:  python -m pytest -m "not manual" (10 passed);
+              python -m pytest -m manual (6 passed)
 Hardware:     4070 Ti active (5090 arriving soon)
 Active model: qwen3:14b (upgrade to qwen3:32b when 5090 arrives)
-Next:         Install/verify Piper model files and live audio packages, then run real mic/TTS
-              acceptance: wake word, push-to-talk, STT, self-suppression, full voice loop.
-Notes:        dry_run=true in config.yaml. Phase 1 modules use lazy imports/fallbacks so tests
-              pass before hardware setup. Live qwen3:14b prompt latency remains high.
+Next:         Run final spoken loop acceptance: "hey jarvis, what time is it?"
+              through wake word, VAD, STT, routing, streaming TTS, SFX, and self-suppression.
+Notes:        dry_run=true in config.yaml. Piper runtime files are local-only and ignored.
+              GitHub CLI 2.92.0 is installed and authenticated for UnknownShadow00.
 ```
 
 > Update this section at the end of every Claude Code session.

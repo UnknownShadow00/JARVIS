@@ -18,8 +18,12 @@ class WakeWordDetector:
     def __init__(self) -> None:
         self._model = None
 
-    def listen(self) -> bytes:
-        """Block until wake word or push-to-talk, then return WAV bytes for STT."""
+    def listen(self, timeout: float | None = None) -> bytes:
+        """Block until wake word or push-to-talk, then return WAV bytes for STT.
+
+        Returns b"" on timeout or if hardware/model is unavailable.
+        Silently skips frames while tts_module.is_speaking to prevent self-triggering.
+        """
         if self._push_to_talk_active():
             audit.log("wake_push_to_talk", {"key": settings.voice.push_to_talk_key})
             sounds.play("listening")
@@ -37,6 +41,7 @@ class WakeWordDetector:
             return b""
 
         audio_queue: queue.Queue[bytes] = queue.Queue()
+        deadline = time.monotonic() + timeout if timeout is not None else None
 
         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
             if status:
@@ -52,7 +57,15 @@ class WakeWordDetector:
             callback=callback,
         ):
             while True:
-                frame = audio_queue.get()
+                if deadline is not None and time.monotonic() >= deadline:
+                    audit.log("wake_timeout", {"timeout": timeout})
+                    return b""
+
+                try:
+                    frame = audio_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+
                 if tts_module.is_speaking:
                     continue
 
@@ -73,7 +86,10 @@ class WakeWordDetector:
             audit.log("wake_unavailable", {"reason": str(exc)})
             return None
 
-        self._model = Model(wakeword_models=[settings.voice.wake_word_model])
+        self._model = Model(
+            wakeword_models=[settings.voice.wake_word_model],
+            inference_framework="onnx",
+        )
         audit.log("wake_model_loaded", {"model": settings.voice.wake_word_model})
         return self._model
 

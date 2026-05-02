@@ -17,7 +17,7 @@ class VoiceActivityDetector:
     max_record_seconds = 30.0
     trailing_silence_seconds = 0.8
 
-    def record_until_silence(self) -> bytes:
+    def record_until_silence(self, timeout: float | None = None) -> bytes:
         try:
             import sounddevice as sd
             import webrtcvad
@@ -39,7 +39,8 @@ class VoiceActivityDetector:
         speech_started = False
         speech_frames = 0
         silence_frames = 0
-        max_frames = int(self.max_record_seconds * 1000 / self.frame_ms)
+        max_record_seconds = min(self.max_record_seconds, timeout) if timeout is not None else self.max_record_seconds
+        max_frames = int(max_record_seconds * 1000 / self.frame_ms)
         min_speech_frames = int(self.min_speech_seconds * 1000 / self.frame_ms)
         stop_silence_frames = int(self.trailing_silence_seconds * 1000 / self.frame_ms)
         started_at = time.perf_counter()
@@ -90,3 +91,7 @@ class VoiceActivityDetector:
 
 
 vad = VoiceActivityDetector()
+
+
+def record_until_silence(timeout: float | None = None) -> bytes:
+    return vad.record_until_silence(timeout=timeout)

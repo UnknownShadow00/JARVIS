@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator, Iterator
 import re
 import shutil
 import subprocess
@@ -13,11 +14,11 @@ from app.logs.audit import audit
 from app.voice.sounds import sounds
 
 is_speaking = False
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class TTSEngine:
     def __init__(self) -> None:
-        self.is_speaking = False
         self._stop_event = asyncio.Event()
 
     async def speak(self, text: str) -> None:
@@ -29,7 +30,6 @@ class TTSEngine:
             return
 
         self._stop_event.clear()
-        self.is_speaking = True
         is_speaking = True
         audit.log("tts_start", {"engine": settings.voice.tts_engine, "sentences": len(sentences)})
 
@@ -57,9 +57,46 @@ class TTSEngine:
             if not self._stop_event.is_set():
                 sounds.play("done")
         finally:
-            self.is_speaking = False
             is_speaking = False
             audit.log("tts_stop", {"stopped": self._stop_event.is_set()})
+
+    async def speak_stream(
+        self,
+        tokens: AsyncIterator[str] | Iterator[str],
+    ) -> None:
+        """Speak a token stream sentence-by-sentence as soon as boundaries appear."""
+        global is_speaking
+
+        self._stop_event.clear()
+        is_speaking = True
+        audit.log("tts_start", {"engine": settings.voice.tts_engine, "streaming": True})
+
+        spoken_sentences = 0
+        buffer = ""
+
+        try:
+            async for token in self._iterate_tokens(tokens):
+                if self._stop_event.is_set():
+                    break
+
+                buffer += token
+                while not self._stop_event.is_set():
+                    sentence, remainder = self._extract_complete_sentence(buffer)
+                    if sentence is None:
+                        break
+                    await self._speak_sentence(sentence)
+                    spoken_sentences += 1
+                    buffer = remainder
+
+            if not self._stop_event.is_set() and buffer.strip():
+                await self._speak_sentence(buffer.strip())
+                spoken_sentences += 1
+
+            if spoken_sentences and not self._stop_event.is_set():
+                sounds.play("done")
+        finally:
+            is_speaking = False
+            audit.log("tts_stop", {"stopped": self._stop_event.is_set(), "streaming": True})
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -82,9 +119,12 @@ class TTSEngine:
         return None
 
     def _synthesize_piper(self, sentence: str) -> Path | None:
-        model_path = Path(settings.voice.piper_model_path)
-        config_path = Path(settings.voice.piper_config_path)
+        model_path = self._resolve_project_path(settings.voice.piper_model_path)
+        config_path = self._resolve_project_path(settings.voice.piper_config_path)
+        local_piper = PROJECT_ROOT / "piper" / "piper.exe"
         piper_bin = shutil.which("piper") or shutil.which("piper.exe")
+        if piper_bin is None and local_piper.is_file():
+            piper_bin = str(local_piper)
 
         if not piper_bin or not model_path.is_file() or not config_path.is_file():
             audit.log(
@@ -112,11 +152,49 @@ class TTSEngine:
         audit.log("tts_synthesized", {"sentence_length": len(sentence), "output": str(output)})
         return output
 
+    def _resolve_project_path(self, path: str) -> Path:
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return candidate
+        return PROJECT_ROOT / candidate
+
     async def _play_audio_file(self, audio_path: Path) -> None:
         await asyncio.to_thread(sounds.play_file, audio_path, blocking=True)
 
     def _split_sentences(self, text: str) -> list[str]:
         return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
+
+    async def _iterate_tokens(
+        self,
+        tokens: AsyncIterator[str] | Iterator[str],
+    ) -> AsyncIterator[str]:
+        if hasattr(tokens, "__aiter__"):
+            async for token in tokens:
+                yield token
+            return
+
+        for token in tokens:
+            yield token
+
+    def _extract_complete_sentence(self, buffer: str) -> tuple[str | None, str]:
+        match = re.search(r"[.!?](?=\s|$)", buffer)
+        if match is None:
+            return None, buffer
+
+        sentence = buffer[: match.end()].strip()
+        remainder = buffer[match.end() :].lstrip()
+        return (sentence or None), remainder
+
+    async def _speak_sentence(self, sentence: str) -> None:
+        if not sentence:
+            return
+
+        audio_path = await self._synthesize_sentence(sentence)
+        if audio_path is None or self._stop_event.is_set():
+            return
+
+        await self._play_audio_file(audio_path)
+        self._cleanup_audio(audio_path)
 
     def _cleanup_audio(self, audio_path: Path) -> None:
         try:

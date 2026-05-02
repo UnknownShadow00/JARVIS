@@ -83,5 +83,9 @@ def run() -> None:
     print(f"\nAll {len(QUERIES)} queries passed.")
 
 
+def test_router_classifies_known_queries() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -11,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.brain.direct_responder import try_direct_reply
-from app.brain.kill_switch import check_voice, is_active, start_hotkey_listener
+from app.brain.kill_switch import check_voice, is_active, register_callback, start_hotkey_listener
 from app.brain.llm_client import OllamaConnectionError, llm_client
 from app.brain.prompts import build_prompt
 from app.brain.response_cleaner import clean, dry_run_narration
@@ -19,6 +20,7 @@ from app.brain.router import router as intent_router
 from app.config import settings
 from app.logs.audit import audit
 from app.tools.registry import ToolError, registry
+from app.voice.tts import tts
 
 app = FastAPI(title="JARVIS", version="0.1.0")
 _STARTED_AT = time.time()
@@ -34,7 +36,11 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def _startup() -> None:
+    from app.voice.audio_stream import voice_pipeline
+
     start_hotkey_listener()
+    register_callback(tts.stop)
+    register_callback(voice_pipeline.stop)
     audit.log("server_start", {"host": settings.server.host, "port": settings.server.port})
 
 
@@ -98,7 +104,20 @@ async def ws_endpoint(websocket: WebSocket) -> None:
             except json.JSONDecodeError:
                 message = raw
 
-            reply, intent_result = await _process(message)
+            stream_result = await _process_stream(message)
+            if stream_result is None:
+                reply, intent_result = await _process(message)
+            else:
+                token_stream, intent_result = stream_result
+                chunks: list[str] = []
+
+                async def tts_tokens() -> AsyncGenerator[str, None]:
+                    async for chunk in token_stream:
+                        chunks.append(chunk)
+                        yield chunk
+
+                await tts.speak_stream(tts_tokens())
+                reply = clean("".join(chunks))
 
             await websocket.send_json(
                 {
@@ -166,6 +185,55 @@ async def _process(message: str):  # type: ignore[return]
         raw_reply = f"Unable to reach Ollama at the moment, sir. {exc}"
 
     return clean(str(raw_reply)), intent_result
+
+
+async def _process_stream(message: str):  # type: ignore[return]
+    from app.brain.router import RouterResult
+
+    if check_voice(message) or not is_active():
+        return None
+
+    intent_result: RouterResult = intent_router.classify(message)
+
+    if intent_result.intent == "use_tool" and intent_result.suggested_tool:
+        tool_name = intent_result.suggested_tool
+        params = _tool_params(tool_name, message)
+
+        try:
+            result = registry.call(tool_name, params)
+            if result.dry_run:
+                return None
+            context = str(result.output)[:1000]
+        except ToolError:
+            return None
+
+        messages = build_prompt(message, context=context)
+        try:
+            raw_reply = await llm_client.chat(messages, stream=True)
+        except OllamaConnectionError:
+            return None
+
+        if hasattr(raw_reply, "__aiter__"):
+            return raw_reply, intent_result
+        return None
+
+    if intent_result.intent == "confirm_action":
+        return None
+
+    if intent_result.intent == "respond":
+        direct_reply = try_direct_reply(message)
+        if direct_reply:
+            return None
+
+    messages = build_prompt(message)
+    try:
+        raw_reply = await llm_client.chat(messages, stream=True)
+    except OllamaConnectionError:
+        return None
+
+    if hasattr(raw_reply, "__aiter__"):
+        return raw_reply, intent_result
+    return None
 
 
 def _tool_params(tool_name: str, message: str) -> dict[str, Any]:

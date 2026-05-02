@@ -22,7 +22,8 @@ ollama>=0.3.0
 # faster-whisper needs CUDA toolkit installed separately
 # https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/
 faster-whisper>=1.0.0
-webrtcvad>=2.0.10
+webrtcvad>=2.0.10; python_version < "3.13"
+webrtcvad-wheels>=2.0.14; python_version >= "3.13"
 sounddevice>=0.4.6
 numpy>=1.26.0
 
@@ -32,7 +33,7 @@ openwakeword>=0.6.0
 
 # ─── Voice — TTS ─────────────────────────────────────────────
 # Piper: install binary separately from github.com/rhasspy/piper/releases
-# Then download ONNX model from huggingface.co/jgkawell/jarvis
+# Then download en_US-lessac-high from huggingface.co/rhasspy/piper-voices
 piper-tts>=1.2.0
 
 # Kokoro (upgrade path — install when switching from Piper)

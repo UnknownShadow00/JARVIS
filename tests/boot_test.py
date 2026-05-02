@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -13,7 +15,7 @@ if str(ROOT) not in sys.path:
 from app import boot
 
 
-async def run() -> None:
+def _patch_boot() -> None:
     async def fake_wait_for_ollama(timeout_seconds: float = 30.0) -> None:  # noqa: ARG001
         return None
 
@@ -28,6 +30,23 @@ async def run() -> None:
     boot.tts.speak = fake_speak  # type: ignore[method-assign]
     boot.sounds.play = lambda sound_name: True  # type: ignore[method-assign]
 
+
+@pytest.mark.asyncio
+async def test_boot_sequence() -> None:
+    _patch_boot()
+    started_at = time.perf_counter()
+    report = await boot.boot_sequence(start_server=False, start_hud=False, start_voice=False)
+    elapsed = time.perf_counter() - started_at
+
+    lower = report.lower()
+    assert "sir" in lower, f"Report missing 'sir': {report}"
+    assert "time" in lower, f"Report missing 'time': {report}"
+    assert "gpu" in lower, f"Report missing 'gpu': {report}"
+    assert elapsed < 10, f"Boot sequence took {elapsed:.3f}s (limit 10s)"
+
+
+async def run() -> None:
+    _patch_boot()
     started_at = time.perf_counter()
     report = await boot.boot_sequence(start_server=False, start_hud=False, start_voice=False)
     elapsed = time.perf_counter() - started_at

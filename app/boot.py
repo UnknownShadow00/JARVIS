@@ -153,14 +153,31 @@ def gpu_temperature() -> str:
 
 
 def last_project_name() -> str:
-    project_state = Path("app") / "memory" / "project_state.py"
-    if not project_state.is_file():
+    log = Path("tasks") / "loop-log.md"
+    if not log.is_file():
         return "no active project"
-    return project_state.stem
+    for line in reversed(log.read_text(encoding="utf-8").splitlines()):
+        line = line.strip()
+        if line.startswith("Last built:") or line.startswith("Last built"):
+            # e.g. "Last built:   app/voice/tts.py, ..."
+            parts = line.split(":", 1)
+            if len(parts) == 2:
+                first_file = parts[1].strip().split(",")[0].strip()
+                if "/" in first_file:
+                    return first_file.split("/")[1]  # e.g. "voice" from "app/voice/tts.py"
+    return "JARVIS"
 
 
 def pending_task_count() -> int:
-    return 0
+    todo = Path("tasks") / "todo.md"
+    if not todo.is_file():
+        return 0
+    count = 0
+    for line in todo.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- [ ]"):
+            count += 1
+    return count
 
 
 async def _server_responds() -> bool:

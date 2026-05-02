@@ -26,5 +26,9 @@ def run() -> None:
     print("Wake word self-suppression test passed. Live microphone detection still requires manual validation.")
 
 
+def test_wake_word_score_and_suppression_flag() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()

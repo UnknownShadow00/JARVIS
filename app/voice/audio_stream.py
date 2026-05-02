@@ -5,7 +5,7 @@ import asyncio
 import threading
 
 from app.logs.audit import audit
-from app.server import _process
+from app.server import _process, _process_stream
 from app.voice.sounds import sounds
 from app.voice.stt import stt
 from app.voice.tts import tts
@@ -54,9 +54,25 @@ class VoicePipeline:
 
                 sounds.play("working")
                 audit.log("voice_request", {"text": text})
-                reply, intent = await _process(text)
+
+                stream_result = await _process_stream(text)
+                if stream_result is not None:
+                    token_stream, intent = stream_result
+                    chunks: list[str] = []
+
+                    async def _tts_tokens():
+                        async for chunk in token_stream:
+                            chunks.append(chunk)
+                            yield chunk
+
+                    await tts.speak_stream(_tts_tokens())
+                    from app.brain.response_cleaner import clean
+                    reply = clean("".join(chunks))
+                else:
+                    reply, intent = await _process(text)
+                    await tts.speak(reply)
+
                 audit.log("voice_reply", {"intent": intent.intent, "reply": reply})
-                await tts.speak(reply)
             except Exception as exc:
                 is_listening = False
                 audit.log("voice_pipeline_error", {"error": str(exc)})

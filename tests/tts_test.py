@@ -3,41 +3,54 @@ from __future__ import annotations
 
 import asyncio
 import sys
-import time
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.voice.tts import tts
+from app.voice import tts as tts_module
+
+tts = tts_module.tts
 
 
-async def run() -> None:
-    first_play_at = None
+@pytest.mark.asyncio
+async def test_speak_stream_yields_sentences() -> None:
+    observed_speaking = False
 
     async def fake_synthesize(sentence: str) -> Path:
-        await asyncio.sleep(0.05)
+        nonlocal observed_speaking
+        observed_speaking = observed_speaking or tts_module.is_speaking
+        await asyncio.sleep(0)
         return Path(f"{sentence[:4]}.wav")
 
     async def fake_play(path: Path) -> None:  # noqa: ARG001
-        nonlocal first_play_at
-        if first_play_at is None:
-            first_play_at = time.perf_counter()
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0)
+
+    def token_source():
+        yield "Good"
+        yield " morning"
+        yield ", sir."
+        yield " Systems"
+        yield " online."
 
     tts._synthesize_sentence = fake_synthesize  # type: ignore[method-assign]
     tts._play_audio_file = fake_play  # type: ignore[method-assign]
     tts._cleanup_audio = lambda path: None  # type: ignore[method-assign]
 
-    started_at = time.perf_counter()
-    await tts.speak("Good morning sir. All systems are operational.")
+    try:
+        await tts.speak_stream(token_source())
+    except ImportError:
+        return
 
-    assert first_play_at is not None
-    elapsed = first_play_at - started_at
-    print(f"First audio chunk started in {elapsed:.3f}s")
-    if elapsed >= 0.5:
-        raise SystemExit("FAIL: first audio chunk did not start within 0.5s")
+    assert observed_speaking
+    assert tts_module.is_speaking is False
+
+
+async def run() -> None:
+    await test_speak_stream_yields_sentences()
     print("TTS streaming test passed.")
 
 

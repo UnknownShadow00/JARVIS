@@ -19,5 +19,9 @@ def run() -> None:
     print("STT cleanup test passed. Live GPU transcription still requires manual audio validation.")
 
 
+def test_stt_cleanup() -> None:
+    run()
+
+
 if __name__ == "__main__":
     run()
