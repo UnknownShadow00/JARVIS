@@ -8,8 +8,23 @@ from typing import Any
 
 from app.config import settings
 from app.logs.audit import audit
+from app.tools import apps as apps_tool
+from app.tools import calendar as calendar_tool
+from app.tools import files as files_tool
+from app.tools import shell as shell_tool
+from app.tools import system_stats as system_stats_tool
+from app.tools import web_search as web_search_tool
 
 SAFETY_LEVEL = 0
+
+TOOLS: dict[str, Any] = {
+    "apps": apps_tool.execute,
+    "calendar": calendar_tool.execute,
+    "files": files_tool.execute,
+    "shell": shell_tool.execute,
+    "system_stats": system_stats_tool.execute,
+    "web_search": web_search_tool.execute,
+}
 
 
 class ToolError(Exception):
@@ -35,9 +50,20 @@ class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, ModuleType] = {}
         self._load_all()
+        self.TOOLS = {name: mod.execute for name, mod in self._tools.items()}
 
     def _load_all(self) -> None:
         import app.tools as pkg
+
+        explicit_tools = {
+            "apps": apps_tool,
+            "calendar": calendar_tool,
+            "files": files_tool,
+            "shell": shell_tool,
+            "system_stats": system_stats_tool,
+            "web_search": web_search_tool,
+        }
+        self._tools.update(explicit_tools)
 
         for info in pkgutil.iter_modules(pkg.__path__):
             if info.name == "registry":
@@ -48,6 +74,7 @@ class ToolRegistry:
                     self._tools[info.name] = mod
             except Exception as exc:  # noqa: BLE001
                 audit.log("tool_load_error", {"tool": info.name, "error": str(exc)})
+        self.TOOLS = {name: mod.execute for name, mod in self._tools.items()}
 
     def get_tool(self, name: str) -> ModuleType:
         """Return a loaded tool module by name."""

@@ -144,3 +144,16 @@
 - Files changed: app/server.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; pytest 	ests/ -m ''not manual'' -q reported 19 passed and oice_pipeline.start is present in pp/server.py
 - Next: None
+
+## [2026-05-02 20:56:39] Task Completed
+- Task: Created scripts/wake_diag.py and tests/test_wake_diag.py for wake-word diagnostics and verification.
+- Files changed: scripts/wake_diag.py, tests/test_wake_diag.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; python -m pytest tests/test_wake_diag.py -q passed (4 tests).
+- Next: Optional live-device validation with PyAudio/OpenWakeWord hardware input to tune final threshold.
+
+## [2026-05-02 21:03:01 -05:00] Task Completed
+- Task: Created the Phase 2 calendar tool for reading local .ics events by date, added registry wiring for the calendar tool, and added pytest coverage for dry-run, empty results, .ics parsing, and registration.
+- Files changed: app/tools/calendar.py, app/tools/registry.py, tests/test_calendar_tool.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_calendar_tool.py -q` passed 5/5 and `python -m pytest -m 'not manual' -q` passed 28/28 with 6 deselected.
+- Next: No immediate follow-up needed.
+
