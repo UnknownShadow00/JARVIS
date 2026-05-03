@@ -181,3 +181,34 @@
 - Result: Pass. `python -m pytest tests/test_mouse_keyboard.py -q` passed 6/6 and `python -m pytest -m 'not manual' -q` passed 50/50 with 6 deselected.
 - Next: No immediate follow-up needed.
 
+## [2026-05-02T21:16:44-05:00] Task Completed
+- Task: Updated app/brain/router.py to advertise all Phase 2 tools, added deterministic routing for shell/calendar/interpreter/browser, split screenshot requests from webcam/camera vision intent, and added router tests for the new routes.
+- Files changed: app/brain/router.py, tests/router_test.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/router_test.py -q passed and python -m pytest -m 'not manual' -q passed.
+- Next: No immediate follow-up needed.
+## [2026-05-02T21:19:58-05:00] Task Completed
+- Task: Built the Phase 2 browser control tool, registered it in the tool registry, and added targeted pytest coverage for dry-run, validation, open, search, and registration behavior.
+- Files changed: app/tools/browser.py, app/tools/registry.py, tests/test_browser_tool.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_browser_tool.py -v` passed 7/7.
+- Next: No immediate follow-up needed.
+
+## [2026-05-02T21:21:30-05:00] Task Completed
+- Task: Built the Phase 3/4 Qwen3-VL vision stub in app/computer/vision.py and added targeted pytest coverage in tests/test_vision.py.
+- Files changed: app/computer/vision.py, tests/test_vision.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/test_vision.py -v passed 5/5.
+- Next: Phase 4 can replace the stub return path with real Qwen3-VL image analysis and webcam capture support.
+## [2026-05-02T21:22:48-05:00] Task Completed
+- Task: Built the Phase 4 Mem0 and ChromaDB stub clients, confirmed app/memory/__init__.py exists, and added targeted pytest coverage for the stub behaviors.
+- Files changed: app/memory/memory_client.py, app/memory/rag_client.py, tests/test_memory_stubs.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_memory_stubs.py -v` passed 5/5.
+- Next: Replace the stub return paths with real Mem0 and ChromaDB integrations in Phase 4 when those dependencies are added.
+## [2026-05-02 21:24:03 -05:00] Task Completed
+- Task: Built the Phase 5 Discord and Telegram comms stub modules, confirmed pp/comms/__init__.py exists, and added targeted async stub tests.
+- Files changed: app/comms/discord_bot.py, app/comms/telegram_bot.py, tests/test_comms_stubs.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/test_comms_stubs.py -v passed 4/4.
+- Next: Replace the stub return paths with real Discord and Telegram integrations in Phase 5 when those dependencies are added.
+## [2026-05-02T21:25:45.1193879-05:00] Task Completed
+- Task: Built the Phase 5 agent task queue and scheduler stub modules, confirmed `app/agent/__init__.py` exists, and added targeted pytest coverage for task and job lifecycle behavior.
+- Files changed: app/agent/task_queue.py, app/agent/scheduler.py, tests/test_agent_stubs.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_agent_stubs.py -v` passed 7/7.
+- Next: Replace the in-memory stub behavior with persistent queueing and a real scheduling loop when Phase 5 autonomous execution is implemented.

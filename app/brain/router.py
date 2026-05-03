@@ -16,7 +16,7 @@ Return ONLY valid JSON - no explanation, no markdown, no extra text:
 
 Intent options:
 - "respond"         - answer directly, no tools or actions needed
-- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files)
+- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, interpreter, screenshot, browser)
 - "retrieve_memory" - needs memory or history lookup
 - "vision"          - needs screen capture or webcam
 - "confirm_action"  - dangerous/irreversible action that needs user confirmation
@@ -116,6 +116,14 @@ class IntentRouter:
         if not text:
             return RouterResult("respond", 1.0, "", "Empty input can be answered directly.")
 
+        if re.search(r"\b(run|execute|shell|cmd|terminal|bash|powershell|npm run|pip install|python -)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.93,
+                "shell",
+                "The request asks to run a shell command.",
+            )
+
         if re.search(
             r"\b(delete|format|wipe|erase|destroy|remove all|commit|push|deploy|install|uninstall|send|message|email|purchase|buy)\b",
             text,
@@ -127,7 +135,15 @@ class IntentRouter:
                 "The request may change external state or cause damage.",
             )
 
-        if re.search(r"\b(screen|screenshot|webcam|camera|see on my screen|look at)\b", text):
+        if re.search(r"\b(screenshot|capture screen|take a screenshot)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.94,
+                "screenshot",
+                "The request asks to capture a screenshot.",
+            )
+
+        if re.search(r"\b(webcam|camera|see on my screen|look at)\b", text):
             return RouterResult("vision", 0.95, "", "The request needs visual context.")
 
         if re.search(
@@ -166,6 +182,30 @@ class IntentRouter:
                 0.91,
                 "files",
                 "The request asks for file system information.",
+            )
+
+        if re.search(r"\b(calendar|schedule|events today|my day|appointments|what.*have.*today|today.*schedule)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.91,
+                "calendar",
+                "The request asks for calendar events.",
+            )
+
+        if re.search(r"\b(write.*code.*run|execute.*code|open interpreter|interpret.*task|code.*and.*execute)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.90,
+                "interpreter",
+                "The request needs Open Interpreter to execute code.",
+            )
+
+        if re.search(r"\b(go to|browse|navigate to|open.*website|open.*url|open.*http|open.*tab|open a browser)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.92,
+                "browser",
+                "The request asks to open a browser or URL.",
             )
 
         if re.search(r"\b(time|joke|capital|how are you|what is|who is|explain|tell me)\b", text):

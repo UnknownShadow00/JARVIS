@@ -9,6 +9,7 @@ from typing import Any
 from app.config import settings
 from app.logs.audit import audit
 from app.tools import apps as apps_tool
+from app.tools import browser as browser_tool
 from app.tools import calendar as calendar_tool
 from app.tools import files as files_tool
 from app.tools import interpreter as interpreter_tool
@@ -20,6 +21,7 @@ SAFETY_LEVEL = 0
 
 TOOLS: dict[str, Any] = {
     "apps": apps_tool.execute,
+    "browser": browser_tool.execute,
     "calendar": calendar_tool.execute,
     "files": files_tool.execute,
     "interpreter": interpreter_tool.execute,
@@ -59,6 +61,7 @@ class ToolRegistry:
 
         explicit_tools = {
             "apps": apps_tool,
+            "browser": browser_tool,
             "calendar": calendar_tool,
             "files": files_tool,
             "interpreter": interpreter_tool,

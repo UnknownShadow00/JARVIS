@@ -26,7 +26,7 @@ QUERIES: list[tuple[str, str]] = [
     ("What tasks do I have pending?", "retrieve_memory"),
     ("What did I tell you about my hardware setup?", "retrieve_memory"),
     ("What do you see on my screen right now?", "vision"),
-    ("Take a screenshot and describe it.", "vision"),
+    ("Take a screenshot and describe it.", "use_tool"),
     ("Look at my webcam and tell me what you see.", "vision"),
     ("Delete all files in my downloads folder.", "confirm_action"),
     ("Send a Discord message to my team saying the build is done.", "confirm_action"),
@@ -85,6 +85,35 @@ def run() -> None:
 
 def test_router_classifies_known_queries() -> None:
     run()
+
+
+def test_routes_shell() -> None:
+    result = router.classify("run npm install")
+    assert result.intent == "use_tool"
+    assert result.suggested_tool == "shell"
+
+
+def test_routes_calendar() -> None:
+    result = router.classify("what do I have on my calendar today")
+    assert result.intent == "use_tool"
+    assert result.suggested_tool == "calendar"
+
+
+def test_routes_browser() -> None:
+    result = router.classify("go to youtube.com")
+    assert result.intent == "use_tool"
+    assert result.suggested_tool == "browser"
+
+
+def test_routes_screenshot_tool() -> None:
+    result = router.classify("take a screenshot")
+    assert result.intent == "use_tool"
+    assert result.suggested_tool == "screenshot"
+
+
+def test_routes_webcam_vision() -> None:
+    result = router.classify("look at my webcam")
+    assert result.intent == "vision"
 
 
 if __name__ == "__main__":

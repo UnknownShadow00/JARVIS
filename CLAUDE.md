@@ -429,25 +429,27 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        1 — IN PROGRESS (Phase 2 tools also partially built this session)
-Last built:   app/tools/shell.py, app/tools/calendar.py, app/tools/interpreter.py,
-              app/computer/screenshot.py, app/computer/mouse_keyboard.py,
-              app/brain/planner.py, scripts/wake_diag.py,
-              app/server.py (lifespan migration + new _tool_params),
-              app/voice/stt.py (CPU fallback), app/voice/audio_stream.py (bounded windows)
-Last tested:  python -m pytest -m "not manual" (50 passed, 6 deselected);
-              python -m pytest -m manual (6 passed)
+Phase:        1 — IN PROGRESS (Phase 2 tools complete; Phase 3-5 stubs scaffolded)
+Last built:   app/tools/browser.py (L1 — open/search URLs),
+              app/computer/vision.py (Qwen3-VL stub, Phase 4 placeholder),
+              app/memory/memory_client.py (Mem0 stub, Phase 4),
+              app/memory/rag_client.py (ChromaDB stub, Phase 4),
+              app/comms/discord_bot.py (Discord stub, Phase 5),
+              app/comms/telegram_bot.py (Telegram stub, Phase 5),
+              app/agent/task_queue.py (AgentTask queue, Phase 5),
+              app/agent/scheduler.py (ScheduledJob cron stub, Phase 5),
+              app/brain/router.py (5 new deterministic rules + updated LLM prompt),
+              + all Phase 1-2 files from prior session
+Last tested:  python -m pytest -m "not manual" (83 passed, 6 deselected)
 Hardware:     4070 Ti active (5090 arriving soon)
 Active model: qwen3:14b (upgrade to qwen3:32b when 5090 arrives)
-Next:         Run wake_diag.py to get per-frame scores CSV, tune sensitivity, then
-              re-run live spoken loop: "hey jarvis, what time is it?"
-              Full Phase 1 acceptance still requires live hardware voice test.
-Notes:        dry_run=true in config.yaml. STT model cached (medium.en CPU/int8).
-              New tools registered: shell (L2), calendar (L0), interpreter (L2),
-              screenshot (L0). Phase 3 stubs: screenshot.py, mouse_keyboard.py.
-              Brain planner.py scaffolded (LLM decompose + fallback).
-              Run scripts/wake_diag.py --duration 30 to get sensitivity CSV.
-              GitHub: UnknownShadow00/JARVIS, main branch, all commits pushed.
+Next:         Run wake_diag.py to tune sensitivity, then live spoken loop acceptance:
+              "hey jarvis, what time is it?" through wake→VAD→STT→router→TTS.
+              Full Phase 1 acceptance gate still requires live hardware voice test.
+Notes:        dry_run=true in config.yaml. All Phase 2 tools registered in registry.py.
+              Router now routes: shell, calendar, interpreter, browser, screenshot, vision.
+              Phase 3-5 modules are stubs — all return {'stub': True} until hardware/deps arrive.
+              GitHub: UnknownShadow00/JARVIS, main branch.
 ```
 
 > Update this section at the end of every Claude Code session.
