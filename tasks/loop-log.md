@@ -157,3 +157,15 @@
 - Result: Pass. `python -m pytest tests/test_calendar_tool.py -q` passed 5/5 and `python -m pytest -m 'not manual' -q` passed 28/28 with 6 deselected.
 - Next: No immediate follow-up needed.
 
+## [2026-05-02T21:04:47.4912531-05:00] Task Completed
+- Task: Created the Open Interpreter bridge tool, added registry wiring, and added pytest coverage for safety level, dry-run, install checks, timeout handling, success, and registration.
+- Files changed: app/tools/interpreter.py, app/tools/registry.py, tests/test_interpreter_tool.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_interpreter_tool.py -q` passed 6/6 and `python -m pytest -m 'not manual' -q` passed 34/34 with 6 deselected.
+- Next: No immediate follow-up needed.
+
+## [2026-05-02T21:06:58-05:00] Task Completed
+- Task: Created the Phase 3 screenshot prep module in `app/computer/screenshot.py` with dry-run handling and added pytest coverage for safety level, missing `mss`, mocked capture, and execute success.
+- Files changed: app/computer/screenshot.py, tests/test_screenshot.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_screenshot.py -q` passed 5/5 and `python -m pytest -m 'not manual' -q` passed 39/39 with 6 deselected.
+- Next: No immediate follow-up needed.
+

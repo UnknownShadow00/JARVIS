@@ -11,6 +11,7 @@ from app.logs.audit import audit
 from app.tools import apps as apps_tool
 from app.tools import calendar as calendar_tool
 from app.tools import files as files_tool
+from app.tools import interpreter as interpreter_tool
 from app.tools import shell as shell_tool
 from app.tools import system_stats as system_stats_tool
 from app.tools import web_search as web_search_tool
@@ -21,6 +22,7 @@ TOOLS: dict[str, Any] = {
     "apps": apps_tool.execute,
     "calendar": calendar_tool.execute,
     "files": files_tool.execute,
+    "interpreter": interpreter_tool.execute,
     "shell": shell_tool.execute,
     "system_stats": system_stats_tool.execute,
     "web_search": web_search_tool.execute,
@@ -59,6 +61,7 @@ class ToolRegistry:
             "apps": apps_tool,
             "calendar": calendar_tool,
             "files": files_tool,
+            "interpreter": interpreter_tool,
             "shell": shell_tool,
             "system_stats": system_stats_tool,
             "web_search": web_search_tool,
