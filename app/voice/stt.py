@@ -15,6 +15,7 @@ _FILLER_PREFIX = re.compile(r"^\s*(um+|uh+|erm|ah|like|okay|ok)[,\s]+", re.IGNOR
 class SpeechToText:
     def __init__(self) -> None:
         self._model = None
+        self._model_key: tuple[str, str] | None = None
 
     def transcribe(self, audio_bytes: bytes) -> str:
         if not audio_bytes:
@@ -28,8 +29,28 @@ class SpeechToText:
             if model is None:
                 return ""
 
-            segments, _info = model.transcribe(str(temp_path), beam_size=1, vad_filter=True)
-            text = " ".join(segment.text for segment in segments)
+            try:
+                text = self._transcribe_file(model, temp_path)
+            except Exception as exc:
+                if settings.voice.stt_device.lower() == "cpu":
+                    audit.log("stt_unavailable", {"reason": str(exc)})
+                    return ""
+
+                audit.log(
+                    "stt_fallback",
+                    {
+                        "from_device": settings.voice.stt_device,
+                        "from_compute_type": settings.voice.stt_compute_type,
+                        "to_device": "cpu",
+                        "to_compute_type": "int8",
+                        "reason": str(exc),
+                    },
+                )
+                model = self._load_model(device="cpu", compute_type="int8", force_reload=True)
+                if model is None:
+                    return ""
+                text = self._transcribe_file(model, temp_path)
+
             cleaned = self._clean_text(text)
             audit.log(
                 "stt_transcribed",
@@ -39,8 +60,21 @@ class SpeechToText:
         finally:
             temp_path.unlink(missing_ok=True)
 
-    def _load_model(self):  # noqa: ANN202
-        if self._model is not None:
+    def _transcribe_file(self, model, temp_path: Path) -> str:  # noqa: ANN001
+        segments, _info = model.transcribe(str(temp_path), beam_size=1, vad_filter=True)
+        return " ".join(segment.text for segment in segments)
+
+    def _load_model(
+        self,
+        device: str | None = None,
+        compute_type: str | None = None,
+        force_reload: bool = False,
+    ):  # noqa: ANN202
+        selected_device = device or settings.voice.stt_device
+        selected_compute_type = compute_type or settings.voice.stt_compute_type
+        model_key = (selected_device, selected_compute_type)
+
+        if not force_reload and self._model is not None and self._model_key == model_key:
             return self._model
 
         try:
@@ -51,15 +85,16 @@ class SpeechToText:
 
         self._model = WhisperModel(
             settings.voice.stt_model,
-            device=settings.voice.stt_device,
-            compute_type=settings.voice.stt_compute_type,
+            device=selected_device,
+            compute_type=selected_compute_type,
         )
+        self._model_key = model_key
         audit.log(
             "stt_model_loaded",
             {
                 "model": settings.voice.stt_model,
-                "device": settings.voice.stt_device,
-                "compute_type": settings.voice.stt_compute_type,
+                "device": selected_device,
+                "compute_type": selected_compute_type,
             },
         )
         return self._model

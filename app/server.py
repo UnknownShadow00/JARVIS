@@ -5,6 +5,7 @@ import json
 import re
 import time
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -22,7 +23,22 @@ from app.logs.audit import audit
 from app.tools.registry import ToolError, registry
 from app.voice.tts import tts
 
-app = FastAPI(title="JARVIS", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.voice.audio_stream import voice_pipeline
+
+    start_hotkey_listener()
+    register_callback(tts.stop)
+    register_callback(voice_pipeline.stop)
+    voice_pipeline.start()
+    audit.log("server_start", {"host": settings.server.host, "port": settings.server.port})
+    yield
+    audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
+    tts.stop()
+    voice_pipeline.stop()
+
+
+app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
 _STARTED_AT = time.time()
 
 app.add_middleware(
@@ -32,16 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def _startup() -> None:
-    from app.voice.audio_stream import voice_pipeline
-
-    start_hotkey_listener()
-    register_callback(tts.stop)
-    register_callback(voice_pipeline.stop)
-    audit.log("server_start", {"host": settings.server.host, "port": settings.server.port})
 
 
 # ------------------------------------------------------------------

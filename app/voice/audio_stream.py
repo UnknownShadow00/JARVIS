@@ -18,6 +18,7 @@ class VoicePipeline:
     def __init__(self) -> None:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self.listen_timeout_seconds = 1.0
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -43,7 +44,7 @@ class VoicePipeline:
             try:
                 is_listening = True
                 audit.log("voice_listening", {})
-                audio = await asyncio.to_thread(wake_word.listen)
+                audio = await asyncio.to_thread(wake_word.listen, timeout=self.listen_timeout_seconds)
                 is_listening = False
                 if not audio:
                     continue

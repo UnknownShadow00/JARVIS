@@ -433,13 +433,17 @@ Phase:        1 — IN PROGRESS (voice + boot scaffold built; live hardware vali
 Last built:   app/voice/tts.py, app/voice/sounds.py, app/voice/vad.py,
               app/voice/stt.py, app/voice/wake_word.py, app/voice/audio_stream.py,
               app/boot.py, scripts/install_piper.py, scripts/setup_autostart.py
-Last tested:  python -m pytest -m "not manual" (10 passed);
-              python -m pytest -m manual (6 passed)
+Last tested:  python -m pytest -m "not manual" (12 passed);
+              python -m pytest -m manual (6 passed);
+              delayed-cue live voice loop exited cleanly but did not detect wake phrase
 Hardware:     4070 Ti active (5090 arriving soon)
 Active model: qwen3:14b (upgrade to qwen3:32b when 5090 arrives)
 Next:         Run final spoken loop acceptance: "hey jarvis, what time is it?"
               through wake word, VAD, STT, routing, streaming TTS, SFX, and self-suppression.
-Notes:        dry_run=true in config.yaml. Piper runtime files are local-only and ignored.
+Notes:        dry_run=true in config.yaml. VoicePipeline now uses bounded wake-word
+              listen windows so stop() is responsive. STT model is cached and
+              app/voice/stt.py falls back to CPU/int8 if CUDA transcription fails.
+              Current shell reports torch.cuda.is_available() == False.
               GitHub CLI 2.92.0 is installed and authenticated for UnknownShadow00.
 ```
 

@@ -90,3 +90,57 @@
 - Files changed: tasks/todo.md, tasks/loop-log.md
 - Result: Pass. `UnknownShadow00/JARVIS` exists, `origin` points to `https://github.com/UnknownShadow00/JARVIS.git`, and `git push -u origin main` succeeded.
 - Next: Run the remaining full spoken live loop test before closing Phase 1 acceptance.
+
+## [2026-05-01 21:45:38 -05:00] Task Completed
+- Task: Continued Phase 1 live voice-loop validation and fixed VoicePipeline shutdown responsiveness while the final spoken wake loop remains pending.
+- Files changed: app/voice/audio_stream.py, tests/voice_pipeline_test.py, CLAUDE.md, tasks/loop-log.md
+- Result: Fail against final live-loop acceptance. `python -m pytest tests\voice_pipeline_test.py` passed, `python -m pytest -m "not manual"` passed 11/11, and `python -m pytest -m manual` passed 6/6. The bounded live voice loop now exits cleanly, but the audit log showed repeated `wake_timeout` events and no `wake_detected`, `stt_transcribed`, `voice_request`, or `voice_reply` events during the spoken acceptance attempt.
+- Next: Re-run the spoken acceptance close to the active microphone, verify input device selection and wake-word sensitivity if detection still times out, then close Phase 1 once wake word -> STT -> response -> streaming TTS is captured.
+
+## [2026-05-01 21:53:16 -05:00] Task Completed
+- Task: Diagnosed microphone input routing for the blocked Phase 1 live wake-word loop.
+- Files changed: tasks/loop-log.md
+- Result: Fail against live-loop acceptance. `config.yaml` uses `voice.input_device_index: -1`, so JARVIS listens to Windows default input device 1. A 5-second default-input level test reported `peak=31`, `rms=7.95`, `heard_audio=False`. A scan across available input devices found no strong speech signal; the highest peak was device 6 at `peak=286`, and SteelSeries Sonar devices 15 and 17 failed to open with PortAudio `Invalid device`.
+- Next: Confirm the user spoke during the scan. If yes, fix Windows/default mic routing or choose a working physical input device before rerunning the live wake loop; if no, rerun the scan while speaking continuously.
+
+## [2026-05-01 21:56:00 -05:00] Task Completed
+- Task: Re-ran mic scan with clear speaking cue and re-ran the live wake loop.
+- Files changed: tasks/loop-log.md
+- Result: Fail against full live-loop acceptance. The mic scan passed with strong input on default device 1 (`peak=10856`, `rms=711.27`). The live loop detected the wake word repeatedly (`wake_detected` scores 0.536, 0.956, 0.989, 0.990) and VAD recorded speech, but STT failed because `faster-whisper` tried to download/load `medium.en` from Hugging Face and no local cached model exists; the environment returned `WinError 10013` for network access. TTS error handling worked and spoke the fallback error response.
+- Next: Download/cache the configured faster-whisper model locally or point `voice.stt_model` at a local CTranslate2 Whisper model path, then rerun the full wake word -> STT -> response -> streaming TTS acceptance test.
+
+## [2026-05-01 21:57:55 -05:00] Task Completed
+- Task: Checked whether the faster-whisper STT model was cached after the user requested another run.
+- Files changed: tasks/loop-log.md
+- Result: Fail against full live-loop acceptance. `WhisperModel('medium.en', local_files_only=True)` failed for both configured CUDA/float16 and CPU/int8 loads with `LocalEntryNotFoundError`; no Hugging Face cache environment variables or `models--Systran--faster-whisper-medium.en` directory were found under the user profile.
+- Next: Run the faster-whisper model cache command from a normal internet-enabled PowerShell, then rerun the full live loop.
+
+## [2026-05-01 22:00:17 -05:00] Task Completed
+- Task: Rechecked faster-whisper local cache before another live-loop attempt.
+- Files changed: tasks/loop-log.md
+- Result: Fail against full live-loop acceptance. `WhisperModel('medium.en', local_files_only=True)` still failed for both configured CUDA/float16 and CPU/int8 loads with `LocalEntryNotFoundError`, and no `models--Systran--faster-whisper-medium.en` cache directory was found under the user profile.
+- Next: Run the cache command in the same Python environment used by this project, verify with a local-only load, then rerun the full live voice loop.
+
+## [2026-05-01 22:14:52 -05:00] Task Completed
+- Task: Verified cached faster-whisper model, added STT CPU fallback for missing CUDA runtime, and reran live voice-loop acceptance.
+- Files changed: app/voice/stt.py, tests/stt_test.py, CLAUDE.md, tasks/loop-log.md
+- Result: Fail against full live-loop acceptance. `WhisperModel('medium.en', local_files_only=True)` now loads for configured CUDA/float16 and CPU/int8. The first live run detected wake word and loaded STT but failed on missing `cublas64_12.dll`; STT now retries CPU/int8 after CUDA transcription errors. `python -m pytest tests\stt_test.py` passed 2/2 and `python -m pytest -m "not manual"` passed 12/12. The delayed-cue live loop exited cleanly but did not detect the wake phrase, so no STT transcript or final response was produced.
+- Next: Rerun the live loop with the wake phrase spoken after the delayed cue and close to the active mic; if wake detection remains intermittent, lower `voice.wake_word_sensitivity` or add a one-shot wake diagnostics script that logs per-frame scores during the cue window.
+
+## [2026-05-02 19:06:45 -05:00] Task Completed
+- Task: Created `app/tools/shell.py` with hard-denied command patterns, allowed-root cwd validation, bounded subprocess execution, and added pytest coverage for direct tool behavior plus registry confirmation and dry-run handling.
+- Files changed: app/tools/shell.py, tests/test_shell_tool.py, tasks/loop-log.md
+- Result: Pass. `pytest tests/test_shell_tool.py -q` passed 7/7, `pytest -m "not manual" -q` passed 19/19, and `python -c "from app.tools.shell import execute, SAFETY_LEVEL; print(SAFETY_LEVEL)"` printed `2`.
+- Next: No immediate follow-up needed.
+
+## [2026-05-02 19:08:49 -05:00] Task Completed
+- Task: Migrated app/server.py from FastAPI's deprecated startup event hook to a lifespan async context manager and added shutdown cleanup/audit logging.
+- Files changed: app/server.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/ -m 'not manual' -q passed 19/19 with 6 deselected and no FastAPI on_event DeprecationWarning in the output.
+- Next: No immediate follow-up needed.
+
+## [2026-05-02 19:35:31 -05:00] Task Completed
+- Task: Added oice_pipeline.start() to the FastAPI lifespan startup sequence in pp/server.py
+- Files changed: app/server.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; pytest 	ests/ -m ''not manual'' -q reported 19 passed and oice_pipeline.start is present in pp/server.py
+- Next: None
