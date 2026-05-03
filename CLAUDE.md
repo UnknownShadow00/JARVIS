@@ -429,22 +429,25 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        1 — IN PROGRESS (voice + boot scaffold built; live hardware validation pending)
-Last built:   app/voice/tts.py, app/voice/sounds.py, app/voice/vad.py,
-              app/voice/stt.py, app/voice/wake_word.py, app/voice/audio_stream.py,
-              app/boot.py, scripts/install_piper.py, scripts/setup_autostart.py
-Last tested:  python -m pytest -m "not manual" (12 passed);
-              python -m pytest -m manual (6 passed);
-              delayed-cue live voice loop exited cleanly but did not detect wake phrase
+Phase:        1 — IN PROGRESS (Phase 2 tools also partially built this session)
+Last built:   app/tools/shell.py, app/tools/calendar.py, app/tools/interpreter.py,
+              app/computer/screenshot.py, app/computer/mouse_keyboard.py,
+              app/brain/planner.py, scripts/wake_diag.py,
+              app/server.py (lifespan migration + new _tool_params),
+              app/voice/stt.py (CPU fallback), app/voice/audio_stream.py (bounded windows)
+Last tested:  python -m pytest -m "not manual" (50 passed, 6 deselected);
+              python -m pytest -m manual (6 passed)
 Hardware:     4070 Ti active (5090 arriving soon)
 Active model: qwen3:14b (upgrade to qwen3:32b when 5090 arrives)
-Next:         Run final spoken loop acceptance: "hey jarvis, what time is it?"
-              through wake word, VAD, STT, routing, streaming TTS, SFX, and self-suppression.
-Notes:        dry_run=true in config.yaml. VoicePipeline now uses bounded wake-word
-              listen windows so stop() is responsive. STT model is cached and
-              app/voice/stt.py falls back to CPU/int8 if CUDA transcription fails.
-              Current shell reports torch.cuda.is_available() == False.
-              GitHub CLI 2.92.0 is installed and authenticated for UnknownShadow00.
+Next:         Run wake_diag.py to get per-frame scores CSV, tune sensitivity, then
+              re-run live spoken loop: "hey jarvis, what time is it?"
+              Full Phase 1 acceptance still requires live hardware voice test.
+Notes:        dry_run=true in config.yaml. STT model cached (medium.en CPU/int8).
+              New tools registered: shell (L2), calendar (L0), interpreter (L2),
+              screenshot (L0). Phase 3 stubs: screenshot.py, mouse_keyboard.py.
+              Brain planner.py scaffolded (LLM decompose + fallback).
+              Run scripts/wake_diag.py --duration 30 to get sensitivity CSV.
+              GitHub: UnknownShadow00/JARVIS, main branch, all commits pushed.
 ```
 
 > Update this section at the end of every Claude Code session.
