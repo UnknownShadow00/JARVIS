@@ -1,6 +1,7 @@
 """FastAPI server — /health, /chat (REST), /ws (WebSocket)."""
 from __future__ import annotations
 
+import datetime
 import json
 import re
 import time
@@ -257,6 +258,37 @@ def _tool_params(tool_name: str, message: str) -> dict[str, Any]:
         action = "read" if "read" in lower else "list"
         path = settings.paths.downloads_dir if "download" in lower else settings.paths.projects_dir
         return {"action": action, "path": path, "query": message}
+    if tool_name == "shell":
+        command = re.sub(
+            r"^\s*(run|execute|shell|cmd|bash|terminal)\b[:\s-]*",
+            "",
+            message,
+            flags=re.IGNORECASE,
+        ).strip()
+        return {"command": command or message.strip(), "timeout": 30}
+    if tool_name == "calendar":
+        lower = message.lower()
+        today = datetime.date.today()
+        if "tomorrow" in lower:
+            date_value = (today + datetime.timedelta(days=1)).isoformat()
+        else:
+            date_value = today.isoformat()
+            if "today" in lower or re.search(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", lower):
+                date_value = message
+            elif re.search(r"\d", message):
+                date_value = message
+        return {"date": date_value}
+    if tool_name == "interpreter":
+        task = re.sub(
+            r"^\s*(interpret|open interpreter|run code|execute code)\b[:\s-]*",
+            "",
+            message,
+            flags=re.IGNORECASE,
+        ).strip()
+        return {"task": task or message.strip(), "timeout": 60}
+    if tool_name == "screenshot":
+        monitor_match = re.search(r"\b(?:monitor|screen)\s+(\d+)\b", message, flags=re.IGNORECASE)
+        return {"monitor": int(monitor_match.group(1)) if monitor_match else 0}
     return {"query": message}
 
 

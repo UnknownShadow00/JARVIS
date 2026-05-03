@@ -169,3 +169,15 @@
 - Result: Pass. `python -m pytest tests/test_screenshot.py -q` passed 5/5 and `python -m pytest -m 'not manual' -q` passed 39/39 with 6 deselected.
 - Next: No immediate follow-up needed.
 
+## [2026-05-02T21:10:32-05:00] Task Completed
+- Task: Created `app/brain/planner.py` with LLM-backed task planning plus offline fallback behavior, and added required pytest coverage in `tests/test_planner.py`.
+- Files changed: app/brain/planner.py, tests/test_planner.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_planner.py -q` passed 5/5 and `python -m pytest -m 'not manual' -q` passed 44/44 with 6 deselected.
+- Next: No immediate follow-up needed.
+
+## [2026-05-02T21:11:36-05:00] Task Completed
+- Task: Updated `app/server.py` `_tool_params` to support `shell`, `calendar`, `interpreter`, and `screenshot`, and created the Phase 3 prep stub `app/computer/mouse_keyboard.py` with pytest coverage.
+- Files changed: app/server.py, app/computer/mouse_keyboard.py, tests/test_mouse_keyboard.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_mouse_keyboard.py -q` passed 6/6 and `python -m pytest -m 'not manual' -q` passed 50/50 with 6 deselected.
+- Next: No immediate follow-up needed.
+
