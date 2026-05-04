@@ -429,23 +429,25 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        5 — COMPLETE (Discord/Telegram bots, scheduler, reporter, approval gates)
-Last built:   app/comms/discord_bot.py (httpx REST, asyncio.to_thread),
-              app/comms/telegram_bot.py (httpx REST, asyncio.to_thread),
-              app/agent/reporter.py (psutil stats, send_report, morning_report),
-              app/agent/scheduler.py (APScheduler AsyncIOScheduler + CronTrigger),
-              app/server.py (approval gates: _pending_confirmations, POST /confirm/{id})
-Last tested:  202 tests passing. Full suite: pytest tests/ -q --tb=short
+Phase:        6 — COMPLETE (Tailscale status, Phone PWA, RPi sensor node, Glasses mode)
+Last built:   frontend/pwa/ (index.html, app.js, manifest.json, sw.js — full mobile PWA),
+              app/network/tailscale.py (GET /network/status, tailscale status --json),
+              app/agent/sensor_store.py (deque store, 100 readings/node),
+              scripts/sensor_node.py (standalone RPi agent, stdlib fallback),
+              app/server.py (/pwa mount, /network/status, /sensors/* endpoints)
+Last tested:  217 tests passing. Full suite: pytest tests/ -q --tb=short
 Hardware:     4070 Ti active (5090 arriving soon).
 Active model: qwen3:14b on GPU
-Next:         Phase 6 — Multi-Device. Tailscale VPN, Phone PWA, Meta Glasses audio,
-              Raspberry Pi sensor node. Also: Electron HUD npm install (manual step pending).
-Notes:        dry_run=false. All Phase 1–5 acceptance criteria met.
-              Discord/Telegram send via httpx REST (no event loop conflicts).
-              Approval gates: Level 2 tools notify Discord/Telegram; /confirm/{id} approves.
-              APScheduler wired; apscheduler optional (graceful fallback if not installed).
-              Hermes Agent still waits for 5090. gesture.py and computer_use.py Phase 3 stubs.
-              GitHub: UnknownShadow00/JARVIS, main branch.
+Next:         Phase 7 — Cinematic. UE5 MetaHuman + Audio2Face + Chatterbox TTS voice clone.
+              Also pending: Electron HUD npm install (manual), Hermes Agent (waits for 5090),
+              icon.png for PWA (192x192 PNG, manual).
+Notes:        dry_run=false. All Phase 1–6 acceptance criteria met.
+              PWA served at http://server:8000/pwa — connect via Tailscale IP.
+              Glasses Mode: auto-restart mic after reply, noise filter, setSinkId() audio.
+              RPi sensor node: set JARVIS_URL + NODE_ID env vars, run scripts/sensor_node.py.
+              Tailscale: GET /network/status reports Tailscale IP + peer count.
+              Hermes Agent still waits for 5090. GitHub: UnknownShadow00/JARVIS, main branch.
+              Commit: 5de7960.
 ```
 
 > Update this section at the end of every Claude Code session.
