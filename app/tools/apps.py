@@ -5,6 +5,8 @@ import re
 import subprocess
 from typing import Any
 
+from app.config import settings
+
 SAFETY_LEVEL = 0
 DESCRIPTION = "Launch or close a named application on this PC."
 
@@ -31,23 +33,28 @@ _APP_MAP: dict[str, list[str]] = {
 }
 
 
-def execute(params: dict[str, Any]) -> str:
+def execute(params: dict[str, Any]) -> str | dict[str, str]:
     """Open or close a known application by name."""
     action = str(params.get("action", "open")).lower().strip()
     app_name = _extract_app_name(params)
 
     if not app_name:
-        return "No app name provided."
+        return {"error": "No app name provided."}
+
+    if settings.safety.dry_run:
+        return f"[DRY RUN] Would {action} '{app_name}'."
 
     if action == "close":
         return close_app(app_name)
     return open_app(app_name)
 
 
-def open_app(app_name: str) -> str:
+def open_app(app_name: str) -> str | dict[str, str]:
     """Open an application by friendly name."""
     normalized = app_name.lower().strip()
-    cmd = _APP_MAP.get(normalized, [normalized])
+    if normalized not in _APP_MAP:
+        return {"error": f"Unknown app: {normalized}"}
+    cmd = _APP_MAP[normalized]
 
     try:
         subprocess.Popen(cmd, shell=True)  # noqa: S602 - intentional app launch

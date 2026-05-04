@@ -14,9 +14,11 @@ from app.voice.vad import vad
 class WakeWordDetector:
     sample_rate = 16_000
     frame_samples = 1_280
+    _POST_DETECTION_GAP: float = 6.0
 
     def __init__(self) -> None:
         self._model = None
+        self._last_detection_at: float = 0.0
 
     def listen(self, timeout: float | None = None) -> bytes:
         """Block until wake word or push-to-talk, then return WAV bytes for STT.
@@ -66,7 +68,10 @@ class WakeWordDetector:
                 except queue.Empty:
                     continue
 
-                if tts_module.is_speaking:
+                if tts_module.is_speaking or time.monotonic() < tts_module.cooldown_until:
+                    continue
+
+                if time.monotonic() - self._last_detection_at < self._POST_DETECTION_GAP:
                     continue
 
                 prediction = model.predict(np.frombuffer(frame, dtype=np.int16))
@@ -74,7 +79,9 @@ class WakeWordDetector:
                 if score >= settings.voice.wake_word_sensitivity:
                     audit.log("wake_detected", {"score": score})
                     sounds.play("listening")
-                    return vad.record_until_silence()
+                    audio = vad.record_until_silence()
+                    self._last_detection_at = time.monotonic()
+                    return audio
 
     def _load_model(self):  # noqa: ANN202
         if self._model is not None:

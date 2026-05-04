@@ -21,6 +21,7 @@ from app.brain.response_cleaner import clean, dry_run_narration
 from app.brain.router import router as intent_router
 from app.config import settings
 from app.logs.audit import audit
+from app.tools.health_check import check_tools
 from app.tools.registry import ToolError, registry
 from app.voice.tts import tts
 
@@ -78,6 +79,11 @@ async def health() -> dict[str, Any]:
         "router_model": settings.models.router,
         "uptime_seconds": round(time.time() - _STARTED_AT, 1),
     }
+
+
+@app.get("/health/tools")
+async def health_tools() -> dict[str, bool]:
+    return check_tools()
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -243,53 +249,64 @@ async def _process_stream(message: str):  # type: ignore[return]
     return None
 
 
+_WAKE_PREFIX_RE = re.compile(r"^\s*(?:hey\s+jarvis|jarvis)[,\s]*", re.IGNORECASE)
+_WAKE_SUFFIX_RE = re.compile(r"[,\s]*\bjarvis\b\s*[?.]?\s*$", re.IGNORECASE)
+
+
+def _strip_wake_word(text: str) -> str:
+    text = _WAKE_PREFIX_RE.sub("", text)
+    text = _WAKE_SUFFIX_RE.sub("", text)
+    return text.strip()
+
+
 def _tool_params(tool_name: str, message: str) -> dict[str, Any]:
     """Map routed user text to concrete tool parameters."""
+    clean_msg = _strip_wake_word(message)
     if tool_name == "system_stats":
         return {}
     if tool_name == "web_search":
-        query = re.sub(r"\b(search|web|google|duckduckgo|look up)\b", "", message, flags=re.IGNORECASE)
-        return {"query": query.strip(" .") or message, "max_results": 5}
+        query = re.sub(r"\b(search|web|google|duckduckgo|look up)\b", "", clean_msg, flags=re.IGNORECASE)
+        return {"query": query.strip(" .") or clean_msg, "max_results": 5}
     if tool_name == "apps":
-        action = "close" if re.search(r"\b(close|quit|exit)\b", message, re.IGNORECASE) else "open"
-        return {"action": action, "app": _extract_app_name(message), "query": message}
+        action = "close" if re.search(r"\b(close|quit|exit)\b", clean_msg, re.IGNORECASE) else "open"
+        return {"action": action, "app": _extract_app_name(clean_msg), "query": clean_msg}
     if tool_name == "files":
-        lower = message.lower()
+        lower = clean_msg.lower()
         action = "read" if "read" in lower else "list"
         path = settings.paths.downloads_dir if "download" in lower else settings.paths.projects_dir
-        return {"action": action, "path": path, "query": message}
+        return {"action": action, "path": path, "query": clean_msg}
     if tool_name == "shell":
         command = re.sub(
             r"^\s*(run|execute|shell|cmd|bash|terminal)\b[:\s-]*",
             "",
-            message,
+            clean_msg,
             flags=re.IGNORECASE,
         ).strip()
-        return {"command": command or message.strip(), "timeout": 30}
+        return {"command": command or clean_msg, "timeout": 30}
     if tool_name == "calendar":
-        lower = message.lower()
+        lower = clean_msg.lower()
         today = datetime.date.today()
         if "tomorrow" in lower:
             date_value = (today + datetime.timedelta(days=1)).isoformat()
         else:
             date_value = today.isoformat()
             if "today" in lower or re.search(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", lower):
-                date_value = message
-            elif re.search(r"\d", message):
-                date_value = message
+                date_value = clean_msg
+            elif re.search(r"\d", clean_msg):
+                date_value = clean_msg
         return {"date": date_value}
     if tool_name == "interpreter":
         task = re.sub(
             r"^\s*(interpret|open interpreter|run code|execute code)\b[:\s-]*",
             "",
-            message,
+            clean_msg,
             flags=re.IGNORECASE,
         ).strip()
-        return {"task": task or message.strip(), "timeout": 60}
+        return {"task": task or clean_msg, "timeout": 60}
     if tool_name == "screenshot":
-        monitor_match = re.search(r"\b(?:monitor|screen)\s+(\d+)\b", message, flags=re.IGNORECASE)
+        monitor_match = re.search(r"\b(?:monitor|screen)\s+(\d+)\b", clean_msg, flags=re.IGNORECASE)
         return {"monitor": int(monitor_match.group(1)) if monitor_match else 0}
-    return {"query": message}
+    return {"query": clean_msg}
 
 
 def _extract_app_name(message: str) -> str:

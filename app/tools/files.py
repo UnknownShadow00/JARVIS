@@ -18,16 +18,21 @@ _MAX_SEARCH_RESULTS = 50
 def execute(params: dict[str, Any]) -> Any:
     """Dispatch file actions after enforcing allowed root boundaries."""
     action: str = str(params.get("action", "list")).lower()
+    if settings.safety.dry_run:
+        return f"[DRY RUN] Would execute files action '{action}' with params {params}"
 
-    if action == "list":
-        return list_dir(str(params.get("path", ".")))
-    if action == "read":
-        return read_file(str(params.get("path", "")))
-    if action == "search":
-        return search_files(str(params.get("path", ".")), str(params.get("query", "")))
-    if action == "move":
-        return _move(params)
-    return f"Unknown file action: {action!r}"
+    try:
+        if action == "list":
+            return list_dir(str(params.get("path", ".")))
+        if action == "read":
+            return read_file(str(params.get("path", "")))
+        if action == "search":
+            return search_files(str(params.get("path", ".")), str(params.get("query", "")))
+        if action == "move":
+            return _move(params)
+    except PermissionError as exc:
+        return {"error": str(exc)}
+    return {"error": f"Unknown file action: {action!r}"}
 
 
 def list_dir(path: str) -> list[str]:
@@ -41,18 +46,18 @@ def list_dir(path: str) -> list[str]:
     return [str(e) for e in entries]
 
 
-def read_file(path: str) -> str:
+def read_file(path: str) -> str | dict[str, str]:
     """Read a UTF-8 text file from an allowed path."""
     target = _safe_path(path)
     if not target.is_file():
-        return f"File not found: {target}"
+        return {"error": f"File not found: {target}"}
     size = target.stat().st_size
     if size > _MAX_READ_BYTES:
-        return f"File too large to read ({size} bytes). Max is {_MAX_READ_BYTES}."
+        return {"error": f"File too large to read ({size} bytes). Max is {_MAX_READ_BYTES}."}
     try:
         return target.read_text(encoding="utf-8", errors="replace")
     except Exception as exc:
-        return f"Read error: {exc}"
+        return {"error": f"Read error: {exc}"}
 
 
 def search_files(path: str, query: str) -> list[str]:
@@ -107,6 +112,17 @@ def _safe_path(path: str) -> Path:
 
 
 def _allowed_roots() -> list[Path]:
+    configured_roots = getattr(getattr(settings, "files", None), "allowed_roots", None)
+    if configured_roots:
+        roots: list[Path] = []
+        for item in configured_roots:
+            try:
+                roots.append(Path(item).expanduser().resolve())
+            except OSError:
+                continue
+        if roots:
+            return roots
+
     repo_root = Path(__file__).resolve().parents[2]
     configured = [
         settings.paths.projects_dir,

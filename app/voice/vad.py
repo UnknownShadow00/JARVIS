@@ -14,8 +14,8 @@ class VoiceActivityDetector:
     sample_rate = 16_000
     frame_ms = 30
     min_speech_seconds = 0.5
-    max_record_seconds = 30.0
-    trailing_silence_seconds = 0.8
+    max_record_seconds = 12.0
+    trailing_silence_seconds = 0.5
 
     def record_until_silence(self, timeout: float | None = None) -> bytes:
         try:
@@ -40,10 +40,11 @@ class VoiceActivityDetector:
         speech_frames = 0
         silence_frames = 0
         max_record_seconds = min(self.max_record_seconds, timeout) if timeout is not None else self.max_record_seconds
-        max_frames = int(max_record_seconds * 1000 / self.frame_ms)
+        max_post_speech_frames = int(max_record_seconds * 1000 / self.frame_ms)
         min_speech_frames = int(self.min_speech_seconds * 1000 / self.frame_ms)
         stop_silence_frames = int(self.trailing_silence_seconds * 1000 / self.frame_ms)
         started_at = time.perf_counter()
+        pre_speech_deadline = started_at + max_record_seconds
 
         with sd.RawInputStream(
             samplerate=self.sample_rate,
@@ -53,8 +54,14 @@ class VoiceActivityDetector:
             device=None if settings.voice.input_device_index < 0 else settings.voice.input_device_index,
             callback=callback,
         ):
-            while len(recorded) < max_frames:
-                frame = audio_queue.get()
+            while True:
+                try:
+                    frame = audio_queue.get(timeout=0.1)
+                except Exception:
+                    if not speech_started and time.perf_counter() > pre_speech_deadline:
+                        break
+                    continue
+
                 if len(frame) != frame_bytes:
                     continue
 
@@ -66,11 +73,17 @@ class VoiceActivityDetector:
                     recorded.append(frame)
                     continue
 
-                if speech_started:
-                    silence_frames += 1
-                    recorded.append(frame)
-                    if speech_frames >= min_speech_frames and silence_frames >= stop_silence_frames:
+                if not speech_started:
+                    if time.perf_counter() > pre_speech_deadline:
                         break
+                    continue
+
+                silence_frames += 1
+                recorded.append(frame)
+                if speech_frames >= min_speech_frames and silence_frames >= stop_silence_frames:
+                    break
+                if len(recorded) >= max_post_speech_frames:
+                    break
 
         duration = time.perf_counter() - started_at
         wav_data = self._to_wav_bytes(recorded)

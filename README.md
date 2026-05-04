@@ -1,6 +1,6 @@
 # JARVIS
 
-A local-first, fully autonomous AI assistant modeled on Tony Stark's JARVIS. Runs 100% on personal hardware — no API costs, no cloud dependency. Controls the PC, watches the screen and webcam, helps with coding, runs assigned tasks autonomously, and sends status updates via Discord and Telegram.
+A local-first, fully autonomous AI assistant modeled on Tony Stark's JARVIS. Runs 100% on personal hardware - no API costs, no cloud dependency. Controls the PC, watches the screen and webcam, helps with coding, runs assigned tasks autonomously, and sends status updates via Discord and Telegram.
 
 > Built on Windows with an RTX 5090. Every phase ships something real and demo-able.
 
@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 **2. Install Ollama and pull models**
 ```bash
-# https://ollama.com — set these before starting Ollama:
+# https://ollama.com - set these before starting Ollama:
 $env:OLLAMA_KEEP_ALIVE = "-1"
 $env:OLLAMA_NUM_PARALLEL = "2"
 
@@ -41,15 +41,20 @@ ollama pull gemma3:4b       # intent router
 python scripts/install_piper.py
 ```
 
-**4. Configure**
-Edit `config.yaml`. Set `dry_run: true` to test without executing actions.
-
-**5. Run**
+**4. Optional: register autostart**
 ```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+python scripts/setup_autostart.py
 ```
 
-**6. Talk to JARVIS**
+**5. Configure**
+Edit `config.yaml`. `dry_run` is disabled for normal operation; set it to `true` only when you want narrated no-op testing.
+
+**6. Run**
+```bash
+python -m uvicorn app.server:app --reload
+```
+
+**7. Talk to JARVIS**
 ```bash
 # REST
 curl -X POST http://localhost:8000/chat \
@@ -78,14 +83,14 @@ wscat -c ws://localhost:8000/ws
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 0 | Core Brain — FastAPI + router + tools + kill switch | **Complete** |
-| 1 | Voice + Boot — wake word, STT, TTS, boot sequence | In progress — unit + hardware smoke tests passing; full spoken loop pending |
-| 2 | Tools & Web — app launch, file ops, web search, shell | Planned |
-| 3 | PC Control — Open Interpreter, Electron HUD, gestures | Planned |
-| 4 | Workshop Brain — vision, Mem0, ChromaDB RAG, YOLO | Planned |
-| 5 | Autonomous Agent — task queue, Discord/Telegram | Planned |
-| 6 | Multi-Device — phone PWA, Meta Glasses, Raspberry Pi | Planned |
-| 7 | Cinematic — UE5 MetaHuman, Audio2Face | Far future |
+| 0 | Core Brain - FastAPI + router + tools + kill switch | ✅ COMPLETE |
+| 1 | Voice + Boot - wake word, STT, TTS, boot sequence | ✅ COMPLETE |
+| 2 | Tools & Web - app launch, file ops, web search, shell | 🔄 IN PROGRESS |
+| 3 | PC Control - Open Interpreter, Electron HUD, gestures | ⏳ |
+| 4 | Workshop Brain - vision, Mem0, ChromaDB RAG, YOLO | ⏳ |
+| 5 | Autonomous Agent - task queue, Discord/Telegram | ⏳ |
+| 6 | Multi-Device - phone PWA, Meta Glasses, Raspberry Pi | ⏳ |
+| 7 | Cinematic - UE5 MetaHuman, Audio2Face | ⏳ |
 
 ---
 
@@ -118,6 +123,15 @@ All actions use a 4-level safety system enforced in every tool:
 
 Set `dry_run: true` in `config.yaml` to narrate all actions without executing.
 
+## Tool Safety Levels
+
+| Level | Name | Tools |
+|-------|------|-------|
+| 0 | Safe | `apps`, `calendar`, `system_stats`, `web_search` |
+| 1 | Reversible | `browser`, `files` |
+| 2 | Risky | `shell`, `interpreter`, `mouse_keyboard` |
+| 3 | Blocked | None currently registered |
+
 ---
 
 ## Kill Switch
@@ -126,6 +140,12 @@ Set `dry_run: true` in `config.yaml` to narrate all actions without executing.
 - Keyboard: `Ctrl+Alt+J`
 
 ---
+
+## Tests
+
+```bash
+python -m pytest tests/ -q
+```
 
 ## Running Tests
 
@@ -137,7 +157,7 @@ python -m pytest tests/ -m "not manual"
 python -m pytest tests/ -m manual
 ```
 
-Current checkpoint: Phase 0 is complete. Phase 1 voice modules, Piper setup, and manual hardware smoke tests pass; the final spoken loop (`hey jarvis, what time is it?` through wake word, VAD, STT, routing, streaming TTS, SFX, and self-suppression) still needs live confirmation before Phase 1 is closed.
+Current checkpoint: Phase 1 voice pipeline is fully validated on GPU. `dry_run` is disabled for normal operation, wake-word self-suppression is implemented, VAD is tuned, and `/health` plus `/health/tools` are live. The repo currently passes 130+ tests, and Phase 2 tool expansion is underway.
 
 ---
 

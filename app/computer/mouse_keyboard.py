@@ -1,77 +1,90 @@
 from __future__ import annotations
 
-import builtins
 from typing import Any
 
 from app.config import settings
 from app.logs.audit import audit
 
-SAFETY_LEVEL = 1
+SAFETY_LEVEL = 2
 DESCRIPTION = "Control mouse and keyboard via PyAutoGUI"
+SHORT_TEXT_LIMIT = 50
+
+try:
+    import pyautogui
+
+    pyautogui.FAILSAFE = True
+    pyautogui.PAUSE = 0.1
+except ImportError:
+    pyautogui = None
+
+
+def _dry_run_narration(action: str, params: dict[str, Any]) -> str:
+    return f"[DRY RUN] Would execute mouse_keyboard action '{action}' with params {params}"
 
 
 def _load_pyautogui() -> Any:
-    try:
-        return builtins.__import__("pyautogui")
-    except ImportError:
-        return None
-
-
-def click(x: int, y: int, button: str = "left") -> dict[str, Any]:
-    audit.log("tool_mouse_keyboard", {"action": "click", "dry_run": settings.safety.dry_run})
-    if settings.safety.dry_run:
-        return {"dry_run": True, "action": "click", "x": x, "y": y}
-
-    pyautogui = _load_pyautogui()
     if pyautogui is None:
-        return {"error": "pyautogui not installed: pip install pyautogui"}
-
-    pyautogui.click(x, y, button=button)
-    return {"action": "click", "x": x, "y": y, "button": button}
+        raise ImportError("pyautogui not installed: pip install pyautogui")
+    return pyautogui
 
 
-def type_text(text: str, interval: float = 0.05) -> dict[str, Any]:
-    audit.log("tool_mouse_keyboard", {"action": "type", "dry_run": settings.safety.dry_run})
-    if settings.safety.dry_run:
-        return {"dry_run": True, "action": "type", "text": text}
-
-    pyautogui = _load_pyautogui()
-    if pyautogui is None:
-        return {"error": "pyautogui not installed: pip install pyautogui"}
-
-    pyautogui.typewrite(text, interval=interval)
-    return {"action": "type", "chars": len(text)}
+def _coerce_int(params: dict[str, Any], key: str) -> int:
+    return int(params[key])
 
 
-def hotkey(*keys: str) -> dict[str, Any]:
-    audit.log("tool_mouse_keyboard", {"action": "hotkey", "dry_run": settings.safety.dry_run})
-    if settings.safety.dry_run:
-        return {"dry_run": True, "action": "hotkey", "keys": list(keys)}
-
-    pyautogui = _load_pyautogui()
-    if pyautogui is None:
-        return {"error": "pyautogui not installed: pip install pyautogui"}
-
-    pyautogui.hotkey(*keys)
-    return {"action": "hotkey", "keys": list(keys)}
+def _maybe_position(params: dict[str, Any]) -> tuple[int, int] | None:
+    if "x" in params and "y" in params:
+        return (_coerce_int(params, "x"), _coerce_int(params, "y"))
+    return None
 
 
-def execute(params: dict[str, Any]) -> dict[str, Any]:
+def execute(params: dict[str, Any]) -> dict[str, Any] | str:
     action = str(params.get("action") or "").strip().lower()
-    if action == "click":
-        return click(
-            int(params.get("x", 0)),
-            int(params.get("y", 0)),
-            str(params.get("button", "left")),
-        )
-    if action == "type":
-        return type_text(
-            str(params.get("text", "")),
-            float(params.get("interval", 0.05)),
-        )
-    if action == "hotkey":
-        keys = params.get("keys", [])
-        if isinstance(keys, str):
-            keys = [keys]
-        return hotkey(*[str(key) for key in keys])
-    return {"error": "unknown action"}
+    audit.log("tool_mouse_keyboard", {"action": action, "params": params, "dry_run": settings.safety.dry_run})
+
+    if settings.safety.dry_run:
+        return _dry_run_narration(action, params)
+
+    try:
+        gui = _load_pyautogui()
+
+        if action == "move":
+            gui.moveTo(_coerce_int(params, "x"), _coerce_int(params, "y"), duration=0.2)
+        elif action == "click":
+            position = _maybe_position(params)
+            if position is None:
+                gui.click()
+            else:
+                gui.click(*position)
+        elif action == "double_click":
+            gui.doubleClick(_coerce_int(params, "x"), _coerce_int(params, "y"))
+        elif action == "right_click":
+            gui.rightClick(_coerce_int(params, "x"), _coerce_int(params, "y"))
+        elif action == "type":
+            text = str(params.get("text") or "")
+            if len(text) <= SHORT_TEXT_LIMIT:
+                gui.typewrite(text, interval=0.05)
+            else:
+                gui.write(text, interval=0.05)
+        elif action == "key":
+            keys = params.get("keys")
+            if isinstance(keys, list):
+                gui.hotkey(*[str(key) for key in keys])
+            else:
+                key = params.get("key", keys)
+                gui.press(str(key))
+        elif action == "scroll":
+            clicks = int(params.get("clicks", 0))
+            position = _maybe_position(params)
+            if position is None:
+                gui.scroll(clicks)
+            else:
+                gui.scroll(clicks, x=position[0], y=position[1])
+        elif action == "drag":
+            gui.dragTo(_coerce_int(params, "x"), _coerce_int(params, "y"), duration=0.5)
+        else:
+            return {"error": "unknown action"}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)}
+
+    return {"success": True, "action": action}

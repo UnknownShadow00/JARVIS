@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import threading
 
+from app.brain.llm_client import OllamaConnectionError
 from app.logs.audit import audit
 from app.server import _process, _process_stream
 from app.voice.sounds import sounds
@@ -18,7 +19,7 @@ class VoicePipeline:
     def __init__(self) -> None:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
-        self.listen_timeout_seconds = 1.0
+        self.listen_timeout_seconds = 3.0
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -74,6 +75,11 @@ class VoicePipeline:
                     await tts.speak(reply)
 
                 audit.log("voice_reply", {"intent": intent.intent, "reply": reply})
+            except OllamaConnectionError as exc:
+                is_listening = False
+                audit.log("voice_pipeline_error", {"error": str(exc)})
+                sounds.play("error")
+                await tts.speak("Ollama is unreachable, sir. Standing by until the model is back.")
             except Exception as exc:
                 is_listening = False
                 audit.log("voice_pipeline_error", {"error": str(exc)})

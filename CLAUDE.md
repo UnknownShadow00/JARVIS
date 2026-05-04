@@ -403,12 +403,12 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 ### Phase 1 Done When:
 - [ ] Boot sequence: music → animation → morning report → HUD live
 - [ ] Morning report: time + GPU temp + last project + task count
-- [ ] Wake word fires in workshop environment (fan noise present)
+- [x] Wake word fires in workshop environment (fan noise present)
 - [ ] Push-to-talk fallback works
-- [ ] STT transcribes accurately, sub 0.5s on GPU
-- [ ] TTS starts before full sentence generated (streaming)
+- [x] STT transcribes accurately, sub 0.5s on GPU
+- [x] TTS starts before full sentence generated (streaming)
 - [ ] Self-suppression confirmed — JARVIS never hears itself (10 tests)
-- [ ] UI sound effects at every pipeline state
+- [x] UI sound effects at every pipeline state
 - [ ] Verbal error recovery speaks on Ollama disconnect
 - [ ] Emergency stop works mid-response
 
@@ -429,26 +429,20 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        1 — IN PROGRESS (Phase 2 tools complete; Phase 3-5 stubs scaffolded)
-Last built:   app/tools/browser.py (L1 — open/search URLs),
-              app/computer/vision.py (Qwen3-VL stub, Phase 4 placeholder),
-              app/memory/memory_client.py (Mem0 stub, Phase 4),
-              app/memory/rag_client.py (ChromaDB stub, Phase 4),
-              app/comms/discord_bot.py (Discord stub, Phase 5),
-              app/comms/telegram_bot.py (Telegram stub, Phase 5),
-              app/agent/task_queue.py (AgentTask queue, Phase 5),
-              app/agent/scheduler.py (ScheduledJob cron stub, Phase 5),
-              app/brain/router.py (5 new deterministic rules + updated LLM prompt),
-              + all Phase 1-2 files from prior session
-Last tested:  python -m pytest -m "not manual" (83 passed, 6 deselected)
-Hardware:     4070 Ti active (5090 arriving soon)
-Active model: qwen3:14b (upgrade to qwen3:32b when 5090 arrives)
-Next:         Run wake_diag.py to tune sensitivity, then live spoken loop acceptance:
-              "hey jarvis, what time is it?" through wake→VAD→STT→router→TTS.
-              Full Phase 1 acceptance gate still requires live hardware voice test.
-Notes:        dry_run=true in config.yaml. All Phase 2 tools registered in registry.py.
-              Router now routes: shell, calendar, interpreter, browser, screenshot, vision.
-              Phase 3-5 modules are stubs — all return {'stub': True} until hardware/deps arrive.
+Phase:        1 — IN PROGRESS (full voice pipeline validated end-to-end on GPU)
+Last built:   no new files this session
+Last tested:  Full live voice loop: wake word → VAD → STT (CUDA float16) → LLM (GPU) →
+              streaming TTS (piper, 3 sentences) → SFX done.wav → voice_listening.
+              Confirmed: tts_synthesized, tts_stop, voice_reply all fire correctly.
+Hardware:     4070 Ti active (5090 arriving soon). Ollama updated 0.21.0 → 0.22.1.
+              qwen3:14b now fully GPU-offloaded (~10.5GB VRAM). torch 2.11.0+cu128.
+Active model: qwen3:14b on GPU
+Next:         Self-suppression test (10x — wake word fires after tts_stop, needs muting).
+              Push-to-talk fallback. Verbal error recovery on Ollama disconnect.
+              Emergency stop mid-response. Then flip dry_run=false and test live tools.
+Notes:        dry_run=true in config.yaml. CUDA 13.2 installed; PyTorch and Ollama both
+              updated to support it. Wake word immediately re-fires after TTS ends —
+              self-suppression (is_speaking guard) needs validation before going live.
               GitHub: UnknownShadow00/JARVIS, main branch.
 ```
 

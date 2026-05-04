@@ -86,7 +86,11 @@ def build_prompt(
 
     final_user_message = user_message
     if context:
-        final_user_message = f"Context:\n{context}\n\nUser request:\n{user_message}"
+        final_user_message = (
+            f"Tool output (use only what is directly relevant — do NOT repeat raw data, "
+            f"URLs, or verbose details — answer in 1 short spoken sentence):\n{context}\n\n"
+            f"User request:\n{user_message}"
+        )
 
     return [
         {"role": "system", "content": system_prompt},

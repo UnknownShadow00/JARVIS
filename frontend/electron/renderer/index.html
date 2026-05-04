@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JARVIS HUD</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel-bg: rgba(0, 0, 0, 0.85);
+        --panel-border: rgba(120, 220, 255, 0.35);
+        --accent: #7ee7ff;
+        --text: #ffffff;
+        --muted: #98b8c7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--text);
+        font-family: "Consolas", "Courier New", monospace;
+      }
+
+      .hud {
+        width: min(360px, calc(100vw - 24px));
+        min-height: 220px;
+        padding: 20px;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        box-shadow:
+          0 0 24px rgba(64, 196, 255, 0.25),
+          inset 0 0 18px rgba(126, 231, 255, 0.08);
+        backdrop-filter: blur(10px);
+      }
+
+      .label {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      #status {
+        margin-bottom: 18px;
+        font-size: 20px;
+        font-weight: 700;
+        text-shadow: 0 0 12px rgba(126, 231, 255, 0.55);
+      }
+
+      #message {
+        min-height: 88px;
+        padding: 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      #listening {
+        display: none;
+        margin-top: 14px;
+        color: var(--accent);
+        font-size: 13px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      #listening.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="hud">
+      <p class="label">Stark Industries Tactical Interface</p>
+      <div id="status">JARVIS ONLINE</div>
+      <div id="message">Awaiting response...</div>
+      <div id="listening">Listening...</div>
+    </main>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const status = document.getElementById("status");
+        const message = document.getElementById("message");
+        const listening = document.getElementById("listening");
+
+        window.jarvis.onMessage((payload) => {
+          if (!payload || typeof payload !== "object") {
+            return;
+          }
+
+          if (payload.type === "reply") {
+            status.textContent = "JARVIS ONLINE";
+            message.textContent = payload.text || "";
+          }
+
+          if (payload.type === "listening") {
+            listening.classList.toggle("active", Boolean(payload.active));
+            status.textContent = payload.active ? "JARVIS LISTENING" : "JARVIS ONLINE";
+          }
+        });
+
+        window.jarvis.connectWS();
+      });
+    </script>
+  </body>
+</html>

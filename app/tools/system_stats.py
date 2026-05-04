@@ -5,12 +5,17 @@ from typing import Any
 
 import psutil
 
+from app.config import settings
+
 SAFETY_LEVEL = 0
 DESCRIPTION = "Return current CPU, RAM, disk, GPU, and top CPU process statistics."
 
 
-def execute(params: dict[str, Any]) -> dict[str, Any]:
+def execute(params: dict[str, Any]) -> dict[str, Any] | str:
     """Return current system utilization and the top CPU-consuming processes."""
+    if settings.safety.dry_run:
+        return "[DRY RUN] Would collect system statistics."
+
     cpu = psutil.cpu_percent(interval=0.5)
     ram = psutil.virtual_memory()
     disk = psutil.disk_usage("/")

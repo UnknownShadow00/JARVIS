@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 from app.config import settings
@@ -14,6 +15,8 @@ from app.logs.audit import audit
 from app.voice.sounds import sounds
 
 is_speaking = False
+cooldown_until: float = 0.0
+_COOLDOWN_SECONDS: float = 2.0
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -57,6 +60,8 @@ class TTSEngine:
             if not self._stop_event.is_set():
                 sounds.play("done")
         finally:
+            global cooldown_until
+            cooldown_until = time.monotonic() + _COOLDOWN_SECONDS
             is_speaking = False
             audit.log("tts_stop", {"stopped": self._stop_event.is_set()})
 
@@ -76,7 +81,7 @@ class TTSEngine:
 
         try:
             async for token in self._iterate_tokens(tokens):
-                if self._stop_event.is_set():
+                if self._stop_event.is_set() or spoken_sentences >= 2:
                     break
 
                 buffer += token
@@ -87,14 +92,18 @@ class TTSEngine:
                     await self._speak_sentence(sentence)
                     spoken_sentences += 1
                     buffer = remainder
+                    if spoken_sentences >= 2:
+                        break
 
-            if not self._stop_event.is_set() and buffer.strip():
+            if not self._stop_event.is_set() and spoken_sentences < 2 and buffer.strip():
                 await self._speak_sentence(buffer.strip())
                 spoken_sentences += 1
 
             if spoken_sentences and not self._stop_event.is_set():
                 sounds.play("done")
         finally:
+            global cooldown_until
+            cooldown_until = time.monotonic() + _COOLDOWN_SECONDS
             is_speaking = False
             audit.log("tts_stop", {"stopped": self._stop_event.is_set(), "streaming": True})
 

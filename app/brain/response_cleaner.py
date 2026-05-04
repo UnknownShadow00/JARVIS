@@ -5,6 +5,8 @@ import re
 
 from app.config import settings
 
+_ACTION_TAG_RE = re.compile(r"\[(?:ACTION|EMOTION):[^\]]*\]", re.IGNORECASE)
+
 _MARKDOWN_PATTERNS = [
     re.compile(r"```[\s\S]*?```"),
     re.compile(r"`([^`]+)`"),
@@ -32,7 +34,9 @@ _BANNED_OPENERS = [
 
 
 def clean(text: str) -> str:
-    """Strip markdown and enforce voice output rules."""
+    """Strip action tags, markdown, and enforce voice output rules."""
+    text = _ACTION_TAG_RE.sub("", text)
+
     for pattern in _MARKDOWN_PATTERNS:
         text = pattern.sub(r"\1" if pattern.groups else " ", text)
 

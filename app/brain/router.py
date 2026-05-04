@@ -146,6 +146,9 @@ class IntentRouter:
         if re.search(r"\b(webcam|camera|see on my screen|look at)\b", text):
             return RouterResult("vision", 0.95, "", "The request needs visual context.")
 
+        if re.search(r"\b(can'?t hear|can'?t listen|no audio|audio.*not working|not hearing|speak louder|too quiet|muted|sound.*issue)\b", text):
+            return RouterResult("respond", 0.92, "", "User is reporting an audio/hardware issue — answer directly.")
+
         if re.search(
             r"\b(remember|last project|yesterday|pending tasks|tasks.*pending|todo|hardware setup|what did i tell you|history)\b",
             text,

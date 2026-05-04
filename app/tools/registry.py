@@ -13,6 +13,7 @@ from app.tools import browser as browser_tool
 from app.tools import calendar as calendar_tool
 from app.tools import files as files_tool
 from app.tools import interpreter as interpreter_tool
+from app.tools import mouse_keyboard as mouse_keyboard_tool
 from app.tools import shell as shell_tool
 from app.tools import system_stats as system_stats_tool
 from app.tools import web_search as web_search_tool
@@ -25,6 +26,7 @@ TOOLS: dict[str, Any] = {
     "calendar": calendar_tool.execute,
     "files": files_tool.execute,
     "interpreter": interpreter_tool.execute,
+    "mouse_keyboard": mouse_keyboard_tool.execute,
     "shell": shell_tool.execute,
     "system_stats": system_stats_tool.execute,
     "web_search": web_search_tool.execute,
@@ -65,6 +67,7 @@ class ToolRegistry:
             "calendar": calendar_tool,
             "files": files_tool,
             "interpreter": interpreter_tool,
+            "mouse_keyboard": mouse_keyboard_tool,
             "shell": shell_tool,
             "system_stats": system_stats_tool,
             "web_search": web_search_tool,
@@ -87,6 +90,10 @@ class ToolRegistry:
         if name not in self._tools:
             raise ToolError(f"Unknown tool: {name!r}")
         return self._tools[name]
+
+    def get(self, name: str) -> ModuleType | None:
+        """Return a loaded tool module by name, or None if absent."""
+        return self._tools.get(name)
 
     def list_tools(self) -> list[dict[str, Any]]:
         """Return metadata for all loaded tools."""

@@ -47,6 +47,10 @@ async def boot_sequence(*, start_server: bool = True, start_hud: bool = True, st
     return report
 
 
+async def run_boot_sequence() -> str:
+    return await boot_sequence(start_server=False, start_hud=True, start_voice=False)
+
+
 async def ensure_server_running() -> None:
     global SERVER_PROCESS
 
@@ -74,19 +78,19 @@ async def ensure_server_running() -> None:
 async def wait_for_ollama(timeout_seconds: float = 30.0) -> None:
     deadline = time.perf_counter() + timeout_seconds
     url = f"{settings.models.ollama_base_url}/api/tags"
+    last_error = "unknown"
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
-        while time.perf_counter() < deadline:
-            try:
-                response = await client.get(url)
-                response.raise_for_status()
-                audit.log("boot_ollama_ready", {})
-                return
-            except Exception as exc:
-                last_error = str(exc)
-                await asyncio.sleep(1)
+    while time.perf_counter() < deadline:
+        try:
+            response = await asyncio.to_thread(httpx.get, url, timeout=2.0)
+            response.raise_for_status()
+            audit.log("boot_ollama_ready", {})
+            return
+        except Exception as exc:
+            last_error = str(exc)
+            await asyncio.sleep(1)
 
-    raise OllamaConnectionError(f"Ollama did not respond within {timeout_seconds}s: {last_error}")
+    audit.log("boot_ollama_timeout", {"timeout_seconds": timeout_seconds, "error": last_error})
 
 
 def start_electron_hud() -> None:
@@ -96,8 +100,11 @@ def start_electron_hud() -> None:
         audit.log("boot_hud_skipped", {"reason": "package_json_missing", "path": str(package_json)})
         return
 
-    subprocess.Popen(["npm", "start"], cwd=hud_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
-    audit.log("boot_hud_started", {"path": str(hud_dir)})
+    try:
+        subprocess.Popen(["npm", "start"], cwd=hud_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+        audit.log("boot_hud_started", {"path": str(hud_dir)})
+    except FileNotFoundError as exc:
+        audit.log("boot_hud_skipped", {"reason": "launcher_missing", "error": str(exc)})
 
 
 def send_hud_event(event: dict[str, str]) -> None:

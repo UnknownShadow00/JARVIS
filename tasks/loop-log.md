@@ -212,3 +212,61 @@
 - Files changed: app/agent/task_queue.py, app/agent/scheduler.py, tests/test_agent_stubs.py, tasks/loop-log.md
 - Result: Pass. `python -m pytest tests/test_agent_stubs.py -v` passed 7/7.
 - Next: Replace the in-memory stub behavior with persistent queueing and a real scheduling loop when Phase 5 autonomous execution is implemented.
+## [2026-05-03T17:55:52.3965126-05:00] Task Completed
+- Task: Added unit tests for the apps, files, web_search, and system_stats tools, plus the minimal tool/registry behavior needed for the new coverage expectations.
+- Files changed: app/tools/apps.py, app/tools/files.py, app/tools/web_search.py, app/tools/system_stats.py, app/tools/registry.py, tests/test_apps_tool.py, tests/test_files_tool.py, tests/test_web_search_tool.py, tests/test_system_stats_tool.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_apps_tool.py tests/test_files_tool.py tests/test_web_search_tool.py tests/test_system_stats_tool.py -q` passed 18/18 and `python -m pytest tests/ -q --tb=short` passed 107/107.
+- Next: No immediate follow-up needed.
+## [2026-05-03T21:18:14-05:00] Task Completed
+- Task: Created `tests/test_self_suppression.py` to verify wake-word self-suppression during TTS speaking and cooldown, plus recovery after suppression ends.
+- Files changed: tests/test_self_suppression.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_self_suppression.py -v` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 110/110.
+- Next: No immediate follow-up needed.
+## [2026-05-03T21:20:08.9921176-05:00] Task Completed
+- Task: Created `tests/test_ptt_and_killswitch.py` with integration tests for push-to-talk bypass/listening sound behavior and kill switch trigger/reset/callback/idempotency.
+- Files changed: tests/test_ptt_and_killswitch.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_ptt_and_killswitch.py -v` passed 6/6 and `python -m pytest tests/ -q --tb=short` passed 116/116.
+- Next: No immediate follow-up needed.
+
+## [2026-05-03 16:29 CDT] Task Completed
+- Task: Added async boot integration tests and updated boot sequence compatibility for graceful degraded startup.
+- Files changed: app/boot.py, tests/test_boot_integration.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; targeted boot integration tests and full pytest suite passed.
+- Next: None.
+
+## [2026-05-03T21:30:52-05:00] Task Completed
+- Task: Added startup config validation checks, startup logging hook, and tests for missing Piper/Ollama scenarios.
+- Files changed: app/config_check.py, app/main.py, tests/test_config_check.py
+- Result: pass against acceptance criteria; targeted config-check tests and full pytest suite passed.
+- Next: No immediate follow-up required.
+## [2026-05-03T21:33:15-05:00] Task Completed
+- Task: Created the tools health check module, added the GET /health/tools server route, and added targeted pytest coverage for the checks and route.
+- Files changed: app/tools/health_check.py, app/server.py, tests/test_health_check.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_health_check.py -v` passed 6/6 and `python -m pytest tests/ -q --tb=short` passed 130/130.
+- Next: No immediate follow-up needed.
+
+## [2026-05-03T21:36:00-05:00] Task Completed
+- Task: Created tests/test_vad_timeout.py with 3 pytest tests covering VAD no-speech timeout behavior, bytes return type, and fast exit timing.
+- Files changed: tests/test_vad_timeout.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/test_vad_timeout.py -q passed 3/3; file length is 20 lines and matches the requested mocking approach.
+- Next: No immediate follow-up needed.
+## [2026-05-03T21:37:49.0964759-05:00] Task Completed
+- Task: Created `tests/test_server_integration.py` with FastAPI `TestClient` integration coverage for `/health`, `/health/tools`, `/chat` respond/tool/dry-run flows, and missing-message validation.
+- Files changed: tests/test_server_integration.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_server_integration.py -q` passed 6/6.
+- Next: No immediate follow-up needed.
+## [2026-05-03 21:39:59 -05:00] Task Completed
+- Task: Replaced the `app/computer/mouse_keyboard.py` stub with a real PyAutoGUI-backed dispatcher, added registry wiring as `mouse_keyboard`, and updated the mouse/keyboard tests for safety, dry-run, PyAutoGUI calls, and registration.
+- Files changed: app/computer/mouse_keyboard.py, app/tools/mouse_keyboard.py, app/tools/registry.py, tests/test_mouse_keyboard.py, tasks/loop-log.md
+- Result: Pass. `pytest tests/test_mouse_keyboard.py -q` passed 6/6.
+- Next: No immediate follow-up needed.
+## [2026-05-03 21:41:56 -05:00] Task Completed
+- Task: Updated README.md to reflect the current JARVIS project status, phase progress, quick start steps, tool safety levels, current checkpoint, and pytest command.
+- Files changed: README.md, tasks/loop-log.md
+- Result: Pass against acceptance criteria.
+- Next: None.
+## [2026-05-03T21:43:26.5192399-05:00] Task Completed
+- Task: Created the Electron HUD scaffold under frontend/electron with Electron main/preload files, a transparent overlay renderer, and a short setup README.
+- Files changed: frontend/electron/package.json, frontend/electron/main.js, frontend/electron/preload.js, frontend/electron/renderer/index.html, frontend/electron/README.md, tasks/loop-log.md
+- Result: Pass against acceptance criteria. Scaffold files were created as requested and no npm install was run.
+- Next: Install dependencies in frontend/electron and start the JARVIS server on port 8000 before launching the HUD.
