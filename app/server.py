@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import datetime
+import asyncio
 import json
 import re
 import time
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -50,6 +53,7 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+_pending_confirmations: dict[str, dict] = {}
 
 
 @asynccontextmanager
@@ -203,7 +207,36 @@ async def _process(message: str):  # type: ignore[return]
                 return dry_run_narration(tool_name, params), intent_result
             context = str(result.output)[:1000]
         except ToolError as exc:
-            context = str(exc)
+            if _is_confirmation_required_error(exc):
+                request_id = str(uuid.uuid4())[:8]
+                _pending_confirmations[request_id] = {"tool": tool_name, "params": params}
+                approval_msg = (
+                    f"JARVIS approval required [{request_id}]: Run {tool_name} "
+                    f"with {params}? POST /confirm/{request_id} to approve."
+                )
+                try:
+                    from app.comms.discord_bot import discord_bot
+                    from app.comms.telegram_bot import telegram_bot
+
+                    tasks = []
+                    if getattr(settings.comms, "discord_channel_id", None):
+                        tasks.append(discord_bot.send_message(approval_msg))
+                    if getattr(settings.comms, "telegram_chat_id", None):
+                        tasks.append(telegram_bot.send_message(approval_msg))
+                    if tasks:
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                except Exception:
+                    pass
+                audit.log(
+                    "approval_gate_triggered",
+                    {"request_id": request_id, "tool": tool_name, "params": params},
+                )
+                context = (
+                    f"Confirmation request sent to your devices, sir. "
+                    f"Use /confirm/{request_id} to approve."
+                )
+            else:
+                context = str(exc)
 
         messages = build_prompt(message, context=context)
         try:
@@ -230,6 +263,47 @@ async def _process(message: str):  # type: ignore[return]
         raw_reply = f"Unable to reach Ollama at the moment, sir. {exc}"
 
     return clean(str(raw_reply)), intent_result
+
+
+def _is_confirmation_required_error(exc: ToolError) -> bool:
+    message = str(exc)
+    return "Requires user confirmation" in message or "confirmation" in message.lower()
+
+
+@app.post("/confirm/{request_id}", response_model=None)
+async def confirm_request(request_id: str) -> Any:
+    pending = _pending_confirmations.pop(request_id, None)
+    if pending is None:
+        return JSONResponse(status_code=404, content={"error": "Unknown or expired request"})
+
+    tool_name = str(pending["tool"])
+    params = dict(pending["params"])
+
+    try:
+        result = registry.call(tool_name, params, confirmed=True)
+    except ToolError as exc:
+        return {"error": str(exc)}
+
+    done_msg = f"JARVIS approved [{request_id}]: {tool_name} executed. Result: {str(result.output)[:200]}"
+    try:
+        from app.comms.discord_bot import discord_bot
+        from app.comms.telegram_bot import telegram_bot
+
+        tasks = []
+        if getattr(settings.comms, "discord_channel_id", None):
+            tasks.append(discord_bot.send_message(done_msg))
+        if getattr(settings.comms, "telegram_chat_id", None):
+            tasks.append(telegram_bot.send_message(done_msg))
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception:
+        pass
+
+    audit.log(
+        "approval_gate_confirmed",
+        {"request_id": request_id, "tool": tool_name, "output": str(result.output)[:500]},
+    )
+    return {"confirmed": True, "tool": tool_name, "output": str(result.output)}
 
 
 async def _process_stream(message: str):  # type: ignore[return]

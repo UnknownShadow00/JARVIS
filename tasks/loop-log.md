@@ -325,3 +325,33 @@
 - Result: Pass. `python -m pytest tests/test_yolo_detector.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 180/180. YOLO remains lazy-loaded and the module stays safe when `ultralytics` is not installed.
 - Next: None.
 
+## [2026-05-04T16:03:23-05:00] Task Completed
+- Task: Wired real Discord REST sending into `app/comms/discord_bot.py`, preserved start/stop as audit-only stubs, and added focused Discord bot tests for disabled, missing-library, missing-token, and success paths.
+- Files changed: app/comms/discord_bot.py, tests/test_discord_bot.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_discord_bot.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 184/184. The implementation uses `httpx` with a background-thread offload, logs every send attempt, and tests make no real HTTP calls.
+- Next: No immediate follow-up needed. Phase 6 can replace the audit-only lifecycle stubs with a real Discord listener if required.
+
+## [2026-05-04T16:05:44-05:00] Task Completed
+- Task: Wired real Telegram REST sending into `app/comms/telegram_bot.py`, verified `telegram_chat_id` already exists in `app/config.py`, and added focused Telegram bot tests for disabled, missing-library, missing-token, and success paths.
+- Files changed: app/comms/telegram_bot.py, tests/test_telegram_bot.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_telegram_bot.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 188/188.
+- Next: No immediate follow-up needed. Phase 6 can replace the audit-only lifecycle stubs with a real Telegram listener if required.
+
+## [2026-05-04T16:08:10-05:00] Task Completed
+- Task: Created `app/agent/reporter.py` with async status and morning report generation plus Discord/Telegram dispatch, and added async pytest coverage in `tests/test_reporter.py`.
+- Files changed: app/agent/reporter.py, tests/test_reporter.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_reporter.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 192/192.
+- Next: No immediate follow-up needed.
+
+## [2026-05-04T16:10:14-05:00] Task Completed
+- Task: Wired real APScheduler cron execution into `app/agent/scheduler.py`, preserved the no-APScheduler fallback path, and added focused scheduler tests in `tests/test_scheduler.py`.
+- Files changed: app/agent/scheduler.py, tests/test_scheduler.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_scheduler.py -q` passed 5/5 and `python -m pytest tests/ -q --tb=short` passed 197/197. Scheduled runs queue work through `task_queue.add_task()` instead of executing goals directly.
+- Next: No immediate follow-up needed.
+
+## [2026-05-04T16:18:29-05:00] Task Completed
+- Task: Added approval-gate pending confirmation handling in `app/server.py`, created the `POST /confirm/{request_id}` endpoint, and added focused approval-gate tests.
+- Files changed: app/server.py, tests/test_approval_gates.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_approval_gates.py -q` passed 5/5 and `python -m pytest tests/ -q --tb=short` passed 202/202.
+- Next: No immediate follow-up needed.
+
