@@ -1,9 +1,10 @@
 """FastAPI server — /health, /chat (REST), /ws (WebSocket)."""
 from __future__ import annotations
 
-import datetime
 import asyncio
+import datetime
 import json
+import os
 import re
 import time
 import uuid
@@ -12,8 +13,9 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.brain.direct_responder import try_direct_reply
@@ -22,6 +24,7 @@ from app.brain.llm_client import OllamaConnectionError, llm_client
 from app.brain.prompts import build_prompt
 from app.brain.response_cleaner import clean, dry_run_narration
 from app.brain.router import router as intent_router
+from app.agent.sensor_store import add_reading, get_readings, list_nodes
 from app.config import settings
 from app.logs.audit import audit
 from app.tools.health_check import check_tools
@@ -72,6 +75,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
+_pwa_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "pwa")
+if os.path.isdir(_pwa_dir):
+    app.mount("/pwa", StaticFiles(directory=_pwa_dir, html=True), name="pwa")
 _STARTED_AT = time.time()
 
 app.add_middleware(
@@ -100,6 +106,12 @@ class ChatResponse(BaseModel):
     active: bool
 
 
+class SensorReading(BaseModel):
+    node_id: str
+    readings: dict[str, float]
+    metadata: dict[str, Any] | None = None
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     return {
@@ -117,6 +129,18 @@ async def health_tools() -> dict[str, bool]:
     return check_tools()
 
 
+@app.get("/network/status")
+async def network_status() -> dict[str, Any]:
+    from app.network.tailscale import get_status
+
+    audit.log("network_status_check", {})
+    return {
+        "tailscale": get_status(),
+        "server_host": settings.server.host,
+        "server_port": settings.server.port,
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     reply, intent_result = await _process(req.message)
@@ -127,6 +151,23 @@ async def chat(req: ChatRequest) -> ChatResponse:
         dry_run=settings.safety.dry_run,
         active=is_active(),
     )
+
+
+@app.post("/sensors/data")
+async def receive_sensor_data(reading: SensorReading) -> dict[str, Any]:
+    add_reading(reading.node_id, {"readings": reading.readings, "metadata": reading.metadata or {}})
+    audit.log("sensor_data_received", {"node_id": reading.node_id, "readings": reading.readings})
+    return {"received": True, "node_id": reading.node_id}
+
+
+@app.get("/sensors/{node_id}")
+async def sensor_readings(node_id: str, limit: int = 10) -> dict[str, Any]:
+    return {"node_id": node_id, "readings": get_readings(node_id, limit)}
+
+
+@app.get("/sensors")
+async def sensors() -> dict[str, list[str]]:
+    return {"nodes": list_nodes()}
 
 
 # ------------------------------------------------------------------

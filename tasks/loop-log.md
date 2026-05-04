@@ -355,3 +355,27 @@
 - Result: Pass. `python -m pytest tests/test_approval_gates.py -q` passed 5/5 and `python -m pytest tests/ -q --tb=short` passed 202/202.
 - Next: No immediate follow-up needed.
 
+## [2026-05-04T16:22:22-05:00] Task Completed
+- Task: Created the phone PWA in `frontend/pwa/`, mounted it at `/pwa` in `app/server.py`, added PWA serving tests, and documented the required `frontend/pwa/icon.png` asset in `README.md`.
+- Files changed: app/server.py, frontend/pwa/index.html, frontend/pwa/app.js, frontend/pwa/manifest.json, frontend/pwa/sw.js, README.md, tests/test_pwa_serve.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_pwa_serve.py -q` passed 2/2 and `python -m pytest tests/ -q --tb=short` passed 204/204.
+- Next: Add `frontend/pwa/icon.png` as a 192x192 PNG when the final mobile install asset is ready.
+
+## [2026-05-04T16:25:00-05:00] Task Completed
+- Task: Added Tailscale network status support with a new `app/network/tailscale.py` module, a `GET /network/status` FastAPI endpoint, config schema support for `server.tailscale_hostname`, and focused pytest coverage.
+- Files changed: app/config.py, app/network/__init__.py, app/network/tailscale.py, app/server.py, config.yaml, tests/test_tailscale.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_tailscale.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 208/208.
+- Next: Fill in `server.tailscale_hostname` in `config.yaml` with the actual machine name when ready.
+
+## [2026-05-04 16:33:00 -05:00] Task Completed
+- Task: Built the Phase 6 Raspberry Pi sensor node feature with an in-memory sensor store, FastAPI sensor endpoints, a standalone Pi sender script, and pytest coverage for store and endpoint behavior.
+- Files changed: app/agent/sensor_store.py, app/server.py, scripts/sensor_node.py, tests/test_sensor_store.py, tests/test_sensor_endpoints.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_sensor_store.py tests/test_sensor_endpoints.py -q` passed 7/7 and `python -m pytest tests/ -q --tb=short` passed 215/215.
+- Next: No immediate follow-up needed unless live Pi/Tailscale integration testing surfaces network-specific issues.
+
+## [2026-05-04T16:30:47-05:00] Task Completed
+- Task: Added Meta Glasses hands-free mode and audio output controls to the PWA, bumped the service worker cache, and added regression tests for the new glasses mode UI/logic.
+- Files changed: frontend/pwa/index.html, frontend/pwa/app.js, frontend/pwa/sw.js, tests/test_pwa_glasses.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/test_pwa_glasses.py -q passed 2/2 and python -m pytest tests/ -q --tb=short passed 217/217.
+- Next: Validate the always-listening loop on a real Android/Chrome + Meta Glasses pairing to confirm browser-specific microphone restart behavior.
+

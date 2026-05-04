@@ -159,6 +159,10 @@ python -m pytest tests/ -m manual
 
 Current checkpoint: Phase 1 voice pipeline is fully validated on GPU. `dry_run` is disabled for normal operation, wake-word self-suppression is implemented, VAD is tuned, and `/health` plus `/health/tools` are live. The repo currently passes 130+ tests, and Phase 2 tool expansion is underway.
 
+## Phone PWA
+
+The phone PWA is served at `/pwa` when `frontend/pwa/` exists. Add a `192x192` PNG icon at `frontend/pwa/icon.png` before installing it on a device.
+
 ---
 
 ## License

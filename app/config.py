@@ -65,6 +65,7 @@ class ServerConfig(StrictModel):
     port: int
     websocket_path: str
     cors_origins: list[str]
+    tailscale_hostname: str
 
 
 class MemoryConfig(StrictModel):
