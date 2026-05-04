@@ -429,19 +429,24 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        2 — COMPLETE (tools, tests, health checks, HUD scaffold all shipped)
-Last built:   frontend/electron/ scaffold, app/tools/mouse_keyboard.py (real PyAutoGUI),
-              app/tools/health_check.py, app/config_check.py
-Last tested:  139 tests passing. Full suite: pytest tests/ -q --tb=short
-              Includes: self-suppression, PTT/kill-switch, boot integration, server REST,
-              VAD timeout, config check, health check, tool unit tests (all 8 tools).
+Phase:        3 — COMPLETE (PC control tools, safety gate, verifier, WS broadcast, tests)
+Last built:   app/computer/safety.py, app/computer/verifier.py, app/computer/gesture.py,
+              app/tools/screenshot.py, app/tools/vision.py, app/tools/computer_use.py,
+              app/server.py (ConnectionManager + typed WS), app/tools/shell.py (dry_run)
+Last tested:  162 tests passing. Full suite: pytest tests/ -q --tb=short
+              Includes: computer safety gate, post-action verifier, gesture stub,
+              screenshot/vision/computer_use tools, shell/interpreter dry_run, 5 Phase 3
+              integration tests (/chat + /ws with mocked router/registry/llm).
 Hardware:     4070 Ti active (5090 arriving soon).
 Active model: qwen3:14b on GPU
-Next:         Phase 3 — PC Control. Open Interpreter wiring, open-computer-use,
-              Electron HUD npm install + connect to live server, Hermes Agent (after 5090).
-Notes:        dry_run=false (live tool execution active). All Phase 1 + Phase 2 acceptance
-              criteria met. Electron HUD scaffold at frontend/electron/ — needs npm install.
-              GitHub: UnknownShadow00/JARVIS, main branch.
+Next:         Phase 4 — Workshop Brain. Screen/webcam vision (Qwen3-VL), Mem0, ChromaDB
+              RAG, YOLO object detection, DepthAnything depth maps. Also: Electron HUD
+              npm install + live server connect (manual step still pending).
+              Hermes Agent waits for 5090.
+Notes:        dry_run=false (live tool execution active). All Phase 1–3 acceptance criteria
+              met. gesture.py and computer_use.py are Phase 3 stubs — full wiring in Phase 4.
+              Electron HUD scaffold at frontend/electron/ — needs npm install.
+              GitHub: UnknownShadow00/JARVIS, main branch. Commit: 74d7971.
 ```
 
 > Update this section at the end of every Claude Code session.
