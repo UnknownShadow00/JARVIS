@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import base64
+from pathlib import Path
 from typing import Any
+
+import httpx
+
 
 from app.computer import screenshot
 from app.config import settings
@@ -37,19 +42,58 @@ class VisionClient:
 
         if source == VISION_SOURCE_SCREEN:
             image_path = screenshot.capture()
+            image_b64 = self._encode_file_to_base64(image_path)
         elif source == VISION_SOURCE_WEBCAM:
-            return {"error": "webcam not yet implemented", "phase": 4}
+            try:
+                import cv2
+            except ImportError:
+                return {
+                    "error": "opencv not installed",
+                    "install": "pip install opencv-python",
+                    "phase": 4,
+                }
+
+            capture = cv2.VideoCapture(0)
+            try:
+                ok, frame = capture.read()
+                if not ok:
+                    return {"error": "unable to capture webcam frame", "source": source}
+
+                ok, buffer = cv2.imencode(".jpg", frame)
+                if not ok:
+                    return {"error": "unable to encode webcam frame", "source": source}
+
+                image_path = None
+                image_b64 = base64.b64encode(buffer.tobytes()).decode("ascii")
+            finally:
+                capture.release()
         else:
             return {"error": f"unknown source: {source}"}
 
+        payload = {
+            "model": settings.models.vision,
+            "prompt": prompt,
+            "images": [image_b64],
+            "stream": False,
+        }
+        url = f"{settings.models.ollama_base_url}/api/generate"
+
+        try:
+            response = httpx.post(url, json=payload, timeout=httpx.Timeout(120.0))
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            return {"error": str(exc), "source": source}
+
         result = {
-            "stub": True,
-            "note": "Qwen3-VL integration in Phase 4",
             "source": source,
+            "analysis": response.json()["response"],
             "image_path": image_path,
         }
-        audit.log("tool_result", {"tool": "vision", "stub": True})
+        audit.log("tool_result", {"tool": "vision", "source": source, "image_path": image_path})
         return result
+
+    def _encode_file_to_base64(self, image_path: str) -> str:
+        return base64.b64encode(Path(image_path).read_bytes()).decode("ascii")
 
 
 vision_client = VisionClient()

@@ -300,3 +300,28 @@
 - Files changed: tests/test_phase3_integration.py, tasks/loop-log.md
 - Result: Pass. `pytest tests/test_phase3_integration.py -q` passed 5/5.
 - Next: None.
+
+## [2026-05-03T23:08:30-05:00] Task Completed
+- Task: Wired Qwen3-VL vision in app/computer/vision.py for screen and webcam sources via Ollama, updated the existing vision tests for the real response shape, and added Phase 4 VLM coverage.
+- Files changed: app/computer/vision.py, tests/test_vision.py, tests/test_vision_vlm.py, tasks/loop-log.md
+- Result: Pass. python -m pytest tests/test_vision_vlm.py -q passed 4/4 and python -m pytest tests/ -q --tb=short passed 166/166.
+- Next: None.
+
+## [2026-05-03 23:10:49 -05:00] Task Completed
+- Task: Wired real Mem0 availability handling into `app/memory/memory_client.py`, preserved graceful stub fallbacks when disabled or unavailable, and added targeted Mem0 client tests.
+- Files changed: app/memory/memory_client.py, tests/test_memory_client.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_memory_client.py -q` passed 5/5 and `python -m pytest tests/ -q --tb=short` passed 171/171. Module import remains graceful when `mem0ai` is not installed.
+- Next: None.
+
+## [2026-05-03T23:12:55.7600225-05:00] Task Completed
+- Task: Wired real ChromaDB lazy initialization into `app/memory/rag_client.py`, preserved stub fallback behavior when unavailable, added targeted RAG client tests, and fixed the older stub test to be environment-independent.
+- Files changed: app/memory/rag_client.py, tests/test_rag_client.py, tests/test_memory_stubs.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_rag_client.py -q` passed 5/5 and `python -m pytest tests/ -q --tb=short` passed 176/176. The module remains safe when `chromadb` is not installed.
+- Next: None.
+
+## [2026-05-03T23:16:00-05:00] Task Completed
+- Task: Created `app/computer/yolo_detector.py` with lazy-loaded Ultralytics YOLO detection, dry-run and missing-package fallbacks, and added targeted pytest coverage in `tests/test_yolo_detector.py`.
+- Files changed: app/computer/yolo_detector.py, tests/test_yolo_detector.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_yolo_detector.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 180/180. YOLO remains lazy-loaded and the module stays safe when `ultralytics` is not installed.
+- Next: None.
+

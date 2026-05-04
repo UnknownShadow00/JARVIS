@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from app.memory import rag_client as rag_module
 from app.memory.memory_client import memory_client
-from app.memory.rag_client import rag_client
 
 
 def test_memory_add_disabled() -> None:
@@ -22,14 +22,20 @@ def test_memory_get_all() -> None:
     assert "stub" in result
 
 
-def test_rag_index() -> None:
-    result = rag_client.index(["doc1", "doc2"])
+def test_rag_index(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", False)
+
+    client = rag_module.RAGClient()
+    result = client.index(["doc1", "doc2"])
 
     assert result["stub"] is True
     assert result["indexed"] == 2
 
 
-def test_rag_query() -> None:
-    result = rag_client.query("hello")
+def test_rag_query(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", False)
+
+    client = rag_module.RAGClient()
+    result = client.query("hello")
 
     assert "results" in result
