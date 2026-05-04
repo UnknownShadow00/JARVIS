@@ -102,7 +102,7 @@
 
           if (payload.type === "reply") {
             status.textContent = "JARVIS ONLINE";
-            message.textContent = payload.text || "";
+            message.textContent = payload.reply || payload.text || "";
           }
 
           if (payload.type === "listening") {

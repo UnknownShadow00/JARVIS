@@ -270,3 +270,33 @@
 - Files changed: frontend/electron/package.json, frontend/electron/main.js, frontend/electron/preload.js, frontend/electron/renderer/index.html, frontend/electron/README.md, tasks/loop-log.md
 - Result: Pass against acceptance criteria. Scaffold files were created as requested and no npm install was run.
 - Next: Install dependencies in frontend/electron and start the JARVIS server on port 8000 before launching the HUD.
+## [2026-05-03T21:53:58-05:00] Task Completed
+- Task: Created thin `screenshot` and `vision` tool wrappers, registered both in the tool registry, and added targeted pytest coverage for safety level, dry-run, registration, and delegated error handling.
+- Files changed: app/tools/screenshot.py, app/tools/vision.py, app/tools/registry.py, tests/test_screenshot_tool.py, tests/test_vision_tool.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_screenshot_tool.py tests/test_vision_tool.py -q` passed 8/8.
+- Next: No immediate follow-up needed.
+## [2026-05-03T21:57:21-05:00] Task Completed
+- Task: Created `app/computer/verifier.py` with screenshot-based post-action verification and added targeted pytest coverage for no-expectation, expectation-present, and screenshot failure paths.
+- Files changed: app/computer/verifier.py, tests/test_computer_verifier.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_computer_verifier.py -q` passed 3/3.
+- Next: No immediate follow-up needed.
+## [2026-05-03T22:01:47.9433880-05:00] Task Completed
+- Task: Added a WebSocket `ConnectionManager` to broadcast live HUD updates, updated the server WebSocket reply payload to include `type: 'reply'`, and aligned the Electron HUD to read the new `reply` field.
+- Files changed: app/server.py, frontend/electron/renderer/index.html, frontend/electron/preload.js, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/ -q --tb=short` passed 150/150.
+- Next: None.
+## [2026-05-03T22:06:30-05:00] Task Completed
+- Task: Created the Phase 3 MediaPipe gesture stub, added the thin `open-computer-use` wrapper, registered the tool, and added targeted pytest coverage.
+- Files changed: app/computer/gesture.py, app/tools/computer_use.py, app/tools/registry.py, tests/test_gesture.py, tests/test_computer_use_tool.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_gesture.py tests/test_computer_use_tool.py -q` passed 6/6.
+- Next: No immediate follow-up needed.
+## [2026-05-03 22:05:21 -05:00] Task Completed
+- Task: Added and aligned shell/interpreter tool tests, and updated shell tool dry-run behavior to satisfy the requested assertions
+- Files changed: app/tools/shell.py, tests/test_shell_tool.py, tests/test_interpreter_tool.py, tasks/loop-log.md
+- Result: pass - requested pytest targets passed
+- Next: None
+## [2026-05-03 22:06:56 -05:00] Task Completed
+- Task: Created `tests/test_phase3_integration.py` with mocked `/chat` and websocket integration coverage for the Phase 3 PC control chain.
+- Files changed: tests/test_phase3_integration.py, tasks/loop-log.md
+- Result: Pass. `pytest tests/test_phase3_integration.py -q` passed 5/5.
+- Next: None.

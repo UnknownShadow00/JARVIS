@@ -25,6 +25,33 @@ from app.tools.health_check import check_tools
 from app.tools.registry import ToolError, registry
 from app.voice.tts import tts
 
+
+class ConnectionManager:
+    def __init__(self) -> None:
+        self.active: list[WebSocket] = []
+
+    async def connect(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self.active.append(ws)
+
+    def disconnect(self, ws: WebSocket) -> None:
+        if ws in self.active:
+            self.active.remove(ws)
+
+    async def broadcast(self, data: dict[str, Any]) -> None:
+        dead = []
+        for ws in self.active:
+            try:
+                await ws.send_json(data)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
+
+manager = ConnectionManager()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.voice.audio_stream import voice_pipeline
@@ -105,7 +132,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 @app.websocket(settings.server.websocket_path)
 async def ws_endpoint(websocket: WebSocket) -> None:
-    await websocket.accept()
+    await manager.connect(websocket)
     audit.log("ws_connect", {"client": str(websocket.client)})
 
     try:
@@ -116,6 +143,8 @@ async def ws_endpoint(websocket: WebSocket) -> None:
                 message = data.get("message", raw)
             except json.JSONDecodeError:
                 message = raw
+
+            await manager.broadcast({"type": "listening", "active": True})
 
             stream_result = await _process_stream(message)
             if stream_result is None:
@@ -132,16 +161,19 @@ async def ws_endpoint(websocket: WebSocket) -> None:
                 await tts.speak_stream(tts_tokens())
                 reply = clean("".join(chunks))
 
-            await websocket.send_json(
-                {
-                    "reply": reply,
-                    "intent": intent_result.intent,
-                    "confidence": intent_result.confidence,
-                    "dry_run": settings.safety.dry_run,
-                    "active": is_active(),
-                }
-            )
+            response = {
+                "type": "reply",
+                "reply": reply,
+                "intent": intent_result.intent,
+                "confidence": intent_result.confidence,
+                "dry_run": settings.safety.dry_run,
+                "active": is_active(),
+            }
+            await websocket.send_json(response)
+            await manager.broadcast(response)
+            await manager.broadcast({"type": "listening", "active": False})
     except WebSocketDisconnect:
+        manager.disconnect(websocket)
         audit.log("ws_disconnect", {"client": str(websocket.client)})
 
 

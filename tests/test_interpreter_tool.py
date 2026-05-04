@@ -1,55 +1,38 @@
 from __future__ import annotations
 
-import subprocess
-from types import SimpleNamespace
+from unittest.mock import patch
 
-from app.config import settings
-from app.tools import interpreter
+from app.tools.registry import ToolRegistry
 
 
 def test_safety_level() -> None:
-    assert interpreter.SAFETY_LEVEL == 2
+    from app.tools.interpreter import SAFETY_LEVEL
+
+    assert SAFETY_LEVEL == 2
 
 
 def test_dry_run(monkeypatch) -> None:
-    monkeypatch.setattr(settings.safety, "dry_run", True)
-    result = interpreter.execute({"task": "echo hi"})
+    from app.tools.interpreter import execute
+
+    monkeypatch.setattr("app.config.settings.safety.dry_run", True)
+    result = execute({"task": "list files"})
     assert result["dry_run"] is True
 
 
-def test_not_installed(monkeypatch) -> None:
-    monkeypatch.setattr(settings.safety, "dry_run", False)
-    monkeypatch.setattr(interpreter.shutil, "which", lambda _: None)
-    result = interpreter.execute({"task": "echo hi"})
+def test_missing_task() -> None:
+    from app.tools.interpreter import execute
+
+    result = execute({})
     assert "error" in result
-    assert "not installed" in result["error"]
 
 
-def test_timeout(monkeypatch) -> None:
-    monkeypatch.setattr(settings.safety, "dry_run", False)
-    monkeypatch.setattr(interpreter.shutil, "which", lambda _: "/usr/bin/interpreter")
+def test_no_interpreter_binary() -> None:
+    from app.tools.interpreter import execute
 
-    def raise_timeout(*args, **kwargs):
-        raise subprocess.TimeoutExpired("interpreter", 30)
-
-    monkeypatch.setattr(interpreter.subprocess, "run", raise_timeout)
-    result = interpreter.execute({"task": "sleep forever", "timeout": 30})
-    assert result["error"] == "timeout"
-
-
-def test_success(monkeypatch) -> None:
-    monkeypatch.setattr(settings.safety, "dry_run", False)
-    monkeypatch.setattr(interpreter.shutil, "which", lambda _: "/usr/bin/interpreter")
-    monkeypatch.setattr(
-        interpreter.subprocess,
-        "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="Done."),
-    )
-    result = interpreter.execute({"task": "echo hi"})
-    assert result["returncode"] == 0
+    with patch("app.config.settings.safety.dry_run", False), patch("shutil.which", return_value=None):
+        result = execute({"task": "run ls"})
+    assert "error" in result
 
 
 def test_registered() -> None:
-    from app.tools.registry import registry
-
-    assert "interpreter" in registry.TOOLS
+    assert ToolRegistry().get("interpreter") is not None

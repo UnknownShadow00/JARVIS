@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld("jarvis", {
       } catch (_error) {
         emitMessage({
           type: "reply",
-          text: "Invalid message received from JARVIS server.",
+          reply: "Invalid message received from JARVIS server.",
         });
       }
     });
@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld("jarvis", {
     socket.addEventListener("error", () => {
       emitMessage({
         type: "reply",
-        text: "Unable to connect to ws://localhost:8000/ws",
+        reply: "Unable to connect to ws://localhost:8000/ws",
       });
     });
 

@@ -39,6 +39,13 @@ def execute(params: dict[str, Any]) -> Any:
     if not command:
         return {"error": "missing command"}
 
+    if settings.safety.dry_run:
+        return {
+            "dry_run": True,
+            "command": command,
+            "note": "Would run shell command: " + command,
+        }
+
     _ensure_command_allowed(command)
 
     timeout = min(int(params.get("timeout") or 30), 120)
