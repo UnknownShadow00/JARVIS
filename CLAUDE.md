@@ -429,24 +429,23 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        3 — COMPLETE (PC control tools, safety gate, verifier, WS broadcast, tests)
-Last built:   app/computer/safety.py, app/computer/verifier.py, app/computer/gesture.py,
-              app/tools/screenshot.py, app/tools/vision.py, app/tools/computer_use.py,
-              app/server.py (ConnectionManager + typed WS), app/tools/shell.py (dry_run)
-Last tested:  162 tests passing. Full suite: pytest tests/ -q --tb=short
-              Includes: computer safety gate, post-action verifier, gesture stub,
-              screenshot/vision/computer_use tools, shell/interpreter dry_run, 5 Phase 3
-              integration tests (/chat + /ws with mocked router/registry/llm).
+Phase:        4 — COMPLETE (vision VLM, Mem0, ChromaDB RAG, YOLO shipped)
+Last built:   app/computer/vision.py (Qwen3-VL httpx wiring, OpenCV webcam),
+              app/memory/memory_client.py (real Mem0, lazy init),
+              app/memory/rag_client.py (real ChromaDB PersistentClient),
+              app/computer/yolo_detector.py (yolov8n.pt, lazy load, dry_run safe)
+Last tested:  180 tests passing. Full suite: pytest tests/ -q --tb=short
 Hardware:     4070 Ti active (5090 arriving soon).
 Active model: qwen3:14b on GPU
-Next:         Phase 4 — Workshop Brain. Screen/webcam vision (Qwen3-VL), Mem0, ChromaDB
-              RAG, YOLO object detection, DepthAnything depth maps. Also: Electron HUD
-              npm install + live server connect (manual step still pending).
-              Hermes Agent waits for 5090.
-Notes:        dry_run=false (live tool execution active). All Phase 1–3 acceptance criteria
-              met. gesture.py and computer_use.py are Phase 3 stubs — full wiring in Phase 4.
-              Electron HUD scaffold at frontend/electron/ — needs npm install.
-              GitHub: UnknownShadow00/JARVIS, main branch. Commit: 74d7971.
+Next:         Phase 5 — Autonomous Agent. Hermes full power (waits for 5090),
+              task queue, Discord/Telegram bot, approval gates.
+              Pre-5090: wire Discord bot + Telegram bot stubs, task scheduler,
+              reporter.py. Electron HUD npm install still pending (manual step).
+Notes:        dry_run=false. All Phase 1–4 acceptance criteria met.
+              Mem0 disabled by default (mem0_enabled: false) — enable in config.yaml.
+              ChromaDB path: ./data/chroma. YOLO model downloads on first use.
+              Hermes Agent waits for 5090. gesture.py and computer_use.py Phase 3 stubs.
+              GitHub: UnknownShadow00/JARVIS, main branch. Commit: dc3fc82.
 ```
 
 > Update this section at the end of every Claude Code session.
