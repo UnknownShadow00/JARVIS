@@ -429,20 +429,18 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        1 — IN PROGRESS (full voice pipeline validated end-to-end on GPU)
-Last built:   no new files this session
-Last tested:  Full live voice loop: wake word → VAD → STT (CUDA float16) → LLM (GPU) →
-              streaming TTS (piper, 3 sentences) → SFX done.wav → voice_listening.
-              Confirmed: tts_synthesized, tts_stop, voice_reply all fire correctly.
-Hardware:     4070 Ti active (5090 arriving soon). Ollama updated 0.21.0 → 0.22.1.
-              qwen3:14b now fully GPU-offloaded (~10.5GB VRAM). torch 2.11.0+cu128.
+Phase:        2 — COMPLETE (tools, tests, health checks, HUD scaffold all shipped)
+Last built:   frontend/electron/ scaffold, app/tools/mouse_keyboard.py (real PyAutoGUI),
+              app/tools/health_check.py, app/config_check.py
+Last tested:  139 tests passing. Full suite: pytest tests/ -q --tb=short
+              Includes: self-suppression, PTT/kill-switch, boot integration, server REST,
+              VAD timeout, config check, health check, tool unit tests (all 8 tools).
+Hardware:     4070 Ti active (5090 arriving soon).
 Active model: qwen3:14b on GPU
-Next:         Self-suppression test (10x — wake word fires after tts_stop, needs muting).
-              Push-to-talk fallback. Verbal error recovery on Ollama disconnect.
-              Emergency stop mid-response. Then flip dry_run=false and test live tools.
-Notes:        dry_run=true in config.yaml. CUDA 13.2 installed; PyTorch and Ollama both
-              updated to support it. Wake word immediately re-fires after TTS ends —
-              self-suppression (is_speaking guard) needs validation before going live.
+Next:         Phase 3 — PC Control. Open Interpreter wiring, open-computer-use,
+              Electron HUD npm install + connect to live server, Hermes Agent (after 5090).
+Notes:        dry_run=false (live tool execution active). All Phase 1 + Phase 2 acceptance
+              criteria met. Electron HUD scaffold at frontend/electron/ — needs npm install.
               GitHub: UnknownShadow00/JARVIS, main branch.
 ```
 
