@@ -429,27 +429,33 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 
 ## Current Status
 ```
-Phase:        7 — COMPLETE (Chatterbox TTS, UE5 MetaHuman bridge, Audio2Face, hologram frontend)
-Last built:   app/boot.py (boot WebSocket phase broadcasts via ConnectionManager, compose_morning_report integration),
-              frontend/electron/renderer/index.html (boot overlay/logo/status handling for boot WS events),
-              tests/test_boot_events.py (boot event shape, morning report call, no-client boot coverage),
-              app/voice/tts.py (Chatterbox TTS voice clone, lazy CUDA→CPU, soundfile/scipy wav),
-              app/comms/ue5_bridge.py (UE5ConnectionManager, emotion→animation map, parse_emotion_from_reply),
-              app/comms/audio2face.py (Audio2FaceManager, base64 PCM transport, build_audio_event, build_viseme_event)
-Last tested:  243 tests passing. Full suite: pytest tests/ -q --tb=short
-Hardware:     4070 Ti active (5090 arriving soon).
+Phase:        ALL COMPLETE (0–7) + release prep done. Ready to push to GitHub.
+Last built:   .github/workflows/tests.yml (CI pipeline, pytest on push/PR, Python 3.11)
+              .github/ISSUE_TEMPLATE/ (bug_report.md, feature_request.md)
+              .github/pull_request_template.md
+              docs/5090_migration.md (step-by-step 5090 migration runbook)
+              scripts/switch_models.py (--profile {4070ti,5090} atomic config rewrite)
+              tests/perf/baseline_4070ti.json (pre-migration latency baseline)
+              tests/e2e/test_full_loop.py (cancel token, router mock, timing)
+              tests/stress/test_wake_word_stress.py (100-cycle p50/p95/p99 + RSS leak)
+              docs/content/ (episode_01_script.md, tiktok_60s_cut.md, recording_setup.md, episode_arc.md)
+              README.md, LICENSE (MIT), CONTRIBUTING.md, scripts/install.py, scripts/install.ps1
+Last tested:  276 tests passing. Full suite: pytest tests/ -q --tb=short -m 'not hardware and not slow'
+Hardware:     4070 Ti Super 16GB active. 5090 server PC not yet set up.
 Active model: qwen3:14b on GPU
-Next:         ALL PHASES COMPLETE (0–7). Outstanding manual steps:
+Next:         Push to GitHub (git push origin main — 14 commits ahead of remote).
+              Then manual steps:
               - Electron HUD: cd frontend/electron && npm install
               - PWA icon: frontend/pwa/icon.png (192x192 PNG)
               - Hermes Agent: activate after 5090 installs
               - UE5: install MetaHuman + Audio2Face-3D, connect ws://server:8000/ue5
               - Chatterbox: pip install chatterbox-tts, set voice_clone_path in config.yaml
+              - 5090 migration: follow docs/5090_migration.md when hardware arrives
 Notes:        dry_run=false. All Phase 1–7 acceptance criteria met.
-              UE5 bridge: emotion parsed from RAW reply before clean() strips [EMOTION:X] tags.
-              Audio2Face: base64 PCM/wav over WebSocket, exception-safe no-ops when disconnected.
-              Hologram: open frontend/hologram/index.html in browser, connect projector.
-              GitHub: UnknownShadow00/JARVIS, main branch. Commit: f8d42fe.
+              CI: pytest runs on every push, ignores e2e/stress/perf/hardware markers.
+              5090 migration: run scripts/switch_models.py --profile 5090 after GPU swap.
+              Content: 10-episode YouTube arc in docs/content/episode_arc.md.
+              GitHub: UnknownShadow00/JARVIS, main branch. Latest commit: 6d28728.
 ```
 
 > Update this section at the end of every Claude Code session.
