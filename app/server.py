@@ -222,6 +222,21 @@ async def ws_endpoint(websocket: WebSocket) -> None:
         audit.log("ws_disconnect", {"client": str(websocket.client)})
 
 
+@app.websocket("/ue5")
+async def ue5_endpoint(websocket: WebSocket) -> None:
+    from app.comms.ue5_bridge import ue5_manager
+
+    await ue5_manager.connect(websocket)
+    audit.log("ue5_ws_connect", {"client": str(websocket.client)})
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ue5_manager.disconnect(websocket)
+        audit.log("ue5_ws_disconnect", {"client": str(websocket.client)})
+
+
 # ------------------------------------------------------------------
 # Core pipeline
 # ------------------------------------------------------------------
@@ -229,12 +244,25 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 
 async def _process(message: str):  # type: ignore[return]
     from app.brain.router import RouterResult
+    from app.comms.ue5_bridge import build_emotion_event, parse_emotion_from_reply, ue5_manager
+
+    def finalize_reply(reply_text: str, *, emotion_source: str | None = None) -> str:
+        cleaned_reply = clean(reply_text)
+        emotion = parse_emotion_from_reply(emotion_source or reply_text) or "neutral"
+        if settings.server.ue5_enabled:
+            asyncio.create_task(ue5_manager.broadcast(build_emotion_event(emotion)))
+        return cleaned_reply
 
     if check_voice(message):
-        return "Understood, sir. Standing by.", RouterResult("confirm_action", 1.0, "", "Kill switch activated.")
+        return finalize_reply("Understood, sir. Standing by."), RouterResult(
+            "confirm_action",
+            1.0,
+            "",
+            "Kill switch activated.",
+        )
 
     if not is_active():
-        return "Standing by, sir.", RouterResult("confirm_action", 1.0, "", "Kill switch is active.")
+        return finalize_reply("Standing by, sir."), RouterResult("confirm_action", 1.0, "", "Kill switch is active.")
 
     intent_result: RouterResult = intent_router.classify(message)
 
@@ -285,16 +313,16 @@ async def _process(message: str):  # type: ignore[return]
         except OllamaConnectionError as exc:
             raw_reply = f"Unable to reach Ollama, sir. {exc}"
 
-        return clean(str(raw_reply)), intent_result
+        return finalize_reply(str(raw_reply)), intent_result
 
     if intent_result.intent == "confirm_action":
         reply = f"That action requires your confirmation, sir. Shall I proceed with: {message}?"
-        return reply, intent_result
+        return finalize_reply(reply), intent_result
 
     if intent_result.intent == "respond":
         direct_reply = try_direct_reply(message)
         if direct_reply:
-            return direct_reply, intent_result
+            return finalize_reply(direct_reply), intent_result
 
     # respond, retrieve_memory, vision — all go straight to LLM
     messages = build_prompt(message)
@@ -303,7 +331,7 @@ async def _process(message: str):  # type: ignore[return]
     except OllamaConnectionError as exc:
         raw_reply = f"Unable to reach Ollama at the moment, sir. {exc}"
 
-    return clean(str(raw_reply)), intent_result
+    return finalize_reply(str(raw_reply)), intent_result
 
 
 def _is_confirmation_required_error(exc: ToolError) -> bool:

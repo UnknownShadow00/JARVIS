@@ -379,3 +379,27 @@
 - Result: Pass. python -m pytest tests/test_pwa_glasses.py -q passed 2/2 and python -m pytest tests/ -q --tb=short passed 217/217.
 - Next: Validate the always-listening loop on a real Android/Chrome + Meta Glasses pairing to confirm browser-specific microphone restart behavior.
 
+## [2026-05-04T17:26:00.5744283-05:00] Task Completed
+- Task: Built the UE5 MetaHuman emotion bridge, added the `/ue5` WebSocket endpoint, wired reply emotion broadcasts from `_process()`, added config support, and created focused UE5 bridge tests.
+- Files changed: app/comms/ue5_bridge.py, app/config.py, app/server.py, config.yaml, tests/test_ue5_bridge.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_ue5_bridge.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 224/224.
+- Next: Enable `server.ue5_enabled: true` when the UE5 MetaHuman client is running and validate the live `/ue5` event flow from Unreal.
+
+## [2026-05-04T17:24:55-05:00] Task Completed
+- Task: Added Chatterbox TTS engine support with guarded import, lazy model/device fallback, optional voice clone handling, config schema updates, and focused pytest coverage in app/voice/tts.py.
+- Files changed: app/config.py, app/voice/tts.py, config.yaml, tests/test_tts_chatterbox.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_tts_chatterbox.py -q` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 224/224 with no Piper/Kokoro regressions.
+- Next: Optional follow-up is a live Chatterbox hardware smoke test once `chatterbox-tts` and its preferred audio stack are installed locally.
+
+## [2026-05-04T21:57:00-05:00] Task Completed
+- Task: Created the hologram projector frontend in `frontend/hologram/`, added the required Three.js full-screen display and websocket reply/emotion handling, and added focused file-existence/content pytest coverage.
+- Files changed: frontend/hologram/index.html, frontend/hologram/app.js, frontend/hologram/README.md, tests/test_hologram_files.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_hologram_files.py -q` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 231/231.
+- Next: Optional follow-up is mounting or serving `frontend/hologram/` from the app if you want a first-class route instead of opening the static file directly.
+
+
+## [2026-05-04T21:57:45-05:00] Task Completed
+- Task: Created Audio2Face-3D websocket bridge module and tests for audio/viseme event building and disconnected no-op behavior
+- Files changed: app/comms/audio2face.py, tests/test_audio2face.py
+- Result: pass against acceptance criteria; requested Audio2Face tests and full test suite both passed
+- Next: Optional follow-up is replacing datetime.utcnow() usage later if the project wants to remove Python 3.13 deprecation warnings

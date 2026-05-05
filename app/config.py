@@ -42,6 +42,7 @@ class VoiceConfig(StrictModel):
     stt_device: str
     stt_compute_type: str
     tts_engine: str
+    voice_clone_path: str
     piper_model_path: str
     piper_config_path: str
     kokoro_voice: str
@@ -64,6 +65,7 @@ class ServerConfig(StrictModel):
     host: str
     port: int
     websocket_path: str
+    ue5_enabled: bool
     cors_origins: list[str]
     tailscale_hostname: str
 

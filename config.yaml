@@ -65,7 +65,9 @@ voice:
   stt_compute_type: "float16"
 
   # TTS engine — piper | kokoro
+  # Supported values: piper | kokoro | chatterbox
   tts_engine: "piper"
+  voice_clone_path: ""
   piper_model_path: "./models/en_US-lessac-high.onnx"
   piper_config_path: "./models/en_US-lessac-high.onnx.json"
 
@@ -99,6 +101,7 @@ server:
   host: "0.0.0.0"
   port: 8000
   websocket_path: "/ws"
+  ue5_enabled: false  # set true when UE5 MetaHuman project is running
   tailscale_hostname: ""   # fill in your Tailscale machine name
   # Allow these origins for browser HUD (add your main PC IP)
   cors_origins:
