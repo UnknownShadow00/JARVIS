@@ -1,170 +1,188 @@
-# JARVIS
+# JARVIS — Local AI Assistant
 
-A local-first, fully autonomous AI assistant modeled on Tony Stark's JARVIS. Runs 100% on personal hardware - no API costs, no cloud dependency. Controls the PC, watches the screen and webcam, helps with coding, runs assigned tasks autonomously, and sends status updates via Discord and Telegram.
+Tony Stark-style AI running 100% on your hardware. No API costs. No cloud.
 
-> Built on Windows with an RTX 5090. Every phase ships something real and demo-able.
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688)
+![Ollama](https://img.shields.io/badge/Ollama-local%20models-black)
+![License MIT](https://img.shields.io/badge/License-MIT-green)
+![Tests passing](https://img.shields.io/badge/Tests-passing-brightgreen)
 
----
+JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enabled, tool-using, screen-aware, automation-capable, and designed to run entirely on your own machine. The backend is Python/FastAPI, the model stack is local via Ollama, and the long-term system layers in autonomy, vision, memory, HUD interfaces, and cinematic presence without depending on cloud APIs.
+
+## Feature Matrix
+
+| Phase | Name | What it does |
+|-------|------|---------------|
+| 0 | Core Brain | FastAPI server, local LLM routing, tool registry, audit logging, kill switch, config-driven model selection |
+| 1 | Voice + Boot | Wake word, VAD, GPU STT, streaming TTS, boot sequence, morning report, response audio cues |
+| 2 | Tools & Web | App launch, file operations, browser control, shell commands, web search, system stats, health endpoints |
+| 3 | PC Control | Open Interpreter bridge, computer-use tooling, Electron HUD, Hermes Agent activation, gesture control |
+| 4 | Workshop Brain | Screen and webcam vision, Mem0 memory, local RAG, object detection, depth awareness, workshop assistance |
+| 5 | Autonomous Agent | Hermes-powered task queue, scheduler, reporting, Discord/Telegram updates, approval-gated autonomy |
+| 6 | Multi-Device | Tailscale access, phone PWA, Meta glasses support, remote presence across devices |
+| 7 | Cinematic | UE5 bridge, MetaHuman pipeline, Audio2Face integration, hologram frontend, voice-clone path |
 
 ## Hardware Requirements
 
+JARVIS is built for local inference first. It can start on a strong consumer GPU and scales up to a dedicated always-on host.
+
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| GPU | RTX 4070 Ti (12GB VRAM) | RTX 5090 (32GB VRAM) |
-| RAM | 32GB | 64GB |
+| GPU VRAM | 12 GB (RTX 4070 Ti class) | 32 GB (RTX 5090 class) |
+| System RAM | 32 GB | 64 GB |
 | OS | Windows 10/11 | Windows 11 |
-| Mic | Any USB mic | Studio condenser |
+| CUDA | Required for fast STT / local inference workflows | Latest NVIDIA drivers + CUDA stack |
 
----
+Notes:
+- Use `qwen3:14b` on a 4070 Ti-class system as the fallback baseline.
+- Hermes Agent and the full 32B stack are intended for the 5090-class configuration.
+- `qwen3-vl` requires a recent Ollama build.
 
 ## Quick Start
 
-**1. Clone and install dependencies**
+### Prerequisites
+
+- Ollama installed and running locally
+- Python `3.11+`
+- NVIDIA CUDA environment available
+- Git
+
+Before starting Ollama, set:
+
+```powershell
+$env:OLLAMA_KEEP_ALIVE="-1"
+$env:OLLAMA_NUM_PARALLEL="2"
+```
+
+### Install
+
 ```bash
 git clone https://github.com/UnknownShadow00/JARVIS.git
 cd JARVIS
 pip install -r requirements.txt
 ```
 
-**2. Install Ollama and pull models**
-```bash
-# https://ollama.com - set these before starting Ollama:
-$env:OLLAMA_KEEP_ALIVE = "-1"
-$env:OLLAMA_NUM_PARALLEL = "2"
+### Configure
 
-ollama pull qwen3:14b       # main brain (4070 Ti)
-ollama pull gemma3:4b       # intent router
+Copy the example config, then set the model names for your hardware:
+
+```powershell
+Copy-Item config.yaml.example config.yaml
 ```
 
-**3. Install Piper TTS**
-```bash
-python scripts/install_piper.py
+Key model fields in `config.yaml`:
+
+```yaml
+models:
+  main: "qwen3:14b"
+  coder: "qwen2.5-coder:32b"
+  router: "gemma3:4b"
+  vision: "qwen3-vl"
 ```
 
-**4. Optional: register autostart**
+Recommended Ollama pulls:
+
 ```bash
-python scripts/setup_autostart.py
+ollama pull qwen3:14b
+ollama pull gemma3:4b
+ollama pull qwen3-vl
 ```
 
-**5. Configure**
-Edit `config.yaml`. `dry_run` is disabled for normal operation; set it to `true` only when you want narrated no-op testing.
+Upgrade to the 32B stack on 5090-class hardware when ready.
 
-**6. Run**
+### Run
+
 ```bash
-python -m uvicorn app.server:app --reload
+python -m app.main
 ```
 
-**7. Talk to JARVIS**
-```bash
-# REST
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d "{\"message\": \"What time is it?\"}"
+The FastAPI app exposes the REST and WebSocket brain used by the desktop and voice layers.
 
-# WebSocket (streaming TTS)
-wscat -c ws://localhost:8000/ws
+## Architecture
+
+JARVIS is organized as a three-layer local agent stack:
+
+1. **FastAPI Brain**: the custom backend that owns routing, prompts, tools, safety, logging, voice orchestration, and API/WebSocket transport.
+2. **Hermes Agent**: the autonomy layer that handles scheduled tasks, messaging, persistent workflows, and broader tool-driven operation.
+3. **OpenJarvis**: the optimization and trace-driven skill layer used to refine long-running behavior after enough real interactions accumulate.
+
+In shorthand:
+
+```text
+User / Devices
+      |
+      v
+FastAPI Brain  -->  Hermes Agent  -->  OpenJarvis
 ```
 
----
+## Voice Pipeline
 
-## Model Stack
-
-| Model | Role | VRAM |
-|-------|------|------|
-| Qwen3 14B | Primary brain (4070 Ti) | ~10GB |
-| Qwen3 32B | Primary brain (5090) | ~20GB |
-| Qwen2.5-Coder 32B | Coding tasks | ~20GB |
-| Gemma3 4B | Intent router (<50ms) | ~3GB |
-| Qwen3-VL | Vision (screen/webcam) | ~8GB |
-
----
-
-## Phase Roadmap
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 0 | Core Brain - FastAPI + router + tools + kill switch | ✅ COMPLETE |
-| 1 | Voice + Boot - wake word, STT, TTS, boot sequence | ✅ COMPLETE |
-| 2 | Tools & Web - app launch, file ops, web search, shell | 🔄 IN PROGRESS |
-| 3 | PC Control - Open Interpreter, Electron HUD, gestures | ⏳ |
-| 4 | Workshop Brain - vision, Mem0, ChromaDB RAG, YOLO | ⏳ |
-| 5 | Autonomous Agent - task queue, Discord/Telegram | ⏳ |
-| 6 | Multi-Device - phone PWA, Meta Glasses, Raspberry Pi | ⏳ |
-| 7 | Cinematic - UE5 MetaHuman, Audio2Face | ⏳ |
-
----
+```text
+Mic Input
+   |
+   v
+OpenWakeWord
+   |
+   v
+VAD Gate
+   |
+   v
+faster-whisper STT
+   |
+   v
+Intent Router / Brain
+   |
+   +--> Tool Calls / Memory / Vision
+   |
+   v
+TTS (Piper / Kokoro / Chatterbox)
+   |
+   v
+Speakers + HUD Feedback
+```
 
 ## Project Structure
 
-```
-app/
-  brain/      LLM client, intent router, prompt builder, kill switch
-  voice/      wake word, VAD, STT, TTS, SFX, boot sequence
-  tools/      safety-gated system, web, app, and file tools
-  logs/       structured JSONL audit logger
-  server.py   FastAPI /health, /chat REST, /ws WebSocket
-tests/        unit + hardware smoke tests
-scripts/      setup utilities (install_piper.py, setup_autostart.py)
-config.yaml   single source of runtime configuration
-```
-
----
-
-## Safety
-
-All actions use a 4-level safety system enforced in every tool:
-
-| Level | Name | Behavior |
-|-------|------|----------|
-| 0 | Safe | Always execute |
-| 1 | Reversible | Execute unless confidence < 75% |
-| 2 | Risky | Always confirm with user |
-| 3 | Blocked | Never execute automatically |
-
-Set `dry_run: true` in `config.yaml` to narrate all actions without executing.
-
-## Tool Safety Levels
-
-| Level | Name | Tools |
-|-------|------|-------|
-| 0 | Safe | `apps`, `calendar`, `system_stats`, `web_search` |
-| 1 | Reversible | `browser`, `files` |
-| 2 | Risky | `shell`, `interpreter`, `mouse_keyboard` |
-| 3 | Blocked | None currently registered |
-
----
-
-## Kill Switch
-
-- Voice command: *"JARVIS, shut it down"*
-- Keyboard: `Ctrl+Alt+J`
-
----
-
-## Tests
-
-```bash
-python -m pytest tests/ -q
+```text
+JARVIS/
+├── app/
+│   ├── agent/        # scheduler, reporting, task queue, sensor state
+│   ├── brain/        # LLM routing, prompts, planner, morning report, kill switch
+│   ├── comms/        # Discord, Telegram, UE5, Audio2Face bridges
+│   ├── computer/     # screenshots, vision, gestures, safety, mouse/keyboard control
+│   ├── memory/       # memory client and local RAG
+│   ├── network/      # Tailscale integration
+│   ├── tools/        # browser, files, shell, interpreter, health, system tools
+│   ├── voice/        # wake word, VAD, STT, TTS, push-to-talk, audio stream
+│   ├── main.py
+│   └── server.py
+├── frontend/
+│   ├── electron/     # desktop HUD shell
+│   ├── hologram/     # cinematic frontend
+│   └── pwa/          # mobile interface
+├── scripts/          # setup and diagnostics
+├── tests/            # backend, voice, tools, autonomy, frontend integration coverage
+├── config.yaml.example
+├── requirements.txt
+└── CLAUDE.md
 ```
 
-## Running Tests
+## Roadmap
 
-```bash
-# Unit tests (no hardware required)
-python -m pytest tests/ -m "not manual"
+All 8 phases complete. Next: 5090 migration, content creation.
 
-# Hardware smoke tests (mic + speakers required)
-python -m pytest tests/ -m manual
-```
+Current follow-on priorities:
+- Switch the production stack from the active 4070 Ti fallback to the 5090-first model profile
+- Finalize public repo polish, demos, and creator-facing documentation
+- Continue content capture for YouTube/TikTok around the build process and local AI workflow
 
-Current checkpoint: Phase 1 voice pipeline is fully validated on GPU. `dry_run` is disabled for normal operation, wake-word self-suppression is implemented, VAD is tuned, and `/health` plus `/health/tools` are live. The repo currently passes 130+ tests, and Phase 2 tool expansion is underway.
+## Contributing
 
-## Phone PWA
-
-The phone PWA is served at `/pwa` when `frontend/pwa/` exists. Add a `192x192` PNG icon at `frontend/pwa/icon.png` before installing it on a device.
-
----
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the short workflow: fork, branch, keep changes scoped, and make sure tests pass before opening a PR.
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+Built with Claude Code. 100% local. Zero API costs.
