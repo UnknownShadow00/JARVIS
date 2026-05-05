@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from app.brain.cancel_token import current_token
 from app.config import settings
 from app.logs.audit import audit
 from app.voice.sounds import sounds
@@ -50,8 +51,8 @@ class TTSEngine:
         try:
             next_task: asyncio.Task[Path | None] | None = None
             for index, sentence in enumerate(sentences):
-                if self._stop_event.is_set():
-                    break
+                if self._stop_event.is_set() or self._cancel_requested():
+                    return
 
                 if next_task is None:
                     next_task = asyncio.create_task(self._synthesize_sentence(sentence))
@@ -65,10 +66,13 @@ class TTSEngine:
                 )
 
                 if audio_path is not None and not self._stop_event.is_set():
+                    if self._cancel_requested():
+                        self._cleanup_audio(audio_path)
+                        return
                     await self._play_audio_file(audio_path)
                     self._cleanup_audio(audio_path)
 
-            if not self._stop_event.is_set():
+            if not self._stop_event.is_set() and not current_token.is_cancelled():
                 sounds.play("done")
         finally:
             global cooldown_until
@@ -92,11 +96,13 @@ class TTSEngine:
 
         try:
             async for token in self._iterate_tokens(tokens):
-                if self._stop_event.is_set() or spoken_sentences >= 2:
-                    break
+                if self._stop_event.is_set() or spoken_sentences >= 2 or self._cancel_requested():
+                    return
 
                 buffer += token
                 while not self._stop_event.is_set():
+                    if self._cancel_requested():
+                        return
                     sentence, remainder = self._extract_complete_sentence(buffer)
                     if sentence is None:
                         break
@@ -107,10 +113,12 @@ class TTSEngine:
                         break
 
             if not self._stop_event.is_set() and spoken_sentences < 2 and buffer.strip():
+                if self._cancel_requested():
+                    return
                 await self._speak_sentence(buffer.strip())
                 spoken_sentences += 1
 
-            if spoken_sentences and not self._stop_event.is_set():
+            if spoken_sentences and not self._stop_event.is_set() and not current_token.is_cancelled():
                 sounds.play("done")
         finally:
             global cooldown_until
@@ -335,6 +343,9 @@ class TTSEngine:
         if audio_path is None or self._stop_event.is_set():
             return
 
+        if self._cancel_requested():
+            self._cleanup_audio(audio_path)
+            return
         await self._play_audio_file(audio_path)
         self._cleanup_audio(audio_path)
 
@@ -343,6 +354,12 @@ class TTSEngine:
             audio_path.unlink(missing_ok=True)
         except OSError:
             audit.log("tts_cleanup_failed", {"path": str(audio_path)})
+
+    def _cancel_requested(self) -> bool:
+        if not current_token.is_cancelled():
+            return False
+        self.stop()
+        return True
 
 
 tts = TTSEngine()

@@ -430,12 +430,13 @@ Phase 7  Cinematic           UE5 MetaHuman + Audio2Face + original voice + proje
 ## Current Status
 ```
 Phase:        7 — COMPLETE (Chatterbox TTS, UE5 MetaHuman bridge, Audio2Face, hologram frontend)
-Last built:   app/voice/tts.py (Chatterbox TTS voice clone, lazy CUDA→CPU, soundfile/scipy wav),
+Last built:   app/boot.py (boot WebSocket phase broadcasts via ConnectionManager, compose_morning_report integration),
+              frontend/electron/renderer/index.html (boot overlay/logo/status handling for boot WS events),
+              tests/test_boot_events.py (boot event shape, morning report call, no-client boot coverage),
+              app/voice/tts.py (Chatterbox TTS voice clone, lazy CUDA→CPU, soundfile/scipy wav),
               app/comms/ue5_bridge.py (UE5ConnectionManager, emotion→animation map, parse_emotion_from_reply),
-              app/comms/audio2face.py (Audio2FaceManager, base64 PCM transport, build_audio_event, build_viseme_event),
-              frontend/hologram/ (Three.js full-screen hologram, wireframe torus+icosahedron, emotion colors, WS overlay),
-              app/server.py (/ue5 WebSocket endpoint, emotion parse+broadcast in _process())
-Last tested:  231 tests passing. Full suite: pytest tests/ -q --tb=short
+              app/comms/audio2face.py (Audio2FaceManager, base64 PCM transport, build_audio_event, build_viseme_event)
+Last tested:  243 tests passing. Full suite: pytest tests/ -q --tb=short
 Hardware:     4070 Ti active (5090 arriving soon).
 Active model: qwen3:14b on GPU
 Next:         ALL PHASES COMPLETE (0–7). Outstanding manual steps:

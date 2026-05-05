@@ -1,0 +1,93 @@
+"""Global push-to-talk hotkey listener."""
+from __future__ import annotations
+
+import threading
+from collections.abc import Callable
+
+from app.config import settings
+from app.logs.audit import audit
+
+try:
+    import keyboard  # type: ignore[import-untyped]
+except ImportError:
+    keyboard = None
+    KEYBOARD_AVAILABLE = False
+else:
+    KEYBOARD_AVAILABLE = True
+
+
+class PushToTalkManager:
+    """Manage a global push-to-talk hotkey lifecycle."""
+
+    def __init__(self, hotkey: str | None = None) -> None:
+        configured_key = (hotkey or settings.voice.push_to_talk_key or "ctrl+space").strip()
+        self._hotkey = configured_key or "ctrl+space"
+        self._active = threading.Event()
+        self._press_callback: Callable[[], None] | None = None
+        self._release_callback: Callable[[], None] | None = None
+        self._press_hook = None
+        self._release_hook = None
+        self._started = False
+        self._lock = threading.Lock()
+        self._warning_logged = False
+
+    def start(self) -> None:
+        """Register press and release handlers for the configured hotkey."""
+        if not KEYBOARD_AVAILABLE or keyboard is None:
+            self._log_unavailable_warning()
+            return
+
+        with self._lock:
+            if self._started:
+                return
+
+            self._press_hook = keyboard.on_press_key(self._hotkey, self._handle_press)
+            self._release_hook = keyboard.on_release_key(self._hotkey, self._handle_release)
+            self._started = True
+
+    def stop(self) -> None:
+        """Unregister any active hotkey handlers and clear active state."""
+        if not KEYBOARD_AVAILABLE or keyboard is None:
+            self._active.clear()
+            return
+
+        with self._lock:
+            if self._press_hook is not None:
+                keyboard.unhook(self._press_hook)
+                self._press_hook = None
+            if self._release_hook is not None:
+                keyboard.unhook(self._release_hook)
+                self._release_hook = None
+            self._started = False
+
+        self._active.clear()
+
+    def on_press(self, callback: Callable[[], None]) -> None:
+        """Store the callback fired while the push-to-talk key is pressed."""
+        self._press_callback = callback
+
+    def on_release(self, callback: Callable[[], None]) -> None:
+        """Store the callback fired when the push-to-talk key is released."""
+        self._release_callback = callback
+
+    def is_active(self) -> bool:
+        """Return whether the push-to-talk key is currently held."""
+        if not KEYBOARD_AVAILABLE:
+            return False
+        return self._active.is_set()
+
+    def _handle_press(self, _event) -> None:  # noqa: ANN001
+        self._active.set()
+        if self._press_callback is not None:
+            self._press_callback()
+
+    def _handle_release(self, _event) -> None:  # noqa: ANN001
+        self._active.clear()
+        if self._release_callback is not None:
+            self._release_callback()
+
+    def _log_unavailable_warning(self) -> None:
+        if self._warning_logged:
+            return
+        self._warning_logged = True
+        audit.log("push_to_talk_warning", {"msg": "keyboard package not installed; push-to-talk disabled"})

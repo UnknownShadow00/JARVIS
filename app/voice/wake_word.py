@@ -11,6 +11,11 @@ from app.voice.sounds import sounds
 from app.voice.vad import vad
 
 
+def is_speaking() -> bool:
+    """Return whether TTS output is currently active."""
+    return bool(tts_module.is_speaking)
+
+
 class WakeWordDetector:
     sample_rate = 16_000
     frame_samples = 1_280
@@ -68,7 +73,7 @@ class WakeWordDetector:
                 except queue.Empty:
                     continue
 
-                if tts_module.is_speaking or time.monotonic() < tts_module.cooldown_until:
+                if is_speaking() or time.monotonic() < tts_module.cooldown_until:
                     continue
 
                 if time.monotonic() - self._last_detection_at < self._POST_DETECTION_GAP:

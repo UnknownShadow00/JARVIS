@@ -11,8 +11,10 @@ from pathlib import Path
 import httpx
 
 from app.brain.llm_client import OllamaConnectionError, llm_client
+from app.brain.morning_report import compose_morning_report
 from app.config import settings
 from app.logs.audit import audit
+from app.server import ConnectionManager, manager as default_ws_manager
 from app.voice.audio_stream import voice_pipeline
 from app.voice.sounds import sounds
 from app.voice.tts import tts
@@ -20,8 +22,22 @@ from app.voice.tts import tts
 SERVER_PROCESS: subprocess.Popen | None = None
 
 
-async def boot_sequence(*, start_server: bool = True, start_hud: bool = True, start_voice: bool = True) -> str:
+async def broadcast_boot_event(manager: ConnectionManager, phase: str, message: str) -> dict[str, str]:
+    event = {"type": "boot", "phase": phase, "message": message}
+    audit.log("hud_event", event)
+    await manager.broadcast(event)
+    return event
+
+
+async def boot_sequence(
+    *,
+    start_server: bool = True,
+    start_hud: bool = True,
+    start_voice: bool = True,
+    ws_manager: ConnectionManager | None = None,
+) -> str:
     started_at = time.perf_counter()
+    active_manager = ws_manager or default_ws_manager
     audit.log("boot_start", {})
 
     if start_server:
@@ -32,12 +48,14 @@ async def boot_sequence(*, start_server: bool = True, start_hud: bool = True, st
     if start_hud:
         start_electron_hud()
 
+    await broadcast_boot_event(active_manager, "logo", "Stark Industries systems initializing...")
     sounds.play("boot_intro")
-    send_hud_event({"type": "boot_start"})
+    await broadcast_boot_event(active_manager, "music", "Boot sequence started.")
     await asyncio.sleep(settings.boot.animation_delay_ms / 1000)
 
     report = await generate_morning_report()
-    send_hud_event({"type": "boot_complete"})
+    await broadcast_boot_event(active_manager, "status", report)
+    await broadcast_boot_event(active_manager, "ready", "JARVIS online. Good to see you again, sir.")
     await tts.speak(report)
 
     if start_voice:
@@ -112,6 +130,10 @@ def send_hud_event(event: dict[str, str]) -> None:
 
 
 async def generate_morning_report() -> str:
+    return compose_morning_report()
+
+
+async def _generate_morning_report_via_llm() -> str:
     context = build_status_context()
     prompt = [
         {

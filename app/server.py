@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from app.brain.cancel_token import current_token
 from app.brain.direct_responder import try_direct_reply
 from app.brain.kill_switch import check_voice, is_active, register_callback, start_hotkey_listener
 from app.brain.llm_client import OllamaConnectionError, llm_client
@@ -64,6 +65,7 @@ async def lifespan(app: FastAPI):
     from app.voice.audio_stream import voice_pipeline
 
     start_hotkey_listener()
+    register_callback(current_token.cancel)
     register_callback(tts.stop)
     register_callback(voice_pipeline.stop)
     voice_pipeline.start()
@@ -143,14 +145,25 @@ async def network_status() -> dict[str, Any]:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
-    reply, intent_result = await _process(req.message)
-    return ChatResponse(
-        reply=reply,
-        intent=intent_result.intent,
-        confidence=intent_result.confidence,
-        dry_run=settings.safety.dry_run,
-        active=is_active(),
-    )
+    current_token.reset()
+    try:
+        reply, intent_result = await _process(req.message)
+        return ChatResponse(
+            reply=reply,
+            intent=intent_result.intent,
+            confidence=intent_result.confidence,
+            dry_run=settings.safety.dry_run,
+            active=is_active(),
+        )
+    finally:
+        current_token.reset()
+
+
+@app.post("/stop")
+async def stop_response() -> dict[str, str]:
+    current_token.cancel()
+    tts.stop()
+    return {"status": "stopped"}
 
 
 @app.post("/sensors/data")
@@ -189,34 +202,38 @@ async def ws_endpoint(websocket: WebSocket) -> None:
             except json.JSONDecodeError:
                 message = raw
 
-            await manager.broadcast({"type": "listening", "active": True})
+            current_token.reset()
+            try:
+                await manager.broadcast({"type": "listening", "active": True})
 
-            stream_result = await _process_stream(message)
-            if stream_result is None:
-                reply, intent_result = await _process(message)
-            else:
-                token_stream, intent_result = stream_result
-                chunks: list[str] = []
+                stream_result = await _process_stream(message)
+                if stream_result is None:
+                    reply, intent_result = await _process(message)
+                else:
+                    token_stream, intent_result = stream_result
+                    chunks: list[str] = []
 
-                async def tts_tokens() -> AsyncGenerator[str, None]:
-                    async for chunk in token_stream:
-                        chunks.append(chunk)
-                        yield chunk
+                    async def tts_tokens() -> AsyncGenerator[str, None]:
+                        async for chunk in token_stream:
+                            chunks.append(chunk)
+                            yield chunk
 
-                await tts.speak_stream(tts_tokens())
-                reply = clean("".join(chunks))
+                    await tts.speak_stream(tts_tokens())
+                    reply = clean("".join(chunks))
 
-            response = {
-                "type": "reply",
-                "reply": reply,
-                "intent": intent_result.intent,
-                "confidence": intent_result.confidence,
-                "dry_run": settings.safety.dry_run,
-                "active": is_active(),
-            }
-            await websocket.send_json(response)
-            await manager.broadcast(response)
-            await manager.broadcast({"type": "listening", "active": False})
+                response = {
+                    "type": "reply",
+                    "reply": reply,
+                    "intent": intent_result.intent,
+                    "confidence": intent_result.confidence,
+                    "dry_run": settings.safety.dry_run,
+                    "active": is_active(),
+                }
+                await websocket.send_json(response)
+                await manager.broadcast(response)
+            finally:
+                current_token.reset()
+                await manager.broadcast({"type": "listening", "active": False})
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         audit.log("ws_disconnect", {"client": str(websocket.client)})
@@ -252,6 +269,16 @@ async def _process(message: str):  # type: ignore[return]
         if settings.server.ue5_enabled:
             asyncio.create_task(ue5_manager.broadcast(build_emotion_event(emotion)))
         return cleaned_reply
+
+    if _is_cancel_command(message):
+        current_token.cancel()
+        tts.stop()
+        return finalize_reply("Stopping current response, sir."), RouterResult(
+            "respond",
+            1.0,
+            "",
+            "Cancel token requested.",
+        )
 
     if check_voice(message):
         return finalize_reply("Understood, sir. Standing by."), RouterResult(
@@ -378,6 +405,11 @@ async def confirm_request(request_id: str) -> Any:
 async def _process_stream(message: str):  # type: ignore[return]
     from app.brain.router import RouterResult
 
+    if _is_cancel_command(message):
+        current_token.cancel()
+        tts.stop()
+        return None
+
     if check_voice(message) or not is_active():
         return None
 
@@ -426,12 +458,17 @@ async def _process_stream(message: str):  # type: ignore[return]
 
 _WAKE_PREFIX_RE = re.compile(r"^\s*(?:hey\s+jarvis|jarvis)[,\s]*", re.IGNORECASE)
 _WAKE_SUFFIX_RE = re.compile(r"[,\s]*\bjarvis\b\s*[?.]?\s*$", re.IGNORECASE)
+_CANCEL_COMMAND_RE = re.compile(r"\babort\b|\bstop\s*,?\s*jarvis\b", re.IGNORECASE)
 
 
 def _strip_wake_word(text: str) -> str:
     text = _WAKE_PREFIX_RE.sub("", text)
     text = _WAKE_SUFFIX_RE.sub("", text)
     return text.strip()
+
+
+def _is_cancel_command(text: str) -> bool:
+    return bool(_CANCEL_COMMAND_RE.search(text))
 
 
 def _tool_params(tool_name: str, message: str) -> dict[str, Any]:

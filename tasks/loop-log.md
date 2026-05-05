@@ -403,3 +403,37 @@
 - Files changed: app/comms/audio2face.py, tests/test_audio2face.py
 - Result: pass against acceptance criteria; requested Audio2Face tests and full test suite both passed
 - Next: Optional follow-up is replacing datetime.utcnow() usage later if the project wants to remove Python 3.13 deprecation warnings
+
+## [2026-05-04T22:29:19-05:00] Task Completed
+- Task: Added Ollama verbal error recovery with retry backoff in `app/brain/llm_client.py`, created `app/voice/error_recovery.py`, and added the requested recovery tests.
+- Files changed: app/brain/llm_client.py, app/voice/error_recovery.py, tests/test_error_recovery.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_error_recovery.py -q` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 240/240.
+- Next: No immediate follow-up needed.
+## [2026-05-04T22:28:27-05:00] Task Completed
+- Task: Created the deterministic morning report generator, added a system stats compatibility wrapper, and added the requested morning report tests.
+- Files changed: app/tools/system_stats.py, app/brain/morning_report.py, tests/test_morning_report.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_morning_report.py -q` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 237/237.
+- Next: Optional follow-up is wiring `app.boot.generate_morning_report()` to reuse `compose_morning_report()` if you want a single report path.
+## [2026-05-04T22:28:25-05:00] Task Completed
+- Task: Created `app/voice/push_to_talk.py` with a keyboard-backed `PushToTalkManager`, graceful no-keyboard fallback, audit logging, and added the requested push-to-talk tests.
+- Files changed: app/voice/push_to_talk.py, tests/test_push_to_talk.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_push_to_talk.py -q` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 237/237.
+- Next: Optional follow-up is wiring `PushToTalkManager` into the live voice pipeline so held-key capture can trigger STT directly at runtime.
+
+## [2026-05-04T22:33:33-05:00] Task Completed
+- Task: Wired boot-sequence WebSocket events through the server ConnectionManager, updated the Electron HUD to react to boot phases, and added focused boot event tests.
+- Files changed: app/boot.py, frontend/electron/renderer/index.html, tests/test_boot_events.py, CLAUDE.md, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_boot_events.py -q` passed 3/3 and `python -m pytest tests/ -q --tb=short` passed 243/243.
+- Next: Optional follow-up is adding a renderer-level test harness if you want automated DOM assertions for the Electron boot overlay behavior.
+
+## [2026-05-04 22:35:48 -05:00] Task Completed
+- Task: Added a thread-safe cancel token, wired cancel-aware LLM streaming and TTS playback, added `/stop` plus server reset hooks, and created the requested cancel-token tests.
+- Files changed: app/brain/cancel_token.py, app/brain/llm_client.py, app/voice/tts.py, app/server.py, tests/test_cancel_token.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_cancel_token.py -q` passed 4/4 and `python -m pytest tests/ -q --tb=short` passed 247/247.
+- Next: No immediate follow-up needed.
+
+## [2026-05-04T22:39:14-05:00] Task Completed
+- Task: Added explicit wake-word speaking-state coverage and rewrote `tests/test_self_suppression.py` to verify TTS self-suppression, reset behavior, cross-thread visibility, and push-to-talk isolation.
+- Files changed: app/voice/wake_word.py, tests/test_self_suppression.py, tests/conftest.py, tasks/loop-log.md
+- Result: Pass. `python -m pytest tests/test_self_suppression.py -q` passed 10/10 and `python -m pytest tests/ -q --tb=short` passed 254/254.
+- Next: No immediate follow-up needed.

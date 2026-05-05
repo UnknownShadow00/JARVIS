@@ -48,6 +48,19 @@ def execute(params: dict[str, Any]) -> dict[str, Any] | str:
     return result
 
 
+def get_stats() -> dict[str, Any]:
+    """Return system statistics in a report-friendly shape."""
+    result = execute({})
+    if not isinstance(result, dict):
+        return {}
+
+    normalized = dict(result)
+    if "gpu_temp" not in normalized and "gpu_temp_c" in normalized:
+        normalized["gpu_temp"] = normalized["gpu_temp_c"]
+
+    return normalized
+
+
 def _top_cpu_processes(limit: int = 5) -> list[dict[str, Any]]:
     """Return the highest CPU processes visible to this user."""
     processes: list[dict[str, Any]] = []
