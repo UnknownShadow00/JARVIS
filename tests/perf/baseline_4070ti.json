@@ -1,0 +1,47 @@
+{
+  "profile": "4070ti",
+  "captured_date": "2026-05-04",
+  "hardware": {
+    "gpu": "RTX 4070 Ti Super",
+    "vram_gb": 16,
+    "cuda": "12.x"
+  },
+  "models": {
+    "brain": "qwen3:14b",
+    "router": "gemma3:4b",
+    "coder": "qwen2.5-coder:14b"
+  },
+  "benchmarks": {
+    "router_classify_ms": {
+      "p50": 45,
+      "p95": 80,
+      "p99": 120,
+      "note": "gemma3:4b intent classification"
+    },
+    "llm_first_token_ms": {
+      "p50": 800,
+      "p95": 1500,
+      "p99": 2000,
+      "note": "qwen3:14b first token latency"
+    },
+    "tts_first_chunk_ms": {
+      "p50": 200,
+      "p95": 400,
+      "p99": 600,
+      "note": "piper TTS first audio chunk"
+    },
+    "stt_transcribe_ms": {
+      "p50": 300,
+      "p95": 500,
+      "p99": 800,
+      "note": "faster-whisper medium.en on GPU"
+    },
+    "end_to_end_ms": {
+      "p50": 1800,
+      "p95": 3000,
+      "p99": 4000,
+      "note": "wake word trigger to TTS start"
+    }
+  },
+  "notes": "Baseline before RTX 5090 migration. Run scripts/switch_models.py --profile 5090 and re-capture after upgrade."
+}
