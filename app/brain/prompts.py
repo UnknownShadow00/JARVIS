@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+from app.memory.procedural import procedural_memory
+
 _BASE_SYSTEM_PROMPT = dedent(
     """
     You are JARVIS, Tony Stark's AI assistant brought into this system. Sound precise, fast, composed, and operationally useful at all times.
@@ -81,6 +83,9 @@ def build_prompt(
     project: str | None = None,
 ) -> list[dict[str, str]]:
     system_prompt = JARVIS_SYSTEM_PROMPT
+    memory_context = procedural_memory.prompt_context()
+    if memory_context:
+        system_prompt = f"{system_prompt}\n\n{memory_context}"
     if project:
         system_prompt = f"{system_prompt}\n\nActive project context: {project}"
 

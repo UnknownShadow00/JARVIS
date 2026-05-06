@@ -32,6 +32,7 @@ from app.agent.sensor_store import add_reading, get_readings, list_nodes
 from app.agent.task_queue import task_queue
 from app.config import settings
 from app.logs.audit import audit
+from app.memory.procedural import procedural_memory
 from app.tools.health_check import check_readiness, check_tools
 from app.tools.registry import ToolError, registry
 from app.voice.filler_manager import filler_manager
@@ -133,6 +134,10 @@ class ScheduledJobRequest(BaseModel):
     name: str
     cron_expr: str
     goal: str
+
+
+class SkillCreateRequest(BaseModel):
+    skill: str
 
 
 @app.get("/health")
@@ -248,6 +253,19 @@ async def list_scheduled_jobs() -> dict[str, Any]:
 async def delete_scheduled_job(job_id: str) -> dict[str, bool]:
     removed = scheduler.remove_job(job_id)
     return {"deleted": removed}
+
+
+@app.get("/memory/skills")
+async def list_procedural_skills() -> dict[str, Any]:
+    skills = procedural_memory.list_skills()
+    return {"skills": skills, "count": len(skills)}
+
+
+@app.post("/memory/skills")
+async def add_procedural_skill(request: SkillCreateRequest) -> dict[str, Any]:
+    added = procedural_memory.add_skill(request.skill)
+    skills = procedural_memory.list_skills()
+    return {"added": added, "skills": skills, "count": len(skills)}
 
 
 @app.post("/sensors/data")

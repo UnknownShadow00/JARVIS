@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.agent.scheduler import Scheduler
 from app.agent.task_queue import TaskQueue
+from app.memory.procedural import ProceduralMemory
 from app.server import app
 from app.tools.registry import ToolResult
 
@@ -105,3 +106,26 @@ def test_schedule_job_routes(monkeypatch) -> None:  # noqa: ANN001
     deleted = client.delete(f"/schedule/jobs/{job_id}")
     assert deleted.status_code == 200
     assert deleted.json()["deleted"] is True
+
+
+def test_procedural_memory_routes(monkeypatch) -> None:  # noqa: ANN001
+    store = "tasks/.server_skills_test.md"
+    memory = ProceduralMemory(store)
+    try:
+        monkeypatch.setattr("app.server.procedural_memory", memory)
+
+        created = client.post("/memory/skills", json={"skill": "Check local files first."})
+        assert created.status_code == 200
+        assert created.json()["added"] is True
+
+        duplicate = client.post("/memory/skills", json={"skill": "Check local files first."})
+        assert duplicate.status_code == 200
+        assert duplicate.json()["added"] is False
+
+        listed = client.get("/memory/skills")
+        assert listed.status_code == 200
+        assert listed.json()["skills"] == ["Check local files first."]
+    finally:
+        from pathlib import Path
+
+        Path(store).unlink(missing_ok=True)

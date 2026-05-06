@@ -74,3 +74,8 @@
 - Files changed: Modelfile.nothink, config.yaml, config.yaml.example, app/brain/llm_client.py, app/brain/router.py, app/brain/complexity_router.py, app/server.py, app/voice/stt.py, app/voice/tts.py, app/voice/phrase_cache.py, app/voice/filler_manager.py, tests/test_complexity_router.py, tests/test_llm_client_payload.py, tests/router_test.py, tests/stt_test.py, tests/test_config_check.py, tests/test_tts_chatterbox.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; qwen3-nothink was created successfully in Ollama, py_compile passed for changed runtime modules, and focused pytest reported 42 passed
 - Next: Remaining completion work is integration that requires external installs, credentials, or hardware: Hermes WSL2, browser-use/MCP packages, CAD/Kasa dependencies, real voice clone audio, Electron npm install, PWA icon, and UE5/Audio2Face setup
+## [2026-05-06 01:34:23 -05:00] Task Completed
+- Task: Added procedural memory backed by skills.md, injected it into prompts, and exposed API routes to list/add skills
+- Files changed: skills.md, app/memory/procedural.py, app/brain/prompts.py, app/server.py, tests/test_procedural_memory.py, tests/test_prompts_memory.py, tests/test_server_integration.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; py_compile passed for changed runtime modules and focused pytest reported 13 passed
+- Next: Continue local-only completion with project indexing or optional dependency-gated tool wrappers before external installs/hardware setup
