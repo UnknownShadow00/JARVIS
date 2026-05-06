@@ -16,7 +16,7 @@ from app.config import settings
 from app.server import _process, llm_client
 
 
-async def _fake_chat(messages, model=None, stream=False):  # noqa: ANN001
+async def _fake_chat(messages, model=None, stream=False, **kwargs):  # noqa: ANN001, ARG001
     return "Ready, sir."
 
 

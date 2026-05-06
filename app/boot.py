@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
+import json
 import subprocess
 import sys
 import time
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -53,7 +57,8 @@ async def boot_sequence(
     await broadcast_boot_event(active_manager, "music", "Boot sequence started.")
     await asyncio.sleep(settings.boot.animation_delay_ms / 1000)
 
-    report = await generate_morning_report()
+    boot_context = await prefetch_boot_context()
+    report = await generate_morning_report(boot_context)
     await broadcast_boot_event(active_manager, "status", report)
     await broadcast_boot_event(active_manager, "ready", "JARVIS online. Good to see you again, sir.")
     await tts.speak(report)
@@ -129,8 +134,66 @@ def send_hud_event(event: dict[str, str]) -> None:
     audit.log("hud_event", event)
 
 
-async def generate_morning_report() -> str:
+async def generate_morning_report(context: dict[str, Any] | None = None) -> str:
+    if context is not None and _accepts_context_arg(compose_morning_report):
+        return compose_morning_report(context)
     return compose_morning_report()
+
+
+def _accepts_context_arg(func: Callable[..., Any]) -> bool:
+    try:
+        signature = inspect.signature(func)
+    except (TypeError, ValueError):
+        return True
+    return any(
+        parameter.kind in (parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY)
+        for parameter in signature.parameters.values()
+    )
+
+
+async def prefetch_boot_context() -> dict[str, Any]:
+    """Fetch slow boot context concurrently so report generation stays snappy."""
+    results = await asyncio.gather(
+        _safe_prefetch("system_stats", _prefetch_system_stats),
+        _safe_prefetch("pending_tasks", _prefetch_pending_task_count),
+        _safe_prefetch("last_project", _prefetch_last_project),
+        _safe_prefetch("recent_errors", _prefetch_recent_error_count),
+    )
+    context: dict[str, Any] = {}
+    for result in results:
+        context.update(result)
+    audit.log("boot_context_prefetched", context)
+    return context
+
+
+async def _safe_prefetch(name: str, loader: Callable[[], Awaitable[dict[str, Any]]]) -> dict[str, Any]:
+    try:
+        return await loader()
+    except Exception as exc:  # noqa: BLE001
+        audit.log("boot_context_prefetch_error", {"name": name, "error": str(exc)})
+        return {}
+
+
+async def _prefetch_system_stats() -> dict[str, Any]:
+    from app.tools.system_stats import get_stats
+
+    stats = await asyncio.to_thread(get_stats)
+    return {
+        "gpu_temp": stats.get("gpu_temp") or "unknown",
+        "system_stats": stats,
+    }
+
+
+async def _prefetch_pending_task_count() -> dict[str, Any]:
+    return {"pending_tasks": await asyncio.to_thread(pending_task_count)}
+
+
+async def _prefetch_last_project() -> dict[str, Any]:
+    return {"last_project": await asyncio.to_thread(last_project_name)}
+
+
+async def _prefetch_recent_error_count() -> dict[str, Any]:
+    return {"recent_errors": await asyncio.to_thread(recent_error_count)}
 
 
 async def _generate_morning_report_via_llm() -> str:
@@ -198,6 +261,15 @@ def last_project_name() -> str:
 
 
 def pending_task_count() -> int:
+    state = Path("tasks") / "state.json"
+    if state.is_file():
+        try:
+            payload = json.loads(state.read_text(encoding="utf-8"))
+            value = payload.get("pending_count", 0) if isinstance(payload, dict) else 0
+            return int(value)
+        except Exception:  # noqa: BLE001
+            pass
+
     todo = Path("tasks") / "todo.md"
     if not todo.is_file():
         return 0
@@ -205,6 +277,21 @@ def pending_task_count() -> int:
     for line in todo.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if stripped.startswith("- [ ]"):
+            count += 1
+    return count
+
+
+def recent_error_count(limit: int = 200) -> int:
+    log_path = Path(settings.logging.audit_log)
+    if not log_path.is_absolute():
+        log_path = Path.cwd() / log_path
+    if not log_path.is_file():
+        return 0
+
+    lines = log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    count = 0
+    for line in lines[-limit:]:
+        if "error" in line.lower() or "timeout" in line.lower():
             count += 1
     return count
 

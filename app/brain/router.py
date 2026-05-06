@@ -16,7 +16,7 @@ Return ONLY valid JSON - no explanation, no markdown, no extra text:
 
 Intent options:
 - "respond"         - answer directly, no tools or actions needed
-- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, interpreter, screenshot, browser)
+- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, interpreter, screenshot, browser, browser_use)
 - "retrieve_memory" - needs memory or history lookup
 - "vision"          - needs screen capture or webcam
 - "confirm_action"  - dangerous/irreversible action that needs user confirmation
@@ -221,6 +221,14 @@ class IntentRouter:
                 0.92,
                 "browser",
                 "The request asks to open a browser or URL.",
+            )
+
+        if re.search(r"\b(browser agent|use browser-use|automate.*browser|research.*website|fill.*form)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.91,
+                "browser_use",
+                "The request asks for browser-agent automation.",
             )
 
         if re.search(r"\b(time|joke|capital|how are you|what is|who is|explain|tell me)\b", text):

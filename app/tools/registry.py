@@ -10,10 +10,15 @@ from app.config import settings
 from app.logs.audit import audit
 from app.tools import apps as apps_tool
 from app.tools import browser as browser_tool
+from app.tools import browser_use as browser_use_tool
 from app.tools import calendar as calendar_tool
+from app.tools import cad as cad_tool
+from app.tools import cli as cli_tool
 from app.tools import computer_use as computer_use_tool
 from app.tools import files as files_tool
 from app.tools import interpreter as interpreter_tool
+from app.tools import kasa as kasa_tool
+from app.tools import mcp_client as mcp_client_tool
 from app.tools import mouse_keyboard as mouse_keyboard_tool
 from app.tools import screenshot as screenshot_tool
 from app.tools import shell as shell_tool
@@ -26,10 +31,15 @@ SAFETY_LEVEL = 0
 TOOLS: dict[str, Any] = {
     "apps": apps_tool.execute,
     "browser": browser_tool.execute,
+    "browser_use": browser_use_tool.execute,
     "calendar": calendar_tool.execute,
+    "cad": cad_tool.execute,
+    "cli": cli_tool.execute,
     "computer_use": computer_use_tool.execute,
     "files": files_tool.execute,
     "interpreter": interpreter_tool.execute,
+    "kasa": kasa_tool.execute,
+    "mcp_client": mcp_client_tool.execute,
     "mouse_keyboard": mouse_keyboard_tool.execute,
     "screenshot": screenshot_tool.execute,
     "shell": shell_tool.execute,
@@ -70,10 +80,15 @@ class ToolRegistry:
         explicit_tools = {
             "apps": apps_tool,
             "browser": browser_tool,
+            "browser_use": browser_use_tool,
             "calendar": calendar_tool,
+            "cad": cad_tool,
+            "cli": cli_tool,
             "computer_use": computer_use_tool,
             "files": files_tool,
             "interpreter": interpreter_tool,
+            "kasa": kasa_tool,
+            "mcp_client": mcp_client_tool,
             "mouse_keyboard": mouse_keyboard_tool,
             "screenshot": screenshot_tool,
             "shell": shell_tool,

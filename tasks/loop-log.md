@@ -79,3 +79,23 @@
 - Files changed: skills.md, app/memory/procedural.py, app/brain/prompts.py, app/server.py, tests/test_procedural_memory.py, tests/test_prompts_memory.py, tests/test_server_integration.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; py_compile passed for changed runtime modules and focused pytest reported 13 passed
 - Next: Continue local-only completion with project indexing or optional dependency-gated tool wrappers before external installs/hardware setup
+## [2026-05-06 15:32:57 -05:00] Task Completed
+- Task: Implemented Phase 8 local integration completion with boot context prefetch, project indexing, optional tool stubs, readiness coverage, artifact cleanup, and status documentation
+- Files changed: CLAUDE.md, app/boot.py, app/brain/morning_report.py, app/brain/prompts.py, app/brain/router.py, app/memory/project_indexer.py, app/tools/health_check.py, app/tools/registry.py, app/tools/mcp_client.py, app/tools/browser_use.py, app/tools/kasa.py, app/tools/cad.py, app/tools/cli/__init__.py, tests/test_phase8_integrations.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; py_compile passed for changed runtime modules and focused pytest reported 31 passed
+- Next: Manual integrations remain: Ollama Windows env vars, Electron npm install, PWA icon, voice clone WAV/config, Hermes WSL2 setup, UE5/Audio2Face, 5090 setup, and optional live package installs only when approved
+## [2026-05-06 17:12:48 -05:00] Task Completed
+- Task: Installed approved local integration dependencies and skipped OrcaSlicer after confirming 3D printing is out of scope
+- Files changed: CLAUDE.md, app/tools/health_check.py, frontend/electron/package.json, frontend/electron/package-lock.json, frontend/pwa/icon.png, tasks/loop-log.md
+- Result: pass against acceptance criteria; browser-use, python-kasa, build123d, FastMCP, Electron dependencies, PWA icon, and Ollama user registry environment values were installed/set; pip check passed; npm audit reported 0 vulnerabilities; py_compile passed; focused pytest reported 31 passed; readiness report passed required checks
+- Next: Open Interpreter remains optional and blocked by Python 3.13/tiktoken build tooling; voice_clone_path still needs a real 10s user voice WAV; restart Ollama or sign in again so new user environment variables affect fresh Ollama processes
+## [2026-05-06 17:21:57 -05:00] Task Completed
+- Task: Reviewed current completed, pending, missing, and remaining JARVIS work
+- Files changed: tasks/loop-log.md
+- Result: pass against acceptance criteria; readiness report confirms all required live voice checks pass, with only Open Interpreter and voice clone sample still warning
+- Next: Use the summary to decide whether to commit current changes, record voice clone audio, restart Ollama, or continue Hermes/Open Interpreter work later
+## [2026-05-06 17:44:01 -05:00] Task Completed
+- Task: Completed the five-phase pre-5090 stabilization pass with Phase 8 local integrations, optional tool readiness, unattended voice validation, voice clone skip documentation, 5090 migration runbook, final test fixes, and review
+- Files changed: CLAUDE.md, app/boot.py, app/brain/morning_report.py, app/brain/prompts.py, app/brain/router.py, app/memory/project_indexer.py, app/tools/health_check.py, app/tools/registry.py, app/tools/browser_use.py, app/tools/cad.py, app/tools/cli/__init__.py, app/tools/kasa.py, app/tools/mcp_client.py, docs/5090_migration.md, frontend/electron/package.json, frontend/electron/package-lock.json, frontend/pwa/icon.png, tasks/loop-log.md, tasks/todo.md, tasks/tool-readiness-inventory.md, tests/pipeline_test.py, tests/test_phase8_integrations.py
+- Result: pass against automated acceptance criteria; pip check passed, npm audit reported 0 vulnerabilities, readiness report passed required checks, tool readiness smoke passed, mocked voice pipeline passed, focused pytest reported 38 passed, and full pytest reported 317 passed / 1 skipped
+- Next: Only attended hardware validation remains: run the real spoken wake/PTT -> STT -> response -> TTS playback plus kill-switch test when someone is at the microphone; Open Interpreter remains optional and OrcaSlicer remains skipped by scope

@@ -55,6 +55,27 @@ def _piper_binary() -> str | None:
     )
 
 
+def _voice_clone_ready() -> tuple[bool, str]:
+    value = settings.voice.voice_clone_path.strip()
+    if not value:
+        return True, "skipped intentionally; no personal voice sample configured"
+    path = _path(value)
+    return path.is_file(), str(path)
+
+
+def _pwa_icon_ready() -> tuple[bool, str]:
+    path = PROJECT_ROOT / "frontend" / "pwa" / "icon.png"
+    return path.is_file(), str(path)
+
+
+def _electron_install_ready() -> tuple[bool, str]:
+    node_modules = PROJECT_ROOT / "frontend" / "electron" / "node_modules"
+    package_json = PROJECT_ROOT / "frontend" / "electron" / "package.json"
+    if not package_json.is_file():
+        return False, str(package_json)
+    return node_modules.is_dir(), str(node_modules)
+
+
 def _ollama_ready() -> tuple[bool, str]:
     try:
         response = httpx.get(f"{settings.models.ollama_base_url}/api/tags", timeout=2.0)
@@ -170,6 +191,58 @@ def check_readiness() -> dict[str, dict[str, Any]]:
             shutil.which("interpreter") is not None,
             shutil.which("interpreter") or "not installed",
             "Optional Phase 3 bridge; install only when enabling that integration.",
+        ),
+        "mcp_client": _status(
+            "MCP client wrapper",
+            True,
+            "stub available; live client dependency not installed",
+            "Optional Phase 8 integration; install FastMCP/client dependencies only when approved.",
+        ),
+        "browser_use": _status(
+            "browser-use",
+            _module_available("browser_use"),
+            "module import check",
+            "Optional Phase 8 integration; install browser-use only when enabling live browser-agent automation.",
+        ),
+        "kasa": _status(
+            "python-kasa",
+            _module_available("kasa"),
+            "module import check",
+            "Optional Phase 8 integration; install python-kasa only when enabling smart plug control.",
+        ),
+        "cad_build123d": _status(
+            "build123d",
+            _module_available("build123d"),
+            "module import check",
+            "Optional Phase 8 integration; install build123d only when enabling CAD generation.",
+        ),
+        "cad_orcaslicer": _status(
+            "OrcaSlicer",
+            True,
+            _first_binary("OrcaSlicer", "orca-slicer", "orca-slicer.exe")
+            or "skipped; only needed for 3D printing/slicing",
+            "Install OrcaSlicer only when live 3D printing or slicing is needed.",
+        ),
+        "cli_anything": _status(
+            "CLI-Anything harness",
+            True,
+            "stub available for OBS/FFmpeg/Blender readiness",
+            "Optional Phase 8 integration; add live adapters only when approved.",
+        ),
+        "electron_install": _status(
+            "Electron dependencies",
+            *_electron_install_ready(),
+            "Run npm install in frontend/electron when desktop HUD validation is ready.",
+        ),
+        "pwa_icon": _status(
+            "PWA icon",
+            *_pwa_icon_ready(),
+            "Create frontend/pwa/icon.png as a 192x192 PNG.",
+        ),
+        "voice_clone_path": _status(
+            "Voice clone sample",
+            *_voice_clone_ready(),
+            "Record a 10s WAV and set voice.voice_clone_path in config.yaml.",
         ),
     }
 

@@ -34,6 +34,7 @@ _BASE_SYSTEM_PROMPT = dedent(
     - Append tags after the spoken response in this exact bracketed format.
     - Valid examples:
       [ACTION:BROWSER:https://google.com]
+      [ACTION:BROWSER_AGENT:research a vendor portal and summarize the order status]
       [ACTION:APP:vscode]
       [ACTION:FILE:read:/path/to/file]
       [ACTION:SHELL:npm run dev]

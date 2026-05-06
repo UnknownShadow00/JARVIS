@@ -16,6 +16,11 @@ Last updated: 2026-05-06
 | Mouse/keyboard | Working with confirmation | `tests/test_mouse_keyboard.py`, `tests/test_phase3_integration.py` | PyAutoGUI-backed Level 2 control with failsafe enabled. |
 | Voice text/TTS route | Working | `python tasks/manual_voice_smoke.py --text "hello jarvis" --speak` | Ollama streaming response and Piper playback returned successfully. |
 | Mock voice pipeline | Working | `python tasks/manual_voice_smoke.py --mock-pipeline` | Wake/STT/router/TTS call order verified without hardware. |
+| browser-use | Installed, stubbed live execution | `python tasks/readiness_report.py`, `tests/test_phase8_integrations.py` | Import is available. Runtime tool returns an action plan only until live browser-agent automation is intentionally enabled. |
+| python-kasa | Installed, discovery/status only | `python tasks/readiness_report.py`, `tests/test_phase8_integrations.py` | Status/discovery are Level 0. Control actions remain dry-run Level 1 semantics. |
+| build123d CAD | Installed, dry-run export planning | `python tasks/readiness_report.py`, `tests/test_phase8_integrations.py` | CAD tool returns a design/export plan only. It does not slice or print. |
+| FastMCP/MCP wrapper | Stubbed with whitelist | `tests/test_phase8_integrations.py` | Whitelists baseline MCP servers and rejects unknown servers. Live client calls remain deferred. |
+| OBS/FFmpeg/Blender CLI harness | Stubbed readiness | `python tasks/readiness_report.py`, `python tasks/tool_readiness_smoke.py` | Reports local command availability and returns dry-run plans for execution. |
 
 ## Needs Config Or Attended Input
 
@@ -27,6 +32,7 @@ Last updated: 2026-05-06
 | Vision screen analysis | Needs model/service | `tests/test_vision.py`, `tests/test_vision_vlm.py` | Screenshot capture and Ollama `/api/generate` path exist; requires configured vision model. |
 | Vision webcam | Needs dependency/device | `tests/test_vision.py`, `tests/test_vision_vlm.py` | Webcam path requires OpenCV and a camera. |
 | Open Interpreter | Needs dependency/config | `tests/test_interpreter_tool.py` | Level 2 bridge exists; requires `interpreter` CLI and Ollama-compatible config. |
+| Voice clone sample | Intentionally skipped | `python tasks/readiness_report.py` | No real personal 10-second WAV is available while the operator is away. Chatterbox continues without conditioning and falls back to Kokoro/Piper if needed. |
 
 ## Stubbed Or Deferred
 
@@ -38,6 +44,7 @@ Last updated: 2026-05-06
 | Discord comms | Stubbed by default | `tests/test_discord_bot.py`, `tests/test_comms_stubs.py` | Requires enable flag, package/API availability, bot token, and channel ID. |
 | Telegram comms | Stubbed by default | `tests/test_telegram_bot.py`, `tests/test_comms_stubs.py` | Requires enable flag, package/API availability, token, and chat ID. |
 | UE5 / Audio2Face | Deferred bridge | `tests/test_ue5_bridge.py`, `tests/test_audio2face.py` | Event-building and disabled-manager behavior are covered; live bridge requires external runtime. |
+| OrcaSlicer | Skipped by scope | `python tasks/readiness_report.py` | 3D printing/slicing is out of scope for this pre-5090 pass. |
 
 ## Immediate Next Gate
 
