@@ -54,3 +54,8 @@
 - Files changed: app/voice/wake_word.py, tests/test_ptt_and_killswitch.py, tasks/tool-readiness-inventory.md, tasks/loop-log.md
 - Result: pass for automatable acceptance criteria; collect-only reported 285 tests, full pytest reported 284 passed and 1 skipped, mock voice pipeline passed, text route with TTS passed, startup checks passed in live mode, and live wake/PTT still requires attended input/audio capture
 - Next: Run `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` with someone holding `ctrl+space` and speaking during the listen window to complete the attended MVP gate
+## [2026-05-06 00:39:46 -05:00] Task Completed
+- Task: Added an automated tool readiness smoke harness for local dry-run and disabled-integration checks
+- Files changed: tasks/tool_readiness_smoke.py, tests/test_tool_readiness_smoke.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; targeted pytest reported 68 passed, the smoke command reported 10 readiness checks passed, and full pytest reported 287 passed and 1 skipped
+- Next: Run `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` with attended push-to-talk or wake audio to complete the remaining live voice gate
