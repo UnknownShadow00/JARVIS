@@ -1,4 +1,4 @@
-"""Streaming text-to-speech facade for Piper first, Kokoro later."""
+"""Streaming text-to-speech facade with Chatterbox/Kokoro/Piper fallback."""
 from __future__ import annotations
 
 import asyncio
@@ -17,12 +17,27 @@ from app.logs.audit import audit
 from app.voice.sounds import sounds
 
 try:
-    from chatterbox.tts import ChatterboxTTS as _ChatterboxTTS
+    from chatterbox.tts_turbo import ChatterboxTurboTTS as _ChatterboxTTS
 
     CHATTERBOX_AVAILABLE = True
 except ImportError:
-    _ChatterboxTTS = None
-    CHATTERBOX_AVAILABLE = False
+    try:
+        from chatterbox.tts import ChatterboxTTS as _ChatterboxTTS
+
+        CHATTERBOX_AVAILABLE = True
+    except ImportError:
+        _ChatterboxTTS = None
+        CHATTERBOX_AVAILABLE = False
+
+try:
+    import kokoro as _kokoro  # type: ignore[import-untyped]
+
+    KOKORO_AVAILABLE = True
+except ImportError:
+    _kokoro = None
+    KOKORO_AVAILABLE = False
+
+_PARALINGUISTIC_RE = re.compile(r"\[(?:laugh|chuckle|cough)\]", re.IGNORECASE)
 
 is_speaking = False
 cooldown_until: float = 0.0
@@ -138,21 +153,39 @@ class TTSEngine:
 
     async def _synthesize_sentence(self, sentence: str) -> Path | None:
         engine = settings.voice.tts_engine.lower()
-        if engine == "piper":
-            return await asyncio.to_thread(self._synthesize_piper, sentence)
-        if engine == "kokoro":
-            audit.log("tts_unavailable", {"engine": "kokoro", "reason": "not_implemented"})
-            return None
         if engine == "chatterbox":
-            if not CHATTERBOX_AVAILABLE:
-                audit.log(
-                    "tts_unavailable",
-                    {"engine": "chatterbox", "reason": "import_error_fallback_to_piper"},
-                )
-                return await asyncio.to_thread(self._synthesize_piper, sentence)
-            return await asyncio.to_thread(self._synthesize_chatterbox, sentence)
+            return await self._synthesize_with_fallback(sentence, start_at="chatterbox")
+        if engine == "kokoro":
+            return await self._synthesize_with_fallback(sentence, start_at="kokoro")
+        if engine == "piper":
+            return await self._synthesize_with_fallback(sentence, start_at="piper")
 
         audit.log("tts_unavailable", {"engine": settings.voice.tts_engine, "reason": "unknown_engine"})
+        return await self._synthesize_with_fallback(sentence, start_at="piper")
+
+    async def _synthesize_with_fallback(self, sentence: str, *, start_at: str) -> Path | None:
+        engines = ["chatterbox", "kokoro", "piper"]
+        start_index = engines.index(start_at)
+        for engine in engines[start_index:]:
+            try:
+                if engine == "chatterbox":
+                    if not CHATTERBOX_AVAILABLE:
+                        audit.log(
+                            "tts_unavailable",
+                            {"engine": "chatterbox", "reason": "import_error_fallback"},
+                        )
+                        continue
+                    return await asyncio.to_thread(self._synthesize_chatterbox, sentence)
+                if engine == "kokoro":
+                    if not KOKORO_AVAILABLE:
+                        audit.log("tts_unavailable", {"engine": "kokoro", "reason": "import_error_fallback"})
+                        continue
+                    return await asyncio.to_thread(self._synthesize_kokoro, self._strip_paralinguistics(sentence))
+                if engine == "piper":
+                    return await asyncio.to_thread(self._synthesize_piper, self._strip_paralinguistics(sentence))
+            except Exception as exc:  # noqa: BLE001
+                audit.log("tts_unavailable", {"engine": engine, "reason": str(exc)})
+                continue
         return None
 
     def _synthesize_piper(self, sentence: str) -> Path | None:
@@ -281,6 +314,34 @@ class TTSEngine:
         audit.log("tts_chatterbox", {"text_length": len(sentence)})
         return output
 
+    def _synthesize_kokoro(self, sentence: str) -> Path | None:
+        if _kokoro is None:
+            raise ImportError("kokoro is not installed")
+
+        output = Path(tempfile.NamedTemporaryFile(prefix="jarvis-tts-", suffix=".wav", delete=False).name)
+        pipeline_factory = getattr(_kokoro, "KPipeline", None) or getattr(_kokoro, "Pipeline", None)
+        if pipeline_factory is None:
+            raise ImportError("kokoro pipeline API not available")
+
+        pipeline = pipeline_factory(lang_code="a")
+        voice = getattr(settings.voice, "kokoro_voice", "af_heart")
+        speed = float(getattr(settings.voice, "kokoro_speed", 1.0))
+        generator = pipeline(sentence, voice=voice, speed=speed)
+
+        wav = None
+        for item in generator:
+            if isinstance(item, tuple) and item:
+                wav = item[-1]
+            else:
+                wav = item
+            break
+        if wav is None:
+            return None
+
+        self._write_wav_file(output, wav)
+        audit.log("tts_kokoro", {"text_length": len(sentence), "voice": voice})
+        return output
+
     def _chatterbox_generate_kwargs(self) -> dict[str, Any]:
         if self._chatterbox_conditioning is None:
             return {}
@@ -354,6 +415,9 @@ class TTSEngine:
             audio_path.unlink(missing_ok=True)
         except OSError:
             audit.log("tts_cleanup_failed", {"path": str(audio_path)})
+
+    def _strip_paralinguistics(self, sentence: str) -> str:
+        return _PARALINGUISTIC_RE.sub("", sentence).strip()
 
     def _cancel_requested(self) -> bool:
         if not current_token.is_cancelled():

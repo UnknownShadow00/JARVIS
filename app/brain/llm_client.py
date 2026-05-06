@@ -33,16 +33,47 @@ class LLMClient:
         messages: list[dict[str, Any]],
         model: str | None = None,
         stream: bool = False,
+        think: bool = False,
+        num_predict: int = 150,
     ) -> str | AsyncGenerator[str, None]:
         target_model = model or settings.models.main
-        return await self._chat_with_model(target_model, messages, stream=stream)
+        return await self._chat_with_model(
+            target_model,
+            messages,
+            stream=stream,
+            think=think,
+            num_predict=num_predict,
+        )
+
+    async def deep_reasoning(
+        self,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        stream: bool = False,
+    ) -> str | AsyncGenerator[str, None]:
+        target_model = model or settings.models.main
+        if target_model == "qwen3-nothink":
+            target_model = "qwen3:14b"
+        return await self._chat_with_model(
+            target_model,
+            messages,
+            stream=stream,
+            think=True,
+            num_predict=700,
+        )
 
     async def code(
         self,
         messages: list[dict[str, Any]],
         stream: bool = False,
     ) -> str | AsyncGenerator[str, None]:
-        return await self._chat_with_model(settings.models.coder, messages, stream=stream)
+        return await self._chat_with_model(
+            settings.models.coder,
+            messages,
+            stream=stream,
+            think=False,
+            num_predict=700,
+        )
 
     async def vision(
         self,
@@ -81,6 +112,8 @@ class LLMClient:
         messages: list[dict[str, Any]],
         model: str,
     ) -> list[dict[str, Any]]:
+        if model == "qwen3-nothink":
+            return messages
         if not model.startswith("qwen3"):
             return messages
         result = list(messages)
@@ -100,13 +133,16 @@ class LLMClient:
         messages: list[dict[str, Any]],
         *,
         stream: bool,
+        think: bool = False,
+        num_predict: int = 150,
     ) -> str | AsyncGenerator[str, None]:
         payload = self._normalize_messages(messages)
-        payload = self._suppress_thinking(payload, model)
-        audit.log("llm_call", {"model": model, "message_count": len(payload)})
+        if not think:
+            payload = self._suppress_thinking(payload, model)
+        audit.log("llm_call", {"model": model, "message_count": len(payload), "think": think})
 
         if stream:
-            return self._stream_response(model, payload)
+            return self._stream_response(model, payload, think=think, num_predict=num_predict)
 
         try:
             response = await self._call_with_recovery(
@@ -114,6 +150,8 @@ class LLMClient:
                 model=model,
                 messages=payload,
                 stream=False,
+                think=think,
+                num_predict=num_predict,
             )
         except self._connection_exceptions() as exc:
             raise OllamaConnectionError(
@@ -129,13 +167,16 @@ class LLMClient:
         model: str,
         messages: list[dict[str, Any]],
         stream: bool,
+        *,
+        think: bool = False,
+        num_predict: int = 150,
     ) -> dict[str, Any]:
         return {
             "model": model,
             "messages": messages,
             "stream": stream,
-            "think": False,
-            "options": {"num_predict": 120},
+            "think": think,
+            "options": {"num_predict": num_predict},
         }
 
     async def _call_chat(
@@ -144,8 +185,10 @@ class LLMClient:
         model: str,
         messages: list[dict[str, Any]],
         stream: bool,
+        think: bool = False,
+        num_predict: int = 150,
     ) -> Any:
-        payload = self._build_payload(model, messages, stream=False)
+        payload = self._build_payload(model, messages, stream=False, think=think, num_predict=num_predict)
         url = f"{self._host}/api/chat"
         async with httpx.AsyncClient(timeout=httpx.Timeout(600.0)) as client:
             response = await client.post(url, json=payload)
@@ -156,8 +199,11 @@ class LLMClient:
         self,
         model: str,
         messages: list[dict[str, Any]],
+        *,
+        think: bool = False,
+        num_predict: int = 150,
     ) -> AsyncGenerator[str, None]:
-        payload = self._build_payload(model, messages, stream=True)
+        payload = self._build_payload(model, messages, stream=True, think=think, num_predict=num_predict)
         url = f"{self._host}/api/chat"
         chunks: list[str] = []
 

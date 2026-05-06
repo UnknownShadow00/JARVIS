@@ -61,7 +61,14 @@ class SpeechToText:
             temp_path.unlink(missing_ok=True)
 
     def _transcribe_file(self, model, temp_path: Path) -> str:  # noqa: ANN001
-        segments, _info = model.transcribe(str(temp_path), beam_size=1, vad_filter=True)
+        segments, _info = model.transcribe(
+            str(temp_path),
+            beam_size=1,
+            vad_filter=True,
+            vad_parameters={"min_silence_duration_ms": 300, "speech_pad_ms": 100},
+            language="en",
+            condition_on_previous_text=False,
+        )
         return " ".join(segment.text for segment in segments)
 
     def _load_model(

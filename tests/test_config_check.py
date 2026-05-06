@@ -15,9 +15,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def test_example_config_matches_schema() -> None:
     example = load_settings(PROJECT_ROOT / "config.yaml.example")
 
-    assert example.models.main == "qwen3:14b"
-    assert example.voice.stt_model == "medium.en"
-    assert example.voice.tts_engine == "piper"
+    assert example.models.main == "qwen3-nothink"
+    assert example.voice.stt_model == "large-v3-turbo"
+    assert example.voice.tts_engine == "chatterbox"
 
 
 def test_builtin_wake_model_is_available(monkeypatch) -> None:

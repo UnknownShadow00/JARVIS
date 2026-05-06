@@ -28,6 +28,7 @@ QUERIES: list[tuple[str, str]] = [
     ("What do you see on my screen right now?", "vision"),
     ("Take a screenshot and describe it.", "use_tool"),
     ("Look at my webcam and tell me what you see.", "vision"),
+    ("Debug this failing voice pipeline.", "deep_reasoning"),
     ("Delete all files in my downloads folder.", "confirm_action"),
     ("Send a Discord message to my team saying the build is done.", "confirm_action"),
     ("Install all the packages in requirements.txt.", "confirm_action"),
@@ -35,6 +36,7 @@ QUERIES: list[tuple[str, str]] = [
 ]
 
 VALID_INTENTS = {"respond", "use_tool", "retrieve_memory", "vision", "confirm_action"}
+VALID_INTENTS.add("deep_reasoning")
 MAX_MS = 1000
 
 
@@ -114,6 +116,11 @@ def test_routes_screenshot_tool() -> None:
 def test_routes_webcam_vision() -> None:
     result = router.classify("look at my webcam")
     assert result.intent == "vision"
+
+
+def test_routes_deep_reasoning() -> None:
+    result = router.classify("debug this failing voice pipeline")
+    assert result.intent == "deep_reasoning"
 
 
 if __name__ == "__main__":

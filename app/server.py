@@ -25,6 +25,7 @@ from app.brain.kill_switch import check_voice, is_active, register_callback, sta
 from app.brain.llm_client import OllamaConnectionError, llm_client
 from app.brain.prompts import build_prompt
 from app.brain.response_cleaner import clean, dry_run_narration
+from app.brain.complexity_router import complexity_router
 from app.brain.router import router as intent_router
 from app.agent.scheduler import scheduler
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
@@ -33,6 +34,7 @@ from app.config import settings
 from app.logs.audit import audit
 from app.tools.health_check import check_readiness, check_tools
 from app.tools.registry import ToolError, registry
+from app.voice.filler_manager import filler_manager
 from app.voice.tts import tts
 
 
@@ -378,6 +380,7 @@ async def _process(message: str):  # type: ignore[return]
     if intent_result.intent == "use_tool" and intent_result.suggested_tool:
         tool_name = intent_result.suggested_tool
         params = _tool_params(tool_name, message)
+        filler_manager.play_for_tool(tool_name)
 
         try:
             result = registry.call(tool_name, params)
@@ -417,8 +420,14 @@ async def _process(message: str):  # type: ignore[return]
                 context = str(exc)
 
         messages = build_prompt(message, context=context)
+        decision = complexity_router.decide(message, intent_result.intent)
         try:
-            raw_reply = await llm_client.chat(messages)
+            raw_reply = await llm_client.chat(
+                messages,
+                model=decision.model,
+                think=decision.think,
+                num_predict=decision.num_predict,
+            )
         except OllamaConnectionError as exc:
             raw_reply = f"Unable to reach Ollama, sir. {exc}"
 
@@ -433,10 +442,30 @@ async def _process(message: str):  # type: ignore[return]
         if direct_reply:
             return finalize_reply(direct_reply), intent_result
 
+    if intent_result.intent == "deep_reasoning":
+        messages = build_prompt(message)
+        decision = complexity_router.decide(message, intent_result.intent)
+        try:
+            raw_reply = await llm_client.chat(
+                messages,
+                model=decision.model,
+                think=decision.think,
+                num_predict=decision.num_predict,
+            )
+        except OllamaConnectionError as exc:
+            raw_reply = f"Unable to reach Ollama for deep reasoning, sir. {exc}"
+        return finalize_reply(str(raw_reply)), intent_result
+
     # respond, retrieve_memory, vision — all go straight to LLM
     messages = build_prompt(message)
+    decision = complexity_router.decide(message, intent_result.intent)
     try:
-        raw_reply = await llm_client.chat(messages)
+        raw_reply = await llm_client.chat(
+            messages,
+            model=decision.model,
+            think=decision.think,
+            num_predict=decision.num_predict,
+        )
     except OllamaConnectionError as exc:
         raw_reply = f"Unable to reach Ollama at the moment, sir. {exc}"
 
@@ -510,8 +539,15 @@ async def _process_stream(message: str):  # type: ignore[return]
             return None
 
         messages = build_prompt(message, context=context)
+        decision = complexity_router.decide(message, intent_result.intent)
         try:
-            raw_reply = await llm_client.chat(messages, stream=True)
+            raw_reply = await llm_client.chat(
+                messages,
+                model=decision.model,
+                stream=True,
+                think=decision.think,
+                num_predict=decision.num_predict,
+            )
         except OllamaConnectionError:
             return None
 
@@ -527,9 +563,34 @@ async def _process_stream(message: str):  # type: ignore[return]
         if direct_reply:
             return None
 
+    if intent_result.intent == "deep_reasoning":
+        messages = build_prompt(message)
+        decision = complexity_router.decide(message, intent_result.intent)
+        try:
+            raw_reply = await llm_client.chat(
+                messages,
+                model=decision.model,
+                stream=True,
+                think=decision.think,
+                num_predict=decision.num_predict,
+            )
+        except OllamaConnectionError:
+            return None
+
+        if hasattr(raw_reply, "__aiter__"):
+            return raw_reply, intent_result
+        return None
+
     messages = build_prompt(message)
+    decision = complexity_router.decide(message, intent_result.intent)
     try:
-        raw_reply = await llm_client.chat(messages, stream=True)
+        raw_reply = await llm_client.chat(
+            messages,
+            model=decision.model,
+            stream=True,
+            think=decision.think,
+            num_predict=decision.num_predict,
+        )
     except OllamaConnectionError:
         return None
 

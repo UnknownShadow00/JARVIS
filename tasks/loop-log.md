@@ -69,3 +69,8 @@
 - Files changed: app/agent/task_queue.py, app/agent/scheduler.py, app/server.py, tests/test_agent_stubs.py, tests/test_server_integration.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; focused pytest for agent, scheduler, and server integration reported 23 passed, and py_compile passed for changed runtime modules
 - Next: Continue replacing deferred integrations with real local implementations where credentials or manual hardware are not required
+## [2026-05-06 01:25:11 -05:00] Task Completed
+- Task: Added the no-think Ollama model file, switched defaults to qwen3-nothink/large-v3-turbo/Chatterbox, added deep complexity routing, phrase/filler managers, STT speed options, and Chatterbox->Kokoro->Piper TTS fallback
+- Files changed: Modelfile.nothink, config.yaml, config.yaml.example, app/brain/llm_client.py, app/brain/router.py, app/brain/complexity_router.py, app/server.py, app/voice/stt.py, app/voice/tts.py, app/voice/phrase_cache.py, app/voice/filler_manager.py, tests/test_complexity_router.py, tests/test_llm_client_payload.py, tests/router_test.py, tests/stt_test.py, tests/test_config_check.py, tests/test_tts_chatterbox.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; qwen3-nothink was created successfully in Ollama, py_compile passed for changed runtime modules, and focused pytest reported 42 passed
+- Next: Remaining completion work is integration that requires external installs, credentials, or hardware: Hermes WSL2, browser-use/MCP packages, CAD/Kasa dependencies, real voice clone audio, Electron npm install, PWA icon, and UE5/Audio2Face setup

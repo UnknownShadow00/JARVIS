@@ -20,13 +20,14 @@ Intent options:
 - "retrieve_memory" - needs memory or history lookup
 - "vision"          - needs screen capture or webcam
 - "confirm_action"  - dangerous/irreversible action that needs user confirmation
+- "deep_reasoning"  - needs slower analysis/design/debug reasoning
 
 Rules:
 - confidence is 0.0 to 1.0
 - suggested_tool is the tool name if intent is use_tool, else empty string ""
 - reasoning is one short sentence explaining why"""
 
-_VALID_INTENTS = {"respond", "use_tool", "retrieve_memory", "vision", "confirm_action"}
+_VALID_INTENTS = {"respond", "use_tool", "retrieve_memory", "vision", "confirm_action", "deep_reasoning"}
 
 
 @dataclass
@@ -148,6 +149,17 @@ class IntentRouter:
 
         if re.search(r"\b(can'?t hear|can'?t listen|no audio|audio.*not working|not hearing|speak louder|too quiet|muted|sound.*issue)\b", text):
             return RouterResult("respond", 0.92, "", "User is reporting an audio/hardware issue — answer directly.")
+
+        if re.search(
+            r"\b(debug|design|architect|analy[sz]e|think through|root cause|trade[- ]?off|review this|investigate)\b",
+            text,
+        ):
+            return RouterResult(
+                "deep_reasoning",
+                0.94,
+                "",
+                "The request asks for deeper analysis or design reasoning.",
+            )
 
         if re.search(
             r"\b(remember|last project|yesterday|pending tasks|tasks.*pending|todo|hardware setup|what did i tell you|history)\b",

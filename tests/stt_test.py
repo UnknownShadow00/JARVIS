@@ -31,11 +31,11 @@ def test_stt_cpu_fallback_after_transcribe_error(monkeypatch) -> None:  # noqa: 
         text = " fallback works"
 
     class FailingModel:
-        def transcribe(self, path: str, beam_size: int, vad_filter: bool):  # noqa: ARG002
+        def transcribe(self, path: str, beam_size: int, vad_filter: bool, **kwargs):  # noqa: ARG002, ANN003
             raise RuntimeError("Library cublas64_12.dll is not found or cannot be loaded")
 
     class CpuModel:
-        def transcribe(self, path: str, beam_size: int, vad_filter: bool):  # noqa: ARG002
+        def transcribe(self, path: str, beam_size: int, vad_filter: bool, **kwargs):  # noqa: ARG002, ANN003
             return [Segment()], None
 
     subject = SpeechToText()

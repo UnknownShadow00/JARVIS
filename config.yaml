@@ -8,7 +8,7 @@
 models:
   # Primary brain — conversation, reasoning, planning, tool calls
   # Use qwen3:14b on 4070 Ti. Switch to qwen3:32b when 5090 arrives.
-  main: "qwen3:14b"
+  main: "qwen3-nothink"
 
   # Dedicated coding model — code gen, review, debug
   # Use qwen2.5-coder:14b on 4070 Ti. Switch to qwen2.5-coder:32b on 5090.
@@ -60,13 +60,13 @@ voice:
   vad_aggressiveness: 3
 
   # STT model size — medium.en is best balance of speed and accuracy on GPU
-  stt_model: "medium.en"
+  stt_model: "large-v3-turbo"
   stt_device: "cuda"
   stt_compute_type: "float16"
 
   # TTS engine — piper | kokoro
   # Supported values: piper | kokoro | chatterbox
-  tts_engine: "piper"
+  tts_engine: "chatterbox"
   voice_clone_path: ""
   piper_model_path: "./models/en_US-lessac-high.onnx"
   piper_config_path: "./models/en_US-lessac-high.onnx.json"

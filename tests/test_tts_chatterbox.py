@@ -50,7 +50,34 @@ async def test_chatterbox_unavailable_fallback(monkeypatch: pytest.MonkeyPatch) 
     await engine.speak("Fallback test.")
 
     assert fallback_calls == ["Fallback test."]
-    assert ("tts_unavailable", {"engine": "chatterbox", "reason": "import_error_fallback_to_piper"}) in events
+    assert ("tts_unavailable", {"engine": "chatterbox", "reason": "import_error_fallback"}) in events
+
+
+@pytest.mark.asyncio
+async def test_piper_fallback_strips_paralinguistics(monkeypatch: pytest.MonkeyPatch) -> None:
+    engine = tts_module.TTSEngine()
+    fallback_calls: list[str] = []
+
+    def fake_piper(sentence: str) -> Path:
+        fallback_calls.append(sentence)
+        output = _temp_wav_path()
+        output.write_bytes(b"wav")
+        return output
+
+    async def fake_play(_: Path) -> None:
+        return None
+
+    monkeypatch.setattr(tts_module, "CHATTERBOX_AVAILABLE", False)
+    monkeypatch.setattr(tts_module, "KOKORO_AVAILABLE", False)
+    monkeypatch.setattr(tts_module.settings.voice, "tts_engine", "chatterbox")
+    monkeypatch.setattr(engine, "_synthesize_piper", fake_piper)
+    monkeypatch.setattr(engine, "_play_audio_file", fake_play)
+    monkeypatch.setattr(engine, "_cleanup_audio", lambda _: None)
+    monkeypatch.setattr(tts_module.sounds, "play", lambda _: True)
+
+    await engine.speak("Certainly, sir [chuckle].")
+
+    assert fallback_calls == ["Certainly, sir ."]
 
 
 @pytest.mark.asyncio
