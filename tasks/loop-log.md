@@ -59,3 +59,8 @@
 - Files changed: tasks/tool_readiness_smoke.py, tests/test_tool_readiness_smoke.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; targeted pytest reported 68 passed, the smoke command reported 10 readiness checks passed, and full pytest reported 287 passed and 1 skipped
 - Next: Run `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` with attended push-to-talk or wake audio to complete the remaining live voice gate
+## [2026-05-06 01:02:10 -05:00] Task Completed
+- Task: Added detailed live-voice readiness reporting with a CLI and API endpoint
+- Files changed: app/tools/health_check.py, app/server.py, tasks/readiness_report.py, tests/test_health_check.py, tests/test_readiness_report.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; readiness report showed all required live-voice checks passing with Open Interpreter marked optional, targeted pytest reported 18 passed, and full pytest reported 291 passed and 1 skipped
+- Next: Run `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` with attended push-to-talk or wake audio to complete the remaining live voice gate

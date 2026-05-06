@@ -28,7 +28,7 @@ from app.brain.router import router as intent_router
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
 from app.config import settings
 from app.logs.audit import audit
-from app.tools.health_check import check_tools
+from app.tools.health_check import check_readiness, check_tools
 from app.tools.registry import ToolError, registry
 from app.voice.tts import tts
 
@@ -129,6 +129,11 @@ async def health() -> dict[str, Any]:
 @app.get("/health/tools")
 async def health_tools() -> dict[str, bool]:
     return check_tools()
+
+
+@app.get("/health/readiness")
+async def health_readiness() -> dict[str, dict[str, Any]]:
+    return check_readiness()
 
 
 @app.get("/network/status")
