@@ -3,6 +3,8 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
+from app.agent.scheduler import Scheduler
+from app.agent.task_queue import TaskQueue
 from app.server import app
 from app.tools.registry import ToolResult
 
@@ -62,3 +64,44 @@ def test_health_tools_route() -> None:
 def test_chat_missing_message() -> None:
     response = client.post("/chat", json={})
     assert response.status_code == 422
+
+
+def test_task_routes(monkeypatch) -> None:  # noqa: ANN001
+    queue = TaskQueue()
+    monkeypatch.setattr("app.server.task_queue", queue)
+
+    created = client.post("/tasks", json={"goal": "finish build"})
+    assert created.status_code == 200
+    task_id = created.json()["task_id"]
+
+    listed = client.get("/tasks")
+    assert listed.status_code == 200
+    assert listed.json()["count"] == 1
+
+    updated = client.patch(f"/tasks/{task_id}", json={"status": "done", "result": {"ok": True}})
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "done"
+
+    deleted = client.delete(f"/tasks/{task_id}")
+    assert deleted.status_code == 200
+    assert deleted.json()["deleted"] is True
+
+
+def test_schedule_job_routes(monkeypatch) -> None:  # noqa: ANN001
+    local_scheduler = Scheduler()
+    monkeypatch.setattr("app.server.scheduler", local_scheduler)
+
+    created = client.post(
+        "/schedule/jobs",
+        json={"name": "daily", "cron_expr": "0 8 * * *", "goal": "morning report"},
+    )
+    assert created.status_code == 200
+    job_id = created.json()["job_id"]
+
+    listed = client.get("/schedule/jobs")
+    assert listed.status_code == 200
+    assert listed.json()["count"] == 1
+
+    deleted = client.delete(f"/schedule/jobs/{job_id}")
+    assert deleted.status_code == 200
+    assert deleted.json()["deleted"] is True

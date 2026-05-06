@@ -64,3 +64,8 @@
 - Files changed: app/tools/health_check.py, app/server.py, tasks/readiness_report.py, tests/test_health_check.py, tests/test_readiness_report.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; readiness report showed all required live-voice checks passing with Open Interpreter marked optional, targeted pytest reported 18 passed, and full pytest reported 291 passed and 1 skipped
 - Next: Run `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` with attended push-to-talk or wake audio to complete the remaining live voice gate
+## [2026-05-06 01:12:22 -05:00] Task Completed
+- Task: Added persistent agent task and scheduler storage with REST endpoints for task and job management
+- Files changed: app/agent/task_queue.py, app/agent/scheduler.py, app/server.py, tests/test_agent_stubs.py, tests/test_server_integration.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; focused pytest for agent, scheduler, and server integration reported 23 passed, and py_compile passed for changed runtime modules
+- Next: Continue replacing deferred integrations with real local implementations where credentials or manual hardware are not required

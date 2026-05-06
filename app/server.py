@@ -10,6 +10,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -25,7 +26,9 @@ from app.brain.llm_client import OllamaConnectionError, llm_client
 from app.brain.prompts import build_prompt
 from app.brain.response_cleaner import clean, dry_run_narration
 from app.brain.router import router as intent_router
+from app.agent.scheduler import scheduler
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
+from app.agent.task_queue import task_queue
 from app.config import settings
 from app.logs.audit import audit
 from app.tools.health_check import check_readiness, check_tools
@@ -114,6 +117,22 @@ class SensorReading(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class TaskCreateRequest(BaseModel):
+    goal: str
+
+
+class TaskStatusRequest(BaseModel):
+    status: str
+    result: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class ScheduledJobRequest(BaseModel):
+    name: str
+    cron_expr: str
+    goal: str
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     return {
@@ -169,6 +188,64 @@ async def stop_response() -> dict[str, str]:
     current_token.cancel()
     tts.stop()
     return {"status": "stopped"}
+
+
+@app.post("/tasks")
+async def create_task(request: TaskCreateRequest) -> dict[str, Any]:
+    task = await task_queue.add_task(request.goal)
+    return asdict(task)
+
+
+@app.get("/tasks")
+async def list_tasks(status: str | None = None) -> dict[str, Any]:
+    tasks = await task_queue.list_tasks(status=status)
+    return {"tasks": [asdict(task) for task in tasks], "count": len(tasks)}
+
+
+@app.get("/tasks/{task_id}")
+async def get_task(task_id: str) -> Any:
+    task = await task_queue.get_task(task_id)
+    if task is None:
+        return JSONResponse(status_code=404, content={"error": "Unknown task"})
+    return asdict(task)
+
+
+@app.patch("/tasks/{task_id}")
+async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
+    updated = await task_queue.update_status(
+        task_id,
+        request.status,
+        result=request.result,
+        error=request.error,
+    )
+    if not updated:
+        return JSONResponse(status_code=404, content={"error": "Unknown task"})
+    task = await task_queue.get_task(task_id)
+    return asdict(task) if task is not None else {"updated": True}
+
+
+@app.delete("/tasks/{task_id}")
+async def delete_task(task_id: str) -> dict[str, bool]:
+    deleted = await task_queue.delete_task(task_id)
+    return {"deleted": deleted}
+
+
+@app.post("/schedule/jobs")
+async def create_scheduled_job(request: ScheduledJobRequest) -> dict[str, Any]:
+    job = scheduler.add_job(request.name, request.cron_expr, request.goal)
+    return asdict(job)
+
+
+@app.get("/schedule/jobs")
+async def list_scheduled_jobs() -> dict[str, Any]:
+    jobs = scheduler.list_jobs()
+    return {"jobs": [asdict(job) for job in jobs], "count": len(jobs)}
+
+
+@app.delete("/schedule/jobs/{job_id}")
+async def delete_scheduled_job(job_id: str) -> dict[str, bool]:
+    removed = scheduler.remove_job(job_id)
+    return {"deleted": removed}
 
 
 @app.post("/sensors/data")
