@@ -31,6 +31,26 @@ def test_ptt_plays_listening_sound() -> None:
     mock_play.assert_called_once_with("listening")
 
 
+def test_ptt_during_listen_window_records_audio() -> None:
+    detector = wake_word.__class__()
+    stream = MagicMock()
+    stream.__enter__.return_value = stream
+    stream.__exit__.return_value = False
+    sd = MagicMock(RawInputStream=MagicMock(return_value=stream))
+    np = MagicMock()
+    model = MagicMock()
+
+    with patch.dict(sys.modules, {"sounddevice": sd, "numpy": np}):
+        with patch.object(detector, "_load_model", return_value=model), patch.object(
+            detector, "_push_to_talk_active", side_effect=[False, True]
+        ), patch("app.voice.vad.vad.record_until_silence", return_value=b"pttaudio"), patch(
+            "app.voice.wake_word.sounds.play"
+        ):
+            assert detector.listen(timeout=0.2) == b"pttaudio"
+
+    model.predict.assert_not_called()
+
+
 def test_trigger_sets_inactive() -> None:
     _reset_kill_switch()
     kill_switch.trigger()

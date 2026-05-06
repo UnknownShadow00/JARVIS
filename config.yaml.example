@@ -40,7 +40,7 @@ safety:
 
   # Dry run: JARVIS narrates what it would do instead of doing it
   # Set true during early testing. false for normal operation.
-  dry_run: true
+  dry_run: false
 
   # Confidence threshold — below this, JARVIS asks before acting
   # even on Level 1 actions
@@ -66,6 +66,7 @@ voice:
 
   # TTS engine — piper | kokoro
   tts_engine: "piper"
+  voice_clone_path: ""
   piper_model_path: "./models/en_US-lessac-high.onnx"
   piper_config_path: "./models/en_US-lessac-high.onnx.json"
 
@@ -99,6 +100,8 @@ server:
   host: "0.0.0.0"
   port: 8000
   websocket_path: "/ws"
+  ue5_enabled: false  # set true when UE5 MetaHuman project is running
+  tailscale_hostname: ""   # fill in your Tailscale machine name
   # Allow these origins for browser HUD (add your main PC IP)
   cors_origins:
     - "http://localhost:3000"

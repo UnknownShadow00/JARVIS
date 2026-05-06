@@ -32,9 +32,7 @@ class WakeWordDetector:
         Silently skips frames while tts_module.is_speaking to prevent self-triggering.
         """
         if self._push_to_talk_active():
-            audit.log("wake_push_to_talk", {"key": settings.voice.push_to_talk_key})
-            sounds.play("listening")
-            return vad.record_until_silence()
+            return self._record_push_to_talk()
 
         try:
             import numpy as np
@@ -71,7 +69,12 @@ class WakeWordDetector:
                 try:
                     frame = audio_queue.get(timeout=0.1)
                 except queue.Empty:
+                    if self._push_to_talk_active():
+                        return self._record_push_to_talk()
                     continue
+
+                if self._push_to_talk_active():
+                    return self._record_push_to_talk()
 
                 if is_speaking() or time.monotonic() < tts_module.cooldown_until:
                     continue
@@ -112,6 +115,11 @@ class WakeWordDetector:
             return bool(keyboard.is_pressed(settings.voice.push_to_talk_key))
         except Exception:
             return False
+
+    def _record_push_to_talk(self) -> bytes:
+        audit.log("wake_push_to_talk", {"key": settings.voice.push_to_talk_key})
+        sounds.play("listening")
+        return vad.record_until_silence()
 
     def _score(self, prediction) -> float:  # noqa: ANN001
         if isinstance(prediction, dict):

@@ -39,3 +39,18 @@
 - Files changed: tests/perf/__init__.py, tests/perf/baseline_4070ti.json, tests/test_perf_baseline.py, tasks/loop-log.md
 - Result: pass against acceptance criteria; pytest tests/test_perf_baseline.py -q --tb=short reported 2 passed (with 1 PytestCacheWarning about .pytest_cache permissions)
 - Next: Optional follow-up is re-capturing this baseline after the RTX 5090 migration and updating the perf fixture accordingly
+## [2026-05-05 23:18:43 -05:00] Task Completed
+- Task: Cleaned temporary voice-test artifacts, aligned the example config with the strict schema, and added a manual MVP voice-loop smoke command
+- Files changed: .gitignore, config.yaml.example, tests/test_config_check.py, tasks/manual_voice_smoke.py, tasks/loop-log.md
+- Result: pass against acceptance criteria; mock voice-loop smoke passed, example config schema test passed, collect-only reported 280 tests, and filtered pytest reported 277 passed, 1 skipped, 2 deselected
+- Next: Run `python tasks/manual_voice_smoke.py --live --speak` on the target machine with microphone, Piper assets, and Ollama available to validate a real spoken interaction
+## [2026-05-05 23:28:31 -05:00] Task Completed
+- Task: Continued MVP verification, started local Ollama for smoke testing, fixed wake-model health checks, fixed direct-run diagnostics, and reran full validation
+- Files changed: .gitignore, app/config_check.py, app/tools/health_check.py, scripts/wake_diag.py, tasks/manual_voice_smoke.py, tests/test_config_check.py, tests/test_health_check.py, tasks/loop-log.md
+- Result: pass for all automatable checks; collect-only reported 284 tests, full pytest reported 283 passed and 1 skipped, Ollama-backed text smoke with TTS passed, mock voice pipeline passed, live smoke reached startup readiness but no wake/PTT audio was captured
+- Next: Live spoken wake-word acceptance still needs an attended run with someone saying the wake phrase or holding push-to-talk during `python tasks/manual_voice_smoke.py --live --speak`
+## [2026-05-06 00:19:34 -05:00] Task Completed
+- Task: Stabilized the MVP voice gate by polling push-to-talk during the listen window, reran automated/manual smoke checks, and inventoried current tool readiness
+- Files changed: app/voice/wake_word.py, tests/test_ptt_and_killswitch.py, tasks/tool-readiness-inventory.md, tasks/loop-log.md
+- Result: pass for automatable acceptance criteria; collect-only reported 285 tests, full pytest reported 284 passed and 1 skipped, mock voice pipeline passed, text route with TTS passed, startup checks passed in live mode, and live wake/PTT still requires attended input/audio capture
+- Next: Run `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` with someone holding `ctrl+space` and speaking during the listen window to complete the attended MVP gate

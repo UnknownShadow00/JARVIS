@@ -39,6 +39,20 @@ def test_interpreter_missing(monkeypatch) -> None:
     assert health_check.check_tools()["interpreter"] is False
 
 
+def test_builtin_wake_model_is_available(monkeypatch) -> None:
+    monkeypatch.setattr(health_check.settings.voice, "wake_word_model", "hey_jarvis")
+    monkeypatch.setattr(health_check.httpx, "get", lambda *args, **kwargs: SimpleNamespace(status_code=200))
+    monkeypatch.setattr(Path, "is_file", lambda self: False)
+    assert health_check.check_tools()["wake_model"] is True
+
+
+def test_custom_wake_model_path_missing(monkeypatch) -> None:
+    monkeypatch.setattr(health_check.settings.voice, "wake_word_model", "./models/custom.onnx")
+    monkeypatch.setattr(health_check.httpx, "get", lambda *args, **kwargs: SimpleNamespace(status_code=200))
+    monkeypatch.setattr(Path, "is_file", lambda self: False)
+    assert health_check.check_tools()["wake_model"] is False
+
+
 def test_server_route(monkeypatch) -> None:
     expected = {"ollama": True, "piper": True, "interpreter": True, "wake_model": True}
     monkeypatch.setattr("app.server.check_tools", lambda: expected)

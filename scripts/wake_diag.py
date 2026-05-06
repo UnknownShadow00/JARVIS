@@ -5,7 +5,12 @@ import csv
 from datetime import datetime
 from pathlib import Path
 from statistics import mean
+import sys
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from app.config import settings
 

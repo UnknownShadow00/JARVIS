@@ -10,10 +10,23 @@ from app.config import settings
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _path(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
+
+def _wake_model_available(value: str) -> bool:
+    if not value:
+        return False
+
+    path = Path(value)
+    if path.suffix or path.parent != Path("."):
+        return _path(value).is_file()
+
+    return True
+
+
 def check_tools() -> dict[str, bool]:
-    wake_model = Path(settings.voice.wake_word_model)
-    if not wake_model.is_absolute():
-        wake_model = PROJECT_ROOT / wake_model
     try:
         ollama = httpx.get(f"{settings.models.ollama_base_url}/api/tags", timeout=2.0).status_code == 200
     except httpx.HTTPError:
@@ -29,5 +42,5 @@ def check_tools() -> dict[str, bool]:
         "ollama": ollama,
         "piper": piper,
         "interpreter": shutil.which("interpreter") is not None,
-        "wake_model": settings.voice.wake_word_model != "" and wake_model.is_file(),
+        "wake_model": _wake_model_available(settings.voice.wake_word_model),
     }
