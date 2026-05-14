@@ -1,15 +1,31 @@
 from __future__ import annotations
 
+import importlib.util
+from typing import Any
+
 from app.config import settings
 from app.logs.audit import audit
 
-try:
-    import chromadb
+chromadb: Any | None = None
+CHROMADB_AVAILABLE = importlib.util.find_spec("chromadb") is not None
 
+
+def _chromadb_available() -> bool:
+    global CHROMADB_AVAILABLE, chromadb
+    if not CHROMADB_AVAILABLE:
+        return False
+    if chromadb is not None:
+        return True
+
+    try:
+        import chromadb as chromadb_module
+    except ImportError:
+        CHROMADB_AVAILABLE = False
+        return False
+
+    chromadb = chromadb_module
     CHROMADB_AVAILABLE = True
-except ImportError:
-    chromadb = None
-    CHROMADB_AVAILABLE = False
+    return True
 
 
 class RAGClient:
@@ -22,7 +38,7 @@ class RAGClient:
     def _get_collection(self):
         if not self._enabled:
             return None
-        if not CHROMADB_AVAILABLE:
+        if not _chromadb_available():
             return None
 
         if self._client is None or self._collection is None:

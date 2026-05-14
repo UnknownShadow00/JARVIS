@@ -104,11 +104,14 @@ def _wake(args: argparse.Namespace) -> int:
 
 
 def _status(args: argparse.Namespace) -> int:
-    payload = _get("/resource/status")
+    persisted_state = read_persisted_state()
+    payload = None
+    if persisted_state.get("state") != "DEEP_SLEEP":
+        payload = _get("/resource/status", timeout=0.4)
     if payload is None:
         payload = {
             "server": "offline",
-            "persisted_state": read_persisted_state(),
+            "persisted_state": persisted_state,
             "resources": resource_manager.resource_report(),
         }
     if args.json:
@@ -149,9 +152,9 @@ def _base_url() -> str:
     return f"http://{host}:{settings.server.port}"
 
 
-def _get(path: str) -> dict[str, Any] | None:
+def _get(path: str, *, timeout: float = 3.0) -> dict[str, Any] | None:
     try:
-        response = httpx.get(f"{_base_url()}{path}", timeout=3.0)
+        response = httpx.get(f"{_base_url()}{path}", timeout=timeout)
         response.raise_for_status()
         payload = response.json()
         return payload if isinstance(payload, dict) else {"result": payload}
@@ -170,7 +173,7 @@ def _post(path: str, *, params: dict[str, str] | None = None) -> dict[str, Any] 
 
 
 def _server_responds() -> bool:
-    return _get("/health") is not None
+    return _get("/health", timeout=0.5) is not None
 
 
 def _wait_for_server(timeout_seconds: float = 15.0) -> bool:

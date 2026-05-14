@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-try:
-    import apscheduler  # noqa: F401
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    from apscheduler.triggers.cron import CronTrigger
-
-    APSCHEDULER_AVAILABLE = True
-except ImportError:
-    AsyncIOScheduler = None
-    CronTrigger = None
-    APSCHEDULER_AVAILABLE = False
+AsyncIOScheduler = None
+CronTrigger = None
+APSCHEDULER_AVAILABLE = importlib.util.find_spec("apscheduler") is not None
 
 from app.agent.task_queue import task_queue
 from app.logs.audit import audit
@@ -73,7 +67,7 @@ class Scheduler:
         return list(self._jobs.values())
 
     async def start(self) -> None:
-        if APSCHEDULER_AVAILABLE:
+        if _load_apscheduler():
             if self._scheduler is None:
                 self._scheduler = AsyncIOScheduler()
                 self._scheduler.start()
@@ -94,7 +88,7 @@ class Scheduler:
         audit.log("scheduler_stop", {})
 
     def _register_job(self, job: ScheduledJob) -> None:
-        if self._scheduler is None or CronTrigger is None:
+        if self._scheduler is None or not _load_apscheduler() or CronTrigger is None:
             return
         trigger = CronTrigger.from_crontab(job.cron_expr)
         self._scheduler.add_job(
@@ -155,6 +149,28 @@ async def _run_job(job: ScheduledJob) -> None:
     job.last_run = datetime.now(UTC).isoformat()
     await task_queue.add_task(job.goal)
     audit.log("job_executed", {"job_id": job.job_id, "name": job.name, "goal": job.goal})
+
+
+def _load_apscheduler() -> bool:
+    global APSCHEDULER_AVAILABLE, AsyncIOScheduler, CronTrigger
+    if not APSCHEDULER_AVAILABLE:
+        return False
+    if AsyncIOScheduler is not None and CronTrigger is not None:
+        return True
+
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler as LoadedAsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger as LoadedCronTrigger
+    except ImportError:
+        APSCHEDULER_AVAILABLE = False
+        AsyncIOScheduler = None
+        CronTrigger = None
+        return False
+
+    AsyncIOScheduler = LoadedAsyncIOScheduler
+    CronTrigger = LoadedCronTrigger
+    APSCHEDULER_AVAILABLE = True
+    return True
 
 
 scheduler = Scheduler(DEFAULT_JOB_STORE)

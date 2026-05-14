@@ -124,3 +124,8 @@
 - Files changed: tasks/loop-log.md
 - Result: pass; `python -m pip_audit -r requirements.txt` found no known vulnerabilities, `python -m pip check` found no broken requirements, `npm audit --prefix frontend\electron --audit-level=high` found 0 vulnerabilities, full pytest reported 327 passed, and JARVIS remained in DEEP_SLEEP with 0 MB loaded-model VRAM and 0 JARVIS-owned processes
 - Next: Only physical validation remains: attended live microphone/speaker wake flow and final always-on server hardware validation when that target machine is available
+## [2026-05-14T17:22:11.0722988-05:00] Task Completed
+- Task: Performed pre-server code review, bug fixes, startup/resource cleanup, and validation to make JARVIS smaller, faster, and safer before dedicated server install
+- Files changed: PROJECT_STATUS.md, app/agent/scheduler.py, app/cli.py, app/memory/rag_client.py, app/resource_manager.py, app/tools/registry.py, app/voice/audio_stream.py, app/voice/tts.py, tests/test_resource_manager.py, tasks/loop-log.md
+- Result: pass; lazy-loaded tools, ChromaDB, APScheduler, Chatterbox, Kokoro, and voice server callbacks; fixed wake-listener event-loop handoff; reduced `app.server` import from about 1.38s to about 0.56s and deep-sleep status to about 1.23s; full pytest reported 327 passed; pip-audit, pip check, and npm audit passed
+- Next: Only physical validation remains: attended live microphone/speaker wake flow and final always-on server hardware validation when that target machine is available

@@ -125,7 +125,11 @@ def test_resource_report_sums_loaded_model_vram_and_process_memory(monkeypatch) 
         committed_mb=250.0,
     )
 
-    monkeypatch.setattr(resource_module, "list_loaded_ollama_models", lambda: [{"name": "qwen3:14b", "size_vram_mb": 8192.0}])
+    monkeypatch.setattr(
+        resource_module,
+        "list_loaded_ollama_models",
+        lambda **_: [{"name": "qwen3:14b", "size_vram_mb": 8192.0}],
+    )
     monkeypatch.setattr(resource_module, "discover_jarvis_processes", lambda exclude_pids: [process])
     monkeypatch.setattr(resource_module, "detect_cuda_contexts", lambda: {"available": True, "contexts": []})
     monkeypatch.setattr(resource_module, "gpu_memory_report", lambda: {"available": False})

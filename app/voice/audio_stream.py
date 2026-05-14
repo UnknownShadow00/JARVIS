@@ -6,7 +6,6 @@ import threading
 
 from app.brain.llm_client import OllamaConnectionError
 from app.logs.audit import audit
-from app.server import _process, _process_stream
 from app.voice.sounds import sounds
 from app.voice.stt import stt
 from app.voice.tts import tts
@@ -56,6 +55,8 @@ class VoicePipeline:
 
                 sounds.play("working")
                 audit.log("voice_request", {"text": text})
+
+                from app.server import _process, _process_stream
 
                 stream_result = await _process_stream(text)
                 if stream_result is not None:

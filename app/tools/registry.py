@@ -3,47 +3,32 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+from collections.abc import Callable
 from types import ModuleType
 from typing import Any
 
 from app.config import settings
 from app.logs.audit import audit
-from app.tools import apps as apps_tool
-from app.tools import browser as browser_tool
-from app.tools import browser_use as browser_use_tool
-from app.tools import calendar as calendar_tool
-from app.tools import cad as cad_tool
-from app.tools import cli as cli_tool
-from app.tools import computer_use as computer_use_tool
-from app.tools import files as files_tool
-from app.tools import kasa as kasa_tool
-from app.tools import mcp_client as mcp_client_tool
-from app.tools import mouse_keyboard as mouse_keyboard_tool
-from app.tools import screenshot as screenshot_tool
-from app.tools import shell as shell_tool
-from app.tools import system_stats as system_stats_tool
-from app.tools import vision as vision_tool
-from app.tools import web_search as web_search_tool
 
 SAFETY_LEVEL = 0
 
-TOOLS: dict[str, Any] = {
-    "apps": apps_tool.execute,
-    "browser": browser_tool.execute,
-    "browser_use": browser_use_tool.execute,
-    "calendar": calendar_tool.execute,
-    "cad": cad_tool.execute,
-    "cli": cli_tool.execute,
-    "computer_use": computer_use_tool.execute,
-    "files": files_tool.execute,
-    "kasa": kasa_tool.execute,
-    "mcp_client": mcp_client_tool.execute,
-    "mouse_keyboard": mouse_keyboard_tool.execute,
-    "screenshot": screenshot_tool.execute,
-    "shell": shell_tool.execute,
-    "system_stats": system_stats_tool.execute,
-    "vision": vision_tool.execute,
-    "web_search": web_search_tool.execute,
+_EXPLICIT_TOOL_MODULES: dict[str, str] = {
+    "apps": "app.tools.apps",
+    "browser": "app.tools.browser",
+    "browser_use": "app.tools.browser_use",
+    "calendar": "app.tools.calendar",
+    "cad": "app.tools.cad",
+    "cli": "app.tools.cli",
+    "computer_use": "app.tools.computer_use",
+    "files": "app.tools.files",
+    "kasa": "app.tools.kasa",
+    "mcp_client": "app.tools.mcp_client",
+    "mouse_keyboard": "app.tools.mouse_keyboard",
+    "screenshot": "app.tools.screenshot",
+    "shell": "app.tools.shell",
+    "system_stats": "app.tools.system_stats",
+    "vision": "app.tools.vision",
+    "web_search": "app.tools.web_search",
 }
 
 
@@ -64,68 +49,91 @@ class ToolResult:
         return f"ToolResult({self.tool}{tag}): {self.output}"
 
 
+class _LazyToolCallable:
+    def __init__(self, module_path: str) -> None:
+        self._module_path = module_path
+
+    def __call__(self, params: dict[str, Any] | None = None) -> Any:
+        module = importlib.import_module(self._module_path)
+        return module.execute(params or {})
+
+
+def _discover_tool_modules() -> dict[str, str]:
+    import app.tools as pkg
+
+    modules = dict(_EXPLICIT_TOOL_MODULES)
+    for info in pkgutil.iter_modules(pkg.__path__):
+        if info.name == "registry":
+            continue
+        modules.setdefault(info.name, f"app.tools.{info.name}")
+    return modules
+
+
+TOOLS: dict[str, Callable[[dict[str, Any] | None], Any]] = {
+    name: _LazyToolCallable(module_path)
+    for name, module_path in _discover_tool_modules().items()
+}
+
+
 class ToolRegistry:
     """Discover available tools and enforce safety policy before execution."""
 
     def __init__(self) -> None:
         self._tools: dict[str, ModuleType] = {}
-        self._load_all()
-        self.TOOLS = {name: mod.execute for name, mod in self._tools.items()}
-
-    def _load_all(self) -> None:
-        import app.tools as pkg
-
-        explicit_tools = {
-            "apps": apps_tool,
-            "browser": browser_tool,
-            "browser_use": browser_use_tool,
-            "calendar": calendar_tool,
-            "cad": cad_tool,
-            "cli": cli_tool,
-            "computer_use": computer_use_tool,
-            "files": files_tool,
-            "kasa": kasa_tool,
-            "mcp_client": mcp_client_tool,
-            "mouse_keyboard": mouse_keyboard_tool,
-            "screenshot": screenshot_tool,
-            "shell": shell_tool,
-            "system_stats": system_stats_tool,
-            "vision": vision_tool,
-            "web_search": web_search_tool,
+        self._tool_modules = _discover_tool_modules()
+        self.TOOLS: dict[str, Callable[[dict[str, Any] | None], Any]] = {
+            name: _LazyToolCallable(module_path)
+            for name, module_path in self._tool_modules.items()
         }
-        self._tools.update(explicit_tools)
 
-        for info in pkgutil.iter_modules(pkg.__path__):
-            if info.name == "registry":
-                continue
-            try:
-                mod = importlib.import_module(f"app.tools.{info.name}")
-                if hasattr(mod, "execute") and hasattr(mod, "SAFETY_LEVEL"):
-                    self._tools[info.name] = mod
-            except Exception as exc:  # noqa: BLE001
-                audit.log("tool_load_error", {"tool": info.name, "error": str(exc)})
-        self.TOOLS = {name: mod.execute for name, mod in self._tools.items()}
+    def _load_tool(self, name: str) -> ModuleType:
+        if name in self._tools:
+            return self._tools[name]
+
+        module_path = self._tool_modules.get(name)
+        if module_path is None:
+            raise ToolError(f"Unknown tool: {name!r}")
+
+        try:
+            module = importlib.import_module(module_path)
+        except Exception as exc:  # noqa: BLE001
+            audit.log("tool_load_error", {"tool": name, "error": str(exc)})
+            raise ToolError(f"Unable to load tool {name!r}: {exc}") from exc
+
+        if not hasattr(module, "execute") or not hasattr(module, "SAFETY_LEVEL"):
+            raise ToolError(f"Invalid tool module: {name!r}")
+
+        self._tools[name] = module
+        return module
 
     def get_tool(self, name: str) -> ModuleType:
         """Return a loaded tool module by name."""
-        if name not in self._tools:
-            raise ToolError(f"Unknown tool: {name!r}")
-        return self._tools[name]
+        return self._load_tool(name)
 
     def get(self, name: str) -> ModuleType | None:
         """Return a loaded tool module by name, or None if absent."""
-        return self._tools.get(name)
+        try:
+            return self._load_tool(name)
+        except ToolError:
+            return None
 
     def list_tools(self) -> list[dict[str, Any]]:
-        """Return metadata for all loaded tools."""
-        return [
-            {
-                "name": name,
-                "safety_level": getattr(mod, "SAFETY_LEVEL", -1),
-                "description": getattr(mod, "DESCRIPTION", ""),
-            }
-            for name, mod in self._tools.items()
-        ]
+        """Return metadata for all known tools."""
+        tools: list[dict[str, Any]] = []
+        for name in sorted(self._tool_modules):
+            try:
+                module = self._load_tool(name)
+            except ToolError as exc:
+                tools.append({"name": name, "safety_level": -1, "description": str(exc)})
+                continue
+            tools.append(
+                {
+                    "name": name,
+                    "safety_level": getattr(module, "SAFETY_LEVEL", -1),
+                    "description": getattr(module, "DESCRIPTION", ""),
+                }
+            )
+        return tools
 
     def call(
         self,
@@ -136,12 +144,8 @@ class ToolRegistry:
     ) -> ToolResult:
         """Execute a tool after Level 0-3 safety and dry-run checks."""
         params = params or {}
-
-        if tool_name not in self._tools:
-            raise ToolError(f"Unknown tool: {tool_name!r}")
-
-        mod = self._tools[tool_name]
-        safety_level: int = getattr(mod, "SAFETY_LEVEL", 0)
+        module = self._load_tool(tool_name)
+        safety_level: int = getattr(module, "SAFETY_LEVEL", 0)
 
         audit.log(
             "tool_call",
@@ -161,13 +165,13 @@ class ToolRegistry:
             raise ToolError(f"Tool '{tool_name}' is Level {safety_level}. Requires user confirmation before executing.")
 
         if settings.safety.dry_run:
-            description = getattr(mod, "DESCRIPTION", tool_name)
+            description = getattr(module, "DESCRIPTION", tool_name)
             output = f"[DRY RUN] Would execute '{tool_name}': {description} with params {params}"
             audit.log("tool_result", {"tool": tool_name, "dry_run": True, "output": output})
             return ToolResult(tool=tool_name, output=output, dry_run=True)
 
         try:
-            output = mod.execute(params)
+            output = module.execute(params)
         except Exception as exc:
             audit.log("tool_error", {"tool": tool_name, "error": str(exc)})
             raise ToolError(f"Tool '{tool_name}' raised: {exc}") from exc

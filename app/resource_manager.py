@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 import psutil
@@ -58,11 +59,16 @@ class WakeListener:
         self._manager = manager
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
             return
         self._stop_event.clear()
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None
         self._thread = threading.Thread(target=self._run, name="jarvis-resource-wake-listener", daemon=True)
         self._thread.start()
         audit.log("resource_wake_listener_started", {})
@@ -82,11 +88,22 @@ class WakeListener:
                 audio = wake_word.listen(timeout=3.0)
                 if audio and not self._stop_event.is_set():
                     audit.log("resource_wake_listener_detected", {"bytes": len(audio)})
-                    asyncio.run(self._manager.wake(reason="wake_listener"))
+                    self._wake_manager()
                     return
             except Exception as exc:  # noqa: BLE001
                 audit.log("resource_wake_listener_error", {"error": str(exc)})
                 time.sleep(1.0)
+
+    def _wake_manager(self) -> None:
+        if self._loop is not None and self._loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(self._manager.wake(reason="wake_listener"), self._loop)
+            try:
+                future.result(timeout=30)
+            except Exception as exc:  # noqa: BLE001
+                audit.log("resource_wake_listener_error", {"error": str(exc)})
+            return
+
+        asyncio.run(self._manager.wake(reason="wake_listener"))
 
 
 class ResourceManager:
@@ -247,7 +264,7 @@ class ResourceManager:
         }
 
     def resource_report(self) -> dict[str, Any]:
-        loaded_models = list_loaded_ollama_models()
+        loaded_models = list_loaded_ollama_models(timeout_seconds=0.5)
         processes = discover_jarvis_processes(exclude_pids=set())
         cuda_contexts = detect_cuda_contexts()
         jarvis_rss_mb = round(sum(process.rss_mb for process in processes), 1)
@@ -467,9 +484,25 @@ def configured_ollama_models() -> list[str]:
     return sorted(name for name in names if name)
 
 
-def list_loaded_ollama_models() -> list[dict[str, Any]]:
+def _ollama_endpoint(path: str) -> str:
+    base_url = settings.models.ollama_base_url.rstrip("/")
+    parsed = urlsplit(base_url)
+    if parsed.hostname and parsed.hostname.lower() == "localhost":
+        netloc = "127.0.0.1"
+        if parsed.port is not None:
+            netloc = f"{netloc}:{parsed.port}"
+        if parsed.username:
+            auth = parsed.username
+            if parsed.password:
+                auth = f"{auth}:{parsed.password}"
+            netloc = f"{auth}@{netloc}"
+        base_url = urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)).rstrip("/")
+    return f"{base_url}{path}"
+
+
+def list_loaded_ollama_models(*, timeout_seconds: float = 2.0) -> list[dict[str, Any]]:
     try:
-        response = httpx.get(f"{settings.models.ollama_base_url}/api/ps", timeout=2.0)
+        response = httpx.get(_ollama_endpoint("/api/ps"), timeout=timeout_seconds)
         response.raise_for_status()
         payload = response.json()
     except Exception as exc:  # noqa: BLE001
@@ -497,7 +530,7 @@ def list_loaded_ollama_models() -> list[dict[str, Any]]:
 
 
 def unload_all_ollama_models() -> list[str]:
-    loaded = list_loaded_ollama_models()
+    loaded = list_loaded_ollama_models(timeout_seconds=2.0)
     model_names = {
         str(model.get("name"))
         for model in loaded
@@ -523,7 +556,7 @@ def unload_ollama_model(model_name: str) -> bool:
         "keep_alive": 0,
     }
     try:
-        response = httpx.post(f"{settings.models.ollama_base_url}/api/generate", json=payload, timeout=10.0)
+        response = httpx.post(_ollama_endpoint("/api/generate"), json=payload, timeout=10.0)
         if response.status_code < 500:
             audit.log("resource_ollama_unload", {"model": model_name, "method": "api", "status": response.status_code})
             return response.status_code < 400
@@ -555,13 +588,34 @@ def preload_ollama_model(model_name: str) -> bool:
         "stream": False,
         "keep_alive": settings.resource_mode.preload_keep_alive,
     }
-    response = httpx.post(f"{settings.models.ollama_base_url}/api/generate", json=payload, timeout=120.0)
+    response = httpx.post(_ollama_endpoint("/api/generate"), json=payload, timeout=120.0)
     response.raise_for_status()
     audit.log("resource_ollama_preload", {"model": model_name})
     return True
 
 
 def gpu_memory_report() -> dict[str, Any]:
+    command = [
+        "nvidia-smi",
+        "--query-gpu=name,memory.used,memory.total,utilization.gpu",
+        "--format=csv,noheader,nounits",
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=2, check=False)
+        if result.returncode == 0:
+            line = result.stdout.splitlines()[0] if result.stdout.splitlines() else ""
+            parts = [part.strip() for part in line.split(",")]
+            if len(parts) >= 4:
+                return {
+                    "available": True,
+                    "name": parts[0],
+                    "memory_used_mb": round(float(parts[1]), 1),
+                    "memory_total_mb": round(float(parts[2]), 1),
+                    "load_percent": round(float(parts[3]), 1),
+                }
+    except Exception:
+        pass
+
     try:
         import GPUtil
 

@@ -102,6 +102,7 @@ Live check on 2026-05-14:
 - `app/server.py`: added resource endpoints, idle detection startup, WebSocket shutdown, light-sleep auto-wake for chat/WebSocket interactions, and deep-sleep refusal until manual wake.
 - `app/voice/stt.py`, `app/voice/tts.py`, `app/voice/wake_word.py`, `app/voice/sounds.py`, `app/computer/vision.py`: added cleanup hooks for cached models, audio mixer resources, and lightweight wake listener behavior.
 - `docs/resource_management.md`: documented light sleep vs deep sleep, Windows shared GPU memory behavior, cold-start wake behavior, and expected services per state.
+- Pre-server cleanup: lazy-loaded tool modules, ChromaDB, APScheduler, Chatterbox, Kokoro, and the voice pipeline's server callbacks to reduce startup/import cost and idle memory pressure; tightened CLI status timeouts and wake-listener event-loop handoff.
 - `frontend/pwa/manifest.json`: scoped PWA start URL to the `/pwa` mount.
 - Tests: added coverage for localhost config validation, Docker/Ollama env override, disabled RAG behavior, vision intent wiring, memory intent wiring, PWA manifest scope, default lifespan behavior, and browser URL routing.
 - Docs: updated README, 5090 migration notes, tool readiness inventory, CLAUDE status, and HANDOFF archive note.
@@ -254,8 +255,8 @@ docker compose up --build
 - `pytest tests\test_resource_manager.py tests\test_config_check.py tests\test_server_integration.py -q`: 29 passed.
 - `python -m app.cli sleep --deep`: moved persisted state to DEEP_SLEEP, unloaded Ollama models, and reported 0 MB loaded-model VRAM with 0 JARVIS-owned processes.
 - `python -m app.cli status`: DEEP_SLEEP, server offline, 0 MB estimated loaded-model VRAM, 0 JARVIS-owned processes, 0 loaded Ollama models.
-- `python -m pip_audit -r requirements.txt`: not run because `pip_audit` is not installed in this Python environment.
 - `npm audit --prefix frontend\electron --audit-level=high`: 0 vulnerabilities.
+- Pre-server cleanup validation on 2026-05-14: `app.server` import measured about 0.56s after lazy-loading cleanup versus about 1.38s before; deep-sleep `python -m app.cli status` measured about 1.23s; full pytest reported 327 passed; `python -m pip_audit -r requirements.txt` found no known vulnerabilities; `python -m pip check` found no broken requirements; `npm audit --prefix frontend\electron --audit-level=high` found 0 vulnerabilities.
 - `pytest -q tests/test_config_check.py tests/test_rag_client.py tests/test_server_integration.py tests/router_test.py tests/test_pwa_serve.py tests/test_readiness_report.py -p no:cacheprovider`: 40 passed, 1 warning.
 - `python -m pip check`: no broken requirements found.
 - `npm.cmd audit --audit-level=moderate --prefix frontend/electron`: 0 vulnerabilities.

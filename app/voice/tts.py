@@ -19,26 +19,10 @@ from app.config import settings
 from app.logs.audit import audit
 from app.voice.sounds import sounds
 
-try:
-    from chatterbox.tts_turbo import ChatterboxTurboTTS as _ChatterboxTTS
-
-    CHATTERBOX_AVAILABLE = True
-except ImportError:
-    try:
-        from chatterbox.tts import ChatterboxTTS as _ChatterboxTTS
-
-        CHATTERBOX_AVAILABLE = True
-    except ImportError:
-        _ChatterboxTTS = None
-        CHATTERBOX_AVAILABLE = False
-
-try:
-    import kokoro as _kokoro  # type: ignore[import-untyped]
-
-    KOKORO_AVAILABLE = True
-except ImportError:
-    _kokoro = None
-    KOKORO_AVAILABLE = False
+_ChatterboxTTS: Any | None = None
+CHATTERBOX_AVAILABLE: bool | None = None
+_kokoro: Any | None = None
+KOKORO_AVAILABLE: bool | None = None
 
 _PARALINGUISTIC_RE = re.compile(r"\[(?:laugh|chuckle|cough)\]", re.IGNORECASE)
 
@@ -182,7 +166,7 @@ class TTSEngine:
         for engine in engines[start_index:]:
             try:
                 if engine == "chatterbox":
-                    if not CHATTERBOX_AVAILABLE:
+                    if not self._chatterbox_available():
                         audit.log(
                             "tts_unavailable",
                             {"engine": "chatterbox", "reason": "import_error_fallback"},
@@ -190,7 +174,7 @@ class TTSEngine:
                         continue
                     return await asyncio.to_thread(self._synthesize_chatterbox, sentence)
                 if engine == "kokoro":
-                    if not KOKORO_AVAILABLE:
+                    if not self._kokoro_available():
                         audit.log("tts_unavailable", {"engine": "kokoro", "reason": "import_error_fallback"})
                         continue
                     return await asyncio.to_thread(self._synthesize_kokoro, self._strip_paralinguistics(sentence))
@@ -245,7 +229,7 @@ class TTSEngine:
         if self._chatterbox_model is not None:
             return self._chatterbox_model
 
-        if not CHATTERBOX_AVAILABLE or _ChatterboxTTS is None:
+        if not self._chatterbox_available() or _ChatterboxTTS is None:
             raise ImportError("chatterbox-tts is not installed")
 
         clone_path = self._resolve_voice_clone_path()
@@ -256,7 +240,7 @@ class TTSEngine:
         return self._chatterbox_model
 
     def _create_chatterbox_model(self, device: str, clone_path: Path | None) -> object:
-        if _ChatterboxTTS is None:
+        if not self._chatterbox_available() or _ChatterboxTTS is None:
             raise ImportError("chatterbox-tts is not installed")
 
         init_attempts: list[dict[str, str]] = [{}]
@@ -328,7 +312,7 @@ class TTSEngine:
         return output
 
     def _synthesize_kokoro(self, sentence: str) -> Path | None:
-        if _kokoro is None:
+        if not self._kokoro_available() or _kokoro is None:
             raise ImportError("kokoro is not installed")
 
         output = Path(tempfile.NamedTemporaryFile(prefix="jarvis-tts-", suffix=".wav", delete=False).name)
@@ -437,6 +421,45 @@ class TTSEngine:
             return False
         self.stop()
         return True
+
+    def _chatterbox_available(self) -> bool:
+        global CHATTERBOX_AVAILABLE, _ChatterboxTTS
+        if CHATTERBOX_AVAILABLE is not None:
+            return bool(CHATTERBOX_AVAILABLE and _ChatterboxTTS is not None)
+
+        try:
+            from chatterbox.tts_turbo import ChatterboxTurboTTS
+
+            _ChatterboxTTS = ChatterboxTurboTTS
+            CHATTERBOX_AVAILABLE = True
+            return True
+        except ImportError:
+            try:
+                from chatterbox.tts import ChatterboxTTS
+
+                _ChatterboxTTS = ChatterboxTTS
+                CHATTERBOX_AVAILABLE = True
+                return True
+            except ImportError:
+                _ChatterboxTTS = None
+                CHATTERBOX_AVAILABLE = False
+                return False
+
+    def _kokoro_available(self) -> bool:
+        global KOKORO_AVAILABLE, _kokoro
+        if KOKORO_AVAILABLE is not None:
+            return bool(KOKORO_AVAILABLE and _kokoro is not None)
+
+        try:
+            import kokoro as kokoro_module  # type: ignore[import-untyped]
+
+            _kokoro = kokoro_module
+            KOKORO_AVAILABLE = True
+            return True
+        except ImportError:
+            _kokoro = None
+            KOKORO_AVAILABLE = False
+            return False
 
 
 tts = TTSEngine()
