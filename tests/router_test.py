@@ -107,6 +107,12 @@ def test_routes_browser() -> None:
     assert result.suggested_tool == "browser"
 
 
+def test_routes_open_domain_to_browser() -> None:
+    result = router.classify("open google.com")
+    assert result.intent == "use_tool"
+    assert result.suggested_tool == "browser"
+
+
 def test_routes_screenshot_tool() -> None:
     result = router.classify("take a screenshot")
     assert result.intent == "use_tool"

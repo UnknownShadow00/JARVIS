@@ -97,11 +97,14 @@ boot:
 
 # ─── Server ──────────────────────────────────────────────────
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8000
   websocket_path: "/ws"
   ue5_enabled: false  # set true when UE5 MetaHuman project is running
   tailscale_hostname: ""   # fill in your Tailscale machine name
+  remote_access_enabled: false
+  enable_voice_on_startup: false
+  enable_hotkey_listener: false
   # Allow these origins for browser HUD (add your main PC IP)
   cors_origins:
     - "http://localhost:3000"
@@ -151,10 +154,6 @@ comms:
 computer:
   # Vision-guided automation backend
   use_open_computer_use: false
-  # Code/shell execution backend
-  use_open_interpreter: false
-  open_interpreter_api_base: "http://localhost:11434/v1"
-  open_interpreter_model: "qwen3:32b"
 
   # Screenshot settings
   screenshot_format: "PNG"

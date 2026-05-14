@@ -84,9 +84,18 @@ class VisionClient:
         except httpx.HTTPError as exc:
             return {"error": str(exc), "source": source}
 
+        payload_result = response.json()
+        analysis = str(
+            payload_result.get("response")
+            or payload_result.get("message", {}).get("content")
+            or ""
+        ).strip()
+        if not analysis:
+            return {"error": "vision model returned no analysis", "source": source}
+
         result = {
             "source": source,
-            "analysis": response.json()["response"],
+            "analysis": analysis,
             "image_path": image_path,
         }
         audit.log("tool_result", {"tool": "vision", "source": source, "image_path": image_path})

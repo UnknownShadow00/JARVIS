@@ -1,14 +1,27 @@
 from __future__ import annotations
 
+import ipaddress
+import os
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
+OLLAMA_BASE_URL_ENV = "JARVIS_OLLAMA_BASE_URL"
+
+
+def _is_loopback_host(host: str) -> bool:
+    normalized = host.strip().lower()
+    if normalized == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
 
 
 class StrictModel(BaseModel):
@@ -68,6 +81,17 @@ class ServerConfig(StrictModel):
     ue5_enabled: bool
     cors_origins: list[str]
     tailscale_hostname: str
+    remote_access_enabled: bool = False
+    enable_voice_on_startup: bool = False
+    enable_hotkey_listener: bool = False
+
+    @model_validator(mode="after")
+    def validate_localhost_default(self) -> "ServerConfig":
+        if not self.remote_access_enabled and not _is_loopback_host(self.host):
+            raise ValueError(
+                "server.host must be localhost/loopback unless server.remote_access_enabled is true"
+            )
+        return self
 
 
 class MemoryConfig(StrictModel):
@@ -100,9 +124,6 @@ class CommsConfig(StrictModel):
 
 class ComputerConfig(StrictModel):
     use_open_computer_use: bool
-    use_open_interpreter: bool
-    open_interpreter_api_base: str
-    open_interpreter_model: str
     screenshot_format: str
     screenshot_quality: int
     gesture_enabled: bool
@@ -167,6 +188,9 @@ def load_settings(config_path: Path = CONFIG_PATH) -> Settings:
         raise ValueError(
             f"Invalid config structure in {resolved_path}: expected a YAML mapping at the top level."
         )
+
+    if os.environ.get(OLLAMA_BASE_URL_ENV) and isinstance(raw_config.get("models"), dict):
+        raw_config["models"]["ollama_base_url"] = os.environ[OLLAMA_BASE_URL_ENV]
 
     try:
         return Settings.model_validate(raw_config)

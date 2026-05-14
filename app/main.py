@@ -1,17 +1,15 @@
-"""Entry point - uvicorn app.main:app"""
+"""Runtime entry point for the JARVIS FastAPI app."""
 from __future__ import annotations
 
-import asyncio
+import uvicorn
 
-from app.config_check import check_startup
-from app.logs.audit import audit
+from app.config import settings
 from app.server import app  # noqa: F401 - re-exported for uvicorn
 
 
-def _log_startup_checks() -> None:
-    audit.log("config_check", check_startup())
+def main() -> None:
+    uvicorn.run(app, host=settings.server.host, port=settings.server.port)
 
 
-@app.on_event("startup")
-async def startup_config_check() -> None:
-    asyncio.create_task(asyncio.to_thread(_log_startup_checks))
+if __name__ == "__main__":
+    main()

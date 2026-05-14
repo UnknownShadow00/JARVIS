@@ -8,14 +8,14 @@ This runbook moves JARVIS from the active RTX 4070 Ti Super Windows 11 PC to the
 - Move core JARVIS, Ollama models, Electron/PWA assets, voice pipeline config, and local validation commands.
 - Keep OrcaSlicer and live 3D printing out of scope.
 - Keep UE5/Audio2Face as a separate manual integration unless it becomes required before migration.
-- Keep Open Interpreter optional; it does not block migration.
+- Keep Open Interpreter removed; shell, browser-use stubs, MCP, and computer-use are the replacement direction.
 
 ## Hardware Assumptions
 
 - RTX 5090 with 32 GB VRAM installed and visible in Device Manager.
 - Windows 11 with current NVIDIA driver and CUDA runtime support.
 - 64 GB system RAM preferred.
-- Server can stay on and reach the local network/Tailscale.
+- Server can stay on and reach Tailscale when intentionally enabled. The FastAPI app should remain bound to localhost by default.
 - Microphone/speakers can be attached or routed from the client PC/phone after the move.
 
 ## Files And Folders To Copy
@@ -139,6 +139,7 @@ python -m pip check
 npm.cmd audit --audit-level=moderate --prefix frontend/electron
 python tasks/readiness_report.py
 python tasks/tool_readiness_smoke.py
+python -c "from app.main import app; print(app.title)"
 python tasks/manual_voice_smoke.py --mock-pipeline
 pytest tests/test_phase8_integrations.py tests/test_readiness_report.py tests/test_tool_readiness_smoke.py tests/test_boot_integration.py tests/test_boot_events.py tests/tts_test.py tests/test_tts_chatterbox.py tests/test_push_to_talk.py tests/test_ptt_and_killswitch.py tests/voice_pipeline_test.py -q --tb=short
 pytest tests/ -q --tb=short
@@ -161,7 +162,7 @@ During the listen window, use the wake word or hold `ctrl+space`, speak one shor
 - FastMCP/MCP: whitelist stub is present; live MCP client calls require explicit server setup.
 - CLI harness: OBS/FFmpeg/Blender readiness only.
 - OrcaSlicer: skipped because 3D printing is out of scope.
-- Open Interpreter: optional and currently non-blocking.
+- Open Interpreter: intentionally removed and should not be re-added unless a future local/free replacement is selected.
 
 ## Step 9: Post-Move Cleanup
 

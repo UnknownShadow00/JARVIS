@@ -8,20 +8,20 @@ Tony Stark-style AI running 100% on your hardware. No API costs. No cloud.
 ![License MIT](https://img.shields.io/badge/License-MIT-green)
 ![Tests passing](https://img.shields.io/badge/Tests-passing-brightgreen)
 
-JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enabled, tool-using, screen-aware, automation-capable, and designed to run entirely on your own machine. The backend is Python/FastAPI, the model stack is local via Ollama, and the long-term system layers in autonomy, vision, memory, HUD interfaces, and cinematic presence without depending on cloud APIs.
+JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enabled, tool-using, screen-aware, automation-capable, and designed to run entirely on your own machine. The backend is Python/FastAPI, the model stack is local via Ollama, and the long-term system layers in autonomy, vision, memory, HUD interfaces, and cinematic presence without depending on cloud APIs. The API binds to localhost by default; LAN or Tailscale access must be enabled intentionally.
 
 ## Feature Matrix
 
-| Phase | Name | What it does |
-|-------|------|---------------|
-| 0 | Core Brain | FastAPI server, local LLM routing, tool registry, audit logging, kill switch, config-driven model selection |
-| 1 | Voice + Boot | Wake word, VAD, GPU STT, streaming TTS, boot sequence, morning report, response audio cues |
-| 2 | Tools & Web | App launch, file operations, browser control, shell commands, web search, system stats, health endpoints |
-| 3 | PC Control | Open Interpreter bridge, computer-use tooling, Electron HUD, Hermes Agent activation, gesture control |
-| 4 | Workshop Brain | Screen and webcam vision, Mem0 memory, local RAG, object detection, depth awareness, workshop assistance |
-| 5 | Autonomous Agent | Hermes-powered task queue, scheduler, reporting, Discord/Telegram updates, approval-gated autonomy |
-| 6 | Multi-Device | Tailscale access, phone PWA, Meta glasses support, remote presence across devices |
-| 7 | Cinematic | UE5 bridge, MetaHuman pipeline, Audio2Face integration, hologram frontend, voice-clone path |
+| Phase | Name | Status | What exists now |
+|-------|------|--------|-----------------|
+| 0 | Core Brain | Complete | FastAPI server, local LLM routing, tool registry, audit logging, kill switch, config-driven model selection |
+| 1 | Voice + Boot | Partially complete | Wake word, VAD, GPU STT, TTS, boot sequence, morning report, response audio cues; live voice still needs attended hardware validation |
+| 2 | Tools & Web | Mostly complete | App launch, file operations, browser control, shell commands, web search, system stats, health endpoints |
+| 3 | PC Control | Partially complete | Screenshot, mouse/keyboard safety gates, vision path, Electron HUD, gesture stubs; Open Interpreter is intentionally removed |
+| 4 | Workshop Brain | Stubbed/deferred | Vision model path exists; Mem0, ChromaDB RAG, object detection, and depth remain explicit stubs until hardware/model readiness |
+| 5 | Autonomous Agent | Partially complete/stubbed | Local task queue, scheduler API, reporting, Discord/Telegram stubs, approval gates; Hermes is documented but not active |
+| 6 | Multi-Device | Partially complete | Tailscale status helper and phone PWA exist; remote access stays disabled by default |
+| 7 | Cinematic | Stubbed/deferred | UE5, Audio2Face, hologram frontend, and voice-clone hooks exist; live external runtimes are not wired |
 
 ## Hardware Requirements
 
@@ -97,14 +97,14 @@ Upgrade to the 32B stack on 5090-class hardware when ready.
 python -m app.main
 ```
 
-The FastAPI app exposes the REST and WebSocket brain used by the desktop and voice layers.
+The FastAPI app exposes the REST and WebSocket brain used by the desktop and voice layers. It does not start microphone, wake-word, or hotkey listeners unless explicitly enabled in `config.yaml` or through the separate boot flow.
 
 ## Architecture
 
 JARVIS is organized as a three-layer local agent stack:
 
 1. **FastAPI Brain**: the custom backend that owns routing, prompts, tools, safety, logging, voice orchestration, and API/WebSocket transport.
-2. **Hermes Agent**: the autonomy layer that handles scheduled tasks, messaging, persistent workflows, and broader tool-driven operation.
+2. **Hermes Agent**: the planned autonomy layer for scheduled tasks, messaging, persistent workflows, and broader tool-driven operation. It is documented but not active in the default local setup.
 3. **OpenJarvis**: the optimization and trace-driven skill layer used to refine long-running behavior after enough real interactions accumulate.
 
 In shorthand:
@@ -153,7 +153,7 @@ JARVIS/
 │   ├── computer/     # screenshots, vision, gestures, safety, mouse/keyboard control
 │   ├── memory/       # memory client and local RAG
 │   ├── network/      # Tailscale integration
-│   ├── tools/        # browser, files, shell, interpreter, health, system tools
+│   ├── tools/        # browser, files, shell, health, system tools
 │   ├── voice/        # wake word, VAD, STT, TTS, push-to-talk, audio stream
 │   ├── main.py
 │   └── server.py
@@ -168,14 +168,11 @@ JARVIS/
 └── CLAUDE.md
 ```
 
-## Roadmap
+## Current Status
 
-All 8 phases complete. Next: 5090 migration, content creation.
+The project is usable as a local FastAPI assistant backend with tested tool routing, health/readiness checks, local HUD/PWA assets, and explicit stubs for deferred hardware-heavy integrations. Phase 4+ capabilities are not production-complete yet and should stay documented as stubs until the dedicated server, Ollama model set, and attended voice validation are ready.
 
-Current follow-on priorities:
-- Switch the production stack from the active 4070 Ti fallback to the 5090-first model profile
-- Finalize public repo polish, demos, and creator-facing documentation
-- Continue content capture for YouTube/TikTok around the build process and local AI workflow
+See `PROJECT_STATUS.md` for the current verified state, run commands, blockers, and next priorities.
 
 ## Contributing
 

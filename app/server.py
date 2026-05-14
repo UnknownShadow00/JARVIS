@@ -27,12 +27,17 @@ from app.brain.prompts import build_prompt
 from app.brain.response_cleaner import clean, dry_run_narration
 from app.brain.complexity_router import complexity_router
 from app.brain.router import router as intent_router
+from app.brain.tool_params import build_tool_params as _tool_params
+from app.brain.tool_params import is_cancel_command as _is_cancel_command
 from app.agent.scheduler import scheduler
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
 from app.agent.task_queue import task_queue
 from app.config import settings
+from app.config_check import check_startup
 from app.logs.audit import audit
+from app.memory.memory_client import memory_client
 from app.memory.procedural import procedural_memory
+from app.memory.rag_client import rag_client
 from app.tools.health_check import check_readiness, check_tools
 from app.tools.registry import ToolError, registry
 from app.voice.filler_manager import filler_manager
@@ -64,22 +69,64 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 _pending_confirmations: dict[str, dict] = {}
+_runtime_callbacks_registered = False
+_voice_callback_registered = False
+
+
+def _log_startup_checks() -> None:
+    audit.log("config_check", check_startup())
+
+
+def _register_runtime_callbacks(voice_pipeline: Any | None = None) -> None:
+    global _runtime_callbacks_registered, _voice_callback_registered
+
+    if not _runtime_callbacks_registered:
+        register_callback(current_token.cancel)
+        register_callback(tts.stop)
+        _runtime_callbacks_registered = True
+
+    if voice_pipeline is not None and not _voice_callback_registered:
+        register_callback(voice_pipeline.stop)
+        _voice_callback_registered = True
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.voice.audio_stream import voice_pipeline
+    asyncio.create_task(asyncio.to_thread(_log_startup_checks))
+    _register_runtime_callbacks()
+    await scheduler.start()
 
-    start_hotkey_listener()
-    register_callback(current_token.cancel)
-    register_callback(tts.stop)
-    register_callback(voice_pipeline.stop)
-    voice_pipeline.start()
-    audit.log("server_start", {"host": settings.server.host, "port": settings.server.port})
-    yield
-    audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
-    tts.stop()
-    voice_pipeline.stop()
+    voice_pipeline = None
+    voice_started = False
+
+    if settings.server.enable_hotkey_listener:
+        start_hotkey_listener()
+
+    if settings.server.enable_voice_on_startup:
+        from app.voice.audio_stream import voice_pipeline as configured_voice_pipeline
+
+        voice_pipeline = configured_voice_pipeline
+        _register_runtime_callbacks(voice_pipeline)
+        voice_pipeline.start()
+        voice_started = True
+
+    audit.log(
+        "server_start",
+        {
+            "host": settings.server.host,
+            "port": settings.server.port,
+            "voice_started": voice_started,
+            "hotkey_listener_enabled": settings.server.enable_hotkey_listener,
+        },
+    )
+    try:
+        yield
+    finally:
+        audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
+        tts.stop()
+        if voice_started and voice_pipeline is not None:
+            voice_pipeline.stop()
+        await scheduler.stop()
 
 
 app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
@@ -474,7 +521,44 @@ async def _process(message: str):  # type: ignore[return]
             raw_reply = f"Unable to reach Ollama for deep reasoning, sir. {exc}"
         return finalize_reply(str(raw_reply)), intent_result
 
-    # respond, retrieve_memory, vision — all go straight to LLM
+    if intent_result.intent == "vision":
+        params = _tool_params("vision", message)
+        filler_manager.play_for_tool("vision")
+        try:
+            result = registry.call("vision", params)
+            if result.dry_run:
+                return dry_run_narration("vision", params), intent_result
+            context = str(result.output)[:1500]
+        except ToolError as exc:
+            context = f"Vision tool unavailable: {exc}"
+
+        messages = build_prompt(message, context=context)
+        decision = complexity_router.decide(message, intent_result.intent)
+        try:
+            raw_reply = await llm_client.chat(
+                messages,
+                model=decision.model,
+                think=decision.think,
+                num_predict=decision.num_predict,
+            )
+        except OllamaConnectionError as exc:
+            raw_reply = f"Unable to reach Ollama for vision reasoning, sir. {exc}"
+        return finalize_reply(str(raw_reply)), intent_result
+
+    if intent_result.intent == "retrieve_memory":
+        messages = build_prompt(message, context=_memory_context(message))
+        decision = complexity_router.decide(message, intent_result.intent)
+        try:
+            raw_reply = await llm_client.chat(
+                messages,
+                model=decision.model,
+                think=decision.think,
+                num_predict=decision.num_predict,
+            )
+        except OllamaConnectionError as exc:
+            raw_reply = f"Unable to reach Ollama for memory lookup, sir. {exc}"
+        return finalize_reply(str(raw_reply)), intent_result
+
     messages = build_prompt(message)
     decision = complexity_router.decide(message, intent_result.intent)
     try:
@@ -599,6 +683,9 @@ async def _process_stream(message: str):  # type: ignore[return]
             return raw_reply, intent_result
         return None
 
+    if intent_result.intent in {"retrieve_memory", "vision"}:
+        return None
+
     messages = build_prompt(message)
     decision = complexity_router.decide(message, intent_result.intent)
     try:
@@ -617,73 +704,37 @@ async def _process_stream(message: str):  # type: ignore[return]
     return None
 
 
-_WAKE_PREFIX_RE = re.compile(r"^\s*(?:hey\s+jarvis|jarvis)[,\s]*", re.IGNORECASE)
-_WAKE_SUFFIX_RE = re.compile(r"[,\s]*\bjarvis\b\s*[?.]?\s*$", re.IGNORECASE)
-_CANCEL_COMMAND_RE = re.compile(r"\babort\b|\bstop\s*,?\s*jarvis\b", re.IGNORECASE)
+def _memory_context(message: str) -> str:
+    parts: list[str] = []
 
+    skills = procedural_memory.list_skills()
+    if skills:
+        parts.append("Procedural memory:\n" + "\n".join(f"- {skill}" for skill in skills[:20]))
+    else:
+        parts.append("Procedural memory: no saved skills.")
 
-def _strip_wake_word(text: str) -> str:
-    text = _WAKE_PREFIX_RE.sub("", text)
-    text = _WAKE_SUFFIX_RE.sub("", text)
-    return text.strip()
+    try:
+        mem_result = memory_client.search(message)
+    except Exception as exc:  # noqa: BLE001
+        mem_result = {"error": str(exc)}
 
+    if isinstance(mem_result, dict) and mem_result.get("stub"):
+        parts.append(f"Long-term memory: disabled or unavailable ({mem_result.get('note', 'stub')}).")
+    elif isinstance(mem_result, dict) and mem_result.get("error"):
+        parts.append(f"Long-term memory error: {mem_result['error']}")
+    else:
+        parts.append(f"Long-term memory results: {mem_result}")
 
-def _is_cancel_command(text: str) -> bool:
-    return bool(_CANCEL_COMMAND_RE.search(text))
+    try:
+        rag_result = rag_client.query(message)
+    except Exception as exc:  # noqa: BLE001
+        rag_result = {"error": str(exc)}
 
+    if isinstance(rag_result, dict) and rag_result.get("stub"):
+        parts.append(f"RAG memory: disabled or unavailable ({rag_result.get('note', 'stub')}).")
+    elif isinstance(rag_result, dict) and rag_result.get("error"):
+        parts.append(f"RAG memory error: {rag_result['error']}")
+    else:
+        parts.append(f"RAG memory results: {rag_result}")
 
-def _tool_params(tool_name: str, message: str) -> dict[str, Any]:
-    """Map routed user text to concrete tool parameters."""
-    clean_msg = _strip_wake_word(message)
-    if tool_name == "system_stats":
-        return {}
-    if tool_name == "web_search":
-        query = re.sub(r"\b(search|web|google|duckduckgo|look up)\b", "", clean_msg, flags=re.IGNORECASE)
-        return {"query": query.strip(" .") or clean_msg, "max_results": 5}
-    if tool_name == "apps":
-        action = "close" if re.search(r"\b(close|quit|exit)\b", clean_msg, re.IGNORECASE) else "open"
-        return {"action": action, "app": _extract_app_name(clean_msg), "query": clean_msg}
-    if tool_name == "files":
-        lower = clean_msg.lower()
-        action = "read" if "read" in lower else "list"
-        path = settings.paths.downloads_dir if "download" in lower else settings.paths.projects_dir
-        return {"action": action, "path": path, "query": clean_msg}
-    if tool_name == "shell":
-        command = re.sub(
-            r"^\s*(run|execute|shell|cmd|bash|terminal)\b[:\s-]*",
-            "",
-            clean_msg,
-            flags=re.IGNORECASE,
-        ).strip()
-        return {"command": command or clean_msg, "timeout": 30}
-    if tool_name == "calendar":
-        lower = clean_msg.lower()
-        today = datetime.date.today()
-        if "tomorrow" in lower:
-            date_value = (today + datetime.timedelta(days=1)).isoformat()
-        else:
-            date_value = today.isoformat()
-            if "today" in lower or re.search(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", lower):
-                date_value = clean_msg
-            elif re.search(r"\d", clean_msg):
-                date_value = clean_msg
-        return {"date": date_value}
-    if tool_name == "interpreter":
-        task = re.sub(
-            r"^\s*(interpret|open interpreter|run code|execute code)\b[:\s-]*",
-            "",
-            clean_msg,
-            flags=re.IGNORECASE,
-        ).strip()
-        return {"task": task or clean_msg, "timeout": 60}
-    if tool_name == "screenshot":
-        monitor_match = re.search(r"\b(?:monitor|screen)\s+(\d+)\b", clean_msg, flags=re.IGNORECASE)
-        return {"monitor": int(monitor_match.group(1)) if monitor_match else 0}
-    return {"query": clean_msg}
-
-
-def _extract_app_name(message: str) -> str:
-    """Extract a likely app name from launch/close phrasing."""
-    text = message.lower().replace("visual studio code", "vscode")
-    text = re.sub(r"\b(open|launch|start|close|quit|exit)\b", "", text, flags=re.IGNORECASE)
-    return text.strip(" .")
+    return "\n\n".join(parts)[:3000]

@@ -16,7 +16,7 @@ Return ONLY valid JSON - no explanation, no markdown, no extra text:
 
 Intent options:
 - "respond"         - answer directly, no tools or actions needed
-- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, interpreter, screenshot, browser, browser_use)
+- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, screenshot, browser, browser_use)
 - "retrieve_memory" - needs memory or history lookup
 - "vision"          - needs screen capture or webcam
 - "confirm_action"  - dangerous/irreversible action that needs user confirmation
@@ -180,12 +180,31 @@ class IntentRouter:
                 "The request asks for live system information.",
             )
 
+        if re.search(
+            r"\b(go to|browse|navigate to|open.*website|open.*url|open.*http|open.*tab|open a browser)\b",
+            text,
+        ) or re.search(r"\b[a-z0-9-]+\.(?:com|net|org|io|dev|app|ai|gg|tv|me|local)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.92,
+                "browser",
+                "The request asks to open a browser or URL.",
+            )
+
         if re.search(r"\b(search|web|google|duckduckgo|latest|benchmarks|weather|news|look up)\b", text):
             return RouterResult(
                 "use_tool",
                 0.93,
                 "web_search",
                 "The request needs current web information.",
+            )
+
+        if re.search(r"\b(browser agent|use browser-use|automate.*browser|research.*website|fill.*form)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.91,
+                "browser_use",
+                "The request asks for browser-agent automation.",
             )
 
         if re.search(r"\b(open|launch|start)\b", text):
@@ -205,30 +224,6 @@ class IntentRouter:
                 0.91,
                 "calendar",
                 "The request asks for calendar events.",
-            )
-
-        if re.search(r"\b(write.*code.*run|execute.*code|open interpreter|interpret.*task|code.*and.*execute)\b", text):
-            return RouterResult(
-                "use_tool",
-                0.90,
-                "interpreter",
-                "The request needs Open Interpreter to execute code.",
-            )
-
-        if re.search(r"\b(go to|browse|navigate to|open.*website|open.*url|open.*http|open.*tab|open a browser)\b", text):
-            return RouterResult(
-                "use_tool",
-                0.92,
-                "browser",
-                "The request asks to open a browser or URL.",
-            )
-
-        if re.search(r"\b(browser agent|use browser-use|automate.*browser|research.*website|fill.*form)\b", text):
-            return RouterResult(
-                "use_tool",
-                0.91,
-                "browser_use",
-                "The request asks for browser-agent automation.",
             )
 
         if re.search(r"\b(time|joke|capital|how are you|what is|who is|explain|tell me)\b", text):
@@ -256,3 +251,8 @@ class IntentRouter:
 
 
 router = IntentRouter()
+
+
+def classify_intent(user_message: str) -> RouterResult:
+    """Module-level convenience wrapper around the shared IntentRouter."""
+    return router.classify(user_message)

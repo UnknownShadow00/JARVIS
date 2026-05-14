@@ -18,12 +18,6 @@ def test_screenshot_via_chat() -> None:
     assert "sir" in response.json()["reply"].lower()
 
 
-def test_interpreter_via_chat() -> None:
-    with TestClient(app) as client, patch("app.server.check_voice", return_value=False), patch("app.server.is_active", return_value=True), patch("app.server.intent_router.classify", return_value=_intent("interpreter")), patch("app.server.registry.call", return_value=ToolResult(tool="interpreter", output={"output": "hello", "returncode": 0, "task": "echo hello"})), patch("app.server.llm_client.chat", new=AsyncMock(return_value="Done, sir.")):
-        response = client.post("/chat", json={"message": "run echo hello"})
-    assert response.status_code == 200
-
-
 def test_mouse_keyboard_confirmation_gate() -> None:
     with TestClient(app) as client, patch("app.server.check_voice", return_value=False), patch("app.server.is_active", return_value=True), patch("app.server.intent_router.classify", return_value=_intent("mouse_keyboard")), patch("app.server.registry.call", side_effect=ToolError("Level 2. Requires user confirmation")), patch("app.server.llm_client.chat", new=AsyncMock(return_value="Need confirmation, sir.")):
         response = client.post("/chat", json={"message": "click on the start button"})

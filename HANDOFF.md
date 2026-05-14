@@ -1,5 +1,6 @@
 # JARVIS — Session Handoff
 > Generated: 2026-04-30. Use this to resume in a new Claude Code session or pass to Codex.
+> Archive note: this is an early Phase 0 handoff and is no longer the current project status. Use `PROJECT_STATUS.md` for the verified state.
 
 ---
 

@@ -23,6 +23,7 @@ def test_memory_get_all() -> None:
 
 
 def test_rag_index(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", False)
 
     client = rag_module.RAGClient()
@@ -33,6 +34,7 @@ def test_rag_index(monkeypatch) -> None:
 
 
 def test_rag_query(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", False)
 
     client = rag_module.RAGClient()

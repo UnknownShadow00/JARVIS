@@ -186,12 +186,6 @@ def check_readiness() -> dict[str, dict[str, Any]]:
             "module import check",
             "Install keyboard for push-to-talk and kill-switch hotkeys.",
         ),
-        "interpreter": _status(
-            "Open Interpreter CLI",
-            shutil.which("interpreter") is not None,
-            shutil.which("interpreter") or "not installed",
-            "Optional Phase 3 bridge; install only when enabling that integration.",
-        ),
         "mcp_client": _status(
             "MCP client wrapper",
             True,
@@ -252,6 +246,5 @@ def check_tools() -> dict[str, bool]:
     return {
         "ollama": ollama_available,
         "piper": _piper_binary() is not None,
-        "interpreter": shutil.which("interpreter") is not None,
         "wake_model": _wake_model_available(settings.voice.wake_word_model),
     }

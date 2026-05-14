@@ -14,7 +14,6 @@ TOOL_FILLERS: dict[str, str] = {
     "shell": "working",
     "vision": "looking",
     "screenshot": "looking",
-    "interpreter": "working",
     "cad": "working",
     "default": "on_it",
 }

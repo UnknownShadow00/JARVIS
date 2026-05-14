@@ -16,7 +16,6 @@ from app.tools import cad as cad_tool
 from app.tools import cli as cli_tool
 from app.tools import computer_use as computer_use_tool
 from app.tools import files as files_tool
-from app.tools import interpreter as interpreter_tool
 from app.tools import kasa as kasa_tool
 from app.tools import mcp_client as mcp_client_tool
 from app.tools import mouse_keyboard as mouse_keyboard_tool
@@ -37,7 +36,6 @@ TOOLS: dict[str, Any] = {
     "cli": cli_tool.execute,
     "computer_use": computer_use_tool.execute,
     "files": files_tool.execute,
-    "interpreter": interpreter_tool.execute,
     "kasa": kasa_tool.execute,
     "mcp_client": mcp_client_tool.execute,
     "mouse_keyboard": mouse_keyboard_tool.execute,
@@ -86,7 +84,6 @@ class ToolRegistry:
             "cli": cli_tool,
             "computer_use": computer_use_tool,
             "files": files_tool,
-            "interpreter": interpreter_tool,
             "kasa": kasa_tool,
             "mcp_client": mcp_client_tool,
             "mouse_keyboard": mouse_keyboard_tool,

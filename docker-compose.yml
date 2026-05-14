@@ -13,7 +13,7 @@ services:
     container_name: jarvis_ollama
     restart: always
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     environment:
@@ -42,7 +42,8 @@ services:
     container_name: jarvis_backend
     restart: always
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
       - ./config.yaml:/app/config.yaml
       - ./logs:/app/logs
@@ -52,6 +53,7 @@ services:
       - ./projects:/app/projects
     environment:
       - PYTHONUNBUFFERED=1
+      - JARVIS_OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
       ollama:
         condition: service_healthy

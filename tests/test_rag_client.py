@@ -6,6 +6,7 @@ from app.memory import rag_client as rag_module
 
 
 def test_index_no_chromadb(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", False)
 
     client = rag_module.RAGClient()
@@ -15,6 +16,7 @@ def test_index_no_chromadb(monkeypatch) -> None:
 
 
 def test_query_no_chromadb(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", False)
 
     client = rag_module.RAGClient()
@@ -27,6 +29,7 @@ def test_index_with_chromadb(monkeypatch) -> None:
     collection = Mock()
     collection.count.return_value = 2
 
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", True)
 
     client = rag_module.RAGClient()
@@ -42,6 +45,7 @@ def test_query_with_chromadb(monkeypatch) -> None:
     collection = Mock()
     collection.query.return_value = {"documents": [["doc1"]], "ids": [["1"]]}
 
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", True)
 
     client = rag_module.RAGClient()
@@ -54,6 +58,7 @@ def test_query_with_chromadb(monkeypatch) -> None:
 
 
 def test_index_error(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", True)
     monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", True)
 
     client = rag_module.RAGClient()
@@ -66,3 +71,14 @@ def test_index_error(monkeypatch) -> None:
     result = client.index(["doc1"], ["1"])
 
     assert "error" in result
+
+
+def test_query_disabled_by_config(monkeypatch) -> None:
+    monkeypatch.setattr(rag_module.settings.memory, "chromadb_enabled", False)
+    monkeypatch.setattr(rag_module, "CHROMADB_AVAILABLE", True)
+
+    client = rag_module.RAGClient()
+    result = client.query("test")
+
+    assert result["stub"] is True
+    assert result["reason"] == "disabled"

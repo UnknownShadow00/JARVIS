@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import httpx
+import yaml
 
 from app import config_check as cc
 from app.config import load_settings
@@ -12,12 +13,63 @@ from app.config import load_settings
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _write_temp_config(raw: dict, name: str) -> Path:
+    path = PROJECT_ROOT / "tasks" / name
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    return path
+
+
 def test_example_config_matches_schema() -> None:
     example = load_settings(PROJECT_ROOT / "config.yaml.example")
 
     assert example.models.main == "qwen3-nothink"
     assert example.voice.stt_model == "large-v3-turbo"
     assert example.voice.tts_engine == "chatterbox"
+    assert example.server.host == "127.0.0.1"
+    assert example.server.remote_access_enabled is False
+    assert example.server.enable_voice_on_startup is False
+    assert example.server.enable_hotkey_listener is False
+
+
+def test_non_loopback_host_requires_remote_access_flag() -> None:
+    raw = yaml.safe_load((PROJECT_ROOT / "config.yaml.example").read_text(encoding="utf-8"))
+    raw["server"]["host"] = "0.0.0.0"
+    raw["server"]["remote_access_enabled"] = False
+    config_path = _write_temp_config(raw, "tmp_config_reject_remote.yaml")
+
+    try:
+        try:
+            load_settings(config_path)
+        except ValueError as exc:
+            assert "server.host must be localhost/loopback" in str(exc)
+        else:
+            raise AssertionError("0.0.0.0 should be rejected unless remote access is enabled")
+    finally:
+        config_path.unlink(missing_ok=True)
+
+
+def test_non_loopback_host_allowed_when_remote_access_enabled() -> None:
+    raw = yaml.safe_load((PROJECT_ROOT / "config.yaml.example").read_text(encoding="utf-8"))
+    raw["server"]["host"] = "0.0.0.0"
+    raw["server"]["remote_access_enabled"] = True
+    config_path = _write_temp_config(raw, "tmp_config_allow_remote.yaml")
+
+    try:
+        loaded = load_settings(config_path)
+    finally:
+        config_path.unlink(missing_ok=True)
+
+    assert loaded.server.host == "0.0.0.0"
+    assert loaded.server.remote_access_enabled is True
+
+
+def test_ollama_base_url_can_be_overridden_for_container(monkeypatch) -> None:
+    monkeypatch.setenv("JARVIS_OLLAMA_BASE_URL", "http://ollama:11434")
+
+    loaded = load_settings(PROJECT_ROOT / "config.yaml.example")
+
+    assert loaded.models.ollama_base_url == "http://ollama:11434"
 
 
 def test_builtin_wake_model_is_available(monkeypatch) -> None:

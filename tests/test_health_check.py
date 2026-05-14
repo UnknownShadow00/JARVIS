@@ -34,11 +34,6 @@ def test_piper_missing(monkeypatch) -> None:
     assert health_check.check_tools()["piper"] is False
 
 
-def test_interpreter_missing(monkeypatch) -> None:
-    monkeypatch.setattr(health_check.shutil, "which", lambda name: None)
-    assert health_check.check_tools()["interpreter"] is False
-
-
 def test_builtin_wake_model_is_available(monkeypatch) -> None:
     monkeypatch.setattr(health_check.settings.voice, "wake_word_model", "hey_jarvis")
     monkeypatch.setattr(health_check.httpx, "get", lambda *args, **kwargs: SimpleNamespace(status_code=200))
@@ -54,7 +49,7 @@ def test_custom_wake_model_path_missing(monkeypatch) -> None:
 
 
 def test_server_route(monkeypatch) -> None:
-    expected = {"ollama": True, "piper": True, "interpreter": True, "wake_model": True}
+    expected = {"ollama": True, "piper": True, "wake_model": True}
     monkeypatch.setattr("app.server.check_tools", lambda: expected)
     client = TestClient(app)
     response = client.get("/health/tools")
@@ -68,7 +63,7 @@ def test_detailed_readiness_contains_required_sections(monkeypatch) -> None:
     monkeypatch.setattr(health_check, "_configured_file", lambda path: (True, path))
     monkeypatch.setattr(health_check, "_audio_devices_ready", lambda: (True, "1 input, 1 output"))
     monkeypatch.setattr(health_check, "_module_available", lambda name: True)
-    monkeypatch.setattr(health_check.shutil, "which", lambda name: "interpreter" if name == "interpreter" else None)
+    monkeypatch.setattr(health_check.shutil, "which", lambda name: None)
     monkeypatch.setattr(health_check.settings.voice, "wake_word_model", "hey_jarvis")
 
     readiness = health_check.check_readiness()
@@ -84,7 +79,6 @@ def test_detailed_readiness_contains_required_sections(monkeypatch) -> None:
         "vad_dependency",
         "wake_dependency",
         "keyboard_dependency",
-        "interpreter",
     } <= readiness.keys()
     assert all("available" in item for item in readiness.values())
 

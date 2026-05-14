@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 try:
@@ -19,7 +19,7 @@ def build_audio_event(audio_bytes: bytes, sample_rate: int = 22050) -> dict[str,
         "type": "audio",
         "data": base64.b64encode(audio_bytes).decode(),
         "sample_rate": sample_rate,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -27,7 +27,7 @@ def build_viseme_event(visemes: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "type": "visemes",
         "data": visemes,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 

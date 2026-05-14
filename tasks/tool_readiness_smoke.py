@@ -185,9 +185,9 @@ def check_comms() -> SmokeResult:
     return _fail("Discord/Telegram disabled stubs", f"unexpected responses: {discord_result!r}; {telegram_result!r}")
 
 
-def check_interpreter_computer_use() -> SmokeResult:
+def check_computer_use() -> SmokeResult:
     from app.config import settings
-    from app.tools import computer_use, interpreter
+    from app.tools import computer_use
 
     original_import = builtins.__import__
 
@@ -197,20 +197,18 @@ def check_interpreter_computer_use() -> SmokeResult:
         return original_import(name, globals, locals, fromlist, level)
 
     with temporary_attr(settings.safety, "dry_run", False):
-        interpreter_result = interpreter.execute({"task": "list files", "timeout": 1})
         with temporary_attr(builtins, "__import__", fake_import):
             computer_result = computer_use.execute({"task": "inspect screen"})
 
-    interpreter_ok = _has_key(interpreter_result, "error") or "returncode" in interpreter_result
     computer_ok = _has_key(computer_result, "error") or _has_key(computer_result, "stub")
-    if interpreter_ok and computer_ok:
+    if computer_ok:
         return _pass(
-            "interpreter/computer-use dependency responses",
-            f"interpreter={_response_shape(interpreter_result)}; computer_use={_response_shape(computer_result)}",
+            "computer-use dependency responses",
+            f"computer_use={_response_shape(computer_result)}",
         )
     return _fail(
-        "interpreter/computer-use dependency responses",
-        f"unexpected responses: {interpreter_result!r}; {computer_result!r}",
+        "computer-use dependency responses",
+        f"unexpected response: {computer_result!r}",
     )
 
 
@@ -232,7 +230,7 @@ CHECKS: list[Callable[[], SmokeResult]] = [
     check_apps,
     check_memory_rag,
     check_comms,
-    check_interpreter_computer_use,
+    check_computer_use,
 ]
 
 

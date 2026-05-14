@@ -1,6 +1,6 @@
 # Tool Readiness Inventory
 
-Last updated: 2026-05-06
+Last updated: 2026-05-14
 
 ## Working
 
@@ -28,10 +28,9 @@ Last updated: 2026-05-06
 | --- | --- | --- | --- |
 | Live voice loop | Needs attended input | `python tasks/manual_voice_smoke.py --live --speak --listen-timeout 45` | Startup checks passed, but no wake/PTT audio reached the process during the attended window. PTT is now polled during the listen loop. |
 | Wake-word tuning | Needs attended input | `python scripts/wake_diag.py --duration 10` | Diagnostic captured mic frames from the default input device but saw near-zero scores without a spoken wake phrase. |
-| Web search | Needs dependency/network | `tests/test_web_search_tool.py` | Fetch path is implemented; search requires `ddgs` or `duckduckgo_search` and network access. |
+| Web search | Needs network | `tests/test_web_search_tool.py` | Fetch path is implemented; requirements include DuckDuckGo search support, but live search still depends on network availability. |
 | Vision screen analysis | Needs model/service | `tests/test_vision.py`, `tests/test_vision_vlm.py` | Screenshot capture and Ollama `/api/generate` path exist; requires configured vision model. |
 | Vision webcam | Needs dependency/device | `tests/test_vision.py`, `tests/test_vision_vlm.py` | Webcam path requires OpenCV and a camera. |
-| Open Interpreter | Needs dependency/config | `tests/test_interpreter_tool.py` | Level 2 bridge exists; requires `interpreter` CLI and Ollama-compatible config. |
 | Voice clone sample | Intentionally skipped | `python tasks/readiness_report.py` | No real personal 10-second WAV is available while the operator is away. Chatterbox continues without conditioning and falls back to Kokoro/Piper if needed. |
 
 ## Stubbed Or Deferred

@@ -16,6 +16,7 @@ _STOP_WORDS = re.compile(r"\b(stop|cancel|freeze|abort)\b", re.IGNORECASE)
 _lock = threading.Lock()
 _triggered = False
 _callbacks: list[Callable[[], None]] = []
+_hotkey_thread: threading.Thread | None = None
 
 
 def register_callback(fn: Callable[[], None]) -> None:
@@ -81,5 +82,9 @@ def _hotkey_listener() -> None:
 
 def start_hotkey_listener() -> None:
     """Start Ctrl+Alt+J listener in a daemon thread."""
-    t = threading.Thread(target=_hotkey_listener, daemon=True, name="kill-switch-hotkey")
-    t.start()
+    global _hotkey_thread
+    with _lock:
+        if _hotkey_thread is not None and _hotkey_thread.is_alive():
+            return
+        _hotkey_thread = threading.Thread(target=_hotkey_listener, daemon=True, name="kill-switch-hotkey")
+        _hotkey_thread.start()
