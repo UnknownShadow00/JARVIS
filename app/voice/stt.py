@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 import tempfile
 import time
+import gc
 from pathlib import Path
 
 from app.config import settings
@@ -106,6 +107,12 @@ class SpeechToText:
         )
         return self._model
 
+    def unload_model(self) -> None:
+        self._model = None
+        self._model_key = None
+        gc.collect()
+        audit.log("stt_model_unloaded", {})
+
     def _clean_text(self, text: str) -> str:
         cleaned = re.sub(r"\s+", " ", text).strip()
         while True:
@@ -120,3 +127,7 @@ stt = SpeechToText()
 
 def transcribe(audio_bytes: bytes) -> str:
     return stt.transcribe(audio_bytes)
+
+
+def unload_model() -> None:
+    stt.unload_model()

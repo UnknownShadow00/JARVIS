@@ -104,6 +104,10 @@ class VisionClient:
     def _encode_file_to_base64(self, image_path: str) -> str:
         return base64.b64encode(Path(image_path).read_bytes()).decode("ascii")
 
+    def unload(self) -> None:
+        self._llm_client = None
+        audit.log("vision_client_unloaded", {})
+
 
 vision_client = VisionClient()
 

@@ -94,6 +94,19 @@ class ServerConfig(StrictModel):
         return self
 
 
+class ResourceModeConfig(StrictModel):
+    enabled: bool = True
+    idle_timeout_minutes: int = 10
+    deep_sleep_timeout_minutes: int = 60
+    keep_wake_listener_in_light_sleep: bool = True
+    keep_wake_listener_in_deep_sleep: bool = False
+    auto_light_sleep: bool = True
+    auto_deep_sleep: bool = True
+    stop_server_on_auto_deep_sleep: bool = True
+    preload_primary_model_on_wake: bool = False
+    preload_keep_alive: str = "5m"
+
+
 class MemoryConfig(StrictModel):
     mem0_enabled: bool
     mem0_base_url: str
@@ -161,6 +174,7 @@ class Settings(BaseSettings):
     voice: VoiceConfig
     boot: BootConfig
     server: ServerConfig
+    resource_mode: ResourceModeConfig
     memory: MemoryConfig
     agent: AgentConfig
     comms: CommsConfig

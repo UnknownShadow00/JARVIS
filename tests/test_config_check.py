@@ -30,6 +30,12 @@ def test_example_config_matches_schema() -> None:
     assert example.server.remote_access_enabled is False
     assert example.server.enable_voice_on_startup is False
     assert example.server.enable_hotkey_listener is False
+    assert example.resource_mode.enabled is True
+    assert example.resource_mode.idle_timeout_minutes == 10
+    assert example.resource_mode.deep_sleep_timeout_minutes == 60
+    assert example.resource_mode.keep_wake_listener_in_light_sleep is True
+    assert example.resource_mode.keep_wake_listener_in_deep_sleep is False
+    assert example.resource_mode.stop_server_on_auto_deep_sleep is True
 
 
 def test_non_loopback_host_requires_remote_access_flag() -> None:

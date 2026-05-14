@@ -26,6 +26,7 @@ Default access policy is localhost-only:
 - Screenshot and screen/webcam vision tool path, assuming local dependencies, screen/camera access, Ollama, and the configured vision model are available.
 - Procedural memory route backed by `skills.md`.
 - Task queue and scheduler API surfaces.
+- Resource-management runtime states and commands: ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, WAKING, `jarvis sleep --light`, `jarvis sleep --deep`, `jarvis wake`, `jarvis status`, and `jarvis shutdown`.
 - PWA static mount at `/pwa`.
 - Electron HUD files and package metadata.
 - Tailscale status helper.
@@ -41,6 +42,23 @@ Default access policy is localhost-only:
 - Comms: Discord and Telegram modules exist but remain disabled until packages, tokens, channel IDs, and approval flows are configured.
 - Tailscale/PWA: local PWA works as static assets; remote access remains an intentional future step.
 - Docker Compose: now has a Dockerfile, loopback-bound published ports, and an Ollama service URL override. It still needs Docker/GPU validation on the target host.
+- Resource savings: unload/stop logic is covered by mocks and can report live VRAM/RAM/process/CUDA context data, but real before/after savings still need a live Ollama + GPU idle run on the target host.
+
+## Current Idle Resource Usage Targets
+
+Measured live values are exposed by `jarvis status`; the table below describes the intended steady-state profile for each mode.
+
+| Runtime state | Current expected JARVIS-owned resource profile |
+|---------------|------------------------------------------------|
+| ACTIVE | Normal FastAPI operation; scheduler running; normal Ollama keep_alive behavior; voice/STT/TTS/vision caches may be resident after use. |
+| LIGHT_SLEEP | Ollama models unloaded, STT/TTS/vision caches released, voice pipeline stopped, scheduler stopped, audio mixer released, UI WebSockets closed; FastAPI and optional wake listener remain. |
+| DEEP_SLEEP | LIGHT_SLEEP cleanup plus CLI process-stop pass for JARVIS-owned FastAPI/HUD/automation workers; automatic idle deep sleep exits FastAPI when `resource_mode.stop_server_on_auto_deep_sleep` is true; expected near-zero meaningful JARVIS-owned VRAM/RAM/CPU after process termination. |
+
+Live check on 2026-05-14:
+
+- Before deep sleep: `jarvis status` saw `qwen3-nothink:latest` and `gemma3:4b` loaded in Ollama, with 14,660.4 MB estimated loaded-model VRAM and 14,188 MB total system GPU memory in use. No JARVIS-owned processes were running.
+- After `python -m app.cli sleep --deep`: loaded Ollama models dropped to 0, estimated loaded-model VRAM dropped to 0 MB, total system GPU memory in use dropped to 1,034 MB, JARVIS-owned process RSS/committed RAM stayed at 0 MB.
+- Measured savings in this pass: 14,660.4 MB loaded-model VRAM and about 13,154 MB total GPU memory. JARVIS process RAM savings were 0 MB because the FastAPI/HUD/voice runtime was already offline before the command.
 
 ## What Is Stubbed
 
@@ -62,6 +80,7 @@ Default access policy is localhost-only:
 - Live voice cannot be marked complete until an attended wake/PTT -> STT -> response -> TTS playback run passes.
 - Docker was not validated in this pass because Docker is not available in the current environment.
 - Ollama-dependent commands can fail if Ollama is not running or models are missing.
+- Windows/NVIDIA shared GPU memory can remain visible after model unload because WDDM and the driver may retain reusable mappings; `jarvis status` should be used to check loaded Ollama models and JARVIS-owned CUDA contexts.
 - Docker Compose needs target-host validation with NVIDIA container support before it can be considered deployment-ready.
 - Some docs and historical logs still describe older phase states. Current truth should be `PROJECT_STATUS.md`, `README.md`, `config.yaml`, and tests.
 
@@ -79,6 +98,10 @@ Default access policy is localhost-only:
 - `.gitignore`: changed root runtime ignores so `app/logs/audit.py` and `app/logs/__init__.py` can be tracked.
 - `requirements.txt`: added missing clean-clone dependencies for `pydantic-settings`, `apscheduler`, and `icalendar`.
 - `Dockerfile`, `docker-compose.yml`: added a backend Dockerfile, loopback-only published ports, and container Ollama URL override.
+- `app/resource_manager.py`, `app/cli.py`, `jarvis.py`, `jarvis.cmd`: added runtime resource-state transitions, Ollama unload/preload handling, process discovery/termination, resource reports, and the requested sleep/wake/status/shutdown commands.
+- `app/server.py`: added resource endpoints, idle detection startup, WebSocket shutdown, light-sleep auto-wake for chat/WebSocket interactions, and deep-sleep refusal until manual wake.
+- `app/voice/stt.py`, `app/voice/tts.py`, `app/voice/wake_word.py`, `app/voice/sounds.py`, `app/computer/vision.py`: added cleanup hooks for cached models, audio mixer resources, and lightweight wake listener behavior.
+- `docs/resource_management.md`: documented light sleep vs deep sleep, Windows shared GPU memory behavior, cold-start wake behavior, and expected services per state.
 - `frontend/pwa/manifest.json`: scoped PWA start URL to the `/pwa` mount.
 - Tests: added coverage for localhost config validation, Docker/Ollama env override, disabled RAG behavior, vision intent wiring, memory intent wiring, PWA manifest scope, default lifespan behavior, and browser URL routing.
 - Docs: updated README, 5090 migration notes, tool readiness inventory, CLAUDE status, and HANDOFF archive note.
@@ -92,6 +115,7 @@ Default access policy is localhost-only:
 - Provide real comms tokens/channel IDs only when remote approval flows are ready.
 - Provide a real voice clone WAV if Chatterbox voice conditioning is desired.
 - Validate Docker Compose with NVIDIA runtime on the target machine.
+- Run live ACTIVE -> LIGHT_SLEEP -> DEEP_SLEEP measurements on the target GPU host and record actual VRAM/RAM deltas from `jarvis status`.
 
 ## Hardware/Server-Dependent Tasks
 
@@ -157,6 +181,23 @@ Open PWA after backend starts:
 http://127.0.0.1:8000/pwa/
 ```
 
+Resource management:
+
+```powershell
+jarvis status
+jarvis sleep --light
+jarvis sleep --deep
+jarvis wake
+jarvis shutdown
+```
+
+From the repo without a PATH alias:
+
+```powershell
+.\jarvis.cmd status
+python -m app.cli status
+```
+
 Run readiness checks:
 
 ```powershell
@@ -209,6 +250,12 @@ docker compose up --build
 
 ## Latest Validation Results
 
+- `python -m py_compile app\resource_manager.py app\cli.py app\server.py app\config.py app\voice\stt.py app\voice\tts.py app\voice\wake_word.py app\voice\sounds.py app\computer\vision.py jarvis.py`: passed.
+- `pytest tests\test_resource_manager.py tests\test_config_check.py tests\test_server_integration.py -q`: 29 passed.
+- `python -m app.cli sleep --deep`: moved persisted state to DEEP_SLEEP, unloaded Ollama models, and reported 0 MB loaded-model VRAM with 0 JARVIS-owned processes.
+- `python -m app.cli status`: DEEP_SLEEP, server offline, 0 MB estimated loaded-model VRAM, 0 JARVIS-owned processes, 0 loaded Ollama models.
+- `python -m pip_audit -r requirements.txt`: not run because `pip_audit` is not installed in this Python environment.
+- `npm audit --prefix frontend\electron --audit-level=high`: 0 vulnerabilities.
 - `pytest -q tests/test_config_check.py tests/test_rag_client.py tests/test_server_integration.py tests/router_test.py tests/test_pwa_serve.py tests/test_readiness_report.py -p no:cacheprovider`: 40 passed, 1 warning.
 - `python -m pip check`: no broken requirements found.
 - `npm.cmd audit --audit-level=moderate --prefix frontend/electron`: 0 vulnerabilities.

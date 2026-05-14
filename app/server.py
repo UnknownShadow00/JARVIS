@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,6 +38,7 @@ from app.logs.audit import audit
 from app.memory.memory_client import memory_client
 from app.memory.procedural import procedural_memory
 from app.memory.rag_client import rag_client
+from app.resource_manager import resource_manager
 from app.tools.health_check import check_readiness, check_tools
 from app.tools.registry import ToolError, registry
 from app.voice.filler_manager import filler_manager
@@ -65,6 +66,18 @@ class ConnectionManager:
                 dead.append(ws)
         for ws in dead:
             self.disconnect(ws)
+
+    async def disconnect_all(self) -> int:
+        closed = 0
+        for ws in list(self.active):
+            try:
+                await ws.close(code=1001, reason="JARVIS entering sleep mode")
+                closed += 1
+            except Exception:
+                pass
+            finally:
+                self.disconnect(ws)
+        return closed
 
 
 manager = ConnectionManager()
@@ -94,7 +107,9 @@ def _register_runtime_callbacks(voice_pipeline: Any | None = None) -> None:
 async def lifespan(app: FastAPI):
     asyncio.create_task(asyncio.to_thread(_log_startup_checks))
     _register_runtime_callbacks()
+    resource_manager.mark_activity("server_start")
     await scheduler.start()
+    await resource_manager.start_idle_monitor()
 
     voice_pipeline = None
     voice_started = False
@@ -123,6 +138,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
+        await resource_manager.stop_idle_monitor()
         tts.stop()
         if voice_started and voice_pipeline is not None:
             voice_pipeline.stop()
@@ -142,6 +158,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+_RESOURCE_ACTIVITY_EXEMPT_PREFIXES = ("/health", "/resource", "/pwa")
+
+
+@app.middleware("http")
+async def resource_activity_middleware(request: Request, call_next):  # noqa: ANN001, ANN201
+    response = await call_next(request)
+    if not any(request.url.path.startswith(prefix) for prefix in _RESOURCE_ACTIVITY_EXEMPT_PREFIXES):
+        resource_manager.mark_activity(f"http:{request.method}:{request.url.path}")
+    return response
 
 
 # ------------------------------------------------------------------
@@ -192,11 +219,41 @@ async def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "active": is_active(),
+        "resource_state": resource_manager.state.value,
         "dry_run": settings.safety.dry_run,
         "main_model": settings.models.main,
         "router_model": settings.models.router,
         "uptime_seconds": round(time.time() - _STARTED_AT, 1),
     }
+
+
+@app.get("/resource/status")
+async def resource_status() -> dict[str, Any]:
+    return resource_manager.status()
+
+
+@app.post("/resource/sleep/light")
+async def resource_light_sleep() -> dict[str, Any]:
+    result = await resource_manager.light_sleep(reason="api")
+    return asdict(result)
+
+
+@app.post("/resource/sleep/deep")
+async def resource_deep_sleep(terminate_processes: bool = False) -> dict[str, Any]:
+    result = await resource_manager.deep_sleep(reason="api", terminate_processes=terminate_processes)
+    return asdict(result)
+
+
+@app.post("/resource/wake")
+async def resource_wake(preload_primary_model: bool | None = None) -> dict[str, Any]:
+    result = await resource_manager.wake(reason="api", preload_primary_model=preload_primary_model)
+    return asdict(result)
+
+
+@app.post("/resource/shutdown")
+async def resource_shutdown(terminate_processes: bool = False) -> dict[str, Any]:
+    result = await resource_manager.deep_sleep(reason="api_shutdown", terminate_processes=terminate_processes)
+    return asdict(result)
 
 
 @app.get("/health/tools")
@@ -223,6 +280,14 @@ async def network_status() -> dict[str, Any]:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
+    if not await resource_manager.ensure_awake_for_interaction("chat"):
+        return ChatResponse(
+            reply="JARVIS is in deep sleep. Run `jarvis wake` to restore the runtime.",
+            intent="sleep",
+            confidence=1.0,
+            dry_run=settings.safety.dry_run,
+            active=False,
+        )
     current_token.reset()
     try:
         reply, intent_result = await _process(req.message)
@@ -350,6 +415,16 @@ async def ws_endpoint(websocket: WebSocket) -> None:
                 message = data.get("message", raw)
             except json.JSONDecodeError:
                 message = raw
+
+            if not await resource_manager.ensure_awake_for_interaction("websocket"):
+                await websocket.send_json(
+                    {
+                        "type": "sleep",
+                        "state": resource_manager.state.value,
+                        "message": "JARVIS is in deep sleep. Run `jarvis wake` to restore the runtime.",
+                    }
+                )
+                continue
 
             current_token.reset()
             try:

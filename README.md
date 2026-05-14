@@ -99,6 +99,20 @@ python -m app.main
 
 The FastAPI app exposes the REST and WebSocket brain used by the desktop and voice layers. It does not start microphone, wake-word, or hotkey listeners unless explicitly enabled in `config.yaml` or through the separate boot flow.
 
+### Resource Management
+
+JARVIS supports ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, and WAKING runtime status output so idle operation can release loaded models, voice workers, audio streams, scheduler loops, UI sockets, CUDA caches, and JARVIS-owned worker processes.
+
+```powershell
+jarvis sleep --light
+jarvis sleep --deep
+jarvis wake
+jarvis status
+jarvis shutdown
+```
+
+From a clone without a PATH alias, run `.\jarvis.cmd status` or `python -m app.cli status`. See [docs/resource_management.md](docs/resource_management.md) for state behavior, Windows shared GPU memory notes, and sleep/deep-sleep usage expectations.
+
 ## Architecture
 
 JARVIS is organized as a three-layer local agent stack:

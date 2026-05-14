@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator, Iterator
+import gc
+import os
 import re
 import shutil
 import subprocess
 import tempfile
 import time
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -144,12 +147,22 @@ class TTSEngine:
     def stop(self) -> None:
         self._stop_event.set()
         try:
-            import pygame
+            os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="pkg_resources is deprecated.*", category=UserWarning)
+                import pygame
 
             if pygame.mixer.get_init():
                 pygame.mixer.stop()
         except Exception:
             pass
+
+    def unload_models(self) -> None:
+        self.stop()
+        self._chatterbox_model = None
+        self._chatterbox_conditioning = None
+        gc.collect()
+        audit.log("tts_models_unloaded", {})
 
     async def _synthesize_sentence(self, sentence: str) -> Path | None:
         engine = settings.voice.tts_engine.lower()
@@ -427,3 +440,7 @@ class TTSEngine:
 
 
 tts = TTSEngine()
+
+
+def unload_models() -> None:
+    tts.unload_models()

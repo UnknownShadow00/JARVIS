@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.agent.scheduler import Scheduler
 from app.agent.task_queue import TaskQueue
 from app.memory.procedural import ProceduralMemory
+from app.resource_manager import RuntimeState, TransitionResult
 from app.server import app
 from app.tools.registry import ToolResult
 
@@ -139,6 +140,43 @@ def test_schedule_job_routes(monkeypatch) -> None:  # noqa: ANN001
     deleted = client.delete(f"/schedule/jobs/{job_id}")
     assert deleted.status_code == 200
     assert deleted.json()["deleted"] is True
+
+
+def test_resource_management_routes(monkeypatch) -> None:  # noqa: ANN001
+    class FakeResourceManager:
+        state = RuntimeState.ACTIVE
+
+        def status(self) -> dict:
+            return {"state": "ACTIVE", "resources": {"estimated_vram_mb": 0}}
+
+        async def light_sleep(self, reason: str) -> TransitionResult:
+            return TransitionResult("LIGHT_SLEEP", "ACTIVE", reason, ["ollama_models_unloaded:1"], {})
+
+        async def deep_sleep(self, reason: str, terminate_processes: bool = False) -> TransitionResult:
+            return TransitionResult("DEEP_SLEEP", "ACTIVE", f"{reason}:{terminate_processes}", ["voice_pipeline_stopped"], {})
+
+        async def wake(self, reason: str, preload_primary_model: bool | None = None) -> TransitionResult:
+            return TransitionResult("ACTIVE", "LIGHT_SLEEP", f"{reason}:{preload_primary_model}", ["scheduler_started"], {})
+
+    monkeypatch.setattr("app.server.resource_manager", FakeResourceManager())
+
+    status = client.get("/resource/status")
+    assert status.status_code == 200
+    assert status.json()["state"] == "ACTIVE"
+
+    light = client.post("/resource/sleep/light")
+    assert light.status_code == 200
+    assert light.json()["state"] == "LIGHT_SLEEP"
+
+    deep = client.post("/resource/sleep/deep", params={"terminate_processes": "true"})
+    assert deep.status_code == 200
+    assert deep.json()["state"] == "DEEP_SLEEP"
+    assert deep.json()["reason"] == "api:True"
+
+    wake = client.post("/resource/wake", params={"preload_primary_model": "true"})
+    assert wake.status_code == 200
+    assert wake.json()["state"] == "ACTIVE"
+    assert wake.json()["reason"] == "api:True"
 
 
 def test_procedural_memory_routes(monkeypatch) -> None:  # noqa: ANN001

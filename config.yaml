@@ -112,6 +112,19 @@ server:
     - "http://localhost:5173"
     - "http://127.0.0.1:3000"
 
+# Resource management controls ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, and WAKING runtime states.
+resource_mode:
+  enabled: true
+  idle_timeout_minutes: 10
+  deep_sleep_timeout_minutes: 60
+  keep_wake_listener_in_light_sleep: true
+  keep_wake_listener_in_deep_sleep: false
+  auto_light_sleep: true
+  auto_deep_sleep: true
+  stop_server_on_auto_deep_sleep: true
+  preload_primary_model_on_wake: false
+  preload_keep_alive: "5m"
+
 # ─── Memory (activate at Phase 4) ────────────────────────────
 memory:
   mem0_enabled: false

@@ -1,7 +1,9 @@
 """Non-blocking sound effects for voice pipeline state changes."""
 from __future__ import annotations
 
+import os
 import threading
+import warnings
 from pathlib import Path
 from typing import Final
 
@@ -87,7 +89,10 @@ class SoundsManager:
 
     def _load_pygame(self):  # noqa: ANN202
         try:
-            import pygame
+            os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="pkg_resources is deprecated.*", category=UserWarning)
+                import pygame
         except ImportError as exc:
             audit.log("sound_unavailable", {"reason": str(exc)})
             return None
@@ -97,6 +102,22 @@ class SoundsManager:
                 pygame.mixer.init()
                 self._mixer_initialized = True
         return pygame
+
+    def release(self) -> None:
+        try:
+            os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="pkg_resources is deprecated.*", category=UserWarning)
+                import pygame
+
+            with self._lock:
+                if pygame.mixer.get_init():
+                    pygame.mixer.stop()
+                    pygame.mixer.quit()
+                self._mixer_initialized = False
+            audit.log("sound_released", {})
+        except Exception as exc:  # noqa: BLE001
+            audit.log("sound_release_error", {"error": str(exc)})
 
 
 sounds = SoundsManager()

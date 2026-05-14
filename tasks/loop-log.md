@@ -109,3 +109,8 @@
 - Files changed: app/brain/router.py, app/comms/audio2face.py, app/logs/audit.py, tasks/loop-log.md
 - Result: pass; full pytest now reports 320 passed and 0 skipped, only third-party deprecation warnings remain (GPUtil, pygame); tool readiness smoke 10/10 pass; readiness_report reports all required checks pass after starting Ollama
 - Next: Attended live voice run (mic + speaker), commit working tree, and validate Docker Compose on a Docker/NVIDIA host when available
+## [2026-05-14T13:36:19.8408999-05:00] Task Completed
+- Task: Implemented JARVIS ACTIVE/LIGHT_SLEEP/DEEP_SLEEP/WAKING resource management with sleep/wake/status/shutdown commands, idle detection, model/service cleanup, process stop flow, live resource reporting, documentation, and measured deep-sleep unload validation
+- Files changed: PROJECT_STATUS.md, README.md, app/cli.py, app/resource_manager.py, app/computer/vision.py, app/config.py, app/server.py, app/voice/sounds.py, app/voice/stt.py, app/voice/tts.py, app/voice/wake_word.py, config.yaml, config.yaml.example, docs/resource_management.md, jarvis.cmd, jarvis.py, tests/test_config_check.py, tests/test_resource_manager.py, tests/test_server_integration.py, tasks/loop-log.md
+- Result: pass; py_compile passed for changed runtime modules, focused pytest passed 29 tests, npm audit reported 0 high vulnerabilities, `python -m app.cli sleep --deep` unloaded Ollama models to 0 MB estimated loaded-model VRAM and left 0 JARVIS-owned processes
+- Next: `pip_audit` is not installed in this Python environment; run a full-suite pass and live voice wake/deep-sleep validation on the target always-on host when available

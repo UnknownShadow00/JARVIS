@@ -108,6 +108,10 @@ class WakeWordDetector:
         audit.log("wake_model_loaded", {"model": settings.voice.wake_word_model})
         return self._model
 
+    def unload_model(self) -> None:
+        self._model = None
+        audit.log("wake_model_unloaded", {"model": settings.voice.wake_word_model})
+
     def _push_to_talk_active(self) -> bool:
         try:
             import keyboard
@@ -128,6 +132,10 @@ class WakeWordDetector:
 
 
 wake_word = WakeWordDetector()
+
+
+def unload_model() -> None:
+    wake_word.unload_model()
 
 
 if __name__ == "__main__":
