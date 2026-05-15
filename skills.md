@@ -13,3 +13,4 @@
 - Filler phrases must be played BEFORE any tool call >500ms. Use phrase_cache.get(key) + tts.speak() immediately after classifying the tool intent, before the tool executes.
 - TTS rule: ALWAYS strip [laugh] [chuckle] [cough] before passing text to Kokoro or Piper. Only Chatterbox Turbo handles paralinguistic tags.
 - Ollama env vars (set all 6 as Windows System vars, restart Ollama after): OLLAMA_KEEP_ALIVE=-1, OLLAMA_NUM_PARALLEL=2, OLLAMA_FLASH_ATTENTION=1, OLLAMA_KV_CACHE_TYPE=q8_0, OLLAMA_NUM_BATCH=512, OLLAMA_MAX_LOADED_MODELS=2.
+- Dictation mode uses `voice.dictation_hotkey` and routes STT text to clipboard/type-out only. Do not send dictation transcripts through the brain pipeline, LLM, TTS, or raw-text audit logs.

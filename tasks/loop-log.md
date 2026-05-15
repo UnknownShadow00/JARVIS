@@ -134,3 +134,8 @@
 - Files changed: tasks/todo.md, tasks/loop-log.md
 - Result: pass; tracker entry is preserved so the requested feature sequence can start from a clean git status
 - Next: Begin Task 1 dictation mode with a clean worktree
+## [2026-05-14T20:15:53.4583254-05:00] Task Completed
+- Task: Implemented Dictation mode with a separate hotkey path that routes STT transcripts to clipboard and optional type-out without brain pipeline, LLM, TTS, or raw transcript audit logging
+- Files changed: app/config.py, app/voice/audio_stream.py, app/voice/dictation.py, app/voice/push_to_talk.py, app/voice/wake_word.py, config.yaml, config.yaml.example, requirements.txt, skills.md, tests/test_config_check.py, tests/test_dictation.py, tasks/loop-log.md
+- Result: pass; focused dictation tests passed, PTT/config regression tests passed, manual mock voice smoke passed, full pytest reported 333 passed, readiness_report passed all required checks, and touched files are under 800 lines
+- Next: Start Task 2 Obsidian vault tool from a clean worktree after committing Task 1

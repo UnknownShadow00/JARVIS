@@ -6,12 +6,25 @@ import threading
 
 from app.brain.llm_client import OllamaConnectionError
 from app.logs.audit import audit
+from app.voice.dictation import dictation
 from app.voice.sounds import sounds
 from app.voice.stt import stt
 from app.voice.tts import tts
 from app.voice.wake_word import wake_word
 
 is_listening = False
+
+
+async def _process(text: str):
+    from app.server import _process as server_process
+
+    return await server_process(text)
+
+
+async def _process_stream(text: str):
+    from app.server import _process_stream as server_process_stream
+
+    return await server_process_stream(text)
 
 
 class VoicePipeline:
@@ -44,6 +57,8 @@ class VoicePipeline:
             try:
                 is_listening = True
                 audit.log("voice_listening", {})
+                if hasattr(wake_word, "last_trigger"):
+                    wake_word.last_trigger = None
                 audio = await asyncio.to_thread(wake_word.listen, timeout=self.listen_timeout_seconds)
                 is_listening = False
                 if not audio:
@@ -53,10 +68,13 @@ class VoicePipeline:
                 if not text:
                     continue
 
+                if getattr(wake_word, "last_trigger", None) == "dictation":
+                    await asyncio.to_thread(dictation.handle_transcript, text)
+                    wake_word.last_trigger = None
+                    continue
+
                 sounds.play("working")
                 audit.log("voice_request", {"text": text})
-
-                from app.server import _process, _process_stream
 
                 stream_result = await _process_stream(text)
                 if stream_result is not None:

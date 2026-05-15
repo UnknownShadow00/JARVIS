@@ -24,6 +24,7 @@ class WakeWordDetector:
     def __init__(self) -> None:
         self._model = None
         self._last_detection_at: float = 0.0
+        self.last_trigger: str | None = None
 
     def listen(self, timeout: float | None = None) -> bytes:
         """Block until wake word or push-to-talk, then return WAV bytes for STT.
@@ -31,6 +32,9 @@ class WakeWordDetector:
         Returns b"" on timeout or if hardware/model is unavailable.
         Silently skips frames while tts_module.is_speaking to prevent self-triggering.
         """
+        self.last_trigger = None
+        if self._dictation_active():
+            return self._record_dictation()
         if self._push_to_talk_active():
             return self._record_push_to_talk()
 
@@ -69,10 +73,14 @@ class WakeWordDetector:
                 try:
                     frame = audio_queue.get(timeout=0.1)
                 except queue.Empty:
+                    if self._dictation_active():
+                        return self._record_dictation()
                     if self._push_to_talk_active():
                         return self._record_push_to_talk()
                     continue
 
+                if self._dictation_active():
+                    return self._record_dictation()
                 if self._push_to_talk_active():
                     return self._record_push_to_talk()
 
@@ -85,6 +93,7 @@ class WakeWordDetector:
                 prediction = model.predict(np.frombuffer(frame, dtype=np.int16))
                 score = self._score(prediction)
                 if score >= settings.voice.wake_word_sensitivity:
+                    self.last_trigger = "wake"
                     audit.log("wake_detected", {"score": score})
                     sounds.play("listening")
                     audio = vad.record_until_silence()
@@ -120,8 +129,25 @@ class WakeWordDetector:
         except Exception:
             return False
 
+    def _dictation_active(self) -> bool:
+        if not settings.voice.dictation_enabled:
+            return False
+        try:
+            import keyboard
+
+            return bool(keyboard.is_pressed(settings.voice.dictation_hotkey))
+        except Exception:
+            return False
+
     def _record_push_to_talk(self) -> bytes:
+        self.last_trigger = "ptt"
         audit.log("wake_push_to_talk", {"key": settings.voice.push_to_talk_key})
+        sounds.play("listening")
+        return vad.record_until_silence()
+
+    def _record_dictation(self) -> bytes:
+        self.last_trigger = "dictation"
+        audit.log("wake_dictation", {"key": settings.voice.dictation_hotkey})
         sounds.play("listening")
         return vad.record_until_silence()
 

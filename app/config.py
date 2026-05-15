@@ -61,6 +61,9 @@ class VoiceConfig(StrictModel):
     kokoro_voice: str
     kokoro_speed: float
     push_to_talk_key: str
+    dictation_enabled: bool
+    dictation_hotkey: str
+    dictation_type_out: bool
     input_device_index: int
     output_device_index: int
 
