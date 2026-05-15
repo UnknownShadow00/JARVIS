@@ -129,3 +129,8 @@
 - Files changed: PROJECT_STATUS.md, app/agent/scheduler.py, app/cli.py, app/memory/rag_client.py, app/resource_manager.py, app/tools/registry.py, app/voice/audio_stream.py, app/voice/tts.py, tests/test_resource_manager.py, tasks/loop-log.md
 - Result: pass; lazy-loaded tools, ChromaDB, APScheduler, Chatterbox, Kokoro, and voice server callbacks; fixed wake-listener event-loop handoff; reduced `app.server` import from about 1.38s to about 0.56s and deep-sleep status to about 1.23s; full pytest reported 327 passed; pip-audit, pip check, and npm audit passed
 - Next: Only physical validation remains: attended live microphone/speaker wake flow and final always-on server hardware validation when that target machine is available
+## [2026-05-14T20:09:15.2600229-05:00] Task Completed
+- Task: Recorded the Phase 4+ early-track queue before starting gated feature work
+- Files changed: tasks/todo.md, tasks/loop-log.md
+- Result: pass; tracker entry is preserved so the requested feature sequence can start from a clean git status
+- Next: Begin Task 1 dictation mode with a clean worktree
