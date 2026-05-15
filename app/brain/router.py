@@ -38,6 +38,19 @@ class RouterResult:
     reasoning: str
 
 
+def embedding_select_tool(text: str, candidates: list[str]) -> str | None:
+    """Select the best tool via embeddings, returning None on any unavailable dependency."""
+    try:
+        from app.brain.tool_embeddings import select_tool_by_embedding
+        from app.tools.registry import tool_descriptions
+
+        descriptions = tool_descriptions()
+        return select_tool_by_embedding(text, candidates, descriptions)
+    except Exception as exc:  # noqa: BLE001
+        audit.log("tool_embedding_warning", {"reason": str(exc), "candidate_count": len(candidates)})
+        return None
+
+
 class IntentRouter:
     """Fast intent classifier with deterministic safety rules and Ollama fallback."""
 
@@ -91,6 +104,9 @@ class IntentRouter:
         return str(data.get("response", "") or "").strip()
 
     def _finalize(self, result: RouterResult, user_message: str) -> RouterResult:
+        if result.intent == "use_tool" and result.suggested_tool and settings.routing.embedding_enabled:
+            result = self._select_tool_with_embeddings(result, user_message)
+
         if result.confidence < settings.safety.confidence_threshold:
             result = RouterResult(
                 "confirm_action",
@@ -110,6 +126,29 @@ class IntentRouter:
             },
         )
         return result
+
+    def _select_tool_with_embeddings(self, result: RouterResult, user_message: str) -> RouterResult:
+        try:
+            from app.tools.registry import tool_descriptions
+
+            candidates = sorted(tool_descriptions())
+        except Exception as exc:  # noqa: BLE001
+            audit.log("tool_embedding_warning", {"reason": str(exc), "candidate_count": 0})
+            return result
+
+        if len(candidates) <= 1:
+            return result
+
+        selected_tool = embedding_select_tool(user_message, candidates)
+        if not selected_tool or selected_tool == result.suggested_tool:
+            return result
+
+        return RouterResult(
+            result.intent,
+            result.confidence,
+            selected_tool,
+            f"{result.reasoning} Embedding selector chose {selected_tool}.",
+        )
 
     def _classify_by_rules(self, user_message: str) -> RouterResult | None:
         text = user_message.lower().strip()

@@ -136,6 +136,19 @@ class ToolRegistry:
             )
         return tools
 
+    def tool_descriptions(self) -> dict[str, str]:
+        """Return tool descriptions for embedding-based routing."""
+        descriptions: dict[str, str] = {}
+        for name in sorted(self._tool_modules):
+            try:
+                module = self._load_tool(name)
+            except ToolError:
+                continue
+            description = getattr(module, "DESCRIPTION", "") or (getattr(module, "__doc__", "") or "")
+            safety_level = getattr(module, "SAFETY_LEVEL", "unknown")
+            descriptions[name] = f"{description.strip()}\nSAFETY_LEVEL={safety_level}".strip()
+        return descriptions
+
     def call(
         self,
         tool_name: str,
@@ -200,3 +213,8 @@ class ToolRegistry:
 
 
 registry = ToolRegistry()
+
+
+def tool_descriptions() -> dict[str, str]:
+    """Module-level convenience wrapper for embedding-based routing."""
+    return registry.tool_descriptions()

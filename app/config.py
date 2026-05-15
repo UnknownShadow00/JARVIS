@@ -124,6 +124,12 @@ class ToolsConfig(StrictModel):
     obsidian_vault_path: str
 
 
+class RoutingConfig(StrictModel):
+    embedding_enabled: bool
+    embedding_model: str
+    embedding_top_k: int
+
+
 class AgentConfig(StrictModel):
     hermes_enabled: bool
     hermes_cli_path: str
@@ -185,6 +191,7 @@ class Settings(BaseSettings):
     resource_mode: ResourceModeConfig
     memory: MemoryConfig
     tools: ToolsConfig
+    routing: RoutingConfig
     agent: AgentConfig
     comms: CommsConfig
     computer: ComputerConfig

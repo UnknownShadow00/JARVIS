@@ -41,6 +41,9 @@ def test_example_config_matches_schema() -> None:
     assert example.resource_mode.stop_server_on_auto_deep_sleep is True
     assert example.tools.obsidian_enabled is False
     assert example.tools.obsidian_vault_path == "./jarvis-vault"
+    assert example.routing.embedding_enabled is False
+    assert example.routing.embedding_model == "nomic-embed-text"
+    assert example.routing.embedding_top_k == 3
 
 
 def test_non_loopback_host_requires_remote_access_flag() -> None:
