@@ -16,7 +16,7 @@ Return ONLY valid JSON - no explanation, no markdown, no extra text:
 
 Intent options:
 - "respond"         - answer directly, no tools or actions needed
-- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, screenshot, browser, browser_use)
+- "use_tool"        - requires a tool (set suggested_tool to: system_stats, web_search, apps, files, shell, calendar, screenshot, browser, browser_use, obsidian)
 - "retrieve_memory" - needs memory or history lookup
 - "vision"          - needs screen capture or webcam
 - "confirm_action"  - dangerous/irreversible action that needs user confirmation
@@ -117,6 +117,14 @@ class IntentRouter:
         if not text:
             return RouterResult("respond", 1.0, "", "Empty input can be answered directly.")
 
+        if re.search(r"\[action:obsidian:", text, re.IGNORECASE):
+            return RouterResult(
+                "use_tool",
+                0.97,
+                "obsidian",
+                "The message contains an Obsidian action tag.",
+            )
+
         if re.search(r"\b(run|execute|shell|cmd|terminal|bash|powershell|npm run|pip install|python -)\b", text):
             return RouterResult(
                 "use_tool",
@@ -216,6 +224,14 @@ class IntentRouter:
                 0.91,
                 "files",
                 "The request asks for file system information.",
+            )
+
+        if re.search(r"\b(obsidian|vault|note|notes|linked note|append note|create note|read note|search notes)\b", text):
+            return RouterResult(
+                "use_tool",
+                0.91,
+                "obsidian",
+                "The request asks for an Obsidian vault note operation.",
             )
 
         if re.search(r"\b(calendar|schedule|events today|my day|appointments|what.*have.*today|today.*schedule)\b", text):

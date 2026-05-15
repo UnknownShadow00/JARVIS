@@ -24,6 +24,7 @@ _EXPLICIT_TOOL_MODULES: dict[str, str] = {
     "kasa": "app.tools.kasa",
     "mcp_client": "app.tools.mcp_client",
     "mouse_keyboard": "app.tools.mouse_keyboard",
+    "obsidian": "app.tools.obsidian",
     "screenshot": "app.tools.screenshot",
     "shell": "app.tools.shell",
     "system_stats": "app.tools.system_stats",

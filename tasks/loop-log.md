@@ -139,3 +139,8 @@
 - Files changed: app/config.py, app/voice/audio_stream.py, app/voice/dictation.py, app/voice/push_to_talk.py, app/voice/wake_word.py, config.yaml, config.yaml.example, requirements.txt, skills.md, tests/test_config_check.py, tests/test_dictation.py, tasks/loop-log.md
 - Result: pass; focused dictation tests passed, PTT/config regression tests passed, manual mock voice smoke passed, full pytest reported 333 passed, readiness_report passed all required checks, and touched files are under 800 lines
 - Next: Start Task 2 Obsidian vault tool from a clean worktree after committing Task 1
+## [2026-05-14T20:23:12.0211816-05:00] Task Completed
+- Task: Implemented the Obsidian vault tool with constrained filesystem note create/append/read/search, optional obsidian-mcp stub handoff, registry/router wiring, config defaults, and vault placeholder
+- Files changed: app/brain/prompts.py, app/brain/router.py, app/brain/tool_params.py, app/config.py, app/tools/mcp_client.py, app/tools/obsidian.py, app/tools/registry.py, config.yaml, config.yaml.example, jarvis-vault/.gitkeep, tests/test_config_check.py, tests/test_obsidian_tool.py, tests/test_phase8_integrations.py, tasks/loop-log.md
+- Result: pass; app.tools.obsidian imports successfully, focused Obsidian/MCP/router/config tests passed, full pytest reported 338 passed, readiness_report passed all required checks, and touched files are under 800 lines
+- Next: Start Task 3 embedding-based tool selection from a clean worktree after committing Task 2

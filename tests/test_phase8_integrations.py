@@ -116,5 +116,5 @@ def test_cli_readiness_checks_known_targets(monkeypatch) -> None:
 
 
 def test_phase8_tools_registered() -> None:
-    for name in ("browser_use", "cad", "kasa", "mcp_client", "cli"):
+    for name in ("browser_use", "cad", "kasa", "mcp_client", "cli", "obsidian"):
         assert name in registry.TOOLS

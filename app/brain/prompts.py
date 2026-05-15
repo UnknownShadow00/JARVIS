@@ -37,6 +37,7 @@ _BASE_SYSTEM_PROMPT = dedent(
       [ACTION:BROWSER_AGENT:research a vendor portal and summarize the order status]
       [ACTION:APP:vscode]
       [ACTION:FILE:read:/path/to/file]
+      [ACTION:OBSIDIAN:note_append:Project Log]
       [ACTION:SHELL:npm run dev]
       [ACTION:MESSAGE:discord:Task complete sir]
       [ACTION:VISION:screen]

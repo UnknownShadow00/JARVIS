@@ -10,6 +10,7 @@ from app.config import settings
 _WAKE_PREFIX_RE = re.compile(r"^\s*(?:hey\s+jarvis|jarvis)[,\s]*", re.IGNORECASE)
 _WAKE_SUFFIX_RE = re.compile(r"[,\s]*\bjarvis\b\s*[?.]?\s*$", re.IGNORECASE)
 _CANCEL_COMMAND_RE = re.compile(r"\babort\b|\bstop\s*,?\s*jarvis\b", re.IGNORECASE)
+_OBSIDIAN_ACTION_RE = re.compile(r"\[ACTION:OBSIDIAN:([^:\]]+)(?::([^\]]+))?\]", re.IGNORECASE)
 
 
 def strip_wake_word(text: str) -> str:
@@ -89,8 +90,59 @@ def build_tool_params(tool_name: str, message: str) -> dict[str, Any]:
         return {"action": action, "url": target or clean_msg}
     if tool_name == "browser_use":
         return {"goal": clean_msg}
+    if tool_name == "obsidian":
+        tag_match = _OBSIDIAN_ACTION_RE.search(clean_msg)
+        if tag_match:
+            action = tag_match.group(1).strip().lower()
+            note = (tag_match.group(2) or "").strip()
+            content = _OBSIDIAN_ACTION_RE.sub("", clean_msg).strip()
+            params: dict[str, Any] = {"action": action}
+            if note:
+                params["path"] = note
+            if content:
+                params["content"] = content
+                params["query"] = content
+            return params
+
+        lower = clean_msg.lower()
+        if re.search(r"\b(search|find)\b", lower):
+            query = re.sub(r"\b(search|find|obsidian|vault|notes?)\b", "", clean_msg, flags=re.IGNORECASE)
+            return {"action": "note_search", "query": query.strip(" .") or clean_msg}
+        if re.search(r"\b(read|open)\b", lower):
+            return {"action": "note_read", "path": _extract_note_target(clean_msg)}
+        if re.search(r"\b(append|add)\b", lower):
+            return {
+                "action": "note_append",
+                "path": _extract_note_target(clean_msg),
+                "content": clean_msg,
+            }
+        if re.search(r"\b(create|new)\b", lower):
+            return {
+                "action": "note_create",
+                "path": _extract_note_target(clean_msg),
+                "content": clean_msg,
+            }
+        return {"action": "note_search", "query": clean_msg}
     if tool_name == "computer_use":
         return {"task": clean_msg}
     if tool_name == "mouse_keyboard":
         return {"task": clean_msg, "query": clean_msg}
     return {"query": clean_msg}
+
+
+def _extract_note_target(message: str) -> str:
+    bracketed = re.search(r"\[\[([^\]]+)\]\]", message)
+    if bracketed:
+        return bracketed.group(1).strip()
+
+    quoted = re.search(r'"([^"]+)"|\'([^\']+)\'', message)
+    if quoted:
+        return (quoted.group(1) or quoted.group(2)).strip()
+
+    cleaned = re.sub(
+        r"\b(obsidian|vault|notes?|create|new|append|add|read|open|called|named|to)\b",
+        "",
+        message,
+        flags=re.IGNORECASE,
+    )
+    return cleaned.strip(" .:") or "Inbox"

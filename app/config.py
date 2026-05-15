@@ -119,6 +119,11 @@ class MemoryConfig(StrictModel):
     index_paths: list[str]
 
 
+class ToolsConfig(StrictModel):
+    obsidian_enabled: bool
+    obsidian_vault_path: str
+
+
 class AgentConfig(StrictModel):
     hermes_enabled: bool
     hermes_cli_path: str
@@ -179,6 +184,7 @@ class Settings(BaseSettings):
     server: ServerConfig
     resource_mode: ResourceModeConfig
     memory: MemoryConfig
+    tools: ToolsConfig
     agent: AgentConfig
     comms: CommsConfig
     computer: ComputerConfig

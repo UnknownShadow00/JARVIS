@@ -13,6 +13,7 @@ WHITELISTED_SERVERS: dict[str, dict[str, str]] = {
     "context7": {"transport": "configured", "note": "Project baseline MCP server"},
     "exa": {"transport": "configured", "note": "Project baseline MCP server"},
     "memory": {"transport": "configured", "note": "Project baseline MCP server"},
+    "obsidian": {"transport": "stdio", "note": "Obsidian vault MCP server"},
     "playwright": {"transport": "configured", "note": "Project baseline MCP server"},
     "sequential-thinking": {"transport": "configured", "note": "Project baseline MCP server"},
 }
@@ -32,6 +33,7 @@ def execute(params: dict[str, Any]) -> dict[str, Any]:
         "dry_run": True,
         "server": server,
         "action": action,
+        "configured": _server_config(server),
         "note": "FastMCP/client execution is not installed in this phase; this is a validated request plan.",
         "params": dict(params),
     }
@@ -44,7 +46,7 @@ def status(server: str | None = None) -> dict[str, Any]:
         return {
             "server": server,
             "whitelisted": server in WHITELISTED_SERVERS,
-            "configured": WHITELISTED_SERVERS.get(server),
+            "configured": _server_config(server),
             "dry_run": settings.safety.dry_run,
         }
     return {
@@ -54,3 +56,12 @@ def status(server: str | None = None) -> dict[str, Any]:
         "allowed_servers": sorted(WHITELISTED_SERVERS),
         "note": "Install and configure an MCP client library before live calls.",
     }
+
+
+def _server_config(server: str) -> dict[str, str] | None:
+    if server == "obsidian":
+        return {
+            **WHITELISTED_SERVERS["obsidian"],
+            "command": f"npx obsidian-mcp {settings.tools.obsidian_vault_path}",
+        }
+    return WHITELISTED_SERVERS.get(server)
