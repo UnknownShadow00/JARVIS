@@ -117,6 +117,10 @@ class MemoryConfig(StrictModel):
     chromadb_path: str
     chromadb_collection: str
     index_paths: list[str]
+    graphiti_enabled: bool
+    neo4j_uri: str
+    neo4j_user: str
+    neo4j_password_env: str
 
 
 class ToolsConfig(StrictModel):

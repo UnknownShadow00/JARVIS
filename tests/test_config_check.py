@@ -39,6 +39,10 @@ def test_example_config_matches_schema() -> None:
     assert example.resource_mode.keep_wake_listener_in_light_sleep is True
     assert example.resource_mode.keep_wake_listener_in_deep_sleep is False
     assert example.resource_mode.stop_server_on_auto_deep_sleep is True
+    assert example.memory.graphiti_enabled is False
+    assert example.memory.neo4j_uri == "bolt://localhost:7687"
+    assert example.memory.neo4j_user == "neo4j"
+    assert example.memory.neo4j_password_env == "NEO4J_PASSWORD"
     assert example.tools.obsidian_enabled is False
     assert example.tools.obsidian_vault_path == "./jarvis-vault"
     assert example.routing.embedding_enabled is False

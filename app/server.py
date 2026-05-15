@@ -35,6 +35,7 @@ from app.agent.task_queue import task_queue
 from app.config import settings
 from app.config_check import check_startup
 from app.logs.audit import audit
+from app.memory.graphiti_client import graphiti_client
 from app.memory.memory_client import memory_client
 from app.memory.procedural import procedural_memory
 from app.memory.rag_client import rag_client
@@ -214,6 +215,17 @@ class SkillCreateRequest(BaseModel):
     skill: str
 
 
+class GraphAddRequest(BaseModel):
+    text: str
+    source: str = "api"
+    ts: datetime.datetime | None = None
+
+
+class GraphQueryRequest(BaseModel):
+    text: str
+    limit: int = 5
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     return {
@@ -378,6 +390,20 @@ async def add_procedural_skill(request: SkillCreateRequest) -> dict[str, Any]:
     added = procedural_memory.add_skill(request.skill)
     skills = procedural_memory.list_skills()
     return {"added": added, "skills": skills, "count": len(skills)}
+
+
+@app.post("/memory/graph/add")
+async def add_graph_episode(request: GraphAddRequest) -> Any:
+    if not graphiti_client.is_enabled():
+        return JSONResponse(status_code=503, content={"error": "graphiti_disabled"})
+    return await asyncio.to_thread(graphiti_client.add_episode, request.text, request.source, request.ts)
+
+
+@app.post("/memory/graph/query")
+async def query_graph(request: GraphQueryRequest) -> Any:
+    if not graphiti_client.is_enabled():
+        return JSONResponse(status_code=503, content={"error": "graphiti_disabled"})
+    return await asyncio.to_thread(graphiti_client.query, request.text, request.limit)
 
 
 @app.post("/sensors/data")

@@ -149,3 +149,8 @@
 - Files changed: app/brain/router.py, app/brain/tool_embeddings.py, app/config.py, app/tools/registry.py, config.yaml, config.yaml.example, tests/test_config_check.py, tests/test_tool_embeddings.py, tasks/loop-log.md
 - Result: pass; embedding flag defaults off, mocked embedding ranking tests passed with flag on, existing route behavior stayed unchanged with flag off, full pytest reported 341 passed, readiness_report passed all required checks, and touched files are under 800 lines
 - Next: Start Task 4 Graphiti + Neo4j from a clean worktree after committing Task 3
+## [2026-05-14T20:35:58.0974844-05:00] Task Completed
+- Task: Implemented feature-flagged Graphiti + Neo4j temporal knowledge graph support with lazy graphiti-core imports, env-only Neo4j password handling, disabled REST endpoints, mocked enabled-path tests, compose service, and setup docs
+- Files changed: app/config.py, app/memory/graphiti_client.py, app/server.py, config.yaml, config.yaml.example, docker-compose.yml, docs/graphiti_setup.md, requirements.txt, tests/test_config_check.py, tests/test_graphiti_client.py, tasks/loop-log.md
+- Result: pass; Graphiti defaults off and stubs when graphiti-core is unavailable, focused Graphiti/config/server tests passed, full pytest rerun reported 346 passed with PYTEST_EXIT=0, readiness_report passed all required checks, compose YAML/service shape was validated by tests, and touched files are under 800 lines; Docker CLI is not installed locally, so docker compose config could not be executed here
+- Next: Install Docker CLI on a Docker host to run docker compose config/up for Neo4j, then set NEO4J_PASSWORD and flip memory.graphiti_enabled only when live Graphiti is needed
