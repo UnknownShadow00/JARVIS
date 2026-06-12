@@ -1,51 +1,42 @@
-# JARVIS — Repository Verdicts
+# JARVIS - Repository Verdicts
 
-## ADD (integrate directly)
+Last reviewed: 2026-05-30
 
-| Repo | Stars | Purpose | Install |
-|------|-------|---------|---------|
-| NousResearch/hermes-agent | 23k+ | Self-improving Kanban multi-agent board, 19 platforms, Curator, MCP, cron | WSL2: `curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \| bash` |
-| NousResearch/hermes-labyrinth | — | Observability plugin for Hermes — always install alongside Hermes | `git clone ... ~/.hermes/plugins/hermes-labyrinth` |
-| builderz-labs/mission-control | 4.8k | Self-hosted agent orchestration dashboard, SQLite, 26 panels, real-time WebSocket. **Replaces hermes-workspace as primary Hermes UI** | `git clone`, `pnpm install`, `pnpm dev` |
-| wondelai/skills | 750+ | Cross-platform skill library, MIT license. Install into Hermes after it is running | `git clone ... ~/.hermes/skills/wondelai && hermes skills reload` |
-| resemble-ai/chatterbox | — | Chatterbox Turbo TTS — voice clone + paralinguistic tags, CUDA | `pip install chatterbox-tts` |
-| hexgrad/kokoro | — | Kokoro-82M fallback TTS, Apache 2.0, CUDA | `pip install kokoro` |
-| browser-use/desktop | — | Full Chrome agent with real cookies/sessions (Level 1 tool) | `pip install browser-use` |
-| anthropics/cli-anything-hub | — | JSON-output CLI harnesses for OBS, FFmpeg, Blender | `pip install cli-anything-hub` |
-| modelcontextprotocol/python-sdk (FastMCP) | — | MCP client wrapper for Playwright, GitHub, Obsidian, HA | `pip install fastmcp` |
-| microsoft/playwright-mcp | — | Accessibility-tree browser automation via MCP | `npx @playwright/mcp` |
-| OpenJarvis/openjarvis | — | Stanford SAIL skill optimizer — trace logging already wired, audit.jsonl compatible | Phase 4+ only; activate after 500 real interactions |
-| graphiti-core | — | Temporal knowledge graph — `pip install graphiti-core` + Neo4j | Phase 4+ only |
-| nazirlouis/ada_v2 | — | Workshop tool patterns — CAD + smart home patterns cherry-picked into cad.py / kasa.py | Patterns absorbed; do not import directly |
+## Add Or Keep Integrated
 
-## STUDY (cherry-pick patterns only — do not clone wholesale)
+| Repo | Purpose | Current JARVIS decision |
+| --- | --- | --- |
+| [browser-use/browser-use](https://github.com/browser-use/browser-use) | Browser automation for AI agents on top of browser tooling. | Keep installed/import-checked, but leave JARVIS live execution plan-only until explicit confirmation-gated browser automation is enabled. |
+| [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Official Playwright MCP server for browser automation through MCP. | Best next MCP browser experiment; do not replace the simpler built-in browser tool. |
+| [modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) | Official Python SDK for MCP servers and clients, including FastMCP. | Use for future live MCP client/server work; current wrapper stays whitelisted and stubbed. |
+| [getzep/graphiti](https://github.com/getzep/graphiti) | Temporal knowledge graph engine for agent memory. | Implemented behind `memory.graphiti_enabled`; enable only after live Neo4j/Docker validation. |
+| [chroma-core/chroma](https://github.com/chroma-core/chroma) | Local search/vector/RAG infrastructure. | Use for document/project RAG when `memory.chromadb_enabled=true`; keep separate from Graphiti temporal memory. |
+| [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox) | Voice clone / expressive TTS path. | Optional later; needs a real private voice sample before enabling conditioning. |
+| [hexgrad/kokoro](https://github.com/hexgrad/kokoro) | Lightweight local TTS fallback. | Optional fallback path; do not prioritize over current Piper validation. |
 
-| Repo | Why |
-|------|-----|
-| ethanplusai/jarvis | Request routing patterns, intent classification examples |
-| huwprosser/jarvis-mlx | STT/TTS pipeline architecture for Apple Silicon (reference only) |
-| unreal-audio2lipsync | Audio2Face-3D lip sync timing patterns |
-| voicebox | Streaming TTS buffer management |
-| kanban-video-pipeline | Hermes Kanban multi-agent workflow patterns |
+## Reference For Later
 
-## REFERENCE (bookmark for later — do not install yet)
+| Repo | When to use |
+| --- | --- |
+| [livekit/agents](https://github.com/livekit/agents) | Reference only if the current local voice pipeline needs a larger WebRTC/realtime-agent rearchitecture. |
+| [open-webui/open-webui](https://github.com/open-webui/open-webui) | Reference or run separately if a full local LLM chat UI is wanted; not needed inside the current FastAPI/PWA/Electron stack. |
+| [OpenJarvis/openjarvis](https://github.com/OpenJarvis/openjarvis) | Consider only after enough real JARVIS traces exist to justify optimizer work. |
+| Home Assistant AI repos | Relevant only if Home Assistant becomes the primary smart-home layer. |
+| Steel Browser / hosted browser services | Fallback only if local browser-use or Playwright MCP cannot satisfy browser automation needs. |
 
-| Repo / URL | When to use |
-|------------|-------------|
-| awesome-hermes-agent | Community plugin catalog and Hermes ecosystem index |
-| homeassistant-ai | Home Assistant AI integration — relevant if HA is ever added |
-| obsidian-memory-mcp | Obsidian vault MCP server — Phase 4+ when Obsidian vault is active |
-| steel-browser | Alternative headless browser if browser-use has issues |
-| agentskills.io | OpenClaw community skill catalog — 13,700+ skills, compatible with audit.jsonl format |
-| livekit/agents | Real-time audio agent framework — relevant if voice pipeline needs rearchitecting |
-| open-webui | Local LLM UI — reference if a web chat frontend is ever needed |
-| NousResearch/hermes-agent-self-evolution | ICLR 2026 oral — evolutionary self-improvement for Hermes skills via DSPy + GEPA. **Replaces the OpenJarvis skill optimization role** after 500 interactions |
+## Defer Until Proxmox Or Credentials
 
-## SKIP (with reasons)
+| Tool family | Reason |
+| --- | --- |
+| Hermes / mission-control style multi-agent dashboards | Useful for always-on autonomous work, but the current project can finish local assistant gates before adding another orchestration surface. |
+| Discord and Telegram live sending | Requires real tokens, channel IDs, and remote approval policy. |
+| UE5 / Audio2Face / hologram runtimes | External cinematic stack; keep bridge tests but defer live wiring. |
+| Docker GPU validation | Needs Docker/NVIDIA runtime on the target host. |
+
+## Skip
 
 | Repo | Reason |
-|------|--------|
-| boop-agent | Unmaintained, no Ollama support, duplicates what Hermes already does |
-| mercury-agent | Commercial/closed trajectory, not self-hostable cleanly |
-| AnubhavChaturvedi/jarvis-ai-assistant | Toy project, no multi-agent or local-first architecture, no skill optimizer |
-| hermes-workspace | Superseded by mission-control — richer dashboard, better WebSocket, SQLite backend |
+| --- | --- |
+| Open Interpreter / open computer-use style broad GUI control | High-risk overlap with existing gated shell, browser, mouse/keyboard, and screenshot tools. Keep explicit stubs until a narrow safe use case exists. |
+| Toy JARVIS assistant repos | Most duplicate current Phase 0-3 behavior without the local-first safety and test coverage already present here. |
+| OrcaSlicer integration | 3D printing/slicing is out of scope for this pre-Proxmox pass. |

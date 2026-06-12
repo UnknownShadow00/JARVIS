@@ -1,12 +1,12 @@
 # JARVIS Project Status
 
-Last verified: 2026-05-14
+Last verified: 2026-05-30
 
 ## Current Real Project State
 
-JARVIS is a local-first Python/FastAPI assistant backend with Ollama-based LLM routing, a modular tool registry, local audit logging, basic task/scheduler APIs, local memory stubs, voice pipeline components, and desktop/mobile HUD frontends.
+JARVIS is a local-first Python/FastAPI assistant backend with Ollama-based LLM routing, a modular tool registry, local audit logging, basic task/scheduler APIs, procedural memory, optional disabled-by-default memory backends, voice pipeline components, and desktop/mobile HUD frontends.
 
-The project is not a fully complete always-on assistant yet. Phase 0-3 surfaces are usable or partially usable. Phase 4+ surfaces are intentionally explicit stubs unless they can run safely on the current local machine without the future dedicated server.
+The project is not a fully complete always-on assistant yet. Phase 0-3 surfaces are usable or partially usable. The Phase 4 early local track is implemented behind config flags where needed; hardware-heavy, credentialed, or external-runtime integrations remain explicit stubs until the dedicated server and live services are available.
 
 Default access policy is localhost-only:
 
@@ -21,10 +21,14 @@ Default access policy is localhost-only:
 - REST health routes: `/health`, `/health/tools`, `/health/readiness`.
 - Chat route with intent routing, direct replies, Ollama fallback handling, tool dispatch, dry-run narration, and confirmation gates.
 - WebSocket route at configured `server.websocket_path`.
-- Tool registry: browser, web search, apps, files, shell, calendar, screenshot, system stats, mouse/keyboard, vision wrapper, and deferred integration tools.
+- Tool registry: browser, web search, apps, files, shell, calendar, screenshot, system stats, mouse/keyboard, vision wrapper, Obsidian, browser-use plan stub, Kasa status/control stub, CAD plan stub, CLI readiness stub, and MCP wrapper stub.
 - Browser routing for URL/domain requests such as `open google.com`.
 - Screenshot and screen/webcam vision tool path, assuming local dependencies, screen/camera access, Ollama, and the configured vision model are available.
 - Procedural memory route backed by `skills.md`.
+- Dictation mode routes a separate hotkey path through STT to clipboard and optional type-out without brain, LLM, TTS, or raw transcript audit logging.
+- Obsidian vault tool can create, append, read, and search notes inside `jarvis-vault/`, with optional obsidian-mcp handoff still stubbed.
+- Embedding-based tool selection is implemented as a feature-flagged second pass and defaults OFF.
+- Graphiti + Neo4j temporal memory client, compose service shape, and REST endpoints are implemented behind `memory.graphiti_enabled=false` by default.
 - Task queue and scheduler API surfaces.
 - Resource-management runtime states and commands: ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, WAKING, `jarvis sleep --light`, `jarvis sleep --deep`, `jarvis wake`, `jarvis status`, and `jarvis shutdown`.
 - PWA static mount at `/pwa`.
@@ -37,7 +41,7 @@ Default access policy is localhost-only:
 
 - Voice: wake word, VAD, STT, TTS, push-to-talk, and boot code exist, but live voice requires attended microphone/speaker validation. Backend API startup intentionally does not activate voice automatically.
 - Vision: routing now calls the vision tool for `vision` intents, but useful output depends on a working screenshot/webcam path, Ollama availability, and `models.vision`.
-- Memory: procedural memory works; Mem0 and ChromaDB are disabled by default and return explicit stubs.
+- Memory: procedural memory works; Mem0, ChromaDB RAG, and Graphiti are disabled by default and return explicit stubs until packages/services and config flags are enabled.
 - Scheduler: the API and APScheduler integration exist and now start during FastAPI lifespan, but real scheduled task behavior still needs long-running validation.
 - Comms: Discord and Telegram modules exist but remain disabled until packages, tokens, channel IDs, and approval flows are configured.
 - Tailscale/PWA: local PWA works as static assets; remote access remains an intentional future step.
@@ -63,7 +67,7 @@ Live check on 2026-05-14:
 ## What Is Stubbed
 
 - Mem0 long-term memory unless `memory.mem0_enabled` and the package/service are configured.
-- ChromaDB RAG unless `memory.chromadb_enabled` is true.
+- ChromaDB RAG unless `memory.chromadb_enabled` is true and the package/index paths are configured.
 - Browser-use live execution. The tool returns action plans and avoids live browser-agent automation by default.
 - Open computer-use live GUI automation.
 - Kasa control writes and smart-device operation until real devices are selected.
@@ -82,7 +86,7 @@ Live check on 2026-05-14:
 - Ollama-dependent commands can fail if Ollama is not running or models are missing.
 - Windows/NVIDIA shared GPU memory can remain visible after model unload because WDDM and the driver may retain reusable mappings; `jarvis status` should be used to check loaded Ollama models and JARVIS-owned CUDA contexts.
 - Docker Compose needs target-host validation with NVIDIA container support before it can be considered deployment-ready.
-- Some docs and historical logs still describe older phase states. Current truth should be `PROJECT_STATUS.md`, `README.md`, `config.yaml`, and tests.
+- Historical loop logs still describe older phase states at the time they were written. Current truth should be `PROJECT_STATUS.md`, `tasks/todo.md`, `tasks/tool-readiness-inventory.md`, `README.md`, `config.yaml`, and tests.
 
 ## What Was Fixed During This Review
 
@@ -106,6 +110,7 @@ Live check on 2026-05-14:
 - `frontend/pwa/manifest.json`: scoped PWA start URL to the `/pwa` mount.
 - Tests: added coverage for localhost config validation, Docker/Ollama env override, disabled RAG behavior, vision intent wiring, memory intent wiring, PWA manifest scope, default lifespan behavior, and browser URL routing.
 - Docs: updated README, 5090 migration notes, tool readiness inventory, CLAUDE status, and HANDOFF archive note.
+- Local finish review on 2026-05-30: reconciled stale task/readiness/repo documentation after Dictation, Obsidian, embedding routing, and Graphiti had already landed; added a pre-server readiness runner for repeated local validation.
 
 ## Remaining Blockers
 
@@ -130,11 +135,11 @@ Live check on 2026-05-14:
 
 ## Recommended Next Priorities
 
-1. Finish validation of this stabilization pass with full test collection and targeted runtime checks.
+1. Run `python tasks/pre_server_readiness.py` before each pre-server handoff.
 2. Run attended live voice smoke test on the current machine.
-3. Validate Ollama model availability and vision model behavior.
-4. Keep Phase 4+ integrations as stubs until the dedicated server is installed.
-5. Validate Docker Compose on a machine with Docker and NVIDIA runtime.
+3. Validate live web search and Ollama vision behavior with the configured models/services running.
+4. Decide whether browser-use should remain plan-only or be enabled for live browser-agent automation behind confirmation gates.
+5. Validate Graphiti/Neo4j and Docker Compose on a machine with Docker and NVIDIA runtime.
 6. After hardware install, switch model profile, retest clean clone, and only then enable Tailscale remote access.
 
 ## Exact Commands
@@ -202,6 +207,7 @@ python -m app.cli status
 Run readiness checks:
 
 ```powershell
+python tasks/pre_server_readiness.py
 python tasks/readiness_report.py
 python tasks/tool_readiness_smoke.py
 ```
@@ -251,6 +257,9 @@ docker compose up --build
 
 ## Latest Validation Results
 
+- 2026-05-30 pre-server readiness: initial run exposed Ollama was not running; after starting `ollama serve`, `python tasks/pre_server_readiness.py` passed all 6 checks: full pytest reported 350 passed with 3 third-party GPUtil warnings, `python -m pip_audit -r requirements.txt` found no known vulnerabilities, `python -m pip check` found no broken requirements, `npm audit --prefix frontend/electron --audit-level=high` found 0 vulnerabilities, `python tasks/readiness_report.py` passed all required checks, and `python tasks/tool_readiness_smoke.py` passed 10 checks.
+- `python -m py_compile tasks\pre_server_readiness.py`: passed.
+- `pytest -q tests\test_pre_server_readiness.py -p no:cacheprovider`: 4 passed.
 - `python -m py_compile app\resource_manager.py app\cli.py app\server.py app\config.py app\voice\stt.py app\voice\tts.py app\voice\wake_word.py app\voice\sounds.py app\computer\vision.py jarvis.py`: passed.
 - `pytest tests\test_resource_manager.py tests\test_config_check.py tests\test_server_integration.py -q`: 29 passed.
 - `python -m app.cli sleep --deep`: moved persisted state to DEEP_SLEEP, unloaded Ollama models, and reported 0 MB loaded-model VRAM with 0 JARVIS-owned processes.

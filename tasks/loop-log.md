@@ -154,3 +154,8 @@
 - Files changed: app/config.py, app/memory/graphiti_client.py, app/server.py, config.yaml, config.yaml.example, docker-compose.yml, docs/graphiti_setup.md, requirements.txt, tests/test_config_check.py, tests/test_graphiti_client.py, tasks/loop-log.md
 - Result: pass; Graphiti defaults off and stubs when graphiti-core is unavailable, focused Graphiti/config/server tests passed, full pytest rerun reported 346 passed with PYTEST_EXIT=0, readiness_report passed all required checks, compose YAML/service shape was validated by tests, and touched files are under 800 lines; Docker CLI is not installed locally, so docker compose config could not be executed here
 - Next: Install Docker CLI on a Docker host to run docker compose config/up for Neo4j, then set NEO4J_PASSWORD and flip memory.graphiti_enabled only when live Graphiti is needed
+## [2026-05-30T17:26:06-05:00] Task Completed
+- Task: Implemented the pre-Proxmox local finish plan by reconciling stale tracker/status/repo docs and adding a consolidated pre-server readiness runner
+- Files changed: PROJECT_STATUS.md, docs/repos.md, tasks/todo.md, tasks/tool-readiness-inventory.md, tasks/pre_server_readiness.py, tests/test_pre_server_readiness.py, tasks/loop-log.md
+- Result: pass; `python tasks/pre_server_readiness.py` passed 6 checks after starting local Ollama, including full pytest 350 passed, pip-audit no known vulnerabilities, pip check no broken requirements, npm audit 0 vulnerabilities, readiness report pass, and tool readiness smoke 10 passed
+- Next: Run attended live voice loop and target-host Docker/Graphiti/GPU validation when hardware/services are available
