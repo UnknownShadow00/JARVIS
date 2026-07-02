@@ -335,52 +335,43 @@ T+0.0s login → `boot.py` starts (Task Scheduler) | T+0.1s context pre-fetch (p
 ## Current Status
 
 ```
-Phase:        Pre-server stabilization complete. Phase 0-3 usable; Phase 4+ stays explicit stubs/deferred.
-Tests:        pytest 320 passed / 0 skipped. tool_readiness_smoke 10/10. readiness_report all required PASS.
+Phase:        Pre-server local validation nearly complete. Phase 0-3 usable; Phase 4+
+              early track landed feature-flagged OFF (dictation, Obsidian, embedding
+              routing, Graphiti); rest stays explicit stubs/deferred.
+Tests:        pytest 350 passed / 0 skipped. pre_server_readiness 6/6 PASS
+              (pytest, pip-audit, pip check, npm audit, readiness report, tool smoke).
 Hardware:     4070 Ti Super 16GB active. 5090 not yet set up.
 Active model: qwen3-nothink (Modelfile.nothink); qwen3:14b for deep_reasoning; qwen3-vl for vision.
-Git:          Dirty working tree; review and commit after current stabilization pass.
+Git:          Clean, synced with origin/main.
 GitHub:       UnknownShadow00/JARVIS, main branch.
 
-Completed 2026-05-14 session:
-  - Cleared last skipped e2e test by exporting app.brain.router.classify_intent
-    and aliasing AuditLog = AuditLogger in app/logs/audit.py
-  - Killed datetime.utcnow deprecation in app/comms/audio2face.py
-    (datetime.now(timezone.utc) for both build_audio_event and build_viseme_event)
-  - Refactored app/server.py 827 -> 740 lines by moving _tool_params,
-    _extract_app_name, _strip_wake_word, _is_cancel_command into
-    new app/brain/tool_params.py (under the 800-line global rule)
-  - Started ollama serve; readiness_report now all required PASS
-  - Pulled qwen3-vl model (vision now end-to-end ready)
-  - Real HTTP smoke: uvicorn -> /health, /health/tools, /chat respond,
-    /chat system_stats all returned 200 with real Ollama-backed replies
-  - No hardcoded secrets in repo (regex scan clean)
+Completed 2026-07-02 session (remote, unattended):
+  - Verified all 6 Ollama env vars set at user scope and picked up by ollama serve
+    (FLASH_ATTENTION=1, KV_CACHE_TYPE=q8_0, NUM_PARALLEL=2, NUM_BATCH=512,
+    MAX_LOADED_MODELS=2, KEEP_ALIVE=-1). Admin-shell blocker no longer applies —
+    user-scope vars cover user-run Ollama. Pending env-var item CLOSED.
+  - Live web search smoke PASS (real DuckDuckGo results via web_search.execute)
+  - Live vision smoke PASS (qwen3-vl described live screen capture accurately)
+  - Fixed new high-severity undici advisory in frontend/electron via
+    npm audit fix (lockfile-only, 0 vulnerabilities after)
+  - Full pre_server_readiness re-run: all 6 checks PASS
 
-Completed prior sessions:
-  - docs/repos.md, docs/hermes_setup.md
-  - Open Interpreter fully removed and replaced by shell + browser_use + MCP
-  - All Phase 8 stubs verified working
-  - skills.md procedural patterns
-  - Ollama KEEP_ALIVE + NUM_PARALLEL set
-
-Pending — manual/no code:
-  - Set 4 missing Ollama env vars (FLASH_ATTENTION, KV_CACHE_TYPE, NUM_BATCH,
-    MAX_LOADED_MODELS) as Windows System vars — requires Administrator shell
-  - Restart Ollama after env var changes
+Pending — manual/needs user present:
+  - Attended live voice loop test (wake/PTT -> STT -> response -> TTS -> kill switch)
+  - Decide browser-use posture: keep plan-only vs live behind Level 2 confirm gates
   - voice_clone_path — record 10s WAV, set in config.yaml
   - UE5 MetaHuman Plugin + Audio2Face-3D connection
   - 5090 setup — follow docs/5090_migration.md when hardware arrives
+  - Graphiti vs live Neo4j — needs Docker host (defer to server)
 
 Remaining install work:
   - Hermes Agent: WSL2 install, init kanban, install workspace + labyrinth plugins,
     clone mission-control UI, clone wondelai/skills
 
 Phase 4+ queue (after 500 interactions):
-  - Graphiti + Neo4j temporal knowledge graph
-  - Obsidian vault + obsidian-mcp
-  - Embedding-based tool selection second pass in router.py
-  - Dictation mode in push_to_talk.py
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
+  - Flip feature flags ON when ready: dictation, Obsidian vault, embedding
+    tool selection, Graphiti (all landed, default OFF)
 
 Notes:
   dry_run=false. Backend binds localhost by default. Browser-use, python-kasa,

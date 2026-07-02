@@ -19,7 +19,7 @@
 ## Pre-Proxmox local finish queue
 
 - [ ] Run attended live voice loop test with microphone, speakers, PTT/wake, response, TTS playback, and kill-switch.
-- [ ] Run live web search smoke test with network available.
-- [ ] Run Ollama vision smoke test with the configured `models.vision` model pulled.
+- [x] Run live web search smoke test with network available. (2026-07-02: real DuckDuckGo results returned via `app.tools.web_search.execute`)
+- [x] Run Ollama vision smoke test with the configured `models.vision` model pulled. (2026-07-02: qwen3-vl described live screen capture accurately via `app.computer.vision.execute`)
 - [ ] Decide whether to keep browser-use as plan-only or enable live browser-agent automation behind confirmation gates.
 - [ ] Validate Graphiti against a live Neo4j container after Docker is available locally or on the server host.

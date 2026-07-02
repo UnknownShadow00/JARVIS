@@ -159,3 +159,8 @@
 - Files changed: PROJECT_STATUS.md, docs/repos.md, tasks/todo.md, tasks/tool-readiness-inventory.md, tasks/pre_server_readiness.py, tests/test_pre_server_readiness.py, tasks/loop-log.md
 - Result: pass; `python tasks/pre_server_readiness.py` passed 6 checks after starting local Ollama, including full pytest 350 passed, pip-audit no known vulnerabilities, pip check no broken requirements, npm audit 0 vulnerabilities, readiness report pass, and tool readiness smoke 10 passed
 - Next: Run attended live voice loop and target-host Docker/Graphiti/GPU validation when hardware/services are available
+## [2026-07-02T14:30:00-05:00] Task Completed
+- Task: Unattended remote-session validation pass — closed all local finish-queue items that do not require the user at the desk
+- Files changed: frontend/electron/package-lock.json, tasks/todo.md, PROJECT_STATUS.md, CLAUDE.md, tasks/loop-log.md
+- Result: pass; all 6 Ollama env vars confirmed at user scope and applied by ollama serve (admin-shell blocker closed), live web search smoke passed with real DuckDuckGo results, live vision smoke passed with qwen3-vl describing a live screen capture, new high-severity undici advisory in frontend/electron fixed via non-breaking npm audit fix, and pre_server_readiness re-run passed all 6 checks with full pytest 350 passed
+- Next: Attended live voice loop test and browser-use posture decision remain the only pre-server items needing the user; Hermes WSL2 install and Docker/Graphiti/5090 validation wait for their hosts
