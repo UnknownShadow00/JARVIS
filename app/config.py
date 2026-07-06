@@ -12,6 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
 OLLAMA_BASE_URL_ENV = "JARVIS_OLLAMA_BASE_URL"
+API_TOKEN_ENV = "JARVIS_API_TOKEN"
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -84,6 +85,7 @@ class ServerConfig(StrictModel):
     ue5_enabled: bool
     cors_origins: list[str]
     tailscale_hostname: str
+    api_token: str = ""
     remote_access_enabled: bool = False
     enable_voice_on_startup: bool = False
     enable_hotkey_listener: bool = False
@@ -225,6 +227,9 @@ def load_settings(config_path: Path = CONFIG_PATH) -> Settings:
 
     if os.environ.get(OLLAMA_BASE_URL_ENV) and isinstance(raw_config.get("models"), dict):
         raw_config["models"]["ollama_base_url"] = os.environ[OLLAMA_BASE_URL_ENV]
+
+    if os.environ.get(API_TOKEN_ENV) and isinstance(raw_config.get("server"), dict):
+        raw_config["server"]["api_token"] = os.environ[API_TOKEN_ENV]
 
     try:
         return Settings.model_validate(raw_config)

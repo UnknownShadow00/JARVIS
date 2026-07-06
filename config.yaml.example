@@ -105,6 +105,11 @@ server:
   websocket_path: "/ws"
   ue5_enabled: false  # set true when UE5 MetaHuman project is running
   tailscale_hostname: ""   # fill in your Tailscale machine name
+  # Bearer token for all HTTP routes (except /health) and WebSocket connects.
+  # Empty = auth disabled (localhost-only use).
+  # REQUIRED before any Tailscale/remote exposure — tools include shell and file access.
+  # Env override: JARVIS_API_TOKEN
+  api_token: ""
   remote_access_enabled: false
   enable_voice_on_startup: false
   enable_hotkey_listener: false
