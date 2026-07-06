@@ -1,0 +1,49 @@
+# ============================================================
+# JARVIS — Desktop Dependencies (audio / GUI / vision)
+# Install: pip install -r requirements-desktop.txt
+# Windows + CUDA: ensure CUDA toolkit is installed first
+# Verify GPU: python -c "import torch; print(torch.cuda.is_available())"
+# Not needed on headless servers or in Docker.
+# ============================================================
+
+# ─── Voice — STT ─────────────────────────────────────────────
+# faster-whisper needs CUDA toolkit installed separately
+# https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/
+faster-whisper>=1.0.0
+webrtcvad>=2.0.10; python_version < "3.13"
+webrtcvad-wheels>=2.0.14; python_version >= "3.13"
+sounddevice>=0.4.6
+
+# ─── Voice — Wake Word ───────────────────────────────────────
+# OpenWakeWord ships with pre-built "hey_jarvis" model
+openwakeword>=0.6.0
+
+# ─── Voice — TTS ─────────────────────────────────────────────
+# Piper: install binary separately from github.com/rhasspy/piper/releases
+# Then download en_US-lessac-high from huggingface.co/rhasspy/piper-voices
+piper-tts>=1.2.0
+
+# Kokoro (upgrade path — install when switching from Piper)
+# kokoro>=0.7.0
+
+# Chatterbox (Phase 7 voice clone)
+# chatterbox-tts>=0.1.0
+
+# Audio playback
+pygame>=2.5.0
+pyaudio>=0.2.14
+pyperclip>=1.8.2
+
+# ─── Computer Vision & Control ───────────────────────────────
+opencv-python>=4.9.0
+mediapipe>=0.10.0
+mss>=9.0.0
+Pillow>=10.0.0
+pyautogui>=0.9.54
+keyboard>=0.13.5
+
+# ─── Object Detection (Phase 4 — YOLOE) ──────────────────────
+# ultralytics>=8.2.0
+
+# ─── Depth Estimation (Phase 4 — DepthAnything V2) ───────────
+# Install separately: github.com/DepthAnything/Depth-Anything-V2
