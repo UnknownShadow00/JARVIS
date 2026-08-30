@@ -189,3 +189,8 @@
 - Files changed: app/brain/llm_client.py, app/brain/router.py, app/logs/audit.py, app/observability/__init__.py, app/observability/tracing.py, app/server.py, app/tools/registry.py, app/voice/audio_stream.py, docs/OBSERVABILITY.md, evals/adapter.py, tests/test_evals_adapter.py, tests/test_tracing.py, tasks/loop-log.md
 - Result: pass; 14 tracing tests, 16 eval harness tests, and 400 core-selected tests passed, pip check and compile checks passed, tracing overhead measured about 0.105 ms per no-op request, and the golden product baseline remained exactly 12 of 20 with identical metrics and failed IDs
 - Next: Complete PR and GitHub Python 3.11 full-suite CI, then run the live pre-Hermes baseline on target Ollama, audio, and GPU hardware
+## [2026-08-30T20:19:39Z] Task Completed
+- Task: Captured the available-host pre-Hermes measurement baseline without changing JARVIS behavior
+- Files changed: docs/baselines/PRE_HERMES_BASELINE.md, tasks/loop-log.md
+- Result: partial against acceptance criteria; the deterministic baseline remained exactly 12 of 20 and 47 focused tests passed, but this KVM guest has no Ollama, configured models, NVIDIA GPU, functional STT/TTS runtime, audio device, or Plex, so a complete live target-hardware baseline could not be produced
+- Next: Repeat the documented live golden, latency, resource, STT/TTS/voice, trace-audit, and Plex measurements on the actual JARVIS hardware
