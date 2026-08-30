@@ -11,6 +11,7 @@ import httpx
 from app.brain.cancel_token import current_token
 from app.config import settings
 from app.logs.audit import audit
+from app.observability.tracing import trace_span
 from app.voice.error_recovery import (
     OLLAMA_DOWN_PHRASE,
     TIMEOUT_PHRASE,
@@ -89,12 +90,17 @@ class LLMClient:
         )
 
         try:
-            response = await self._call_with_recovery(
-                self._call_chat,
-                model=target_model,
-                messages=payload,
-                stream=False,
-            )
+            with trace_span(
+                "llm",
+                component="app.brain.llm_client",
+                metadata={"model": target_model, "message_count": len(payload)},
+            ):
+                response = await self._call_with_recovery(
+                    self._call_chat,
+                    model=target_model,
+                    messages=payload,
+                    stream=False,
+                )
         except self._connection_exceptions() as exc:
             raise OllamaConnectionError(
                 f"Unable to connect to Ollama at {self._host} for model '{target_model}'."
@@ -145,14 +151,19 @@ class LLMClient:
             return self._stream_response(model, payload, think=think, num_predict=num_predict)
 
         try:
-            response = await self._call_with_recovery(
-                self._call_chat,
-                model=model,
-                messages=payload,
-                stream=False,
-                think=think,
-                num_predict=num_predict,
-            )
+            with trace_span(
+                "llm",
+                component="app.brain.llm_client",
+                metadata={"model": model, "message_count": len(payload), "streaming": False},
+            ):
+                response = await self._call_with_recovery(
+                    self._call_chat,
+                    model=model,
+                    messages=payload,
+                    stream=False,
+                    think=think,
+                    num_predict=num_predict,
+                )
         except self._connection_exceptions() as exc:
             raise OllamaConnectionError(
                 f"Unable to connect to Ollama at {self._host} for model '{model}'."
@@ -207,26 +218,31 @@ class LLMClient:
         url = f"{self._host}/api/chat"
         chunks: list[str] = []
 
-        try:
-            async with self._stream_with_recovery(url, payload) as response:
-                async for line in response.aiter_lines():
-                    if line:
-                        chunk = _json.loads(line)
-                        content = self._extract_message_content(chunk)
-                        if content:
-                            chunks.append(content)
-                            yield content
-                            if current_token.is_cancelled():
-                                break
-        except self._connection_exceptions() as exc:
-            raise OllamaConnectionError(
-                f"Streaming response from Ollama at {self._host} failed for model '{model}'."
-            ) from exc
-        finally:
-            audit.log(
-                "llm_response",
-                {"model": model, "response_length": len("".join(chunks))},
-            )
+        with trace_span(
+            "llm",
+            component="app.brain.llm_client",
+            metadata={"model": model, "message_count": len(messages), "streaming": True},
+        ):
+            try:
+                async with self._stream_with_recovery(url, payload) as response:
+                    async for line in response.aiter_lines():
+                        if line:
+                            chunk = _json.loads(line)
+                            content = self._extract_message_content(chunk)
+                            if content:
+                                chunks.append(content)
+                                yield content
+                                if current_token.is_cancelled():
+                                    break
+            except self._connection_exceptions() as exc:
+                raise OllamaConnectionError(
+                    f"Streaming response from Ollama at {self._host} failed for model '{model}'."
+                ) from exc
+            finally:
+                audit.log(
+                    "llm_response",
+                    {"model": model, "response_length": len("".join(chunks))},
+                )
 
     def _normalize_messages(
         self,

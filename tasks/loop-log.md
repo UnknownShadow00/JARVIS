@@ -184,3 +184,8 @@
 - Files changed: .gitignore, docs/EVALS.md, evals/__init__.py, evals/adapter.py, evals/fixtures/current_deterministic.json, evals/golden.jsonl, evals/grader.py, evals/runner.py, evals/schema.py, tests/test_evals_adapter.py, tests/test_evals_grading.py, tests/test_evals_schema.py, tasks/loop-log.md
 - Result: pass; 16 harness tests and 386 core-selected tests passed, the deterministic product baseline recorded 12 of 20 scenarios passing and eight informational product gaps without changing application behavior, and the live baseline is pending because Ollama is unavailable
 - Next: Complete PR and CI promotion, then add trace_id and pipeline/audit correlation in Task 6 and capture the live baseline on target hardware when Ollama is available
+## [2026-08-30T20:08:38Z] Task Completed
+- Task: Added local request trace IDs, structured pipeline spans, audit correlation, bounded trace rotation, evaluation trace IDs, and partial voice-stage instrumentation
+- Files changed: app/brain/llm_client.py, app/brain/router.py, app/logs/audit.py, app/observability/__init__.py, app/observability/tracing.py, app/server.py, app/tools/registry.py, app/voice/audio_stream.py, docs/OBSERVABILITY.md, evals/adapter.py, tests/test_evals_adapter.py, tests/test_tracing.py, tasks/loop-log.md
+- Result: pass; 14 tracing tests, 16 eval harness tests, and 400 core-selected tests passed, pip check and compile checks passed, tracing overhead measured about 0.105 ms per no-op request, and the golden product baseline remained exactly 12 of 20 with identical metrics and failed IDs
+- Next: Complete PR and GitHub Python 3.11 full-suite CI, then run the live pre-Hermes baseline on target Ollama, audio, and GPU hardware

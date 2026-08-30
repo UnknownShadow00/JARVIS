@@ -5,7 +5,9 @@ import asyncio
 import threading
 
 from app.brain.llm_client import OllamaConnectionError
+from app.config import settings
 from app.logs.audit import audit
+from app.observability.tracing import start_trace, trace_span
 from app.voice.dictation import dictation
 from app.voice.sounds import sounds
 from app.voice.stt import stt
@@ -64,36 +66,8 @@ class VoicePipeline:
                 if not audio:
                     continue
 
-                text = await asyncio.to_thread(stt.transcribe, audio)
-                if not text:
-                    continue
-
-                if getattr(wake_word, "last_trigger", None) == "dictation":
-                    await asyncio.to_thread(dictation.handle_transcript, text)
-                    wake_word.last_trigger = None
-                    continue
-
-                sounds.play("working")
-                audit.log("voice_request", {"text": text})
-
-                stream_result = await _process_stream(text)
-                if stream_result is not None:
-                    token_stream, intent = stream_result
-                    chunks: list[str] = []
-
-                    async def _tts_tokens():
-                        async for chunk in token_stream:
-                            chunks.append(chunk)
-                            yield chunk
-
-                    await tts.speak_stream(_tts_tokens())
-                    from app.brain.response_cleaner import clean
-                    reply = clean("".join(chunks))
-                else:
-                    reply, intent = await _process(text)
-                    await tts.speak(reply)
-
-                audit.log("voice_reply", {"intent": intent.intent, "reply": reply})
+                with start_trace(origin="user_direct", component="app.voice.audio_stream", transport="voice"):
+                    await self._handle_audio(audio)
             except OllamaConnectionError as exc:
                 is_listening = False
                 audit.log("voice_pipeline_error", {"error": str(exc)})
@@ -104,6 +78,42 @@ class VoicePipeline:
                 audit.log("voice_pipeline_error", {"error": str(exc)})
                 sounds.play("error")
                 await tts.speak("Afraid something went wrong, sir. Standing by.")
+
+    async def _handle_audio(self, audio: bytes) -> None:
+        with trace_span("stt", component="app.voice.stt", metadata={"model": settings.voice.stt_model}):
+            text = await asyncio.to_thread(stt.transcribe, audio)
+        if not text:
+            return
+
+        if getattr(wake_word, "last_trigger", None) == "dictation":
+            await asyncio.to_thread(dictation.handle_transcript, text)
+            wake_word.last_trigger = None
+            return
+
+        sounds.play("working")
+        audit.log("voice_request", {"text": text})
+
+        stream_result = await _process_stream(text)
+        if stream_result is not None:
+            token_stream, intent = stream_result
+            chunks: list[str] = []
+
+            async def _tts_tokens():
+                async for chunk in token_stream:
+                    chunks.append(chunk)
+                    yield chunk
+
+            with trace_span("tts", component="app.voice.tts"):
+                await tts.speak_stream(_tts_tokens())
+            from app.brain.response_cleaner import clean
+            with trace_span("response", component="app.voice.audio_stream"):
+                reply = clean("".join(chunks))
+        else:
+            reply, intent = await _process(text)
+            with trace_span("tts", component="app.voice.tts"):
+                await tts.speak(reply)
+
+        audit.log("voice_reply", {"intent": intent.intent, "reply": reply})
 
 
 voice_pipeline = VoicePipeline()

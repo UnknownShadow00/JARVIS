@@ -40,6 +40,7 @@ from app.memory.graphiti_client import graphiti_client
 from app.memory.memory_client import memory_client
 from app.memory.procedural import procedural_memory
 from app.memory.rag_client import rag_client
+from app.observability.tracing import current_trace_id, emit_event, start_trace, trace_span
 from app.resource_manager import resource_manager
 from app.tools.health_check import check_readiness, check_tools
 from app.tools.registry import ToolError, registry
@@ -355,26 +356,27 @@ async def network_status() -> dict[str, Any]:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
-    if not await resource_manager.ensure_awake_for_interaction("chat"):
-        return ChatResponse(
-            reply="JARVIS is in deep sleep. Run `jarvis wake` to restore the runtime.",
-            intent="sleep",
-            confidence=1.0,
-            dry_run=settings.safety.dry_run,
-            active=False,
-        )
-    current_token.reset()
-    try:
-        reply, intent_result = await _process(req.message)
-        return ChatResponse(
-            reply=reply,
-            intent=intent_result.intent,
-            confidence=intent_result.confidence,
-            dry_run=settings.safety.dry_run,
-            active=is_active(),
-        )
-    finally:
+    with start_trace(origin="user_direct", component="app.server", transport="http"):
+        if not await resource_manager.ensure_awake_for_interaction("chat"):
+            return ChatResponse(
+                reply="JARVIS is in deep sleep. Run `jarvis wake` to restore the runtime.",
+                intent="sleep",
+                confidence=1.0,
+                dry_run=settings.safety.dry_run,
+                active=False,
+            )
         current_token.reset()
+        try:
+            reply, intent_result = await _process(req.message)
+            return ChatResponse(
+                reply=reply,
+                intent=intent_result.intent,
+                confidence=intent_result.confidence,
+                dry_run=settings.safety.dry_run,
+                active=is_active(),
+            )
+        finally:
+            current_token.reset()
 
 
 @app.post("/stop")
@@ -519,33 +521,36 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 
             current_token.reset()
             try:
-                await manager.broadcast({"type": "listening", "active": True})
+                with start_trace(origin="user_direct", component="app.server", transport="websocket"):
+                    await manager.broadcast({"type": "listening", "active": True})
 
-                stream_result = await _process_stream(message)
-                if stream_result is None:
-                    reply, intent_result = await _process(message)
-                else:
-                    token_stream, intent_result = stream_result
-                    chunks: list[str] = []
+                    stream_result = await _process_stream(message)
+                    if stream_result is None:
+                        reply, intent_result = await _process(message)
+                    else:
+                        token_stream, intent_result = stream_result
+                        chunks: list[str] = []
 
-                    async def tts_tokens() -> AsyncGenerator[str, None]:
-                        async for chunk in token_stream:
-                            chunks.append(chunk)
-                            yield chunk
+                        async def tts_tokens() -> AsyncGenerator[str, None]:
+                            async for chunk in token_stream:
+                                chunks.append(chunk)
+                                yield chunk
 
-                    await tts.speak_stream(tts_tokens())
-                    reply = clean("".join(chunks))
+                        with trace_span("tts", component="app.voice.tts"):
+                            await tts.speak_stream(tts_tokens())
+                        with trace_span("response", component="app.server"):
+                            reply = clean("".join(chunks))
 
-                response = {
-                    "type": "reply",
-                    "reply": reply,
-                    "intent": intent_result.intent,
-                    "confidence": intent_result.confidence,
-                    "dry_run": settings.safety.dry_run,
-                    "active": is_active(),
-                }
-                await websocket.send_json(response)
-                await manager.broadcast(response)
+                    response = {
+                        "type": "reply",
+                        "reply": reply,
+                        "intent": intent_result.intent,
+                        "confidence": intent_result.confidence,
+                        "dry_run": settings.safety.dry_run,
+                        "active": is_active(),
+                    }
+                    await websocket.send_json(response)
+                    await manager.broadcast(response)
             finally:
                 current_token.reset()
                 await manager.broadcast({"type": "listening", "active": False})
@@ -576,16 +581,31 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
 # ------------------------------------------------------------------
 
 
+def _build_tool_params_traced(tool_name: str, message: str) -> dict[str, Any]:
+    with trace_span(
+        "tool_parameters",
+        component="app.brain.tool_params",
+        metadata={"tool": tool_name},
+    ):
+        return _tool_params(tool_name, message)
+
+
+def _plan_traced(message: str, intent: str):  # noqa: ANN202
+    with trace_span("planner", component="app.brain.complexity_router"):
+        return complexity_router.decide(message, intent)
+
+
 async def _process(message: str):  # type: ignore[return]
     from app.brain.router import RouterResult
     from app.comms.ue5_bridge import build_emotion_event, parse_emotion_from_reply, ue5_manager
 
     def finalize_reply(reply_text: str, *, emotion_source: str | None = None) -> str:
-        cleaned_reply = clean(reply_text)
-        emotion = parse_emotion_from_reply(emotion_source or reply_text) or "neutral"
-        if settings.server.ue5_enabled:
-            asyncio.create_task(ue5_manager.broadcast(build_emotion_event(emotion)))
-        return cleaned_reply
+        with trace_span("response", component="app.server"):
+            cleaned_reply = clean(reply_text)
+            emotion = parse_emotion_from_reply(emotion_source or reply_text) or "neutral"
+            if settings.server.ue5_enabled:
+                asyncio.create_task(ue5_manager.broadcast(build_emotion_event(emotion)))
+            return cleaned_reply
 
     if _is_cancel_command(message):
         current_token.cancel()
@@ -612,7 +632,7 @@ async def _process(message: str):  # type: ignore[return]
 
     if intent_result.intent == "use_tool" and intent_result.suggested_tool:
         tool_name = intent_result.suggested_tool
-        params = _tool_params(tool_name, message)
+        params = _build_tool_params_traced(tool_name, message)
         filler_manager.play_for_tool(tool_name)
 
         try:
@@ -623,7 +643,11 @@ async def _process(message: str):  # type: ignore[return]
         except ToolError as exc:
             if _is_confirmation_required_error(exc):
                 request_id = str(uuid.uuid4())[:8]
-                _pending_confirmations[request_id] = {"tool": tool_name, "params": params}
+                _pending_confirmations[request_id] = {
+                    "tool": tool_name,
+                    "params": params,
+                    "trace_id": current_trace_id(),
+                }
                 approval_msg = (
                     f"JARVIS approval required [{request_id}]: Run {tool_name} "
                     f"with {params}? POST /confirm/{request_id} to approve."
@@ -645,6 +669,17 @@ async def _process(message: str):  # type: ignore[return]
                     "approval_gate_triggered",
                     {"request_id": request_id, "tool": tool_name, "params": params},
                 )
+                emit_event(
+                    "confirmation",
+                    component="app.server",
+                    status="required",
+                    metadata={
+                        "request_id": request_id,
+                        "tool": tool_name,
+                        "confirmation_required": True,
+                        "parameter_keys": list(params),
+                    },
+                )
                 context = (
                     f"Confirmation request sent to your devices, sir. "
                     f"Use /confirm/{request_id} to approve."
@@ -653,7 +688,7 @@ async def _process(message: str):  # type: ignore[return]
                 context = str(exc)
 
         messages = build_prompt(message, context=context)
-        decision = complexity_router.decide(message, intent_result.intent)
+        decision = _plan_traced(message, intent_result.intent)
         try:
             raw_reply = await llm_client.chat(
                 messages,
@@ -667,6 +702,12 @@ async def _process(message: str):  # type: ignore[return]
         return finalize_reply(str(raw_reply)), intent_result
 
     if intent_result.intent == "confirm_action":
+        emit_event(
+            "confirmation",
+            component="app.server",
+            status="required",
+            metadata={"confirmation_required": True},
+        )
         reply = f"That action requires your confirmation, sir. Shall I proceed with: {message}?"
         return finalize_reply(reply), intent_result
 
@@ -677,7 +718,7 @@ async def _process(message: str):  # type: ignore[return]
 
     if intent_result.intent == "deep_reasoning":
         messages = build_prompt(message)
-        decision = complexity_router.decide(message, intent_result.intent)
+        decision = _plan_traced(message, intent_result.intent)
         try:
             raw_reply = await llm_client.chat(
                 messages,
@@ -690,7 +731,7 @@ async def _process(message: str):  # type: ignore[return]
         return finalize_reply(str(raw_reply)), intent_result
 
     if intent_result.intent == "vision":
-        params = _tool_params("vision", message)
+        params = _build_tool_params_traced("vision", message)
         filler_manager.play_for_tool("vision")
         try:
             result = registry.call("vision", params)
@@ -701,7 +742,7 @@ async def _process(message: str):  # type: ignore[return]
             context = f"Vision tool unavailable: {exc}"
 
         messages = build_prompt(message, context=context)
-        decision = complexity_router.decide(message, intent_result.intent)
+        decision = _plan_traced(message, intent_result.intent)
         try:
             raw_reply = await llm_client.chat(
                 messages,
@@ -715,7 +756,7 @@ async def _process(message: str):  # type: ignore[return]
 
     if intent_result.intent == "retrieve_memory":
         messages = build_prompt(message, context=_memory_context(message))
-        decision = complexity_router.decide(message, intent_result.intent)
+        decision = _plan_traced(message, intent_result.intent)
         try:
             raw_reply = await llm_client.chat(
                 messages,
@@ -728,7 +769,7 @@ async def _process(message: str):  # type: ignore[return]
         return finalize_reply(str(raw_reply)), intent_result
 
     messages = build_prompt(message)
-    decision = complexity_router.decide(message, intent_result.intent)
+    decision = _plan_traced(message, intent_result.intent)
     try:
         raw_reply = await llm_client.chat(
             messages,
@@ -750,37 +791,50 @@ def _is_confirmation_required_error(exc: ToolError) -> bool:
 @app.post("/confirm/{request_id}", response_model=None)
 async def confirm_request(request_id: str) -> Any:
     pending = _pending_confirmations.pop(request_id, None)
-    if pending is None:
-        return JSONResponse(status_code=404, content={"error": "Unknown or expired request"})
+    correlated_trace_id = str(pending.get("trace_id")) if pending and pending.get("trace_id") else None
+    with start_trace(
+        origin="user_direct",
+        component="app.server",
+        transport="http_confirmation",
+        trace_id=correlated_trace_id,
+    ):
+        if pending is None:
+            return JSONResponse(status_code=404, content={"error": "Unknown or expired request"})
 
-    tool_name = str(pending["tool"])
-    params = dict(pending["params"])
+        tool_name = str(pending["tool"])
+        params = dict(pending["params"])
 
-    try:
-        result = registry.call(tool_name, params, confirmed=True)
-    except ToolError as exc:
-        return {"error": str(exc)}
+        emit_event(
+            "confirmation",
+            component="app.server",
+            status="confirmed",
+            metadata={"request_id": request_id, "tool": tool_name, "confirmation_required": False},
+        )
+        try:
+            result = registry.call(tool_name, params, confirmed=True)
+        except ToolError as exc:
+            return {"error": str(exc)}
 
-    done_msg = f"JARVIS approved [{request_id}]: {tool_name} executed. Result: {str(result.output)[:200]}"
-    try:
-        from app.comms.discord_bot import discord_bot
-        from app.comms.telegram_bot import telegram_bot
+        done_msg = f"JARVIS approved [{request_id}]: {tool_name} executed. Result: {str(result.output)[:200]}"
+        try:
+            from app.comms.discord_bot import discord_bot
+            from app.comms.telegram_bot import telegram_bot
 
-        tasks = []
-        if getattr(settings.comms, "discord_channel_id", None):
-            tasks.append(discord_bot.send_message(done_msg))
-        if getattr(settings.comms, "telegram_chat_id", None):
-            tasks.append(telegram_bot.send_message(done_msg))
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
-    except Exception:
-        pass
+            tasks = []
+            if getattr(settings.comms, "discord_channel_id", None):
+                tasks.append(discord_bot.send_message(done_msg))
+            if getattr(settings.comms, "telegram_chat_id", None):
+                tasks.append(telegram_bot.send_message(done_msg))
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception:
+            pass
 
-    audit.log(
-        "approval_gate_confirmed",
-        {"request_id": request_id, "tool": tool_name, "output": str(result.output)[:500]},
-    )
-    return {"confirmed": True, "tool": tool_name, "output": str(result.output)}
+        audit.log(
+            "approval_gate_confirmed",
+            {"request_id": request_id, "tool": tool_name, "output": str(result.output)[:500]},
+        )
+        return {"confirmed": True, "tool": tool_name, "output": str(result.output)}
 
 
 async def _process_stream(message: str):  # type: ignore[return]
@@ -798,7 +852,7 @@ async def _process_stream(message: str):  # type: ignore[return]
 
     if intent_result.intent == "use_tool" and intent_result.suggested_tool:
         tool_name = intent_result.suggested_tool
-        params = _tool_params(tool_name, message)
+        params = _build_tool_params_traced(tool_name, message)
 
         try:
             result = registry.call(tool_name, params)
@@ -809,7 +863,7 @@ async def _process_stream(message: str):  # type: ignore[return]
             return None
 
         messages = build_prompt(message, context=context)
-        decision = complexity_router.decide(message, intent_result.intent)
+        decision = _plan_traced(message, intent_result.intent)
         try:
             raw_reply = await llm_client.chat(
                 messages,
@@ -835,7 +889,7 @@ async def _process_stream(message: str):  # type: ignore[return]
 
     if intent_result.intent == "deep_reasoning":
         messages = build_prompt(message)
-        decision = complexity_router.decide(message, intent_result.intent)
+        decision = _plan_traced(message, intent_result.intent)
         try:
             raw_reply = await llm_client.chat(
                 messages,
@@ -855,7 +909,7 @@ async def _process_stream(message: str):  # type: ignore[return]
         return None
 
     messages = build_prompt(message)
-    decision = complexity_router.decide(message, intent_result.intent)
+    decision = _plan_traced(message, intent_result.intent)
     try:
         raw_reply = await llm_client.chat(
             messages,

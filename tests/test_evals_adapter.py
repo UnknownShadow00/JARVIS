@@ -33,6 +33,7 @@ def test_deterministic_adapter_intercepts_every_selected_tool() -> None:
     assert len(grades) == 20
     assert all(not grade.actual["executed"] for grade in grades)
     assert all(not grade.actual["executed_capabilities"] for grade in grades)
+    assert len({grade.actual["trace_id"] for grade in grades}) == 20
     assert adapter.interceptor.selections
 
 

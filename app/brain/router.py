@@ -8,6 +8,7 @@ import httpx
 
 from app.config import settings
 from app.logs.audit import audit
+from app.observability.tracing import trace_span
 
 _SYSTEM_PROMPT = """You are an intent classifier. Classify the user message into exactly ONE intent.
 
@@ -56,6 +57,10 @@ class IntentRouter:
 
     def classify(self, user_message: str) -> RouterResult:
         """Classify a user message into one Phase 0 intent."""
+        with trace_span("router", component="app.brain.router"):
+            return self._classify(user_message)
+
+    def _classify(self, user_message: str) -> RouterResult:
         deterministic = self._classify_by_rules(user_message)
         if deterministic is not None:
             return self._finalize(deterministic, user_message)
@@ -93,10 +98,15 @@ class IntentRouter:
             },
         }
         url = f"{settings.models.ollama_base_url}/api/chat"
-        with httpx.Client(timeout=httpx.Timeout(20.0)) as client:
-            response = client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        with trace_span(
+            "llm",
+            component="app.brain.router",
+            metadata={"model": settings.models.router},
+        ):
+            with httpx.Client(timeout=httpx.Timeout(20.0)) as client:
+                response = client.post(url, json=payload)
+                response.raise_for_status()
+                data = response.json()
 
         message = data.get("message", {})
         if isinstance(message, dict):

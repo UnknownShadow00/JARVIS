@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -12,6 +12,7 @@ import httpx
 from app.brain.router import IntentRouter, RouterResult
 from app.brain.tool_params import build_tool_params
 from app.config import settings
+from app.observability.tracing import start_trace, trace_span
 from app.tools.registry import registry
 
 DEFAULT_FIXTURES = Path(__file__).with_name("fixtures") / "current_deterministic.json"
@@ -48,6 +49,7 @@ class ObservedDecision:
     intercepted: bool
     executed: bool
     executed_capabilities: tuple[str, ...] = ()
+    trace_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -111,9 +113,12 @@ class CurrentJarvisAdapter:
             if rules_result is None and message not in self._fixtures:
                 raise AdapterError(f"No deterministic router fixture for input: {request.user_input!r}")
 
-        with patch("app.brain.router.audit.log"), patch("app.tools.registry.audit.log"):
-            routed = self._router.classify(message)
-            return self._observe_routed_decision(routed, message, request.context.get("origin") or "user_direct")
+        origin = request.context.get("origin") or "user_direct"
+        with start_trace(origin=origin, component="evals.adapter", transport="evaluation") as trace_id:
+            with patch("app.brain.router.audit.log"), patch("app.tools.registry.audit.log"):
+                routed = self._router.classify(message)
+                decision = self._observe_routed_decision(routed, message, origin)
+                return replace(decision, trace_id=trace_id)
 
     def _observe_routed_decision(self, routed: RouterResult, message: str, origin: str) -> ObservedDecision:
         if routed.intent == "confirm_action":
@@ -135,7 +140,12 @@ class CurrentJarvisAdapter:
         origin: str,
         tool_name: str,
     ) -> ObservedDecision:
-        params = build_tool_params(tool_name, message)
+        with trace_span(
+            "tool_parameters",
+            component="app.brain.tool_params",
+            metadata={"tool": tool_name},
+        ):
+            params = build_tool_params(tool_name, message)
         capability = _capability_for(tool_name, params)
         params = _canonical_params(capability, params)
 
@@ -172,10 +182,21 @@ class CurrentJarvisAdapter:
                 )
 
         safety = _safety_for(tool_name, safety_level)
+        with trace_span(
+            "safety",
+            component="app.tools.registry",
+            metadata={
+                "tool": tool_name,
+                "capability": capability,
+                "safety_level": safety_level,
+                "parameter_keys": list(params),
+            },
+        ):
+            confirmation_required = registry._requires_confirmation(safety_level)  # noqa: SLF001
         if safety_level >= 3:
             mode = "refuse"
             confirmation = False
-        elif registry._requires_confirmation(safety_level):  # noqa: SLF001 - production policy observation
+        elif confirmation_required:
             mode = "confirm"
             safety = "confirmation_required"
             confirmation = True
