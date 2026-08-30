@@ -4,6 +4,7 @@ import ipaddress
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
@@ -23,6 +24,25 @@ def _is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(normalized).is_loopback
     except ValueError:
         return False
+
+
+def _is_loopback_origin(origin: str) -> bool:
+    try:
+        parsed = urlsplit(origin.strip())
+        port = parsed.port
+    except ValueError:
+        return False
+    return bool(
+        parsed.scheme in {"http", "https"}
+        and parsed.hostname
+        and _is_loopback_host(parsed.hostname)
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path in {"", "/"}
+        and not parsed.query
+        and not parsed.fragment
+        and (port is None or 1 <= port <= 65535)
+    )
 
 
 class StrictModel(BaseModel):
@@ -93,10 +113,21 @@ class ServerConfig(StrictModel):
     @model_validator(mode="after")
     def validate_localhost_default(self) -> "ServerConfig":
         is_loopback = _is_loopback_host(self.host)
+        if any(origin.strip() == "*" for origin in self.cors_origins):
+            raise ValueError("server.cors_origins must not contain a wildcard origin")
         if not self.remote_access_enabled and not is_loopback:
             raise ValueError(
                 "server.host must be localhost/loopback unless server.remote_access_enabled is true"
             )
+        if not self.remote_access_enabled:
+            non_loopback_origins = [
+                origin for origin in self.cors_origins if not _is_loopback_origin(origin)
+            ]
+            if non_loopback_origins:
+                raise ValueError(
+                    "server.cors_origins must contain only localhost/loopback origins "
+                    "unless server.remote_access_enabled is true"
+                )
         if (self.remote_access_enabled or not is_loopback) and not self.api_token.strip():
             raise ValueError(
                 "remote/non-loopback server access requires a non-empty server.api_token "

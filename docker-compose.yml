@@ -18,8 +18,8 @@ services:
     environment:
       - OLLAMA_KEEP_ALIVE=-1
       - OLLAMA_NUM_PARALLEL=2
-      # Uncomment to allow external connections
-      # - OLLAMA_HOST=0.0.0.0
+      # Phase 2 intentionally leaves OLLAMA_HOST unset and publishes Ollama
+      # only on host loopback. Do not expose it before the private auth design.
     deploy:
       resources:
         reservations:
@@ -72,7 +72,7 @@ services:
   #   container_name: jarvis_mem0
   #   restart: always
   #   ports:
-  #     - "8001:8000"
+  #     - "127.0.0.1:8001:8000"
   #   volumes:
   #     - mem0_data:/app/data
   #   environment:
@@ -85,7 +85,7 @@ services:
   #   container_name: jarvis_chroma
   #   restart: always
   #   ports:
-  #     - "8002:8000"
+  #     - "127.0.0.1:8002:8000"
   #   volumes:
   #     - chroma_data:/chroma/chroma
 
