@@ -164,3 +164,13 @@
 - Files changed: frontend/electron/package-lock.json, tasks/todo.md, PROJECT_STATUS.md, CLAUDE.md, tasks/loop-log.md
 - Result: pass; all 6 Ollama env vars confirmed at user scope and applied by ollama serve (admin-shell blocker closed), live web search smoke passed with real DuckDuckGo results, live vision smoke passed with qwen3-vl describing a live screen capture, new high-severity undici advisory in frontend/electron fixed via non-breaking npm audit fix, and pre_server_readiness re-run passed all 6 checks with full pytest 350 passed
 - Next: Attended live voice loop test and browser-use posture decision remain the only pre-server items needing the user; Hermes WSL2 install and Docker/Graphiti/5090 validation wait for their hosts
+## [2026-08-30T18:52:02Z] Task Completed
+- Task: Hardened the pre-Hermes baseline with safe bind/auth validation, WebSocket Origin protection, removal of PWA credential persistence and query transport, core/full test boundaries, consistent CI exclusions, and Electron dependency security updates
+- Files changed: .github/workflows/tests.yml, app/computer/mouse_keyboard.py, app/config.py, app/server.py, frontend/electron/package-lock.json, frontend/electron/package.json, frontend/pwa/app.js, pytest.ini, tasks/loop-log.md, tests/test_ci_config.py, tests/test_config_check.py, tests/test_pwa_serve.py, tests/test_server_auth.py, tests/test_vad_timeout.py, tests/test_yolo_detector.py
+- Result: pass against acceptance criteria; core suite 366 passed and 11 deselected, full deterministic suite 371 passed and 6 deselected, pip and npm audits are clean, and Docker, startup, authentication, and tool smoke checks passed
+- Next: Review this local baseline commit and promote/tag v0.7-pre-hermes only when authorized; live Ollama, physical audio, and Electron GUI host checks remain deferred
+## [2026-08-30T19:03:25Z] Task Completed
+- Task: Fixed PR #1's Ubuntu CI environment by installing the PortAudio development headers required to build the declared PyAudio desktop dependency
+- Files changed: .github/workflows/tests.yml, tests/test_ci_config.py, tasks/loop-log.md
+- Result: pass; a fresh Debian-like full dependency install built pyaudio 0.2.14 successfully and the unchanged CI test command completed with 366 passed and 6 deselected
+- Next: Push the narrow CI commit, require a fully green PR workflow, then resume the authorized merge and pre-Hermes rollback tag promotion

@@ -395,11 +395,13 @@
   }
 
   async function sendRestFallback(text) {
+    var headers = {
+      "Content-Type": "application/json"
+    };
+
     var response = await fetch(getRestUrl(getServerUrl()), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: headers,
       body: JSON.stringify({ message: text })
     });
 

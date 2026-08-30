@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import httpx
+import pytest
 import yaml
 
 from app import config_check as cc
@@ -67,11 +68,26 @@ def test_non_loopback_host_requires_remote_access_flag() -> None:
         config_path.unlink(missing_ok=True)
 
 
-def test_non_loopback_host_allowed_when_remote_access_enabled() -> None:
+def test_non_loopback_host_rejected_without_api_token() -> None:
     raw = yaml.safe_load((PROJECT_ROOT / "config.yaml.example").read_text(encoding="utf-8"))
     raw["server"]["host"] = "0.0.0.0"
     raw["server"]["remote_access_enabled"] = True
-    config_path = _write_temp_config(raw, "tmp_config_allow_remote.yaml")
+    raw["server"]["api_token"] = ""
+    config_path = _write_temp_config(raw, "tmp_config_reject_unauthenticated_remote.yaml")
+
+    try:
+        with pytest.raises(ValueError, match="requires a non-empty server.api_token"):
+            load_settings(config_path)
+    finally:
+        config_path.unlink(missing_ok=True)
+
+
+def test_non_loopback_host_allowed_with_remote_access_and_api_token() -> None:
+    raw = yaml.safe_load((PROJECT_ROOT / "config.yaml.example").read_text(encoding="utf-8"))
+    raw["server"]["host"] = "0.0.0.0"
+    raw["server"]["remote_access_enabled"] = True
+    raw["server"]["api_token"] = "test-token"
+    config_path = _write_temp_config(raw, "tmp_config_allow_authenticated_remote.yaml")
 
     try:
         loaded = load_settings(config_path)
@@ -80,6 +96,38 @@ def test_non_loopback_host_allowed_when_remote_access_enabled() -> None:
 
     assert loaded.server.host == "0.0.0.0"
     assert loaded.server.remote_access_enabled is True
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1"])
+@pytest.mark.parametrize("api_token", ["", "test-token"])
+def test_loopback_host_allows_optional_api_token(host: str, api_token: str) -> None:
+    raw = yaml.safe_load((PROJECT_ROOT / "config.yaml.example").read_text(encoding="utf-8"))
+    raw["server"]["host"] = host
+    raw["server"]["remote_access_enabled"] = False
+    raw["server"]["api_token"] = api_token
+    config_path = _write_temp_config(raw, "tmp_config_allow_loopback.yaml")
+
+    try:
+        loaded = load_settings(config_path)
+    finally:
+        config_path.unlink(missing_ok=True)
+
+    assert loaded.server.host == host
+    assert loaded.server.api_token == api_token
+
+
+def test_remote_access_flag_requires_api_token_even_on_loopback() -> None:
+    raw = yaml.safe_load((PROJECT_ROOT / "config.yaml.example").read_text(encoding="utf-8"))
+    raw["server"]["host"] = "127.0.0.1"
+    raw["server"]["remote_access_enabled"] = True
+    raw["server"]["api_token"] = "   "
+    config_path = _write_temp_config(raw, "tmp_config_reject_remote_flag_without_token.yaml")
+
+    try:
+        with pytest.raises(ValueError, match="requires a non-empty server.api_token"):
+            load_settings(config_path)
+    finally:
+        config_path.unlink(missing_ok=True)
 
 
 def test_ollama_base_url_can_be_overridden_for_container(monkeypatch) -> None:

@@ -1,0 +1,67 @@
+# ============================================================
+# JARVIS — Core Server Dependencies (headless-safe)
+# Install: pip install -r requirements-core.txt
+# No audio/GUI/vision packages — safe for Docker and server PCs.
+# ============================================================
+
+# ─── Core Backend ────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+websockets>=12.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+httpx>=0.27.0
+aiofiles>=23.0.0
+
+# ─── Ollama Client ───────────────────────────────────────────
+ollama>=0.3.0
+
+# ─── Numerics (tool embeddings in app/brain) ─────────────────
+numpy>=1.26.0
+
+# ─── Memory & Knowledge ──────────────────────────────────────
+# Mem0 (Phase 4)
+# mem0ai>=0.1.0
+
+# ChromaDB (Phase 4)
+# chromadb>=0.5.0
+
+# Graphiti temporal knowledge graph (optional; install before setting memory.graphiti_enabled=true)
+# graphiti-core>=0.29.0
+
+# ─── Agent Framework ─────────────────────────────────────────
+# Hermes Agent — installed via curl script, not pip
+# See CLAUDE.md Section: Agent Architecture Layer 2
+
+# OpenJarvis — installed via git clone
+# See CLAUDE.md Section: Agent Architecture Layer 3
+
+# ─── Communications (Phase 5) ────────────────────────────────
+# discord.py
+# discord>=2.3.0
+
+# python-telegram-bot
+# python-telegram-bot>=21.0.0
+
+# ─── Web Search ──────────────────────────────────────────────
+duckduckgo-search>=6.0.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# ─── System Utilities ────────────────────────────────────────
+psutil>=5.9.0
+GPUtil>=1.4.0
+schedule>=1.2.0
+apscheduler>=3.10.0
+watchdog>=4.0.0
+icalendar>=5.0.0
+
+# ─── Logging & Structured Data ───────────────────────────────
+structlog>=24.0.0
+rich>=13.0.0
+
+# ─── Testing ─────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

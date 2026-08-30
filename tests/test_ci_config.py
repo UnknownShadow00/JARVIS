@@ -10,6 +10,21 @@ def test_workflow_has_pytest():
     assert "pytest" in workflow
 
 
+def test_workflow_excludes_only_manual_or_hardware_markers():
+    workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
+    assert "not manual and not hardware" in workflow
+    assert "--ignore=tests/e2e" in workflow
+    assert "--ignore=tests/stress" in workflow
+    assert "--ignore=tests/perf" in workflow
+
+
+def test_workflow_installs_portaudio_before_python_dependencies():
+    workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
+    portaudio_setup = workflow.index("portaudio19-dev")
+    python_dependencies = workflow.index("pip install -r requirements.txt")
+    assert portaudio_setup < python_dependencies
+
+
 def test_issue_templates_exist():
     assert Path(".github/ISSUE_TEMPLATE/bug_report.md").exists()
     assert Path(".github/ISSUE_TEMPLATE/feature_request.md").exists()
