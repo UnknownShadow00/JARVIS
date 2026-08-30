@@ -174,3 +174,8 @@
 - Files changed: .github/workflows/tests.yml, tests/test_ci_config.py, tasks/loop-log.md
 - Result: pass; a fresh Debian-like full dependency install built pyaudio 0.2.14 successfully and the unchanged CI test command completed with 366 passed and 6 deselected
 - Next: Push the narrow CI commit, require a fully green PR workflow, then resume the authorized merge and pre-Hermes rollback tag promotion
+## [2026-08-30T19:20:42Z] Task Completed
+- Task: Established an encrypted Restic backup workflow and proved integrity and recovery with a real pre-Hermes snapshot and isolated restore
+- Files changed: .gitignore, config/restic-excludes.txt, docs/BACKUP.md, scripts/backup_restic.sh, scripts/verify_restic_backup.sh, tests/test_restic_scripts.py, tasks/loop-log.md
+- Result: pass; snapshot 9140284d processed 260 files, restic check and check --read-data found no errors, all durable data plus audit history restored successfully, three representative hashes matched, and missing-password failure behavior was verified
+- Next: Move or replicate the same-disk local Restic repository to external/off-host storage for drive-failure protection
