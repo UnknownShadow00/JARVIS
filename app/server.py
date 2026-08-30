@@ -164,8 +164,8 @@ app.add_middleware(
 
 _RESOURCE_ACTIVITY_EXEMPT_PREFIXES = ("/health", "/resource", "/pwa")
 
-# Static PWA assets carry no tool/file access; the app itself needs to load
-# before the user can enter a token in its settings.
+# Static PWA assets carry no tool/file access. Remote browser authentication is
+# deferred; the baseline PWA is intended for the loopback server only.
 _AUTH_EXEMPT_EXACT = ("/health",)
 _AUTH_EXEMPT_PREFIXES = ("/pwa",)
 
@@ -187,9 +187,31 @@ def _ws_authorized(websocket: WebSocket) -> bool:
     if not settings.server.api_token:
         return True
     supplied = _bearer_token(websocket.headers.get("authorization"))
-    if not supplied:
-        supplied = websocket.query_params.get("token", "")
     return _api_token_ok(supplied)
+
+
+def _ws_origin_allowed(websocket: WebSocket) -> bool:
+    origin = websocket.headers.get("origin")
+    if origin is None:
+        return True
+    loopback_origins = {
+        f"http://localhost:{settings.server.port}",
+        f"http://127.0.0.1:{settings.server.port}",
+        f"http://[::1]:{settings.server.port}",
+    }
+    return origin in loopback_origins or origin in settings.server.cors_origins
+
+
+async def _reject_unauthorized_websocket(websocket: WebSocket, path: str) -> bool:
+    if not _ws_origin_allowed(websocket):
+        audit.log("ws_origin_rejected", {"path": path, "client": str(websocket.client)})
+        await websocket.close(code=1008, reason="Origin not allowed")
+        return True
+    if not _ws_authorized(websocket):
+        audit.log("auth_rejected", {"path": path, "client": str(websocket.client)})
+        await websocket.close(code=1008, reason="Unauthorized")
+        return True
+    return False
 
 
 @app.middleware("http")
@@ -471,9 +493,7 @@ async def sensors() -> dict[str, list[str]]:
 
 @app.websocket(settings.server.websocket_path)
 async def ws_endpoint(websocket: WebSocket) -> None:
-    if not _ws_authorized(websocket):
-        audit.log("auth_rejected", {"path": "ws", "client": str(websocket.client)})
-        await websocket.close(code=1008, reason="Unauthorized")
+    if await _reject_unauthorized_websocket(websocket, settings.server.websocket_path):
         return
     await manager.connect(websocket)
     audit.log("ws_connect", {"client": str(websocket.client)})
@@ -538,9 +558,7 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 async def ue5_endpoint(websocket: WebSocket) -> None:
     from app.comms.ue5_bridge import ue5_manager
 
-    if not _ws_authorized(websocket):
-        audit.log("auth_rejected", {"path": "/ue5", "client": str(websocket.client)})
-        await websocket.close(code=1008, reason="Unauthorized")
+    if await _reject_unauthorized_websocket(websocket, "/ue5"):
         return
     await ue5_manager.connect(websocket)
     audit.log("ue5_ws_connect", {"client": str(websocket.client)})

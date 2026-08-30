@@ -92,9 +92,15 @@ class ServerConfig(StrictModel):
 
     @model_validator(mode="after")
     def validate_localhost_default(self) -> "ServerConfig":
-        if not self.remote_access_enabled and not _is_loopback_host(self.host):
+        is_loopback = _is_loopback_host(self.host)
+        if not self.remote_access_enabled and not is_loopback:
             raise ValueError(
                 "server.host must be localhost/loopback unless server.remote_access_enabled is true"
+            )
+        if (self.remote_access_enabled or not is_loopback) and not self.api_token.strip():
+            raise ValueError(
+                "remote/non-loopback server access requires a non-empty server.api_token "
+                "or JARVIS_API_TOKEN"
             )
         return self
 

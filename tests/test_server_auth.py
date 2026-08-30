@@ -56,16 +56,41 @@ def test_ws_rejected_without_token(api_token: str) -> None:
 
 def test_ws_rejected_with_wrong_token(api_token: str) -> None:
     with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws?token=wrong-token"):
+        with client.websocket_connect("/ws", headers={"Authorization": "Bearer wrong-token"}):
             pass
 
 
-def test_ws_accepted_with_query_token(api_token: str) -> None:
-    with client.websocket_connect(f"/ws?token={api_token}"):
-        pass
+def test_ws_rejected_with_query_token(api_token: str) -> None:
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect(f"/ws?token={api_token}"):
+            pass
 
 
 def test_ws_accepted_with_bearer_header(api_token: str) -> None:
+    with client.websocket_connect("/ws", headers={"Authorization": f"Bearer {api_token}"}):
+        pass
+
+
+def test_ws_trusted_origin_accepted(api_token: str) -> None:
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Origin": f"http://127.0.0.1:{settings.server.port}",
+    }
+    with client.websocket_connect("/ws", headers=headers):
+        pass
+
+
+def test_ws_untrusted_origin_rejected_with_valid_token(api_token: str) -> None:
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Origin": "https://untrusted.example",
+    }
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/ws", headers=headers):
+            pass
+
+
+def test_ws_missing_origin_allowed_for_native_client(api_token: str) -> None:
     with client.websocket_connect("/ws", headers={"Authorization": f"Bearer {api_token}"}):
         pass
 
@@ -74,6 +99,27 @@ def test_ue5_ws_rejected_without_token(api_token: str) -> None:
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("/ue5"):
             pass
+
+
+def test_ue5_ws_rejects_untrusted_origin(api_token: str) -> None:
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Origin": "https://untrusted.example",
+    }
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/ue5", headers=headers):
+            pass
+
+
+def test_confirmation_route_requires_authentication(api_token: str) -> None:
+    response = client.post("/confirm/unknown-request")
+    assert response.status_code == 401
+
+    authorized = client.post(
+        "/confirm/unknown-request",
+        headers={"Authorization": f"Bearer {api_token}"},
+    )
+    assert authorized.status_code == 404
 
 
 def test_env_override_sets_api_token(monkeypatch) -> None:

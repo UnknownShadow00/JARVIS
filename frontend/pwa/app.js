@@ -1,6 +1,5 @@
 (function () {
   var STORAGE_KEY = "jarvis_server";
-  var TOKEN_KEY = "jarvis_api_token";
   var GLASSES_MODE_KEY = "jarvis_glasses_mode";
   var AUDIO_OUTPUT_KEY = "jarvis_audio_output";
   var DEFAULT_WS_URL = "ws://localhost:8000/ws";
@@ -70,23 +69,6 @@
       return;
     }
     localStorage.setItem(STORAGE_KEY, next);
-  }
-
-  function getApiToken() {
-    return (localStorage.getItem(TOKEN_KEY) || "").trim();
-  }
-
-  function setApiToken(token) {
-    localStorage.setItem(TOKEN_KEY, (token || "").trim());
-  }
-
-  function withTokenParam(wsUrl) {
-    var token = getApiToken();
-    if (!token) {
-      return wsUrl;
-    }
-    var separator = wsUrl.indexOf("?") === -1 ? "?" : "&";
-    return wsUrl + separator + "token=" + encodeURIComponent(token);
   }
 
   function normalizeWsUrl(rawUrl) {
@@ -371,7 +353,7 @@
   }
 
   function connectSocket() {
-    var url = withTokenParam(normalizeWsUrl(getServerUrl()));
+    var url = normalizeWsUrl(getServerUrl());
 
     if (state.socket) {
       state.socket.onopen = null;
@@ -416,10 +398,6 @@
     var headers = {
       "Content-Type": "application/json"
     };
-    var token = getApiToken();
-    if (token) {
-      headers["Authorization"] = "Bearer " + token;
-    }
 
     var response = await fetch(getRestUrl(getServerUrl()), {
       method: "POST",
@@ -539,12 +517,6 @@
       return;
     }
     setServerUrl(normalizeWsUrl(next));
-
-    var nextToken = window.prompt("Enter API token (blank to disable)", getApiToken());
-    if (nextToken !== null) {
-      setApiToken(nextToken);
-    }
-
     connectSocket();
   }
 

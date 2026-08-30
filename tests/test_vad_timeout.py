@@ -3,7 +3,12 @@ from __future__ import annotations
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.voice.vad import vad
+
+
+pytestmark = pytest.mark.desktop
 
 
 def _run(timeout: float) -> bytes:

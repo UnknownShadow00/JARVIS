@@ -54,7 +54,7 @@ def test_detect_error(monkeypatch) -> None:  # noqa: ANN001
 
     monkeypatch.setattr(yolo_detector, "_get_model", lambda: FailingModel())
 
-    result = yolo_detector.detect()
+    result = yolo_detector.detect(image_path="/tmp/fake.png")
 
     assert "error" in result
     assert result["error"] == "model failed"

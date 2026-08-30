@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from app.config import settings
@@ -9,13 +10,16 @@ SAFETY_LEVEL = 2
 DESCRIPTION = "Control mouse and keyboard via PyAutoGUI"
 SHORT_TEXT_LIMIT = 50
 
-try:
-    import pyautogui
-
-    pyautogui.FAILSAFE = True
-    pyautogui.PAUSE = 0.1
-except ImportError:
+if os.name != "nt" and not os.environ.get("DISPLAY"):
     pyautogui = None
+else:
+    try:
+        import pyautogui
+
+        pyautogui.FAILSAFE = True
+        pyautogui.PAUSE = 0.1
+    except (ImportError, KeyError):
+        pyautogui = None
 
 
 def _dry_run_narration(action: str, params: dict[str, Any]) -> str:
