@@ -179,3 +179,8 @@
 - Files changed: .gitignore, config/restic-excludes.txt, docs/BACKUP.md, scripts/backup_restic.sh, scripts/verify_restic_backup.sh, tests/test_restic_scripts.py, tasks/loop-log.md
 - Result: pass; snapshot 9140284d processed 260 files, restic check and check --read-data found no errors, all durable data plus audit history restored successfully, three representative hashes matched, and missing-password failure behavior was verified
 - Next: Move or replicate the same-disk local Restic repository to external/off-host storage for drive-failure protection
+## [2026-08-30T19:50:16Z] Task Completed
+- Task: Built the migration-neutral JARVIS golden evaluation harness and first 20 scenarios
+- Files changed: .gitignore, docs/EVALS.md, evals/__init__.py, evals/adapter.py, evals/fixtures/current_deterministic.json, evals/golden.jsonl, evals/grader.py, evals/runner.py, evals/schema.py, tests/test_evals_adapter.py, tests/test_evals_grading.py, tests/test_evals_schema.py, tasks/loop-log.md
+- Result: pass; 16 harness tests and 386 core-selected tests passed, the deterministic product baseline recorded 12 of 20 scenarios passing and eight informational product gaps without changing application behavior, and the live baseline is pending because Ollama is unavailable
+- Next: Complete PR and CI promotion, then add trace_id and pipeline/audit correlation in Task 6 and capture the live baseline on target hardware when Ollama is available
