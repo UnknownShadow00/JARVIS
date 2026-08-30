@@ -9,6 +9,7 @@ from typing import Any
 
 from app.config import settings
 from app.logs.audit import audit
+from app.observability.tracing import emit_event, trace_span
 
 SAFETY_LEVEL = 0
 
@@ -160,32 +161,61 @@ class ToolRegistry:
         params = params or {}
         module = self._load_tool(tool_name)
         safety_level: int = getattr(module, "SAFETY_LEVEL", 0)
+        confirmation_required = self._requires_confirmation(safety_level) and not confirmed
+        capability = _capability_for(tool_name, params)
+        trace_metadata = {
+            "tool": tool_name,
+            "capability": capability,
+            "safety_level": safety_level,
+            "confirmation_required": confirmation_required,
+            "parameter_keys": list(params),
+        }
 
-        audit.log(
-            "tool_call",
-            {
-                "tool": tool_name,
-                "safety_level": safety_level,
-                "params": params,
-                "dry_run": settings.safety.dry_run,
-                "confirmed": confirmed,
-            },
-        )
+        with trace_span("safety", component="app.tools.registry", metadata=trace_metadata):
+            audit.log(
+                "tool_call",
+                {
+                    "tool": tool_name,
+                    "safety_level": safety_level,
+                    "params": params,
+                    "dry_run": settings.safety.dry_run,
+                    "confirmed": confirmed,
+                },
+            )
 
         if safety_level >= 3:
+            emit_event(
+                "safety",
+                component="app.tools.registry",
+                status="blocked",
+                metadata=trace_metadata,
+            )
             raise ToolError(f"Tool '{tool_name}' is Level 3 (blocked). Cannot execute automatically.")
 
-        if self._requires_confirmation(safety_level) and not confirmed:
+        if confirmation_required:
+            emit_event(
+                "safety",
+                component="app.tools.registry",
+                status="confirmation_required",
+                metadata=trace_metadata,
+            )
             raise ToolError(f"Tool '{tool_name}' is Level {safety_level}. Requires user confirmation before executing.")
 
         if settings.safety.dry_run:
             description = getattr(module, "DESCRIPTION", tool_name)
             output = f"[DRY RUN] Would execute '{tool_name}': {description} with params {params}"
+            emit_event(
+                "tool",
+                component="app.tools.registry",
+                status="dry_run",
+                metadata=trace_metadata,
+            )
             audit.log("tool_result", {"tool": tool_name, "dry_run": True, "output": output})
             return ToolResult(tool=tool_name, output=output, dry_run=True)
 
         try:
-            output = module.execute(params)
+            with trace_span("tool", component="app.tools.registry", metadata=trace_metadata):
+                output = module.execute(params)
         except Exception as exc:
             audit.log("tool_error", {"tool": tool_name, "error": str(exc)})
             raise ToolError(f"Tool '{tool_name}' raised: {exc}") from exc
@@ -218,3 +248,26 @@ registry = ToolRegistry()
 def tool_descriptions() -> dict[str, str]:
     """Module-level convenience wrapper for embedding-based routing."""
     return registry.tool_descriptions()
+
+
+def _capability_for(tool_name: str, params: dict[str, Any]) -> str:
+    if tool_name == "apps":
+        return "close_app" if params.get("action") == "close" else "open_app"
+    if tool_name == "browser":
+        return "web_search" if params.get("action") == "search" else "browser_open"
+    if tool_name == "files":
+        return {
+            "read": "file_read",
+            "list": "file_list",
+            "move": "file_move",
+        }.get(str(params.get("action")), "file_access")
+    return {
+        "calendar": "calendar_read",
+        "screenshot": "screen_capture",
+        "vision": "screen_describe",
+        "shell": "shell_execute",
+        "computer_use": "computer_control",
+        "mouse_keyboard": "computer_control",
+        "obsidian": "notes_access",
+        "browser_use": "browser_automation",
+    }.get(tool_name, tool_name)

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from app.config import settings
+from app.observability.tracing import current_trace_id
 
 
 SESSION_ID = str(uuid.uuid4())
@@ -29,11 +30,15 @@ class AuditLogger:
 
     def log(self, event_type: str, data: dict[str, Any]) -> None:
         entry = {
+            "schema_version": 2,
             "timestamp": datetime.now(UTC).isoformat(),
             "event_type": str(event_type),
             "data": dict(data),
             "session_id": SESSION_ID,
         }
+        trace_id = current_trace_id()
+        if trace_id is not None:
+            entry["trace_id"] = trace_id
         self._queue.put(entry)
 
     def _run_writer(self) -> None:
@@ -62,4 +67,3 @@ class AuditLogger:
 audit = AuditLogger(settings.logging.audit_log)
 
 AuditLog = AuditLogger
-
