@@ -23,6 +23,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Install PortAudio development headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends portaudio19-dev
+
       - run: pip install -r requirements.txt
 
       - run: pytest tests/ -q --tb=short --ignore=tests/e2e --ignore=tests/stress --ignore=tests/perf -m 'not manual and not hardware'

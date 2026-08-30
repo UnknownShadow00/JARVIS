@@ -169,3 +169,8 @@
 - Files changed: .github/workflows/tests.yml, app/computer/mouse_keyboard.py, app/config.py, app/server.py, frontend/electron/package-lock.json, frontend/electron/package.json, frontend/pwa/app.js, pytest.ini, tasks/loop-log.md, tests/test_ci_config.py, tests/test_config_check.py, tests/test_pwa_serve.py, tests/test_server_auth.py, tests/test_vad_timeout.py, tests/test_yolo_detector.py
 - Result: pass against acceptance criteria; core suite 366 passed and 11 deselected, full deterministic suite 371 passed and 6 deselected, pip and npm audits are clean, and Docker, startup, authentication, and tool smoke checks passed
 - Next: Review this local baseline commit and promote/tag v0.7-pre-hermes only when authorized; live Ollama, physical audio, and Electron GUI host checks remain deferred
+## [2026-08-30T19:03:25Z] Task Completed
+- Task: Fixed PR #1's Ubuntu CI environment by installing the PortAudio development headers required to build the declared PyAudio desktop dependency
+- Files changed: .github/workflows/tests.yml, tests/test_ci_config.py, tasks/loop-log.md
+- Result: pass; a fresh Debian-like full dependency install built pyaudio 0.2.14 successfully and the unchanged CI test command completed with 366 passed and 6 deselected
+- Next: Push the narrow CI commit, require a fully green PR workflow, then resume the authorized merge and pre-Hermes rollback tag promotion
