@@ -194,3 +194,8 @@
 - Files changed: docs/baselines/PRE_HERMES_BASELINE.md, tasks/loop-log.md
 - Result: partial against acceptance criteria; the deterministic baseline remained exactly 12 of 20 and 47 focused tests passed, but this KVM guest has no Ollama, configured models, NVIDIA GPU, functional STT/TTS runtime, audio device, or Plex, so a complete live target-hardware baseline could not be produced
 - Next: Repeat the documented live golden, latency, resource, STT/TTS/voice, trace-audit, and Plex measurements on the actual JARVIS hardware
+## [2026-08-30T20:37:54Z] Task Completed
+- Task: Enforced and verified the Phase 2 loopback-only pre-Hermes network boundary and documented target-host readiness gates
+- Files changed: app/config.py, config.yaml, config.yaml.example, docker-compose.yml, scripts/sensor_node.py, docs/TARGET_HOST_READINESS.md, tests/test_loopback_boundary.py, tasks/loop-log.md
+- Result: pass against Phase 2 boundary criteria; all active Compose publications and runtime smoke bind to 127.0.0.1, 8 network regression tests and 408 core-selected tests passed, the golden baseline remained 12 of 20 with identical failures, and the only broad local-suite failures were the three previously documented missing-PortAudio environment imports
+- Next: Require green Python 3.11 full-suite CI, then move execution to the approved Windows target host, capture the missing live baseline, and verify readiness before any pinned Hermes proof

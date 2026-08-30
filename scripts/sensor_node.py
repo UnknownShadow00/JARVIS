@@ -8,7 +8,8 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 
-JARVIS_URL = os.getenv("JARVIS_URL", "http://100.x.x.x:8000").rstrip("/")
+DEFAULT_JARVIS_URL = "http://127.0.0.1:8000"
+JARVIS_URL = os.getenv("JARVIS_URL", DEFAULT_JARVIS_URL).rstrip("/")
 NODE_ID = os.getenv("NODE_ID", "rpi-node-1")
 INTERVAL_SECONDS = int(os.getenv("INTERVAL", "30"))
 
