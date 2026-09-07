@@ -55,6 +55,11 @@ class TransitionResult:
 class WakeListener:
     """Small wake-word loop used only while the full voice pipeline is asleep."""
 
+    _LISTEN_TIMEOUT_SECONDS = 3.0
+    _IMMEDIATE_EMPTY_THRESHOLD_SECONDS = 0.5
+    _INITIAL_RETRY_SECONDS = 1.0
+    _MAX_RETRY_SECONDS = 30.0
+
     def __init__(self, manager: "ResourceManager") -> None:
         self._manager = manager
         self._stop_event = threading.Event()
@@ -75,24 +80,46 @@ class WakeListener:
 
     def stop(self) -> None:
         self._stop_event.set()
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread() and thread.is_alive():
+            thread.join(timeout=1.0)
         audit.log("resource_wake_listener_stopped", {})
 
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 
     def _run(self) -> None:
+        retry_seconds = self._INITIAL_RETRY_SECONDS
         while not self._stop_event.is_set():
+            started = time.monotonic()
             try:
                 from app.voice.wake_word import wake_word
 
-                audio = wake_word.listen(timeout=3.0)
+                audio = wake_word.listen(timeout=self._LISTEN_TIMEOUT_SECONDS)
                 if audio and not self._stop_event.is_set():
                     audit.log("resource_wake_listener_detected", {"bytes": len(audio)})
                     self._wake_manager()
                     return
+
+                elapsed = time.monotonic() - started
+                outcome = getattr(wake_word, "last_listen_outcome", None)
+                unavailable = outcome == "unavailable"
+                unexpectedly_immediate = (
+                    outcome != "timeout" and elapsed < self._IMMEDIATE_EMPTY_THRESHOLD_SECONDS
+                )
+                if unavailable or unexpectedly_immediate:
+                    if self._stop_event.wait(retry_seconds):
+                        return
+                    retry_seconds = min(retry_seconds * 2.0, self._MAX_RETRY_SECONDS)
+                else:
+                    # A real blocking timeout is the expected polling cadence and
+                    # must not create an additional wake-detection gap.
+                    retry_seconds = self._INITIAL_RETRY_SECONDS
             except Exception as exc:  # noqa: BLE001
                 audit.log("resource_wake_listener_error", {"error": str(exc)})
-                time.sleep(1.0)
+                if self._stop_event.wait(retry_seconds):
+                    return
+                retry_seconds = min(retry_seconds * 2.0, self._MAX_RETRY_SECONDS)
 
     def _wake_manager(self) -> None:
         if self._loop is not None and self._loop.is_running():
