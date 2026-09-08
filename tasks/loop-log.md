@@ -219,3 +219,8 @@
 - Files changed: docs/baselines/PRE_HERMES_BASELINE.md, tasks/loop-log.md; external Core evidence /home/jarvis/jarvis-baselines/pre-hermes-5090-20260908/
 - Result: pass against Task 12 acceptance criteria; deterministic control remained 12/20 with the same eight failures, all three live runs were stable at 11/20, all 60 cases had executed=false, all configured models inferred successfully, 417 local tests and PR CI passed, and no OOM, CUDA, Xid, crash, restart, or wake-loop regression occurred
 - Next: Proceed to an isolated Hermes proof-of-concept comparison against this frozen baseline; separately follow up on Ollama RTX 5090 discovery warnings and defer voice/Plex gates to their authorized environments
+## [2026-09-08T14:28:30Z] Task Completed
+- Task: Recovered, verified, and summarized the completed Task 13A Hermes v0.21.1 qwen3-vl context-compatibility continuation
+- Files changed: tasks/loop-log.md; preserved remote evidence read from /home/jarvis/.hermes-poc/evidence/result.md
+- Result: pass for summary recovery and evidence verification; Task 13A itself remains blocked because native Ollama proved qwen3-vl at context 64000 but Hermes inference reloaded it at context 32768
+- Next: Do not begin Task 13B or enable Hermes in JARVIS; any resolution of Hermes-path effective context requires separate authorization. JARVIS exited successfully at 2026-09-08T01:26:52Z after the PoC and is currently inactive, so restart only if operational service is desired
