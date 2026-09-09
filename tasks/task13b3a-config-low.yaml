@@ -1,0 +1,28 @@
+config_version: 41
+updates:
+  check_on_startup: false
+model:
+  provider: custom
+  default: hermes-candidate-gpt-oss-20b-64k
+  base_url: http://192.168.0.27:11434/v1
+  context_length: 64000
+platform_toolsets:
+  cli: []
+mcp_servers: {}
+memory:
+  enabled: false
+  user_profile_enabled: false
+skills:
+  nudge_interval: 0
+  external_dirs: []
+compression:
+  enabled: false
+telemetry:
+  enabled: false
+agent:
+  reasoning_effort: low
+  disabled_toolsets:
+    - kanban
+  max_turns: 1
+  system_prompt: ''
+  skip_background_review: true

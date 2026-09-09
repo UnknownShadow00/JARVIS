@@ -224,3 +224,27 @@
 - Files changed: tasks/loop-log.md; preserved remote evidence read from /home/jarvis/.hermes-poc/evidence/result.md
 - Result: pass for summary recovery and evidence verification; Task 13A itself remains blocked because native Ollama proved qwen3-vl at context 64000 but Hermes inference reloaded it at context 32768
 - Next: Do not begin Task 13B or enable Hermes in JARVIS; any resolution of Hermes-path effective context requires separate authorization. JARVIS exited successfully at 2026-09-08T01:26:52Z after the PoC and is currently inactive, so restart only if operational service is desired
+
+## [2026-09-09T02:37:07Z] Task Completed
+- Task: Continued Task 13A by restoring JARVIS, creating and validating a dedicated qwen3-vl Ollama alias with embedded 64000 context, and proving direct and Hermes-path 64K operation with three restricted text smokes
+- Files changed: tasks/loop-log.md; Core isolated PoC /home/jarvis/.hermes-poc/config/config.yaml and new /home/jarvis/.hermes-poc/evidence/task13a-alias-64k-20260909/ artifacts; AI Ollama alias hermes-poc-qwen3-vl-64k metadata
+- Result: pass against Task 13A acceptance criteria; direct and fresh Hermes loads both proved effective context 64000, all smokes passed with zero tool turns and zero schemas, all 37 model layers remained on GPU, JARVIS stayed healthy and unchanged, and no OOM/CUDA runtime failure/Xid/restart occurred
+- Next: Retain the alias temporarily for reproducibility; do not start Task 13B, enable Hermes in JARVIS, or approve qwen3-vl as the final Hermes brain without separate authorization
+
+## [2026-09-09T03:43:33Z] Task Completed
+- Task: Qualified the exact qwen3.5:27b-q4_K_M candidate through a dedicated 64K Ollama alias, direct OpenAI-compatible inference, a fresh Hermes-path proof, three runs of six fixed prompts, GPU/resource monitoring, and a no-execution tool-call format probe
+- Files changed: tasks/loop-log.md; Core isolated PoC /home/jarvis/.hermes-poc/config/config.yaml and new /home/jarvis/.hermes-poc/evidence/task13b1-qwen35-27b/ artifacts; AI Ollama model qwen3.5:27b-q4_K_M and alias hermes-candidate-qwen3.5-27b-64k metadata
+- Result: fail against Task 13B1 READY acceptance criteria and HERMES BRAIN CANDIDATE REJECTED; genuine 64000 context, 66/66 GPU layers, stable runtime, healthy latency/headroom, and JARVIS coexistence passed, but the exact bare-JSON output was malformed in two of three runs and the initial direct request truncated its reasoning at 512 tokens with empty visible content
+- Next: Do not start Task 13B2, tune around the failure, enable Hermes in JARVIS, or download another candidate; retain the evidence and make the next candidate or evaluation-policy decision separately
+
+## [2026-09-09T16:13:57Z] Task Completed
+- Task: Qualified the exact gpt-oss:20b candidate at frozen low reasoning through a dedicated 64K Ollama alias, direct and fresh Hermes-path proofs, three complete fixed six-prompt runs, GPU/resource monitoring, and a no-execution tool-call format probe
+- Files changed: tasks/loop-log.md; Core isolated PoC /home/jarvis/.hermes-poc/config/config.yaml and new /home/jarvis/.hermes-poc/evidence/task13b1b-gpt-oss-20b/ artifacts; AI Ollama model gpt-oss:20b and alias hermes-candidate-gpt-oss-20b-64k metadata
+- Result: pass against Task 13B1B READY acceptance criteria; genuine 64000 context, 25/25 GPU model layers, all 18 Hermes requests completed, prompts A/B/C passed exact 3/3 including bare JSON, tool-call structure passed without execution, latency/headroom were healthy, JARVIS coexistence remained healthy, and no OOM/CUDA failure/Xid/Ollama restart occurred
+- Next: Recommend Task 13B2 as a separately authorized frozen old-JARVIS versus isolated Hermes plus gpt-oss:20b personality/text A/B; do not start it or enable Hermes in JARVIS in this task
+
+## [2026-09-09T22:43:56Z] Task Completed
+- Task: Ran the frozen blind text/personality A/B between legacy qwen3-nothink and isolated Hermes v0.21.1 plus gpt-oss:20b using the exact deployed JARVIS_SYSTEM_PROMPT, three complete runs, hard checks, blind scoring, multi-turn checks, resource monitoring, and before/after deterministic controls
+- Files changed: tasks/loop-log.md; isolated Core test home /home/jarvis/.hermes-poc/task13b2-ab-home/ and evidence /home/jarvis/.hermes-poc/evidence/task13b2-text-ab/ only
+- Result: fail against ADVANCE criteria and HERMES TEXT A/B REJECT; zero side effects and stable 64K runtime passed, Hermes improved ambiguous clarification and slightly led aggregate hard compliance, but Legacy won blind preference 21-9 with 15 ties, Hermes was wrong on arithmetic in two of three runs, and Hermes lost the corrected M02 port once
+- Next: Do not start Task 13C or enable Hermes in JARVIS; make the next model or evaluation-policy decision separately while preserving all A/B evidence and installed models
