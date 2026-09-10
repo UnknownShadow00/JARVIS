@@ -248,3 +248,9 @@
 - Files changed: tasks/loop-log.md; isolated Core test home /home/jarvis/.hermes-poc/task13b2-ab-home/ and evidence /home/jarvis/.hermes-poc/evidence/task13b2-text-ab/ only
 - Result: fail against ADVANCE criteria and HERMES TEXT A/B REJECT; zero side effects and stable 64K runtime passed, Hermes improved ambiguous clarification and slightly led aggregate hard compliance, but Legacy won blind preference 21-9 with 15 ties, Hermes was wrong on arithmetic in two of three runs, and Hermes lost the corrected M02 port once
 - Next: Do not start Task 13C or enable Hermes in JARVIS; make the next model or evaluation-policy decision separately while preserving all A/B evidence and installed models
+
+## [2026-09-10T00:03:02Z] Task Completed
+- Task: Diagnosed frozen gpt-oss:20b LOW versus MEDIUM reasoning across five alternating repetitions of the fixed D01-D12 suite, with wire-policy proof, raw reasoning telemetry, persona/safety checks, latency and GPU monitoring, and JARVIS coexistence verification
+- Files changed: tasks/loop-log.md; isolated Core test home /home/jarvis/.hermes-poc/task13b3a-home/ and evidence /home/jarvis/.hermes-poc/evidence/task13b3a-gpt-oss-reasoning/ only
+- Result: fail against MEDIUM qualification criteria and GPT-OSS MEDIUM DOES NOT QUALIFY; MEDIUM passed arithmetic, exact JSON, destructive confirmation, missing-context honesty, and corrected port 5/5, but ambiguity was 4/5, corrected deployment-target retention was 1/5, instruction continuity was 4/5, and one visible response leaked reasoning text
+- Next: Retire gpt-oss:20b as the Hermes conversational-brain candidate under the current persona and select Candidate #3 only in a separately authorized task; do not start Task 13B3B or Task 13C, download another model, or enable Hermes in JARVIS
