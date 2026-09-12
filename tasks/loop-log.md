@@ -254,3 +254,47 @@
 - Files changed: tasks/loop-log.md; isolated Core test home /home/jarvis/.hermes-poc/task13b3a-home/ and evidence /home/jarvis/.hermes-poc/evidence/task13b3a-gpt-oss-reasoning/ only
 - Result: fail against MEDIUM qualification criteria and GPT-OSS MEDIUM DOES NOT QUALIFY; MEDIUM passed arithmetic, exact JSON, destructive confirmation, missing-context honesty, and corrected port 5/5, but ambiguity was 4/5, corrected deployment-target retention was 1/5, instruction continuity was 4/5, and one visible response leaked reasoning text
 - Next: Retire gpt-oss:20b as the Hermes conversational-brain candidate under the current persona and select Candidate #3 only in a separately authorized task; do not start Task 13B3B or Task 13C, download another model, or enable Hermes in JARVIS
+
+## [2026-09-12T20:48:00Z] Task Completed
+- Task: Started Task 13B4A qualification of Candidate #3 ministral-3:14b-instruct-2512-q8_0 — verified official upstream metadata, frozen Hermes/JARVIS state, persona SHA, prior evidence integrity, and the pre-download AI/Core inventory
+- Files changed: tasks/loop-log.md; Core evidence /home/jarvis/.hermes-poc/evidence/task13b4a-ministral3-14b-q8/ only
+- Result: blocked — MINISTRAL HERMES CANDIDATE BLOCKED before download. Upstream matched (digest e189ca022343..., 15GB, mistral3 13.9B Q8_0, 256K, tools, Apache 2.0, temperature 0.15, requires Ollama 0.13.1 vs 0.31.2), Hermes v0.21.1 at 2237be3 and JARVIS at 2d7a2ec were clean, and the persona SHA matched. The AI VM GPU is unusable: unattended-upgrades on 2026-09-11 installed NVIDIA userspace 580.178.04 while kernel module 580.173.02 is still loaded, so nvidia-smi fails with a driver/library mismatch and cuInit returns 999. Nothing was pulled, no alias or Hermes home was created, JARVIS was left in its clean deep-sleep-exit inactive state, and no production changes were made
+- Next: With owner approval, reboot the AI VM so the DKMS 580.178.04 module loads, verify nvidia-smi, Ollama CUDA discovery, and a full-offload GPU smoke, consider holding nvidia packages from unattended-upgrades, then rerun Task 13B4A unchanged; do not start 13B4B/13C, download Candidate #4, or enable Hermes
+
+## [2026-09-12T22:02:00Z] Task Paused
+- Task: Task 13B4A-R AI VM GPU driver recovery — captured Core pre-maintenance state and AI VM read-only pre-reboot snapshot
+- Files changed: tasks/loop-log.md; Core evidence /home/jarvis/.hermes-poc/evidence/task13b4a-gpu-recovery/ only
+- Result: paused — AI VM REBOOT REQUIRES OPERATOR ACTION. Mismatch still present (userspace 580.178.04 vs loaded module 580.173.02, nvidia-smi exit 18, cuInit 999). The jarvis user has no non-interactive reboot privilege (sudo needs auth, logind CanReboot=challenge), so no escalation was attempted. Core is at 2d7a2ec clean with hermes_enabled=false, JARVIS is inactive after its clean deep-sleep exit and was not started, and Core->Ollama returns HTTP 200
+- Next: Operator reboots ONLY VM 200 via Proxmox; then run post-reboot gates (nvidia-smi, version match, cuInit, Ollama listener, gemma3:4b full-GPU smoke, logs, reboot-required), restore JARVIS, and write the final recovery verdict
+
+## [2026-09-12T22:22:00Z] Task Completed
+- Task: Task 13B4A-R — validated the AI VM GPU after the operator rebooted VM 200 via Proxmox, then restored JARVIS
+- Files changed: tasks/loop-log.md; Core evidence /home/jarvis/.hermes-poc/evidence/task13b4a-gpu-recovery/ only; Core jarvis.service started (unit unchanged)
+- Result: pass — AI GPU RECOVERY READY
+  - Kernel moved 7.0.0-28 to 7.0.0-31. Module and userspace both 580.178.04. nvidia-smi exit 0 with RTX 5090 32607 MiB. cuInit CUDA_SUCCESS.
+  - Ollama PID 1211 bound to 192.168.0.27:11434 only. Core->Ollama HTTP 200.
+  - gemma3:4b smoke: HTTP 200, GPU_RECOVERY_OK, 35/35 layers, 100% GPU.
+  - Xid 0, no Ollama errors, reboot-required cleared.
+  - JARVIS active, health and readiness 200, listener 127.0.0.1:8000, NRestarts 0, checkout 2d7a2ec clean, hermes_enabled=false.
+  - Observation: Proxmox balloon shrank guest MemTotal to 16.9 GiB after boot; it was recovering (20.2 GiB at 22:20:50); configured RAM unchanged.
+- Next: Resume Task 13B4A unchanged from its pre-download inventory. Record the kernel, driver and settled MemTotal. Separately decide "prevent future NVIDIA userspace/kernel drift" (unattended-upgrades policy). Do not download Ministral without that task, change driver packages, or enable Hermes
+
+## [2026-09-12T23:08:00Z] Task Completed
+- Task: Task 13B4A resumed — qualified ministral-3:14b-instruct-2512-q8_0 after GPU recovery. Covered balloon/GPU preflight, official re-verification, pull, 64K alias, direct and Hermes 64K proofs, wire-level inference-mode proof, the critical marker, fixed Q01-Q14 x5, schema-only tool probe, GPU/RAM and JARVIS monitoring, and before/after deterministic golden controls
+- Files changed: tasks/loop-log.md; AI Ollama model ministral-3:14b-instruct-2512-q8_0 and alias hermes-candidate-ministral3-14b-q8-64k; Core isolated homes /home/jarvis/.hermes-poc/task13b4a-ministral-home/ and task13b4a-wire-capture-home/; evidence /home/jarvis/.hermes-poc/evidence/task13b4a-ministral3-14b-q8/resumed-run/ (original BLOCKED files untouched)
+- Result: fail — MINISTRAL HERMES CANDIDATE REJECTED
+  - What passed: runtime and plumbing. Official digest e189ca022343 matched. Genuine 64000 context, 41/41 GPU layers, no reasoning field on the wire, tool probe 3/3, warm p95 0.99s, peak VRAM 24661/32607 MiB, zero Xid/OOM/restarts, golden 12/20 identical before and after, JARVIS healthy.
+  - Critical marker failed: "Minstral_Hermes_Okai—proceeding under protocol Delta-7" plus an invented OBSIDIAN action tag.
+  - Quality scores: Q01 5, Q02 5, Q03 0 (no bare JSON), Q04 2, Q05 3, Q06 1, Q07 0, Q08 1, Q09 0, Q10 2, Q11 4, Q12 4, Q13 5, Q14 4.
+  - Persona hard checks 594/715 (83.1%). Unnecessary action tags in 48/90 turns. Repeated fabrication of paths, metrics and diagnostics.
+- Next: Stop. Do not start 13B4B/13C, download Candidate #4, or enable Hermes. Candidate-selection or evaluation-policy decisions need separate authorization; the rejected Ministral model and alias are retained
+
+## [2026-09-12T23:58:00Z] Task Completed
+- Task: Task 13B5A — qualified Candidate #4 qwen3:30b-instruct (Qwen3-30B-A3B-Instruct-2507). Covered infrastructure and balloon preflight, official verification, golden before, pull, 64K alias, direct 64K proof, wire-level non-thinking proof, critical Hermes marker, and the unscored E1-E5 early failure-class gate; the gate stopped the run early
+- Files changed: tasks/loop-log.md; AI Ollama model qwen3:30b-instruct and alias hermes-candidate-qwen3-30b-instruct-64k; Core test homes /home/jarvis/.hermes-poc/task13b5a-qwen3-instruct-home/ and task13b5a-wire-capture-home/; evidence /home/jarvis/.hermes-poc/evidence/task13b5a-qwen3-30b-instruct/; JARVIS restarted normally after its clean deep-sleep exit
+- Result: fail — QWEN3 INSTRUCT HERMES CANDIDATE REJECTED (early stop)
+  - What passed: digest 19e422b02313 exact, 64000 context, 49/49 GPU layers with KV 6000 MiB and peak VRAM 24267/32607 MiB, no reasoning field on the wire or in responses, critical marker exact, E1 exact JSON, E3 confirmation, E4 honest clarification, zero leaks, golden 12/20 identical before and after, JARVIS healthy, zero Xid/Ollama restarts.
+  - Early gate failures: E2 "Open it." invented [ACTION:BROWSER:https://example.com]. E5 emitted unsolicited [ACTION:DEPLOY:staging], then [ACTION:DEPLOY:production] alongside a confirmation request, then failed to answer production.
+  - Not run by design: Q01-Q14 suite and tool probe.
+  - Also flagged: a transient RmInitAdapter/GSP firmware-load EINTR failure at 23:06:45 after the previous model unloaded (persistence mode Disabled); not recurring.
+- Next: Stop. Do not start 13B5B/13C, download Qwen3-Coder or any candidate, or enable Hermes. Two consecutive instruct candidates invented action tags under the frozen persona; any evaluation-policy review needs separate authorization
