@@ -1,0 +1,30 @@
+TASK 13B11B — AUTHORIZATION AND SCOPE RECORD
+
+Authorized by: operator task specification "JARVIS V2 — TASK 13B11B / EXECUTION CONTRACT TYPES +
+FEATURE FLAG FOUNDATION / FIRST PRODUCTION IMPLEMENTATION PHASE / NO HERMES ENABLEMENT / NO
+TOOL-PATH CHANGE / NO USER-VISIBLE BEHAVIOR CHANGE".
+
+Authorized actions (all performed):
+  - verification of the frozen contract commit 5dd853e2, the 13B10D evidence bundle and the
+    13B11A planning commit 6799a0e and its evidence bundle
+  - verification of the production JARVIS and Hermes baselines
+  - production source change limited to: new execution-contract type definitions, execution-mode
+    configuration definition and parsing, the minimal plumbing to expose that mode, unit tests,
+    and the configuration example
+  - one focused production commit in /home/jarvis/JARVIS
+  - a separate workspace commit containing task documentation only
+  - a sealed evidence bundle task13b11b-execution-foundations
+
+Explicitly NOT authorized and NOT performed:
+  - Hermes routing, enablement or any Hermes repository change
+  - deterministic action router, canonicalization, permissions, confirmation state machine,
+    dispatcher wrapper, provenance ledger, operational response engine or raw-prose lock logic
+  - new audit events, real tools, MCP servers, shadow execution or Task 13C
+  - any change to the request/execution path, tool behaviour, confirmation behaviour, lifecycle
+    behaviour, model assignments, Ollama, NVIDIA or VM RAM
+  - any model inference (the shared Ollama reported {"models":[]} before and after)
+  - pushing any commit to a remote
+
+Method: source files were authored locally and installed on the production host; every test,
+probe and measurement was run in the production venv on 192.168.0.162. Before/after comparisons
+were produced by stashing the change on that host and re-running the same probes.
