@@ -1,0 +1,45 @@
+TASK 13B11E — AUTHORIZATION AND SCOPE RECORD
+
+Authorized by: operator task specification "JARVIS V2 — TASK 13B11E / DETERMINISTIC ARGUMENT
+CANONICALIZER FOUNDATION / PRODUCTION — PASSIVE / UNWIRED / NO ROUTING / NO PROVENANCE WIRING /
+NO TOOL EXECUTION CHANGE / NO HERMES ENABLEMENT".
+
+Authorized actions (all performed):
+  - verification of the production entry state b9a557b (parent eb4c5db), the Hermes baseline, the
+    workspace 13B11D commit, and the sealed 13B11D, 13B11C, 13B11B and 13B10D evidence bundles
+  - production source change limited to: one new module holding the canonicalization rule model,
+    the versioned rule table, the deterministic canonicalizer and its passive result type, plus
+    unit tests
+  - one focused production commit in /home/jarvis/JARVIS
+  - a separate workspace commit containing task documentation only
+  - a sealed evidence bundle task13b11e-canonicalizer-foundation
+
+Explicitly NOT authorized and NOT performed:
+  - wiring canonicalization into the request or execution path: no production code outside
+    app/execution/ calls it, and app/brain/tool_params.py is byte-identical, so the legacy
+    extraction path is untouched
+  - request classifier, action router, lane policy, permission engine, confirmation state machine,
+    dispatcher wrapper, obligation engine, operational response engine, Hermes adapter, shadow mode
+    or Task 13C
+  - any provenance interaction: the module imports nothing from the application at all, and
+    app/execution/provenance.py is byte-identical
+  - any audit change: no event emitted, schema version 3 unchanged, the 17 contract fields
+    unchanged, and app/logs/audit.py, app/observability/tracing.py and
+    app/execution/audit_events.py all byte-identical
+  - any change to app/server.py, app/tools/registry.py, app/computer/safety.py,
+    app/resource_manager.py, the intent router, prompts, response cleaner, config.yaml or the
+    execution mode
+  - any change to the frozen P0 types: ToolInvocation was used as it stands and not widened, and
+    ProvenanceSource was NOT extended for TIMEOUT
+  - any fuzzy matching, similarity scoring, spell correction, nearest-name substitution, embedding
+    or model-based normalization; no URL, path, deploy-target or shell-command rule was invented
+  - Hermes routing, enablement or any Hermes repository change
+  - any model inference (the shared Ollama reported {"models":[]} before and after)
+  - pushing any commit to a remote
+  - the three deferred operator decisions: the lane audit-field question, the redaction secret-key
+    list, and TIMEOUT as a provenance source were all left open and untouched
+
+Method: the module and its tests were authored locally and installed on the production host; every
+test, probe and measurement was run in the production venv on 192.168.0.162 (Python 3.14.4). The
+legacy probe was captured at b9a557b before any P3 file was installed and again at HEAD after the
+commit, using the byte-identical fixture carried forward from the 13B11B, 13B11C and 13B11D bundles.
