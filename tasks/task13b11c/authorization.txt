@@ -1,0 +1,34 @@
+TASK 13B11C — AUTHORIZATION AND SCOPE RECORD
+
+Authorized by: operator task specification "JARVIS V2 — TASK 13B11C / AUDIT VOCABULARY +
+CORRELATION FOUNDATION / PRODUCTION PHASE P1 / ADDITIVE ONLY / NO REQUEST-PATH SWITCH /
+NO NEW TOOL EXECUTION / NO HERMES ENABLEMENT".
+
+Authorized actions (all performed):
+  - verification of the frozen contract v1 commit 5dd853e2, the 13B11A planning commit 6799a0e,
+    the 13B11B production commit 521969e and the 13B11B sealed evidence bundle
+  - verification of the production JARVIS and Hermes baselines
+  - production source change limited to: execution-contract audit event vocabulary, the passive
+    audit event record, schema-version constants, deterministic validation, one serialization
+    helper, typed correlation identifiers and an immutable correlation context, plus unit tests
+  - one focused production commit in /home/jarvis/JARVIS
+  - a separate workspace commit containing task documentation only
+  - a sealed evidence bundle task13b11c-audit-foundations
+
+Explicitly NOT authorized and NOT performed:
+  - any audit writer, persistence engine, queue, background worker or emission call site
+  - provenance ledger, request classifier, action router, canonicalizer, permission engine,
+    confirmation state machine, dispatcher wrapper, operational response engine, raw-prose lock,
+    Hermes adapter, shadow mode or Task 13C
+  - any change to app/logs/audit.py, app/observability/tracing.py, the legacy event format, log
+    rotation, retention or existing log contents
+  - any change to the request/execution path, tool behaviour, confirmation behaviour, lifecycle
+    behaviour, model assignments, Ollama, NVIDIA or VM RAM
+  - Hermes routing, enablement or any Hermes repository change
+  - any model inference (the shared Ollama reported {"models":[]} before and after)
+  - pushing any commit to a remote
+
+Method: source files were authored locally and installed on the production host; every test,
+probe and measurement was run in the production venv on 192.168.0.162 (Python 3.14.4). The
+before/after legacy probe was produced by checking out the parent commit 521969e in a detached
+git worktree and running the byte-identical 13B11B probe fixture against both checkouts.
