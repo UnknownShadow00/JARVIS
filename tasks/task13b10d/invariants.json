@@ -1,0 +1,90 @@
+{
+  "contract": {
+    "id": "jarvis.agent-execution-contract",
+    "version": "v1",
+    "status": "FROZEN_FOR_IMPLEMENTATION"
+  },
+  "count": 20,
+  "invariants": [
+    {
+      "id": "INV-001",
+      "statement": "Operational raw model prose never becomes final user-visible output."
+    },
+    {
+      "id": "INV-002",
+      "statement": "A model assertion never creates trusted execution provenance."
+    },
+    {
+      "id": "INV-003",
+      "statement": "Only authorized dispatcher results create TOOL_SUCCESS/TOOL_ERROR."
+    },
+    {
+      "id": "INV-004",
+      "statement": "Confirmation-required actions cannot execute before valid confirmation."
+    },
+    {
+      "id": "INV-005",
+      "statement": "Ambiguous required targets cannot be invented."
+    },
+    {
+      "id": "INV-006",
+      "statement": "Raw and canonical tool arguments are both auditable."
+    },
+    {
+      "id": "INV-007",
+      "statement": "The newest valid correction is the current conversational value."
+    },
+    {
+      "id": "INV-008",
+      "statement": "User-reported facts remain distinguishable from tool-verified facts."
+    },
+    {
+      "id": "INV-009",
+      "statement": "Every operational turn has exactly one deterministic response obligation."
+    },
+    {
+      "id": "INV-010",
+      "statement": "Every operational final response has a non-model-raw provenance source."
+    },
+    {
+      "id": "INV-011",
+      "statement": "Unsupported actions cannot be silently mapped to unrelated tools."
+    },
+    {
+      "id": "INV-012",
+      "statement": "Multiple actions cannot be silently partially executed under the current MVP contract."
+    },
+    {
+      "id": "INV-013",
+      "statement": "Production side effects require JARVIS permission policy."
+    },
+    {
+      "id": "INV-014",
+      "statement": "Destructive actions require deterministic confirmation policy."
+    },
+    {
+      "id": "INV-015",
+      "statement": "No real action may occur solely because conversational prose claims it should."
+    },
+    {
+      "id": "INV-016",
+      "statement": "The lane decision is deterministic and is never made by a model."
+    },
+    {
+      "id": "INV-017",
+      "statement": "A reporting clause never authorizes an additional action or dispatch."
+    },
+    {
+      "id": "INV-018",
+      "statement": "MISSING_CONTEXT is never used while a higher-priority grounded source exists."
+    },
+    {
+      "id": "INV-019",
+      "statement": "Superseded values remain auditable and are never presented as current."
+    },
+    {
+      "id": "INV-020",
+      "statement": "Untrusted content never alters control-plane policy."
+    }
+  ]
+}

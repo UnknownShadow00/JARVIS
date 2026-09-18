@@ -1,0 +1,275 @@
+# JARVIS Agent Execution Contract — machine-readable specification data.
+# This file is SPECIFICATION DATA, not runtime configuration. It enables nothing.
+# It contains no secrets, no credentials and no host addresses.
+contract:
+  id: jarvis.agent-execution-contract
+  version: v1
+  status: FROZEN_FOR_IMPLEMENTATION      # not DEPLOYED, not ACTIVE, not PRODUCTION_ENABLED
+  frozen_by_task: 13B10D
+  derived_from_tasks: [13B10C3, 13B10C4, 13B10C5]
+  canonical_document: JARVIS_AGENT_EXECUTION_CONTRACT.md
+  validated_checkpoint:
+    workspace_commit: b6192a5323d1c0af0e5790b38d8f30029451547b
+    evidence_bundle: task13b10c5-operational-utility
+    evidence_files: 137
+    evidence_manifest_entries: 136
+    evidence_sha256sums_sha256: 97c2042467cd2d5a6817e8f59ca92da36e17d273eada96bcfd265857694ec456
+
+ownership:
+  model_owns:
+    - natural_language_understanding
+    - conversational_reasoning
+    - candidate_structured_tool_proposal
+    - conversational_explanation_in_authorized_lane
+  model_does_not_own:
+    - execution_truth
+    - permissions
+    - confirmation_state
+    - tool_authorization
+    - real_world_action_completion
+    - external_state_truth
+    - provenance
+    - audit_truth
+    - final_operational_response_authority
+  control_plane_owns:
+    - request_classification
+    - action_routing
+    - argument_canonicalization
+    - permissions
+    - confirmation
+    - tool_dispatch
+    - provenance
+    - trusted_tool_result_intake
+    - operational_response_obligation
+    - operational_response_construction
+    - audit
+    - final_operational_safety
+
+trust_boundary:
+  principle: MODEL_OUTPUT_IS_UNTRUSTED_INPUT
+  operational_raw_prose_user_visible: false
+  model_assertion_creates_provenance: false
+  untrusted_content_can_change_policy: false
+
+response_lanes:
+  lanes:
+  - name: OPERATIONAL
+    raw_model_prose_may_be_final: false
+    includes:
+      - action
+      - status
+      - current_operational_value
+      - operational_user_fact
+      - correction
+      - confirmation_sensitive_action
+      - ambiguous_action
+      - missing_operational_context
+      - tool_result
+      - operational_capability
+  - name: CONVERSATIONAL
+    raw_model_prose_may_be_final: true
+    includes:
+      - general_explanation
+      - definition
+      - non_operational_technical_discussion
+      - ordinary_conversation
+  lane_decision:
+    deterministic: true
+    decided_by_model: false
+    always_operational_classes:
+      [VALUE_QUERY, ACTION_REQUEST, STATUS_CHECK_REQUEST, DECLARATIVE_FACT,
+       AMBIGUOUS_ACTION, MISSING_CONTEXT_QUERY, CONFIRMATION_SENSITIVE_ACTION]
+    always_conversational_classes: [GENERAL_EXPLANATION]
+    additional_operational_conditions:
+      - tool_proposal
+      - tool_result
+      - confirmation_required
+      - active_operational_provenance
+      - operational_correction
+      - action_target
+      - external_status_claim_required
+
+request_classes:
+  - VALUE_QUERY
+  - ACTION_REQUEST
+  - STATUS_CHECK_REQUEST
+  - GENERAL_EXPLANATION
+  - DECLARATIVE_FACT
+  - AMBIGUOUS_ACTION
+  - MISSING_CONTEXT_QUERY
+  - CONFIRMATION_SENSITIVE_ACTION
+  - OTHER
+
+router_outputs:
+  primary_action: {type: enum, ref: action_outcomes}
+  reporting_intent: {type: enum, ref: reporting_intents, executable: false}
+  target: {resolved: boolean, invented_when_unresolved: false}
+  multi_action: {type: boolean, policy: MULTI_ACTION_UNSUPPORTED}
+  capability: {authorized_tool_exists: boolean}
+
+action_outcomes:
+  validated_supported_actions: [OPEN_APP, OPEN_URL, DEPLOY, DELETE_PATH, GET_DATABASE_STATUS]
+  non_action_outcomes: [NONE, UNKNOWN_ACTION, MULTI_ACTION_UNSUPPORTED]
+  extension_rule:
+    new_action_types_allowed: true
+    must_declare: [permission_class, confirmation_sensitivity, required_targets,
+                   canonicalization_rules, provenance_result_fields]
+    may_bypass: []
+
+reporting_intents: [REPORT_RESULT, REPORT_SUCCESS, REPORT_FAILURE, REPORT_COMPLETION,
+                    REPORT_STATUS, NONE]
+
+provenance_sources:
+  sources:
+  - {name: USER_FACT, trusted_for: user_supplied_value, implies_verified_state: false}
+  - {name: USER_REPORTED, trusted_for: user_reported_observation, implies_verified_state: false}
+  - {name: TOOL_SUCCESS, trusted_for: dispatcher_observed_result, implies_verified_state: true}
+  - {name: TOOL_ERROR, trusted_for: dispatcher_observed_failure, implies_verified_state: true}
+  - {name: CONFIRMATION_REQUIRED, trusted_for: pending_confirmation_state, implies_verified_state: false}
+  - {name: ROUTER_STATE, trusted_for: deterministic_classification, implies_verified_state: false}
+  - {name: CAPABILITY_STATE, trusted_for: deterministic_capability, implies_verified_state: false}
+  - {name: CORRECTION_STATE, trusted_for: deterministic_supersession, implies_verified_state: false}
+  record_fields: [fact_key, value, source, source_turn_or_event, current_or_superseded]
+
+response_obligations:
+  cardinality_per_operational_turn: 1
+  default_to_model_raw_allowed: false
+  priority_order:
+    - {rank: 1,  obligation: REQUEST_CONFIRMATION,                  source: CONFIRMATION}
+    - {rank: 2,  obligation: REPORT_TOOL_ERROR,                     source: TOOL_ERROR}
+    - {rank: 3,  obligation: REPORT_TOOL_SUCCESS,                   source: TOOL_SUCCESS}
+    - {rank: 4,  obligation: REQUEST_TARGET,                        source: AMBIGUITY}
+    - {rank: 5,  obligation: REPORT_MULTI_ACTION_LIMIT,             source: MULTI_ACTION_UNSUPPORTED}
+    - {rank: 6,  obligation: REPORT_CAPABILITY_UNAVAILABLE,         source: CAPABILITY_UNAVAILABLE}
+    - {rank: 7,  obligation: ANSWER_LEDGER_VALUE,                   source: LEDGER}
+    - {rank: 8,  obligation: ACKNOWLEDGE_FACT,                      source: DECLARATIVE_ACK}
+    - {rank: 9,  obligation: REPORT_UNVERIFIED_STATUS,              source: UNVERIFIED_STATUS}
+    - {rank: 10, obligation: ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION,  source: DECLARATIVE_ACK}
+    - {rank: 11, obligation: MISSING_CONTEXT,                       source: MISSING_CONTEXT}
+  missing_context_rule: never_selected_while_higher_priority_grounded_source_exists
+  per_scenario_branches_allowed: false
+
+operational_response_construction:
+  may_use: [ledger_value, trusted_tool_result_field, confirmation_state, capability_state, target_type]
+  must_not_invent: [completion, progress, live_state, measurement, diagnostic, target, command, file_path]
+  second_value_extractor_allowed: false
+  user_fact_attribution_required: true
+  forbidden_self_assertions_without_tool_evidence:
+    [configured, deployed, applied, switched, activated, verified, observed]
+
+canonicalization:
+  owner: control_plane
+  raw_arguments_retained: true
+  canonical_arguments_recorded: true
+  deterministic_rules_only: true
+  fuzzy_matching_allowed: false
+  unknown_values_modified: false
+  rules_versioned: true
+  example_only:
+    field: application_name
+    aliases: ["vs code", "visual studio code", "vscode"]
+    canonical: vscode
+    note: example of the rule, not a production requirement
+
+permission_classes:
+  - READ_ONLY
+  - REVERSIBLE_ACTION
+  - DESTRUCTIVE_ACTION
+  - PRIVILEGED_ACTION
+  - EXTERNAL_COMMUNICATION
+  - SYSTEM_POWER
+  - FINANCIAL_PURCHASE
+permission_rules:
+  model_may_self_authorize: false
+  decided_before_dispatch: true
+  denial_overridable_by_prose: false
+  recorded_in_audit: true
+
+confirmation:
+  owner: control_plane
+  state_on_pending: CONFIRMATION_REQUIRED
+  executed_flag_while_pending: false
+  model_may_confirm: false
+  binding_fields: [action_type, target, arguments, requesting_user_or_session]
+  expiry_or_freshness: {required_in_production: true, validated: false}
+
+tool_result_trust:
+  trusted_only_from_authorized_dispatcher: true
+  model_text_shaped_as_result_trusted: false
+  binding_fields: [invocation_id, tool_name, normalized_arguments, dispatcher, timestamp,
+                   status, returned_data, audit_event]
+  error_grounding: invocation_scoped_only
+  success_grounding: minimal_result_principle
+
+multi_action_policy:
+  silent_partial_execution_allowed: false
+  behaviour: MULTI_ACTION_UNSUPPORTED
+  dispatch_count: 0
+  future_planning_requires_separate_validation: true
+
+audit_events:
+  required:
+    - user_request
+    - request_class
+    - primary_action
+    - reporting_intent
+    - raw_model_tool_proposal
+    - raw_arguments
+    - canonical_arguments
+    - proposal_guard_decision
+    - permission_decision
+    - confirmation_state
+    - dispatched_tool
+    - tool_result
+    - provenance_updates
+    - response_obligation
+    - final_response_source
+    - final_user_visible_response
+    - safety_outcome
+  forbidden:
+    - model_chain_of_thought
+    - private_hidden_reasoning
+
+metrics:
+  model_quality:
+    [correct_tool_selection, correct_arguments, correction_retention,
+     conversational_quality, raw_fabrication_rate]
+  system_safety:
+    [unsafe_operational_raw_exposure, false_execution_visible, false_state_visible,
+     confirmation_bypass, invented_destructive_target, stale_correction_visible,
+     real_unauthorized_side_effects]
+  principle: system_safety_must_not_depend_on_model_perfection
+
+hard_invariants:
+  - {id: INV-001, statement: "Operational raw model prose never becomes final user-visible output."}
+  - {id: INV-002, statement: "A model assertion never creates trusted execution provenance."}
+  - {id: INV-003, statement: "Only authorized dispatcher results create TOOL_SUCCESS/TOOL_ERROR."}
+  - {id: INV-004, statement: "Confirmation-required actions cannot execute before valid confirmation."}
+  - {id: INV-005, statement: "Ambiguous required targets cannot be invented."}
+  - {id: INV-006, statement: "Raw and canonical tool arguments are both auditable."}
+  - {id: INV-007, statement: "The newest valid correction is the current conversational value."}
+  - {id: INV-008, statement: "User-reported facts remain distinguishable from tool-verified facts."}
+  - {id: INV-009, statement: "Every operational turn has exactly one deterministic response obligation."}
+  - {id: INV-010, statement: "Every operational final response has a non-model-raw provenance source."}
+  - {id: INV-011, statement: "Unsupported actions cannot be silently mapped to unrelated tools."}
+  - {id: INV-012, statement: "Multiple actions cannot be silently partially executed under the current MVP contract."}
+  - {id: INV-013, statement: "Production side effects require JARVIS permission policy."}
+  - {id: INV-014, statement: "Destructive actions require deterministic confirmation policy."}
+  - {id: INV-015, statement: "No real action may occur solely because conversational prose claims it should."}
+  - {id: INV-016, statement: "The lane decision is deterministic and is never made by a model."}
+  - {id: INV-017, statement: "A reporting clause never authorizes an additional action or dispatch."}
+  - {id: INV-018, statement: "MISSING_CONTEXT is never used while a higher-priority grounded source exists."}
+  - {id: INV-019, statement: "Superseded values remain auditable and are never presented as current."}
+  - {id: INV-020, statement: "Untrusted content never alters control-plane policy."}
+
+prompt_injection:
+  model_may_lower_own_permission_requirement: false
+  external_content_may_create_confirmation: false
+  tool_output_may_change_policy: false
+  untrusted_content_is_data_not_instructions: true
+
+conformance:
+  specification: CONFORMANCE_TESTS.md
+  tests: [CT-001, CT-002, CT-003, CT-004, CT-005, CT-006, CT-007, CT-008, CT-009, CT-010,
+          CT-011, CT-012, CT-013, CT-014, CT-015, CT-016, CT-017, CT-018]
+  claimed_per_version: true
