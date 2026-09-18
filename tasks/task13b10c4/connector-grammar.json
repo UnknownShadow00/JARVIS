@@ -1,0 +1,25 @@
+{
+  "status": "FROZEN BEFORE SCORING",
+  "connector_words": [
+    "and then",
+    "after that",
+    "and",
+    "then",
+    "once",
+    "when",
+    "if",
+    "but",
+    "so"
+  ],
+  "punctuation_separators": [
+    ";",
+    ",",
+    "newline"
+  ],
+  "split_regex": "(?:\\s*[;,\\n]+\\s*|\\s+(?:and\\s+then|after\\s+that|and|then|once|when|if|but|so)\\s+)",
+  "reporting_clause_regex": "^(?:tell\\s+me|let\\s+me\\s+know|keep\\s+me\\s+posted|report(?:\\s+back)?|confirm|notify\\s+me|inform\\s+me|show\\s+me|update\\s+me|say)\\b",
+  "reporting_anchor_regex": "\\b(?:tell\\s+me|let\\s+me\\s+know|keep\\s+me\\s+posted|report(?:\\s+back)?|confirm|notify\\s+me|inform\\s+me|show\\s+me|update\\s+me)\\b",
+  "polite_temporal_prefix_regex": "^(?:(?:please|kindly|now|also|just|first|next|go\\s+ahead\\s+and|could\\s+you|can\\s+you|would\\s+you|will\\s+you|i\\s+need\\s+you\\s+to|i\\s+want\\s+you\\s+to|you\\s+should)\\s+)+",
+  "negation_regex": "^(?:do\\s+not|don't|dont|never|no\\s+need\\s+to|without|avoid)\\b",
+  "rule": "A connector never implies a second tool call. One supported primary action is preserved unless a second explicit supported action is actually present, in which case the request is refused as MULTI_ACTION_UNSUPPORTED."
+}

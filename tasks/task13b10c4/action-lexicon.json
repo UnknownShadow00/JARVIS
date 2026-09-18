@@ -1,0 +1,99 @@
+{
+  "status": "FROZEN BEFORE SCORING",
+  "primary_actions": [
+    "OPEN_APP",
+    "OPEN_URL",
+    "DEPLOY",
+    "DELETE_PATH",
+    "GET_DATABASE_STATUS",
+    "NONE",
+    "UNKNOWN_ACTION"
+  ],
+  "supported_actions": [
+    "OPEN_APP",
+    "OPEN_URL",
+    "DEPLOY",
+    "DELETE_PATH",
+    "GET_DATABASE_STATUS"
+  ],
+  "reporting_intents": [
+    "REPORT_RESULT",
+    "REPORT_SUCCESS",
+    "REPORT_FAILURE",
+    "REPORT_COMPLETION",
+    "REPORT_STATUS",
+    "NONE"
+  ],
+  "verbs": {
+    "OPEN_APP/OPEN_URL": [
+      "open",
+      "launch"
+    ],
+    "GET_DATABASE_STATUS": [
+      "check",
+      "verify",
+      "inspect",
+      "get"
+    ],
+    "DEPLOY": [
+      "deploy"
+    ],
+    "DELETE_PATH": [
+      "delete",
+      "remove"
+    ],
+    "UNKNOWN_ACTION (no tool exists)": [
+      "restart",
+      "reboot",
+      "start",
+      "stop",
+      "shutdown",
+      "install",
+      "uninstall",
+      "upgrade",
+      "update",
+      "change",
+      "modify",
+      "rollback",
+      "roll",
+      "scale",
+      "reset",
+      "kill",
+      "enable",
+      "disable",
+      "create",
+      "rename",
+      "move",
+      "copy",
+      "run",
+      "execute",
+      "build",
+      "push",
+      "pull",
+      "commit",
+      "merge",
+      "revert",
+      "fix",
+      "send",
+      "email",
+      "download",
+      "upload",
+      "backup",
+      "restore",
+      "clear",
+      "flush",
+      "rotate",
+      "patch"
+    ]
+  },
+  "rules": [
+    "An action verb counts only in clause-initial position after optional polite/temporal modifiers.",
+    "A clause opening with a negation (do not / don't / never / no need to / without / avoid) is never an action.",
+    "A clause opening with a reporting marker is never an action.",
+    "GET_DATABASE_STATUS additionally requires the literal object 'database' (optionally 'database status').",
+    "DEPLOY additionally requires the exact environment word staging or production.",
+    "DELETE_PATH additionally requires exactly one exact path token equal to the whole operand.",
+    "No fuzzy or semantic verb inference; no second model; no verb learned during testing."
+  ],
+  "mapping_note": "Only these tools exist: jarvis_test_open_app, jarvis_test_open_url, jarvis_test_deploy, jarvis_test_delete_path, jarvis_test_get_database_status. Any other explicit operation is UNKNOWN_ACTION and is never mapped to a nearest available tool."
+}
