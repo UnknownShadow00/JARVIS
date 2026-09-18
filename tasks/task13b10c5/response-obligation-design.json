@@ -1,0 +1,70 @@
+{
+  "status": "FROZEN BEFORE SCORING",
+  "obligations": [
+    "ACKNOWLEDGE_FACT",
+    "ANSWER_LEDGER_VALUE",
+    "REPORT_TOOL_SUCCESS",
+    "REPORT_TOOL_ERROR",
+    "REQUEST_CONFIRMATION",
+    "REQUEST_TARGET",
+    "REPORT_CAPABILITY_UNAVAILABLE",
+    "REPORT_UNVERIFIED_STATUS",
+    "REPORT_MULTI_ACTION_LIMIT",
+    "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION",
+    "MISSING_CONTEXT"
+  ],
+  "obligation_to_source": {
+    "REQUEST_CONFIRMATION": "CONFIRMATION",
+    "REPORT_TOOL_ERROR": "TOOL_ERROR",
+    "REPORT_TOOL_SUCCESS": "TOOL_SUCCESS",
+    "REQUEST_TARGET": "AMBIGUITY",
+    "REPORT_MULTI_ACTION_LIMIT": "MULTI_ACTION_UNSUPPORTED",
+    "REPORT_CAPABILITY_UNAVAILABLE": "CAPABILITY_UNAVAILABLE",
+    "ANSWER_LEDGER_VALUE": "LEDGER",
+    "ACKNOWLEDGE_FACT": "DECLARATIVE_ACK",
+    "REPORT_UNVERIFIED_STATUS": "UNVERIFIED_STATUS",
+    "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION": "DECLARATIVE_ACK",
+    "MISSING_CONTEXT": "MISSING_CONTEXT"
+  },
+  "allowed_operational_sources": [
+    "AMBIGUITY",
+    "CAPABILITY_UNAVAILABLE",
+    "CONFIRMATION",
+    "DECLARATIVE_ACK",
+    "LEDGER",
+    "MISSING_CONTEXT",
+    "MULTI_ACTION_UNSUPPORTED",
+    "TOOL_ERROR",
+    "TOOL_SUCCESS",
+    "UNVERIFIED_STATUS"
+  ],
+  "added_source_vs_c4": "MULTI_ACTION_UNSUPPORTED (spec section 10)",
+  "priority_order": [
+    "1 CONFIRMATION_REQUIRED",
+    "2 TOOL_ERROR",
+    "3 TOOL_SUCCESS",
+    "4 AMBIGUOUS TARGET",
+    "5 MULTI_ACTION_UNSUPPORTED",
+    "6 EXPLICIT UNSUPPORTED CAPABILITY",
+    "7 DIRECT LEDGER VALUE QUESTION",
+    "8 USER_FACT ACKNOWLEDGEMENT",
+    "9 UNVERIFIED STATUS QUESTION",
+    "10 ACKNOWLEDGED ACTION INTENT WITHOUT EXECUTION",
+    "11 MISSING CONTEXT"
+  ],
+  "derivation_inputs": [
+    "frozen request classification",
+    "frozen routing result",
+    "frozen provenance state",
+    "trusted tool result",
+    "confirmation state",
+    "frozen lane reasons"
+  ],
+  "rules": [
+    "Exactly one obligation per operational turn; no model inference anywhere in the derivation.",
+    "MISSING_CONTEXT is never selected when any higher-priority grounded source exists.",
+    "A state word parsed out of the user's own question is never echoed back as something they reported.",
+    "A user-supplied observation is always marked reported/supplied, never independently verified.",
+    "No response may contain a value that frozen provenance does not already hold."
+  ]
+}

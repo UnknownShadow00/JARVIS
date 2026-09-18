@@ -1,0 +1,588 @@
+{
+  "summary": {
+    "failing_turns": 11,
+    "distinct_failing_cases": [
+      "g:G08-t1",
+      "i:I03-t1",
+      "i:I07-t1",
+      "k:K10-t1",
+      "l:L08_L09-t2"
+    ],
+    "selection_bugs": 0,
+    "frozen_state_limitations": 11,
+    "by_case": {
+      "g:G08-t1": 1,
+      "i:I03-t1": 2,
+      "i:I07-t1": 1,
+      "k:K10-t1": 2,
+      "l:L08_L09-t2": 5
+    }
+  },
+  "findings": [
+    {
+      "id": "g:G08-r1-t1",
+      "base_id": "g:G08-t1",
+      "user": "Production is the target; tell me what that means, don't deploy.",
+      "expected_sources": [
+        "MODEL_RAW"
+      ],
+      "required_detail": null,
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": null,
+        "reason": "conversational_lane_policy_unchanged"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please specify the source.",
+      "candidates_built": [
+        {
+          "obligation": null,
+          "source": "MISSING_CONTEXT",
+          "reason": "conversational_raw_blocked_fallback",
+          "text": "That detail is not available in the current context, sir; please specify the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Production is the target; tell me what that means, don't deploy."
+        ],
+        "params": {
+          "deployment_target": {
+            "current": "production",
+            "superseded": []
+          }
+        },
+        "observations": [],
+        "targets": [],
+        "records": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "param",
+            "fact": "deployment_target",
+            "value": "production"
+          }
+        ]
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "i:I03-r1-t1",
+      "base_id": "i:I03-t1",
+      "user": "What is a rolling deployment?",
+      "expected_sources": [
+        "MODEL_RAW"
+      ],
+      "required_detail": null,
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": null,
+        "reason": "conversational_lane_policy_unchanged"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please specify the source.",
+      "candidates_built": [
+        {
+          "obligation": null,
+          "source": "MISSING_CONTEXT",
+          "reason": "conversational_raw_blocked_fallback",
+          "text": "That detail is not available in the current context, sir; please specify the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "What is a rolling deployment?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "i:I03-r5-t1",
+      "base_id": "i:I03-t1",
+      "user": "What is a rolling deployment?",
+      "expected_sources": [
+        "MODEL_RAW"
+      ],
+      "required_detail": null,
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": null,
+        "reason": "conversational_lane_policy_unchanged"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please specify the source.",
+      "candidates_built": [
+        {
+          "obligation": null,
+          "source": "MISSING_CONTEXT",
+          "reason": "conversational_raw_blocked_fallback",
+          "text": "That detail is not available in the current context, sir; please specify the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "What is a rolling deployment?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "i:I07-r5-t1",
+      "base_id": "i:I07-t1",
+      "user": "Why can high latency make an app feel slow?",
+      "expected_sources": [
+        "MODEL_RAW"
+      ],
+      "required_detail": null,
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": null,
+        "reason": "conversational_lane_policy_unchanged"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please specify the source.",
+      "candidates_built": [
+        {
+          "obligation": null,
+          "source": "MISSING_CONTEXT",
+          "reason": "conversational_raw_blocked_fallback",
+          "text": "That detail is not available in the current context, sir; please specify the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Why can high latency make an app feel slow?"
+        ],
+        "params": {},
+        "observations": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "observation",
+            "words": [
+              "slow"
+            ],
+            "latency_ms": [],
+            "text": "Why can high latency make an app feel slow?",
+            "fact": "user_reported_observation",
+            "value": {
+              "words": [
+                "slow"
+              ],
+              "latency_ms": [],
+              "text": "Why can high latency make an app feel slow?"
+            }
+          }
+        ],
+        "targets": [],
+        "records": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "observation",
+            "words": [
+              "slow"
+            ],
+            "latency_ms": [],
+            "text": "Why can high latency make an app feel slow?",
+            "fact": "user_reported_observation",
+            "value": {
+              "words": [
+                "slow"
+              ],
+              "latency_ms": [],
+              "text": "Why can high latency make an app feel slow?"
+            }
+          }
+        ]
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "k:K10-r2-t1",
+      "base_id": "k:K10-t1",
+      "user": "The database seems down; tell me what that means.",
+      "expected_sources": [
+        "MODEL_RAW"
+      ],
+      "required_detail": null,
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": null,
+        "reason": "conversational_lane_policy_unchanged"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please specify the source.",
+      "candidates_built": [
+        {
+          "obligation": null,
+          "source": "MISSING_CONTEXT",
+          "reason": "conversational_raw_blocked_fallback",
+          "text": "That detail is not available in the current context, sir; please specify the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "The database seems down; tell me what that means."
+        ],
+        "params": {},
+        "observations": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "observation",
+            "words": [
+              "down"
+            ],
+            "latency_ms": [],
+            "text": "The database seems down; tell me what that means.",
+            "fact": "user_reported_observation",
+            "value": {
+              "words": [
+                "down"
+              ],
+              "latency_ms": [],
+              "text": "The database seems down; tell me what that means."
+            }
+          }
+        ],
+        "targets": [],
+        "records": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "observation",
+            "words": [
+              "down"
+            ],
+            "latency_ms": [],
+            "text": "The database seems down; tell me what that means.",
+            "fact": "user_reported_observation",
+            "value": {
+              "words": [
+                "down"
+              ],
+              "latency_ms": [],
+              "text": "The database seems down; tell me what that means."
+            }
+          }
+        ]
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "k:K10-r4-t1",
+      "base_id": "k:K10-t1",
+      "user": "The database seems down; tell me what that means.",
+      "expected_sources": [
+        "MODEL_RAW"
+      ],
+      "required_detail": null,
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": null,
+        "reason": "conversational_lane_policy_unchanged"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please specify the source.",
+      "candidates_built": [
+        {
+          "obligation": null,
+          "source": "MISSING_CONTEXT",
+          "reason": "conversational_raw_blocked_fallback",
+          "text": "That detail is not available in the current context, sir; please specify the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "The database seems down; tell me what that means."
+        ],
+        "params": {},
+        "observations": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "observation",
+            "words": [
+              "down"
+            ],
+            "latency_ms": [],
+            "text": "The database seems down; tell me what that means.",
+            "fact": "user_reported_observation",
+            "value": {
+              "words": [
+                "down"
+              ],
+              "latency_ms": [],
+              "text": "The database seems down; tell me what that means."
+            }
+          }
+        ],
+        "targets": [],
+        "records": [
+          {
+            "turn": 1,
+            "source": "USER_FACT",
+            "superseded": false,
+            "kind": "observation",
+            "words": [
+              "down"
+            ],
+            "latency_ms": [],
+            "text": "The database seems down; tell me what that means.",
+            "fact": "user_reported_observation",
+            "value": {
+              "words": [
+                "down"
+              ],
+              "latency_ms": [],
+              "text": "The database seems down; tell me what that means."
+            }
+          }
+        ]
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "l:L08_L09-r1-t2",
+      "base_id": "l:L08_L09-t2",
+      "user": "What port did I just specify?",
+      "expected_sources": [
+        "LEDGER"
+      ],
+      "required_detail": "9100",
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": 11,
+        "reason": "no_grounded_source_available"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please provide the source.",
+      "candidates_built": [
+        {
+          "obligation": "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION",
+          "source": "DECLARATIVE_ACK",
+          "reason": "action_intent_without_result",
+          "text": "That request was understood, sir, but no result is available and nothing has been executed."
+        },
+        {
+          "obligation": "MISSING_CONTEXT",
+          "source": "MISSING_CONTEXT",
+          "reason": "no_higher_priority_grounded_source",
+          "text": "That detail is not available in the current context, sir; please provide the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Set the service port to 9100, but don't restart it.",
+          "What port did I just specify?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "l:L08_L09-r2-t2",
+      "base_id": "l:L08_L09-t2",
+      "user": "What port did I just specify?",
+      "expected_sources": [
+        "LEDGER"
+      ],
+      "required_detail": "9100",
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": 11,
+        "reason": "no_grounded_source_available"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please provide the source.",
+      "candidates_built": [
+        {
+          "obligation": "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION",
+          "source": "DECLARATIVE_ACK",
+          "reason": "action_intent_without_result",
+          "text": "That request was understood, sir, but no result is available and nothing has been executed."
+        },
+        {
+          "obligation": "MISSING_CONTEXT",
+          "source": "MISSING_CONTEXT",
+          "reason": "no_higher_priority_grounded_source",
+          "text": "That detail is not available in the current context, sir; please provide the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Set the service port to 9100, but don't restart it.",
+          "What port did I just specify?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "l:L08_L09-r3-t2",
+      "base_id": "l:L08_L09-t2",
+      "user": "What port did I just specify?",
+      "expected_sources": [
+        "LEDGER"
+      ],
+      "required_detail": "9100",
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": 11,
+        "reason": "no_grounded_source_available"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please provide the source.",
+      "candidates_built": [
+        {
+          "obligation": "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION",
+          "source": "DECLARATIVE_ACK",
+          "reason": "action_intent_without_result",
+          "text": "That request was understood, sir, but no result is available and nothing has been executed."
+        },
+        {
+          "obligation": "MISSING_CONTEXT",
+          "source": "MISSING_CONTEXT",
+          "reason": "no_higher_priority_grounded_source",
+          "text": "That detail is not available in the current context, sir; please provide the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Set the service port to 9100, but don't restart it.",
+          "What port did I just specify?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "l:L08_L09-r4-t2",
+      "base_id": "l:L08_L09-t2",
+      "user": "What port did I just specify?",
+      "expected_sources": [
+        "LEDGER"
+      ],
+      "required_detail": "9100",
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": 11,
+        "reason": "no_grounded_source_available"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please provide the source.",
+      "candidates_built": [
+        {
+          "obligation": "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION",
+          "source": "DECLARATIVE_ACK",
+          "reason": "action_intent_without_result",
+          "text": "That request was understood, sir, but no result is available and nothing has been executed."
+        },
+        {
+          "obligation": "MISSING_CONTEXT",
+          "source": "MISSING_CONTEXT",
+          "reason": "no_higher_priority_grounded_source",
+          "text": "That detail is not available in the current context, sir; please provide the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Set the service port to 9100, but don't restart it.",
+          "What port did I just specify?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    },
+    {
+      "id": "l:L08_L09-r5-t2",
+      "base_id": "l:L08_L09-t2",
+      "user": "What port did I just specify?",
+      "expected_sources": [
+        "LEDGER"
+      ],
+      "required_detail": "9100",
+      "obligation": {
+        "obligation": "MISSING_CONTEXT",
+        "priority": 11,
+        "reason": "no_grounded_source_available"
+      },
+      "final_source": "MISSING_CONTEXT",
+      "visible_text": "That detail is not available in the current context, sir; please provide the source.",
+      "candidates_built": [
+        {
+          "obligation": "ACKNOWLEDGE_INTENT_WITHOUT_EXECUTION",
+          "source": "DECLARATIVE_ACK",
+          "reason": "action_intent_without_result",
+          "text": "That request was understood, sir, but no result is available and nothing has been executed."
+        },
+        {
+          "obligation": "MISSING_CONTEXT",
+          "source": "MISSING_CONTEXT",
+          "reason": "no_higher_priority_grounded_source",
+          "text": "That detail is not available in the current context, sir; please provide the source."
+        }
+      ],
+      "eligible_candidate_would_have_satisfied": false,
+      "verdict": "FROZEN STATE LIMITATION \u2014 no candidate the frozen state supports could meet the expectation",
+      "ledger_snapshot": {
+        "user_texts": [
+          "Set the service port to 9100, but don't restart it.",
+          "What port did I just specify?"
+        ],
+        "params": {},
+        "observations": [],
+        "targets": [],
+        "records": []
+      },
+      "trusted_results": []
+    }
+  ]
+}

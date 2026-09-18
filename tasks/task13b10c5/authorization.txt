@@ -1,0 +1,23 @@
+Task 13B10C5 authorization: change exactly one component family — deterministic operational
+response-obligation derivation, candidate construction, source selection and templates — plus the
+TEST-ONLY harness and evidence.
+
+Immutable and byte-identical to Task 13B10C4: provenance_lock.py, the action router (lexicon,
+connector grammar, primary-action / reporting-intent / target extractors), the request classifier,
+the proposal guard and its ambiguity / unsupported-action / multi-action guards, the canonicalization
+map, the tool schemas, the dispatcher, the confirmation policy, the tool-result trust rules, the lane
+policy, the frozen safety gate, the old shadow detector, the base collector and the persona.
+
+Production JARVIS and Hermes source/configuration: no changes. Hermes remains disabled in
+production. No real side effects. No model download or substitution. No second model and no
+semantic judge anywhere in the response path.
+
+IMMUTABLE RULE (unchanged): for every OPERATIONAL turn, raw model prose is never user-visible.
+Allowed operational sources are the Task 13B10C4 nine — LEDGER, TOOL_SUCCESS, TOOL_ERROR,
+CONFIRMATION, AMBIGUITY, MISSING_CONTEXT, DECLARATIVE_ACK, UNVERIFIED_STATUS,
+CAPABILITY_UNAVAILABLE — plus the one source this task is authorized to add,
+MULTI_ACTION_UNSUPPORTED. SAFE_RAW is not added to operational turns.
+
+The immutable Task 13B10C4 provenance lock is executed unchanged on every turn as a shadow verdict
+and recorded in evidence; the C5 layer's emitted response is independently checked against the same
+rule.

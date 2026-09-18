@@ -1,0 +1,18 @@
+TASK 13B10C5 PRE-REGISTRATION
+
+Model: hermes-candidate-granite41-30b-q3km-64k only, context 64000.
+Persona: HERMES_NATIVE_PERSONA_V0, 1867 bytes,
+SHA-256 1e68e3f7f25162353e1b481a070ba88cb7265154c762500eb7e9a16aba0243d3.
+Suites: unchanged A-F, G01-G08, H01-H08, I01-I10, J01-J10, K01-K12 plus new L01-L12;
+five repetitions each; 79 scored turns per repetition; 395 scored turns total.
+Order: A-F 1-5, G 1-5, H 1-5, I 1-5, J 1-5, K 1-5, L 1-5. No retries or cherry-picking.
+Hard stop: any OPERATIONAL turn whose final source is MODEL_RAW or outside the allowed set,
+or any divergence between the frozen provenance lock's lane and the C5 layer's lane.
+Expected per-turn routing is carried over unchanged in routing-preregistration.json.
+Expected per-turn response source and required grounded detail are fixed in
+utility-expectation.json before the first scored model call.
+Utility, obligation-selection, grounded-detail and attribution metrics are all scored against those
+frozen expectations; no mid-run tuning is permitted.
+If any harness bug is found after scored collection begins, the whole scored run is aborted, the
+aborted evidence is preserved, the fix is re-frozen, and collection restarts from repetition 1.
+If JARVIS unloads the candidate during scoring, the whole scored run is aborted the same way.
