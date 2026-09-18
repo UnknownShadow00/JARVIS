@@ -1,0 +1,264 @@
+task: 13B11A
+contract_version: v1
+production_commit: 2d7a2ec816500610eafdba4c1a3c0d73f5594c18
+generated_from: CONTRACT_GAP_ANALYSIS.md
+counts:
+  MISSING: 21
+  PARTIAL/CONFLICTING: 2
+  PARTIAL: 8
+  MISSING/CONFLICTING: 2
+  IMPLEMENTED: 1
+  N/A-YET: 1
+  CONFLICTING: 1
+gaps:
+- id: G-01
+  requirement: Deterministic request classification into the nine classes
+  clause: "\xA75.1"
+  status: MISSING
+  note: ''
+  evidence: '`app/brain/router.py` classifies six *intents* (`_VALID_INTENTS`, 32) partly by LLM (`_classify_with_ollama`,
+    89). No `VALUE_QUERY`/`DECLARATIVE_FACT`/`MISSING_CONTEXT_QUERY` concept, and classification is not
+    fully deterministic.'
+- id: G-02
+  requirement: Operational vs conversational lane split
+  clause: "\xA74"
+  status: MISSING
+  note: ''
+  evidence: No lane concept anywhere in `app/`. Every branch of `_process` (598) ends in model prose.
+- id: G-03
+  requirement: Primary action routing
+  clause: "\xA75.2"
+  status: PARTIAL/CONFLICTING
+  note: ''
+  evidence: Router emits `suggested_tool`, not a primary action; deterministic rules (163) map verbs straight
+    to tools or to `confirm_action`. A compound request is never segmented, so the C3 failure mode (reporting
+    clause displaces the action) is structurally present.
+- id: G-04
+  requirement: Reporting intent as non-executable metadata
+  clause: "\xA77"
+  status: MISSING
+  note: ''
+  evidence: No representation.
+- id: G-05
+  requirement: Target extraction with resolution state
+  clause: "\xA75.2"
+  status: PARTIAL
+  note: ''
+  evidence: '`build_tool_params` (`app/brain/tool_params.py:33`) extracts app names/paths/queries by regex
+    but has no notion of "unresolved"; `extract_app_name` (26) returns whatever remains after stripping
+    verbs, so "open it" yields the literal target `it`.'
+- id: G-06
+  requirement: Multi-action detection and refusal
+  clause: "\xA78"
+  status: MISSING
+  note: ''
+  evidence: No segmentation; one tool is selected and run.
+- id: G-07
+  requirement: Canonical argument normalization, raw retained
+  clause: "\xA79.1"
+  status: PARTIAL/CONFLICTING
+  note: ''
+  evidence: "The only normalization is `\"visual studio code\" \u2192 \"vscode\"` inside `extract_app_name`\
+    \ (26), i.e. during extraction, and the pre-normalization value is not retained. Audit logs only the\
+    \ final `params` (`registry.call`, 176)."
+- id: G-08
+  requirement: Permission classes
+  clause: "\xA711.1"
+  status: MISSING
+  note: ''
+  evidence: Safety is a single integer `SAFETY_LEVEL` 0-3 per module; there is no class taxonomy and no
+    per-action mapping.
+- id: G-09
+  requirement: Permission decision before dispatch, not overridable
+  clause: "\xA711.2"
+  status: PARTIAL
+  note: ''
+  evidence: "`registry.call` (153) does gate before `module.execute` and blocks level \u2265 3 \u2014\
+    \ a real deny-before-dispatch. But the decision derives from a module-level constant, not from action\
+    \ + target + policy, and `approval_mode` can move the whole threshold at once (236)."
+- id: G-10
+  requirement: Confirmation state owned by JARVIS
+  clause: "\xA712.1"
+  status: PARTIAL
+  note: ''
+  evidence: "`_pending_confirmations` (`app/server.py:87`) is JARVIS-owned and `registry.call(..., confirmed=True)`\
+    \ is the only way to bypass the gate \u2014 but the state is an in-memory dict with no lifecycle."
+- id: G-11
+  requirement: Confirmation bound to action, target, arguments, session
+  clause: "\xA712.3"
+  status: MISSING
+  note: ''
+  evidence: The entry stores `{tool, params, trace_id}` (646); no user/session identity, and arguments
+    are not re-validated at approval (792-810).
+- id: G-12
+  requirement: Confirmation expiry / freshness
+  clause: "\xA712.3"
+  status: MISSING
+  note: ''
+  evidence: No `expires_at`, no freshness check. A request id remains valid until the process exits.
+- id: G-13
+  requirement: Dispatcher is the sole executor and trust boundary
+  clause: "\xA718.1"
+  status: PARTIAL
+  note: ''
+  evidence: '`registry.call` is the main path, but `app/computer/*` has its own gate (`safety.py:9`) and
+    tools are importable directly (`TOOLS` map, 74), so "sole executor" is a convention rather than a
+    structural property.'
+- id: G-14
+  requirement: Tool invocation identity
+  clause: "\xA718.2"
+  status: MISSING
+  note: ''
+  evidence: No invocation id; `ToolResult` (41) carries `tool`, `output`, `dry_run` only. Trace ids exist
+    but are per-request, not per-invocation.
+- id: G-15
+  requirement: Trusted `TOOL_SUCCESS` with structured facts
+  clause: "\xA718.4"
+  status: MISSING
+  note: ''
+  evidence: '`output` is an arbitrary object stringified into the prompt (`str(result.output)[:1000]`,
+    640). No structured fact set, so "only the facts in the result" cannot be enforced.'
+- id: G-16
+  requirement: Trusted `TOOL_ERROR` scoped to the invocation
+  clause: "\xA718.3"
+  status: MISSING
+  note: ''
+  evidence: Errors become `context = str(exc)` (700) and are re-narrated by the model.
+- id: G-17
+  requirement: Provenance ledger
+  clause: "\xA79.3"
+  status: MISSING
+  note: ''
+  evidence: No ledger. Memory components (`app/memory/*`) are semantic stores, not provenance.
+- id: G-18
+  requirement: '`USER_FACT` capture'
+  clause: "\xA73.2"
+  status: MISSING
+  note: ''
+  evidence: User-supplied operational values are not extracted or stored.
+- id: G-19
+  requirement: '`USER_REPORTED` distinct from tool-verified'
+  clause: "\xA79.3"
+  status: MISSING
+  note: ''
+  evidence: No source typing at all.
+- id: G-20
+  requirement: Correction supersession
+  clause: "\xA710"
+  status: MISSING
+  note: ''
+  evidence: No stored values, so nothing to supersede; the model is expected to remember corrections in
+    the prompt window.
+- id: G-21
+  requirement: Exactly one response obligation per operational turn
+  clause: "\xA714.1"
+  status: MISSING
+  note: ''
+  evidence: No obligation concept.
+- id: G-22
+  requirement: Deterministic operational response construction
+  clause: "\xA715"
+  status: MISSING/CONFLICTING
+  note: ''
+  evidence: 'Operational replies are produced by `llm_client.chat` and only cosmetically cleaned (`clean`,
+    `app/brain/response_cleaner.py:36`). Two deterministic exceptions exist: `try_direct_reply` (`app/brain/direct_responder.py`)
+    and the fixed `confirm_action` sentence (711).'
+- id: G-23
+  requirement: Operational raw-model-prose lock
+  clause: "\xA73.1 / INV-001"
+  status: MISSING
+  note: the central gap
+  evidence: Nothing distinguishes a model draft from an approved response; `finalize_reply` (602) returns
+    model text for every operational branch.
+- id: G-24
+  requirement: Capability-unavailable handling, no tool substitution
+  clause: "\xA713"
+  status: MISSING/CONFLICTING
+  note: ''
+  evidence: "An unsupported request is handed to the LLM with no tool result; the model may narrate it\
+    \ as done. Embedding tool selection (`_select_tool_with_embeddings`, 141, flag off) is *similarity-based\
+    \ substitution* \u2014 directly contrary to \xA713.2 if enabled."
+- id: G-25
+  requirement: Ambiguity handling without invented targets
+  clause: "\xA717"
+  status: MISSING
+  note: ''
+  evidence: '`extract_app_name` yields a pseudo-target for "open it"; there is no `REQUEST_TARGET` path.'
+- id: G-26
+  requirement: Audit covering the 17 contract fields
+  clause: "\xA719.1"
+  status: PARTIAL
+  note: ''
+  evidence: 'Good foundation: async JSONL audit (`app/logs/audit.py:46`) with `trace_id` correlation,
+    `intent_classified` / `tool_call` / `tool_result` / `approval_gate_*` events. Missing: raw vs canonical
+    arguments, permission decision as a first-class field, guard decision, provenance updates, response
+    obligation, final response source, final user-visible response, safety outcome.'
+- id: G-27
+  requirement: No chain-of-thought in audit
+  clause: "\xA719.2"
+  status: IMPLEMENTED
+  note: ''
+  evidence: Nothing logs model reasoning; `think` is suppressed for the main path (`llm_client._suppress_thinking`,
+    116).
+- id: G-28
+  requirement: Feature flag for the new path
+  clause: entry criteria
+  status: PARTIAL
+  note: ''
+  evidence: '`agent.hermes_enabled: false` exists (`app/config.py:177`, `config.yaml:168`) but nothing
+    reads it; there is no mode model and no integration boundary behind it.'
+- id: G-29
+  requirement: Rollback path
+  clause: entry criteria
+  status: PARTIAL
+  note: ''
+  evidence: Git revert plus config edit is possible; there is no flag-driven rollback because there is
+    no flag-driven path.
+- id: G-30
+  requirement: "Conformance tests CT-001\u2026CT-018"
+  clause: "\xA723"
+  status: MISSING
+  note: ''
+  evidence: '`tests/` covers router rules, safety levels, pipeline smoke; `evals/` covers product behaviour.
+    Neither asserts a contract invariant.'
+- id: G-31
+  requirement: Metric separation (model quality vs system safety)
+  clause: "\xA720"
+  status: MISSING
+  note: ''
+  evidence: '`evals/` grades product behaviour as a single quality number.'
+- id: G-32
+  requirement: Prompt-injection containment as policy
+  clause: "\xA721"
+  status: PARTIAL
+  note: ''
+  evidence: "Structurally, model text cannot call a tool directly \u2014 the router chooses the tool \u2014\
+    \ but tool *output* is injected into the prompt (`context`) and the model's narration is returned\
+    \ verbatim, so injected content can shape the user-visible answer on an operational turn."
+- id: G-33
+  requirement: Hermes adapter / structured proposals
+  clause: "\xA72.1, \xA718.1"
+  status: N/A-YET
+  note: ''
+  evidence: No adapter exists; `agent.hermes_*` are configuration stubs only.
+- id: G-34
+  requirement: Idempotency / duplicate-execution protection
+  clause: "\xA718.2 (implied)"
+  status: MISSING
+  note: ''
+  evidence: No invocation ids or idempotency keys; a repeated `/confirm/{id}` is protected only by `dict.pop`
+    (793).
+- id: G-35
+  requirement: Lifecycle-safe pending state
+  clause: "\xA712, \xA724"
+  status: MISSING
+  note: ''
+  evidence: Deep sleep exits the process (`resource_auto_deep_sleep_exit`), silently discarding every
+    pending confirmation.
+- id: G-36
+  requirement: Shared-Ollama model ownership
+  clause: "contract \xA76.2 extension discipline"
+  status: CONFLICTING
+  note: ''
+  evidence: '`unload_all_ollama_models` (`app/resource_manager.py:559`) unloads every model loaded in
+    the shared server, including models this instance does not own.'

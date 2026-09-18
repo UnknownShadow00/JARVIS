@@ -1,0 +1,27 @@
+TASK 13B11A — AUTHORIZATION AND SCOPE RECORD
+
+Authorized by: operator task specification "JARVIS V2 — TASK 13B11A / PRODUCTION INTEGRATION PLAN
+AGAINST JARVIS AGENT EXECUTION CONTRACT V1 / PLANNING ONLY — NO PRODUCTION IMPLEMENTATION".
+
+Authorized actions:
+  - read-only verification of the Task 13B10D contract commit and evidence bundle
+  - read-only verification of the production JARVIS and Hermes repositories
+  - read-only inspection of production source code and configuration
+  - creation of planning documents under tasks/task13b11a/
+  - creation of a TEST-ONLY evidence bundle task13b11a-production-integration-plan
+  - one workspace commit containing planning files only
+
+Explicitly NOT authorized and NOT performed:
+  - any production JARVIS source or configuration change
+  - any Hermes repository change or Hermes enablement
+  - any model, Ollama, NVIDIA, VM RAM or lifecycle change
+  - adding tools, MCP servers, services, units or migrations
+  - executing any tool
+  - any model inference run (none was required or performed)
+  - starting Task 13C or implementing any phase of this plan
+
+Verification method: production JARVIS was inspected at commit
+2d7a2ec816500610eafdba4c1a3c0d73f5594c18 through a workspace copy proven byte-identical for the
+inspected paths (app/ tree object 7d6e31f42ba43fb1b478a7b999ec819e23c1973a and config.yaml blob
+1e5d30f0699c3d9bf2bbfea7317cdfc8ff2c79cb are the same at that commit and at the workspace HEAD),
+so no file on the production host was opened for writing and no service was started or stopped.
