@@ -1,0 +1,41 @@
+TASK 13B11D — AUTHORIZATION AND SCOPE RECORD
+
+Authorized by: operator task specification "JARVIS V2 — TASK 13B11D / PROVENANCE LEDGER
+FOUNDATION / PRODUCTION PHASE P2 / PASSIVE / UNWIRED / NO REQUEST-PATH CHANGE / NO HERMES
+ENABLEMENT / NO TOOL EXECUTION CHANGE".
+
+Authorized actions (all performed):
+  - verification of the production entry state eb4c5db (parent 521969e), the Hermes baseline, the
+    workspace 13B11C commit, and the sealed 13B11C and 13B11B evidence bundles
+  - production source change limited to: the provenance record helpers and ledger, the source/trust
+    compatibility table, correction and supersession logic, lookup and snapshot APIs, passive
+    trusted-result constructors, one additive provenance record identifier in the existing P1
+    identifier family, and unit tests
+  - one focused production commit in /home/jarvis/JARVIS
+  - a separate workspace commit containing task documentation only
+  - a sealed evidence bundle task13b11d-provenance-foundation
+
+Explicitly NOT authorized and NOT performed:
+  - wiring provenance into the request path: no ledger is created, no fact recorded and no fact read
+    by any production code outside app/execution/
+  - request classifier, action router, canonicalizer, permission engine, confirmation state machine,
+    dispatcher wrapper, obligation engine, operational response engine, raw-prose lock, Hermes
+    adapter, shadow mode or Task 13C
+  - any audit emission: no schema-v3 event is written, and app/logs/audit.py and
+    app/observability/tracing.py are byte-identical to their baseline
+  - any persistence: no database, no file, no JSONL mirror, no migration
+  - any change to app/server.py, app/tools/registry.py, app/computer/safety.py,
+    app/resource_manager.py, the intent router, tool parameter builder, prompts, response cleaner,
+    config.yaml or the execution mode
+  - any lifecycle wiring: the ledger's drop/clear API is not connected to LIGHT_SLEEP, DEEP_SLEEP or
+    any other event
+  - Hermes routing, enablement or any Hermes repository change
+  - any model inference (the shared Ollama reported {"models":[]} before and after)
+  - pushing any commit to a remote
+  - the deferred operator decisions: the lane audit-field question and the redaction secret-key list
+    were left open, and the frozen P1 audit schema was not altered
+
+Method: source files were authored locally and installed on the production host; every test, probe
+and measurement was run in the production venv on 192.168.0.162 (Python 3.14.4). The legacy probe
+was captured at eb4c5db before any P2 file was installed and again at HEAD after the commit, using
+the byte-identical fixture from the 13B11B and 13B11C bundles.
