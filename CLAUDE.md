@@ -368,6 +368,26 @@ Remaining install work:
   - Hermes Agent: WSL2 install, init kanban, install workspace + labyrinth plugins,
     clone mission-control UI, clone wondelai/skills
 
+Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
+/home/jarvis/JARVIS, all passive and UNWIRED; execution.mode stays legacy):
+  Contract FROZEN (13B10D) and the production integration plan READY (13B11A).
+  Phases P0-P3 now landed, one focused commit each, every one adding files only:
+    521969e  P0  app/execution/types.py + execution.mode (defaults legacy)
+    eb4c5db  P1  audit_events.py + correlation.py
+    b9a557b  P2  provenance.py
+    e743243  P3  canonicalize.py
+    a69f33e  P3  lane.py
+    d4eb171  P3  classifier.py
+    03cab49  P3  router.py
+  Nothing in app/ imports any of them; the legacy path in app/server.py and
+  app/brain/router.py is byte-identical throughout. pytest 350 -> 2113 passed,
+  golden unchanged at 12/20 with the same eight failures at every step, legacy
+  behavioural probe byte-identical (fc68a0b0...). Evidence bundles under
+  /home/jarvis/.hermes-poc/evidence/task13b11{b..h}-*, each sealed with SHA256SUMS.
+  Method to keep: freeze the decision table and hash it BEFORE writing the module.
+  Next approved unit: P4 permission foundation (NOT started). Do not wire any of
+  P0-P3 into the live request path without a separate authorization.
+
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
   - Flip feature flags ON when ready: dictation, Obsidian vault, embedding
