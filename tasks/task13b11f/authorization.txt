@@ -1,0 +1,56 @@
+TASK 13B11F — AUTHORIZATION AND SCOPE RECORD
+
+Authorized by: operator task specification "JARVIS V2 — TASK 13B11F / PASSIVE RESPONSE-LANE POLICY
+FOUNDATION / PRODUCTION — PURE / UNWIRED / NO CLASSIFIER IMPLEMENTATION / NO ROUTER IMPLEMENTATION /
+NO DISPATCH / NO PERMISSIONS / NO HERMES ENABLEMENT".
+
+Authorized actions (all performed):
+  - verification of the production entry state e743243 (parent b9a557b), the Hermes baseline, the
+    workspace 13B11E commit, and the sealed 13B11E, 13B11D, 13B11C, 13B11B and 13B10D bundles
+  - derivation of the lane truth table from the frozen contract, hashed before implementation
+  - production source change limited to: one new module holding the lane policy, its input record,
+    its decision record and its reason vocabulary, plus unit tests
+  - one focused production commit in /home/jarvis/JARVIS
+  - a separate workspace commit containing task documentation only
+  - a sealed evidence bundle task13b11f-lane-policy
+
+Explicitly NOT authorized and NOT performed:
+  - wiring the lane policy into the request or response path: no production module imports
+    app.execution.lane, and app/server.py, app/brain/router.py and app/brain/response_cleaner.py
+    are byte-identical
+  - the request classifier or the action router: neither exists in app/execution/, and no text is
+    parsed anywhere in the new module — there is no regex, no split, no case folding and no lexicon
+  - permission engine, confirmation state machine, dispatcher wrapper, obligation engine,
+    operational response engine, Hermes adapter, shadow mode or Task 13C
+  - any provenance interaction: the ledger is neither read nor written, and
+    app/execution/provenance.py is byte-identical. The one provenance-shaped input,
+    active_operational_provenance, is a boolean the caller supplies
+  - any canonicalizer call: app/execution/canonicalize.py is byte-identical and is never imported
+  - any audit change: no event emitted, schema version 3 unchanged, the 17 contract fields
+    unchanged, lane still not among them, and app/logs/audit.py, app/observability/tracing.py and
+    app/execution/audit_events.py all byte-identical
+  - any new correlation identifier: app/execution/correlation.py is byte-identical
+  - any change to app/tools/registry.py, app/computer/safety.py, app/resource_manager.py,
+    app/brain/tool_params.py, app/brain/prompts.py, config.yaml or the execution mode
+  - any change to the frozen P0 types: Lane and RequestClass were imported and reused, and no
+    duplicate lane or request-class enum was defined
+  - any model-authority input: the public surface is one closed enum plus seven booleans, with no
+    parameter or field naming a model, draft, prose, confidence, prompt or reasoning concept
+  - Hermes routing, enablement or any Hermes repository change
+  - any model inference (the shared Ollama reported {"models":[]} before and after)
+  - pushing any commit to a remote
+  - the three deferred operator decisions: lane as one of the 17 audit fields, the redaction
+    secret-key list, and TIMEOUT as a provenance source were all left open and untouched
+
+One contract ambiguity was resolved rather than guessed, and is recorded in
+02-contract-and-plan-verification.txt §8 and docs/TRUTH_TABLE.md §6: whether the seven additional
+operational conditions reach GENERAL_EXPLANATION. The normative §4.1, §4.2, INV-001 and INV-010 say
+they do; the yaml key name `always_conversational_classes` read alone would say they do not. The
+implemented reading is the one that cannot make model prose more trusted. No contract file was
+modified.
+
+Method: the module and its tests were authored locally and installed on the production host; every
+test, probe, sweep and measurement was run in the production venv on 192.168.0.162 (Python 3.14.4).
+The legacy probe was captured at e743243 before app/execution/lane.py existed and again at HEAD
+after the commit, using the byte-identical fixture carried forward from the 13B11B, 13B11C, 13B11D
+and 13B11E bundles.
