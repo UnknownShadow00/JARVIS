@@ -390,7 +390,12 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   P4 entry criterion packaged 2026-09-19: tasks/task13b11i-review/
   PERMISSION_MATRIX_REVIEW.md — 35-row permission matrix over the real registry,
   9 current-vs-contract mismatches (5 declared + 4 new), 10 operator decisions
-  D-01..D-10 open. Review only; no production change; P4 still NOT started.
+  D-01..D-10. Operator signed off all ten, so P4 part one landed:
+    52c5da5  P4  permissions.py — 40-row signed-off matrix, policy version "1",
+                 tightening-only approval_mode, fail-closed; passive and unwired
+  pytest 2113 -> 2575, golden still 12/20 same eight, probe still fc68a0b0.
+  Next approved unit: passive confirmation state machine (NOT started). No
+  confirmation manager, dispatcher change or live wiring exists yet.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync

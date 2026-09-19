@@ -1,0 +1,537 @@
+{
+  "status": "FROZEN BEFORE app/execution/permissions.py EXISTED",
+  "source": "tasks/task13b11i-review/PERMISSION_MATRIX_REVIEW.md section B, as amended by operator decisions D-01..D-10",
+  "policy_version": "1",
+  "rows": 40,
+  "sha256": "9a8558ae10008ee90f6dbbad21c87c099c35f959e8a10bce1497521fa02a3013",
+  "table": [
+    {
+      "n": 1,
+      "key": "system_stats.read",
+      "review_row": 1,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [],
+      "denial_kind": null
+    },
+    {
+      "n": 2,
+      "key": "calendar.read",
+      "review_row": 2,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "read window only; no mutation path exists"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 3,
+      "key": "web_search.search",
+      "review_row": 3,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "result text is untrusted content"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 4,
+      "key": "web_search.fetch",
+      "review_row": 4,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [
+        "EGRESS_TARGET_POLICY"
+      ],
+      "notes": [
+        "caller-supplied URL: loopback, RFC1918, link-local and equivalent internal targets must be excluded by a future validator"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 5,
+      "key": "screenshot.capture",
+      "review_row": 5,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "local file path only"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 6,
+      "key": "vision.screen",
+      "review_row": 6,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "image content is untrusted"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 7,
+      "key": "vision.webcam",
+      "review_row": 7,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "camera capture is a deliberate act"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 8,
+      "key": "kasa.status",
+      "review_row": 8,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "covers status and discover; local network only"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 9,
+      "key": "kasa.control",
+      "review_row": 9,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "device named in the confirmation"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 10,
+      "key": "apps.open",
+      "review_row": 10,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "_APP_MAP allow-list stays in the tool; unknown name fails there"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 11,
+      "key": "apps.close",
+      "review_row": 11,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "taskkill /F discards unsaved work"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 12,
+      "key": "browser.open",
+      "review_row": 12,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "absolute URL only; no credentials in URL"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 13,
+      "key": "browser.search",
+      "review_row": 13,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [],
+      "denial_kind": null
+    },
+    {
+      "n": 14,
+      "key": "files.read",
+      "review_row": 14,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "safe-root check stays in the tool"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 15,
+      "key": "files.list",
+      "review_row": 14,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "safe-root check stays in the tool"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 16,
+      "key": "files.search",
+      "review_row": 14,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "reads file contents inside the safe roots"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 17,
+      "key": "files.move",
+      "review_row": 15,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "source and destination both named in the confirmation"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 18,
+      "key": "files.move.overwrite",
+      "review_row": 15,
+      "permission_class": "DESTRUCTIVE_ACTION",
+      "base_outcome": "DENY",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "an overwrite is never authorized by the reversible move row"
+      ],
+      "denial_kind": "POLICY_PROHIBITED"
+    },
+    {
+      "n": 19,
+      "key": "files.delete",
+      "review_row": 16,
+      "permission_class": "DESTRUCTIVE_ACTION",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "no tool exists; files.py does not delete"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    },
+    {
+      "n": 20,
+      "key": "obsidian.note_read",
+      "review_row": 17,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "vault scope"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 21,
+      "key": "obsidian.note_search",
+      "review_row": 17,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "vault scope"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 22,
+      "key": "obsidian.note_create",
+      "review_row": 18,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "vault scope"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 23,
+      "key": "obsidian.note_append",
+      "review_row": 18,
+      "permission_class": "REVERSIBLE_ACTION",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "vault scope; append is recoverable"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 24,
+      "key": "mcp_client.status",
+      "review_row": 19,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "no server call in the stub"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 25,
+      "key": "mcp_client.call",
+      "review_row": 20,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "whitelisted servers only; server output is untrusted"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 26,
+      "key": "cli.status",
+      "review_row": 21,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "ALLOW",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "shutil.which probe only"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 27,
+      "key": "cli.run",
+      "review_row": 22,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "per-harness allow-list"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 28,
+      "key": "browser_use.agent",
+      "review_row": 23,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "acts with the user's real session and cookies"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 29,
+      "key": "shell.execute",
+      "review_row": 24,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "class is uniform and never derived from the command text",
+        "existing _BLOCKED_PATTERNS and cwd root check stay in the tool",
+        "the verbatim command, resolved cwd and timeout are what a confirmation can predeclare"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 30,
+      "key": "computer_use.control",
+      "review_row": 25,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "PC control"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 31,
+      "key": "mouse_keyboard.control",
+      "review_row": 26,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "PC control"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 32,
+      "key": "cad.print",
+      "review_row": 27,
+      "permission_class": "DESTRUCTIVE_ACTION",
+      "base_outcome": "REQUIRE_CONFIRMATION",
+      "registered": true,
+      "required_constraints": [],
+      "notes": [
+        "physical output; verify STL first; printing is out of scope today"
+      ],
+      "denial_kind": null
+    },
+    {
+      "n": 33,
+      "key": "messaging.send",
+      "review_row": 28,
+      "permission_class": "EXTERNAL_COMMUNICATION",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "no user-invocable messaging tool exists"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    },
+    {
+      "n": 34,
+      "key": "messaging.system_egress",
+      "review_row": 29,
+      "permission_class": "EXTERNAL_COMMUNICATION",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "no autonomous outbound message may bypass user confirmation"
+      ],
+      "denial_kind": "POLICY_PROHIBITED"
+    },
+    {
+      "n": 35,
+      "key": "system.power",
+      "review_row": 30,
+      "permission_class": "SYSTEM_POWER",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "no host power tool; shell blocklists shutdown and reboot"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    },
+    {
+      "n": 36,
+      "key": "resource.control",
+      "review_row": 31,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "/resource/* and the CLI and kill-switch surfaces are operator-only, never agent-reachable"
+      ],
+      "denial_kind": "POLICY_PROHIBITED"
+    },
+    {
+      "n": 37,
+      "key": "finance.purchase",
+      "review_row": 32,
+      "permission_class": "FINANCIAL_PURCHASE",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "NONE CURRENTLY REGISTERED"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    },
+    {
+      "n": 38,
+      "key": "deploy.execute",
+      "review_row": 33,
+      "permission_class": "PRIVILEGED_ACTION",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "no deploy tool exists"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    },
+    {
+      "n": 39,
+      "key": "database.status",
+      "review_row": 34,
+      "permission_class": "READ_ONLY",
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "no database tool exists"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    },
+    {
+      "n": 40,
+      "key": "health_check",
+      "review_row": 35,
+      "permission_class": null,
+      "base_outcome": "DENY",
+      "registered": false,
+      "required_constraints": [],
+      "notes": [
+        "pkgutil-discovered but defines neither SAFETY_LEVEL nor execute; not dispatchable"
+      ],
+      "denial_kind": "NO_CAPABILITY"
+    }
+  ],
+  "amendment": {
+    "utc": "2026-09-19T04:40:00Z",
+    "what": "added the per-row field denial_kind: POLICY_PROHIBITED | NO_CAPABILITY | null",
+    "why": "a denial must say whether the capability is absent or forbidden, because the two reach different contract obligations: an absent capability is REPORT_CAPABILITY_UNAVAILABLE (contract 13.1) while a prohibition is a policy refusal. messaging.system_egress and resource.control name real, existing surfaces forbidden by D-06 and D-07, so reporting them as 'not registered' was wrong.",
+    "when": "before any scored test existed: the module had been written and smoke-checked, no test file had been created and no scored run had been made.",
+    "class_or_outcome_changed": "none - every row keeps its class, outcome, registration and constraints",
+    "previous_sha256": "8feca50e7a2c5b560e16250fb5a63093a603e3b1899c98d16302bebb43f19772"
+  }
+}
