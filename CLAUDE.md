@@ -421,8 +421,26 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   replayable) — recorded as deferred. No executor is configured anywhere in
   production; the legacy _pending_confirmations path in app/server.py is
   byte-identical and still owns every real confirmation.
-  Next approved unit: P6 obligation engine (NOT started). The real registry
-  adapter is P9, not next.
+  P6 attempted as 13B11L and BLOCKED at its own section-32 decision gate. No
+  module written, no production commit, production byte-identical at a0cc4d3.
+  Finding: classifier.ACTION_VERBS (44) does not cover router.UNSUPPORTED_VERBS
+  (41). 20 of 41 unsupported verbs -- backup build clear commit download fix
+  flush merge modify patch pull reset restore revert roll rollback rotate scale
+  upgrade upload -- are classified OTHER and land on Lane.CONVERSATIONAL, where
+  contract 4.2 permits raw model prose. Contract 13.1 (NORMATIVE) requires
+  UNKNOWN_ACTION + REPORT_CAPABILITY_UNAVAILABLE. "rollback the last deployment"
+  currently routes to an unconstrained model answer. The 20 share one structured
+  signature with plain chat ("hello there", "thanks"), so P6 cannot separate them
+  without reparsing text, which 15.3 and the task forbid. Latent only: nothing is
+  wired, and UNKNOWN_ACTION is already non-confirmable and non-dispatchable.
+  Fix verified read-only: add the 20 verbs to classifier ACTION_VERBS -> 21/41
+  becomes 41/41 with 0 collateral movement; router.py needs no change. Needs one
+  operator answer (which of the 20 also go in SENSITIVE_ACTION_VERBS) --
+  tasks/task13b11l/BLOCKING_CHANGE.md.
+  OBLIGATION_PRIORITY was checked and is complete (11 members, ranks 1-11 once
+  each, identical to contract 14.2) -- not the blocker.
+  Next approved unit: the P3 lexicon fix, THEN P6 obligation engine, THEN the P6
+  response builder. The real registry adapter is P9, not next.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
