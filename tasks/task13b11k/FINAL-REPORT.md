@@ -214,3 +214,22 @@ places it at P9, four phases away, behind the shadow pipeline and the inert conf
 
 Not started. Do not enable Hermes. Do not start Task 13C. Do not wire the dispatcher into live
 requests. Do not call real tools.
+
+---
+
+## Evidence bundle
+
+`/home/jarvis/.hermes-poc/evidence/task13b11k-dispatcher-foundation/` — **50 files, 49 manifest
+entries**, `SHA256SUMS` excludes itself and verifies with **0 failures** (49 OK).
+`SHA256SUMS` SHA-256:
+
+```
+92fcfff4e2dde49f1b0dd5e34c1d26121f0d95fc57a33ef7ba2fd33404621ba0
+```
+
+Sealed before this section was written, so `18-workspace-commit.txt` inside it records the
+documentation commit `8fded988` rather than this one. All 30 sealed bundles under `evidence/`
+were re-verified afterwards and are unchanged, 0 failures each.
+
+Final confirmation run at production `a0cc4d3`: `3247 passed, 11 deselected`, golden 12/20 with
+the same eight IDs.
