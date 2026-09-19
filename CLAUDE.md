@@ -387,6 +387,10 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   Method to keep: freeze the decision table and hash it BEFORE writing the module.
   Next approved unit: P4 permission foundation (NOT started). Do not wire any of
   P0-P3 into the live request path without a separate authorization.
+  P4 entry criterion packaged 2026-09-19: tasks/task13b11i-review/
+  PERMISSION_MATRIX_REVIEW.md — 35-row permission matrix over the real registry,
+  9 current-vs-contract mismatches (5 declared + 4 new), 10 operator decisions
+  D-01..D-10 open. Review only; no production change; P4 still NOT started.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
