@@ -403,10 +403,26 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   ConfirmationDispatcherUnavailable (a NotImplementedError) without advancing
   the record. SUCCEEDED/FAILED have no public route. No TTL value is frozen —
   plan §6 proposes them, no operator signed them.
-  P4 is structurally complete. Next approved unit: P5 trusted dispatcher /
-  ToolInvocation boundary (NOT started). No dispatcher, no live wiring, and the
-  legacy _pending_confirmations path in app/server.py is byte-identical and
-  still owns every real confirmation.
+  P4 is structurally complete. P5 landed in one commit:
+    a0cc4d3  P5  dispatch.py — the trusted execution boundary and the only
+                 constructor of a TrustedToolResult; seven authority gates, an
+                 injected executor with no default, a structural confirmation
+                 authority; passive and unwired. confirmation.py gained the three
+                 edges the frozen graph reserves for it (claim_for_dispatch,
+                 settle_success, settle_failure), each guarded, confirm() still a
+                 wall, still 0 try blocks.
+  pytest 2892 -> 3247, golden still 12/20 same eight, probe still fc68a0b0,
+  all 23 critical files byte-identical, registry.call still 4 callers.
+  A 150-cell dispatch matrix was hashed before the module existed
+  (ede846eb...); 10 cells reach an executor, 140 refuse with executed=false.
+  Five cells failed on the first run and the frozen table won — contract §12.1
+  requires a gated action with no approval to present as CONFIRMATION_REQUIRED.
+  A timeout leaves the confirmation record in EXECUTING (no frozen edge, not
+  replayable) — recorded as deferred. No executor is configured anywhere in
+  production; the legacy _pending_confirmations path in app/server.py is
+  byte-identical and still owns every real confirmation.
+  Next approved unit: P6 obligation engine (NOT started). The real registry
+  adapter is P9, not next.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
