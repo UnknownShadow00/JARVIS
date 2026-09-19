@@ -390,12 +390,23 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   P4 entry criterion packaged 2026-09-19: tasks/task13b11i-review/
   PERMISSION_MATRIX_REVIEW.md — 35-row permission matrix over the real registry,
   9 current-vs-contract mismatches (5 declared + 4 new), 10 operator decisions
-  D-01..D-10. Operator signed off all ten, so P4 part one landed:
+  D-01..D-10. Operator signed off all ten, so P4 landed in two commits:
     52c5da5  P4  permissions.py — 40-row signed-off matrix, policy version "1",
                  tightening-only approval_mode, fail-closed; passive and unwired
-  pytest 2113 -> 2575, golden still 12/20 same eight, probe still fc68a0b0.
-  Next approved unit: passive confirmation state machine (NOT started). No
-  confirmation manager, dispatcher change or live wiring exists yet.
+    c321cb8  P4  confirmation.py — 7-state machine (plan's exact set, no resting
+                 CONFIRMED), 12-field binding, in-memory ConfirmationStore,
+                 expiry as data with an injected clock; passive and unwired
+  pytest 2113 -> 2575 -> 2892, golden still 12/20 same eight, probe still
+  fc68a0b0, all 24 critical files byte-identical each time.
+  PENDING -> EXECUTING is deliberately a wall: confirm() validates session,
+  state, freshness and all 12 binding fields, then raises
+  ConfirmationDispatcherUnavailable (a NotImplementedError) without advancing
+  the record. SUCCEEDED/FAILED have no public route. No TTL value is frozen —
+  plan §6 proposes them, no operator signed them.
+  P4 is structurally complete. Next approved unit: P5 trusted dispatcher /
+  ToolInvocation boundary (NOT started). No dispatcher, no live wiring, and the
+  legacy _pending_confirmations path in app/server.py is byte-identical and
+  still owns every real confirmation.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
