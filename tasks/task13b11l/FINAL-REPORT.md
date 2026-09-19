@@ -152,3 +152,20 @@ Hermes never started, no inference performed.
 
 Do not enable Hermes. Do not start Task 13C. Do not wire anything into live requests. Do not
 build user-facing response text.
+
+---
+
+## Evidence bundle
+
+`/home/jarvis/.hermes-poc/evidence/task13b11l-obligation-engine/` — **33 files, 32 manifest
+entries**, `SHA256SUMS` excludes itself and verifies with **0 failures** (32 OK).
+`SHA256SUMS` SHA-256:
+
+```
+ca703e184c354c935a279f4a7e844873e6a044ba199f4285c4ca418fad5b2e1a
+```
+
+Sealed before this section was written, so `11-workspace-commit.txt` inside it records the
+documentation commit `09132ff3` rather than this one. All 31 sealed bundles under `evidence/`
+were re-verified afterwards and are unchanged, 0 failures each. Production re-checked after
+sealing: `a0cc4d3c…`, 0 dirty, 0 untracked.
