@@ -338,7 +338,9 @@ T+0.0s login → `boot.py` starts (Task Scheduler) | T+0.1s context pre-fetch (p
 Phase:        Pre-server local validation nearly complete. Phase 0-3 usable; Phase 4+
               early track landed feature-flagged OFF (dictation, Obsidian, embedding
               routing, Graphiti); rest stays explicit stubs/deferred.
-Tests:        pytest 350 passed / 0 skipped. pre_server_readiness 6/6 PASS
+Tests:        pytest 350 passed / 0 skipped (workspace clone). Production
+              /home/jarvis/JARVIS: 3464 passed / 11 deselected / 0 failed.
+              pre_server_readiness 6/6 PASS
               (pytest, pip-audit, pip check, npm audit, readiness report, tool smoke).
 Hardware:     4070 Ti Super 16GB active. 5090 not yet set up.
 Active model: qwen3-nothink (Modelfile.nothink); qwen3:14b for deep_reasoning; qwen3-vl for vision.
@@ -423,24 +425,50 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   byte-identical and still owns every real confirmation.
   P6 attempted as 13B11L and BLOCKED at its own section-32 decision gate. No
   module written, no production commit, production byte-identical at a0cc4d3.
-  Finding: classifier.ACTION_VERBS (44) does not cover router.UNSUPPORTED_VERBS
+  Finding: classifier.ACTION_VERBS (44) did not cover router.UNSUPPORTED_VERBS
   (41). 20 of 41 unsupported verbs -- backup build clear commit download fix
   flush merge modify patch pull reset restore revert roll rollback rotate scale
-  upgrade upload -- are classified OTHER and land on Lane.CONVERSATIONAL, where
-  contract 4.2 permits raw model prose. Contract 13.1 (NORMATIVE) requires
+  upgrade upload -- were classified OTHER and landed on Lane.CONVERSATIONAL,
+  where contract 4.2 permits raw model prose. Contract 13.1 (NORMATIVE) requires
   UNKNOWN_ACTION + REPORT_CAPABILITY_UNAVAILABLE. "rollback the last deployment"
-  currently routes to an unconstrained model answer. The 20 share one structured
-  signature with plain chat ("hello there", "thanks"), so P6 cannot separate them
-  without reparsing text, which 15.3 and the task forbid. Latent only: nothing is
-  wired, and UNKNOWN_ACTION is already non-confirmable and non-dispatchable.
-  Fix verified read-only: add the 20 verbs to classifier ACTION_VERBS -> 21/41
-  becomes 41/41 with 0 collateral movement; router.py needs no change. Needs one
-  operator answer (which of the 20 also go in SENSITIVE_ACTION_VERBS) --
-  tasks/task13b11l/BLOCKING_CHANGE.md.
+  routed to an unconstrained model answer. The 20 shared one structured
+  signature with plain chat ("hello there", "thanks"), so P6 could not separate
+  them without reparsing text, which 15.3 and the task forbid. Latent only:
+  nothing was wired, and UNKNOWN_ACTION is non-confirmable and non-dispatchable.
   OBLIGATION_PRIORITY was checked and is complete (11 members, ranks 1-11 once
   each, identical to contract 14.2) -- not the blocker.
-  Next approved unit: the P3 lexicon fix, THEN P6 obligation engine, THEN the P6
-  response builder. The real registry adapter is P9, not next.
+
+  P3 lexicon fix LANDED as 13B11L-R1 (2026-09-20), one focused commit:
+    9ace0e3  P3-R1  classifier.py lexicon reconciliation -- 20 verbs added to
+             ACTION_VERBS (44 -> 64), 14 of them also to SENSITIVE_ACTION_VERBS
+             (26 -> 40) per the operator's signed-off split; backup build
+             download fix roll rotate deliberately not sensitive. router.py
+             untouched. +25 -0 lines, no executable statement, still passive.
+  Invariant now held by tests/execution/classifier_lexicon_reconciliation_test.py
+  (177 tests): router.UNSUPPORTED_VERBS is a subset of classifier.ACTION_VERBS.
+  It is asserted in the test, not the module -- classifier -> router is the
+  dependency the classifier docstring forbids.
+  Measured: 21/41 -> 41/41 reach UNKNOWN_ACTION + OPERATIONAL; 14/14 sensitive
+  and 6/6 not promoted; 8/8 chat + 9/9 new explanatory + 8/8 supported controls
+  unchanged on the full 7-field signature; the five named security prompts 0 on
+  CONVERSATIONAL and 0 dispatchable; a pre-edit collateral scan over 2041
+  distinct strings from every execution corpus moved exactly 2, both "scale",
+  both toward OPERATIONAL, 0 the other way. pytest 3247 -> 3464 passed / 0
+  failed, golden still 12/20 same eight, probe still fc68a0b0, all 24 critical
+  files byte-identical, registry.call still 4 callers. Security review 30/30.
+  Two existing tests changed, neither relaxed: router_generalization_test
+  asserted the defect (now 4 assertions where it had 2) and
+  router_non_activation_test re-pins 1 of its 7 digests with the prior value
+  kept in a comment.
+  Flagged to the operator, not decided: CLASSIFIER_VERSION stays "1" per the
+  task although the constant's comment says a lexicon change bumps it; the
+  frozen split makes "rollback the last deployment" sensitive but "roll back
+  the deployment" ordinary; "reset the service" is AMBIGUOUS_ACTION by
+  precedence, which still satisfies the requirement.
+  Next approved unit: re-run 13B11L (P6 obligation engine) from 9ace0e3 -- its
+  blocking condition is gone -- freezing the matrix against the CORRECTED P3
+  outputs. Then the P6 response builder. The real registry adapter is P9, not
+  next. Do not overwrite the blocked 13B11L analysis; it is history.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
