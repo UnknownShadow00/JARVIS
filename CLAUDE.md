@@ -339,7 +339,7 @@ Phase:        Pre-server local validation nearly complete. Phase 0-3 usable; Pha
               early track landed feature-flagged OFF (dictation, Obsidian, embedding
               routing, Graphiti); rest stays explicit stubs/deferred.
 Tests:        pytest 350 passed / 0 skipped (workspace clone). Production
-              /home/jarvis/JARVIS: 3464 passed / 11 deselected / 0 failed.
+              /home/jarvis/JARVIS: 3744 passed / 11 deselected / 0 failed.
               pre_server_readiness 6/6 PASS
               (pytest, pip-audit, pip check, npm audit, readiness report, tool smoke).
 Hardware:     4070 Ti Super 16GB active. 5090 not yet set up.
@@ -460,15 +460,39 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   asserted the defect (now 4 assertions where it had 2) and
   router_non_activation_test re-pins 1 of its 7 digests with the prior value
   kept in a comment.
-  Flagged to the operator, not decided: CLASSIFIER_VERSION stays "1" per the
-  task although the constant's comment says a lexicon change bumps it; the
+  Flagged to the operator by R1: CLASSIFIER_VERSION stayed "1" although the
+  constant's comment says a lexicon change bumps it (CLOSED by R2 below); the
   frozen split makes "rollback the last deployment" sensitive but "roll back
   the deployment" ordinary; "reset the service" is AMBIGUOUS_ACTION by
-  precedence, which still satisfies the requirement.
-  Next approved unit: re-run 13B11L (P6 obligation engine) from 9ace0e3 -- its
+  precedence, which still satisfies the requirement. The latter two are open
+  and latent -- both spellings are operational, UNKNOWN_ACTION, not executable.
+
+  Classifier version reconciled as 13B11L-R2 (2026-09-20), one focused commit:
+    ea0cb32  R2  CLASSIFIER_VERSION "1" -> "2" and the comment defining both.
+             Exactly ONE non-comment line of 319 differs from 9ace0e3.
+  "1" keeps its original meaning (44 ACTION_VERBS, 26 sensitive, 21/41
+  covered); "2" names the rule set R1 left (64, 40, 41/41). One version name
+  had come to identify two rule sets, so an audited classification could not be
+  replayed against the rules that produced it -- an audit defect, not a
+  behavioural one. The window where the repaired rules reported "1" is exactly
+  9ace0e3..ea0cb32: local only, never pushed, mode legacy, no audit record
+  emitted.
+  Proof rather than assertion: 260 requests x 2 context shapes x 16 fields were
+  snapshotted BEFORE the bump and hashed; with classifier_version removed the
+  snapshot reproduces byte-for-byte after (2b94f79f), 0 of 520 rows moving any
+  non-version field. Exactly 1 of 5 version constants moved -- router, lane,
+  canonicalization and permission all still "1". Lexicon digests, rule table
+  and reason vocabulary identical; 41/41 sweep and all 25 R1 controls
+  unchanged. pytest 3464 -> 3744 passed / 0 failed, golden still 12/20 same
+  eight, probe still fc68a0b0, 24 critical files byte-identical.
+  Six version assertions updated, none weakened (each writes the literal "2");
+  permissions_decisions_test's independence check was STRENGTHENED from
+  all(value == "1") to a per-name map, which the bump now demonstrates.
+  Next approved unit: re-run 13B11L (P6 obligation engine) from ea0cb32 -- its
   blocking condition is gone -- freezing the matrix against the CORRECTED P3
-  outputs. Then the P6 response builder. The real registry adapter is P9, not
-  next. Do not overwrite the blocked 13B11L analysis; it is history.
+  outputs, and carrying classifier version "2" in any audit record. Then the P6
+  response builder. The real registry adapter is P9, not next. Do not overwrite
+  the blocked 13B11L analysis; it is history.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
