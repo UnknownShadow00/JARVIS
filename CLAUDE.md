@@ -339,7 +339,7 @@ Phase:        Pre-server local validation nearly complete. Phase 0-3 usable; Pha
               early track landed feature-flagged OFF (dictation, Obsidian, embedding
               routing, Graphiti); rest stays explicit stubs/deferred.
 Tests:        pytest 350 passed / 0 skipped (workspace clone). Production
-              /home/jarvis/JARVIS: 3744 passed / 11 deselected / 0 failed.
+              /home/jarvis/JARVIS: 5122 passed / 11 deselected / 0 failed.
               pre_server_readiness 6/6 PASS
               (pytest, pip-audit, pip check, npm audit, readiness report, tool smoke).
 Hardware:     4070 Ti Super 16GB active. 5090 not yet set up.
@@ -467,6 +467,39 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   precedence, which still satisfies the requirement. The latter two are open
   and latent -- both spellings are operational, UNKNOWN_ACTION, not executable.
 
+  P6 LANDED as 13B11L-P6 (2026-09-20), one focused commit, files only:
+    8a70d17  P6  obligations.py + 4 test files + 2 fixtures -- the deterministic
+             response-obligation engine. 7 files, +2289 -0, 0 files modified.
+  Contract 14.1: exactly one obligation per operational turn, from frozen inputs
+  only. It decides WHAT to report, never how it is worded: no template, no
+  user-facing string, no prompt, no str field on the input at all. Execution
+  truth arrives only as a TrustedToolResult. Conversational turns return None.
+  The 442-row matrix was frozen and hashed with the module provably absent, and
+  it caught two wrong rank predicates: the validated 13B10C5 ladder put all 41
+  unsupported verbs on rank 1 ("shall I proceed?") or rank 4 ("which one?"),
+  both implying an execution that can never happen, against 13.1. Rank 1 now
+  requires an action an approval could bind (12.3) and rank 4 one that requires
+  a target (17.1), so 41/41 reach REPORT_CAPABILITY_UNAVAILABLE.
+  The existing suite then caught an architectural violation: importing
+  confirmation.py broke the zero-importer invariant P5 had preserved. Fixed on
+  this side -- confirmation_state became confirmation_claimed, the settled
+  projection the plan specified -- at the cost of a matrix re-freeze. No
+  existing test was relaxed and no existing file was modified.
+  Module agreed with the corrected table on the FIRST run: 0 failures / 442
+  rows, including the per-row proof that min(rank of every rule that holds)
+  equals the selected rank. pytest 3744 -> 5122 passed / 0 failed, golden still
+  12/20 same eight, probe still fc68a0b0, 24 critical files byte-identical,
+  security review 34/34, 0 importers and 0 call sites under app/.
+  Two mappings decided inside the frozen eleven and flagged: DENY ->
+  REPORT_CAPABILITY_UNAVAILABLE (no denial member exists; adding one is a 6.2
+  extension) and TIMEOUT -> REPORT_TOOL_ERROR (rank 3 would claim the effect
+  happened). Both distinctions survive in the machine-readable reason.
+  Also flagged: R1/R2 record a "bundle SHA-256" no script in either bundle
+  computes and 14 formulations failed to reproduce; integrity established three
+  other ways instead, nothing modified to make them agree.
+  Next approved unit: P6 unit 2, the deterministic operational response builder
+  (ApprovedOperationalResponse). NOT started. The real registry adapter is P9.
+
   Classifier version reconciled as 13B11L-R2 (2026-09-20), one focused commit:
     ea0cb32  R2  CLASSIFIER_VERSION "1" -> "2" and the comment defining both.
              Exactly ONE non-comment line of 319 differs from 9ace0e3.
@@ -488,11 +521,8 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   Six version assertions updated, none weakened (each writes the literal "2");
   permissions_decisions_test's independence check was STRENGTHENED from
   all(value == "1") to a per-name map, which the bump now demonstrates.
-  Next approved unit: re-run 13B11L (P6 obligation engine) from ea0cb32 -- its
-  blocking condition is gone -- freezing the matrix against the CORRECTED P3
-  outputs, and carrying classifier version "2" in any audit record. Then the P6
-  response builder. The real registry adapter is P9, not next. Do not overwrite
-  the blocked 13B11L analysis; it is history.
+  That re-run is done: see 13B11L-P6 above. Do not overwrite the blocked 13B11L
+  analysis; it is history.
 
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
