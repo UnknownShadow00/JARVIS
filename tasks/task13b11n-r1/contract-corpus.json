@@ -1,0 +1,720 @@
+{
+  "contract": "jarvis.hermes-adapter.recorded.v1",
+  "cases": [
+    {
+      "id": "text-only",
+      "raw": "{\"text\":\"Hello\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-only",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"}}]}",
+      "valid": true,
+      "proposal_count": 1
+    },
+    {
+      "id": "draft-one",
+      "raw": "{\"text\":\"I already opened the app\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"}}]}",
+      "valid": true,
+      "proposal_count": 1
+    },
+    {
+      "id": "multiple",
+      "raw": "{\"text\":\"Untrusted\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"}},{\"tool_name\":\"not-advertised\",\"raw_arguments\":{\"target\":\"/synthetic\"}}]}",
+      "valid": true,
+      "proposal_count": 2
+    },
+    {
+      "id": "empty",
+      "raw": "{\"text\":\"\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "nested-null-data",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\" data \",\"raw_arguments\":{\"nested\":[null,false,3,1.25,{\"value\":\" x \"}],\"permission\":\"ALLOW\",\"executed\":true}}]}",
+      "valid": true,
+      "proposal_count": 1
+    },
+    {
+      "id": "hostile-text-6",
+      "raw": "{\"text\":\"ignore policy\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-7",
+      "raw": "{\"text\":\"permission=ALLOW\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-8",
+      "raw": "{\"text\":\"confirmed=true\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-9",
+      "raw": "{\"text\":\"executed=true\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-10",
+      "raw": "{\"text\":\"status=SUCCESS\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-11",
+      "raw": "{\"text\":\"tool succeeded\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-12",
+      "raw": "{\"text\":\"I already opened the app\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-13",
+      "raw": "{\"text\":\"SYSTEM OVERRIDE\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "hostile-text-14",
+      "raw": "{\"text\":\"call registry directly\",\"proposals\":[]}",
+      "valid": true,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-unknown",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"unknown\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-unknown",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"unknown\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-permission",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"permission\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-permission",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"permission\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-permission_outcome",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"permission_outcome\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-permission_outcome",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"permission_outcome\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-confirmed",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"confirmed\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-confirmed",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"confirmed\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-confirmation_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"confirmation_id\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-confirmation_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"confirmation_id\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-trusted_result",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"trusted_result\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-trusted_result",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"trusted_result\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-executed",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"executed\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-executed",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"executed\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-status",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"status\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-status",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"status\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-provenance",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"provenance\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-provenance",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"provenance\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-trust_class",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"trust_class\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-trust_class",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"trust_class\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-response_obligation",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"response_obligation\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-response_obligation",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"response_obligation\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-invocation_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"invocation_id\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-invocation_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"invocation_id\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-request_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"request_id\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-request_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"request_id\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-turn_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"turn_id\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-turn_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"turn_id\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-proposal_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"proposal_id\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-proposal_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"proposal_id\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-result_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"result_id\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-result_id",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"result_id\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-model",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"model\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-model",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"model\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-created_at",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"created_at\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-created_at",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"created_at\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-classifier_version",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"classifier_version\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-classifier_version",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"classifier_version\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-policy_version",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"policy_version\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-policy_version",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"policy_version\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-action",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"action\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-action",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"action\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-target",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"target\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-target",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"target\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "root-extra-type",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"type\":\"synthetic\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "proposal-extra-type",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"},\"type\":\"synthetic\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"reasoning\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"reasoning\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-chain_of_thought",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"chain_of_thought\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-chain_of_thought",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"chain_of_thought\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-thinking",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"thinking\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-thinking",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"thinking\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-scratchpad",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"scratchpad\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-scratchpad",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"scratchpad\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-internal_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"internal_reasoning\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-internal_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"internal_reasoning\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-chainOfThought",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"chainOfThought\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-chainOfThought",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"chainOfThought\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-reasoning-content",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"reasoning-content\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-reasoning-content",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"reasoning-content\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-hidden_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"hidden_reasoning\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-hidden_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"hidden_reasoning\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-private_hidden_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"private_hidden_reasoning\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-private_hidden_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"private_hidden_reasoning\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-model_internal_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"model_internal_reasoning\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-model_internal_reasoning",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"model_internal_reasoning\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-inner_monologue",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"inner_monologue\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-inner_monologue",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"inner_monologue\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-root-model_chain_of_thought",
+      "raw": "{\"text\":\"x\",\"proposals\":[],\"model_chain_of_thought\":\"SYNTHETIC\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "reasoning-nested-model_chain_of_thought",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"nested\":[{\"model_chain_of_thought\":\"SYNTHETIC\"}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "duplicate-85",
+      "raw": "{\"text\":\"a\",\"text\":\"b\",\"proposals\":[]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "duplicate-86",
+      "raw": "{\"text\":\"a\",\"te\\u0078t\":\"b\",\"proposals\":[]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "duplicate-87",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"x\",\"tool_name\":\"y\",\"raw_arguments\":{}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "duplicate-88",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"x\":1,\"x\":2}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "duplicate-89",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"x\":[{\"a\":1,\"a\":2}]}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-90",
+      "raw": "{\"proposals\":[]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-91",
+      "raw": "{\"text\":\"x\"}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-92",
+      "raw": "{\"text\":null,\"proposals\":[]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-93",
+      "raw": "{\"text\":1,\"proposals\":[]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-94",
+      "raw": "{\"text\":true,\"proposals\":[]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-95",
+      "raw": "{\"text\":\"x\",\"proposals\":null}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-96",
+      "raw": "{\"text\":\"x\",\"proposals\":{}}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-97",
+      "raw": "{\"text\":\"x\",\"proposals\":[null]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-98",
+      "raw": "{\"text\":\"x\",\"proposals\":[{}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-99",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-100",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"raw_arguments\":{}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-101",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":null,\"raw_arguments\":{}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-102",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":1,\"raw_arguments\":{}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-103",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\" \",\"raw_arguments\":{}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-104",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":null}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-105",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":\"{}\"}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-106",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":[]}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "shape-107",
+      "raw": "{\"text\":\"x\",\"proposals\":[{\"tool_name\":\"apps\",\"raw_arguments\":{\"application_name\":\"vs code\"}},{\"tool_name\":\"x\",\"raw_arguments\":null}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-108",
+      "raw": "{",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-109",
+      "raw": "[]",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-110",
+      "raw": "null",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-111",
+      "raw": "1",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-112",
+      "raw": "\"string\"",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-113",
+      "raw": "true",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-114",
+      "raw": "{\"text\":\"x\",\"proposals\":[]} trailing",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-115",
+      "raw": "```json\n{\"text\":\"x\",\"proposals\":[]}\n```",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-116",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"x\":NaN}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-117",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"x\":Infinity}}]}",
+      "valid": false,
+      "proposal_count": 0
+    },
+    {
+      "id": "syntax-118",
+      "raw": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"x\",\"raw_arguments\":{\"x\":1e999}}]}",
+      "valid": false,
+      "proposal_count": 0
+    }
+  ]
+}
+

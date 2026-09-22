@@ -1,0 +1,6 @@
+# Follow-ups
+- P7-LIVE-01 (BEFORE LIVE WIRING): What actual Hermes transport envelope and normalization ownership are approved? Current boundary is canonical recordings only. Options: a separate live normalizer with transport-specific fixtures, or separately revise this versioned contract. Recommend separate normalizer; must discard private reasoning and provider control metadata. Blocks live integration, not R2.
+- P7-LIMITS-01 (LATER HARDENING): What resource budgets should parsing have? No prompt/proposal/depth limits are frozen. Options: operator-approved measured bounds, or isolation at transport. No arbitrary limits selected. Blocks live hardening review, not passive fixtures.
+- P7-PIPELINE-01 (BLOCKING NEXT UNIT): Freeze exact passive pipeline input/output and composition contract against P0-P6 APIs before implementing. The plan names TurnOutcome/handle_turn but does not freeze the type, stage adapters, failure representation or authoritative-state assembly. Do not skip to P8, whose predecessor is full P7 exit.
+Preserve D-P6-01, D-P6-02, browser D-01, TTL numeric values, P5 timeout EXECUTING lifecycle, lane audit field, redaction key list, TIMEOUT source, R1/R2 aggregate ambiguity, real registry, capability projection and live routing.
+
