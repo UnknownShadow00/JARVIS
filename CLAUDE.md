@@ -518,9 +518,17 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   policy. Zero live importers. pytest 5122 -> 5245 passed / 11 deselected,
   golden still 12/20 same eight, probe still fc68a0b0, 24/24 critical files
   byte-identical, security review 19/19. Mode remains legacy; Hermes disabled.
-  Next smallest unit from the actual dependency graph: passive P7 Hermes adapter
-  boundary against recorded outputs only. NOT started; do not enable Hermes or
-  wire a pipeline.
+  The next unit was attempted as 13B11N (2026-09-22) and BLOCKED at its mandatory
+  contract-resolution gate. Canonical identity is clear -- Hermes adapter,
+  app/brain/hermes_adapter.py, JARVIS prompt/tool-schema inputs to untrusted
+  ModelDraft + ToolProposal[] -- but the frozen plan never defines the raw
+  Hermes response envelope, request/input type, field/duplicate/malformed/multiple
+  proposal policy, required ID/time/model ownership, raw retention, or reasoning
+  field policy. C5 recordings are harness-normalized evidence and the target map
+  says harness code is not copied. No corpus or production file was created;
+  pytest remains 5245/11, golden 12/20 same eight, probe fc68a0b0, mode legacy,
+  Hermes disabled. Freeze that adapter boundary before re-running 13B11N; do not
+  enable Hermes or wire a pipeline.
 
   Classifier version reconciled as 13B11L-R2 (2026-09-20), one focused commit:
     ea0cb32  R2  CLASSIFIER_VERSION "1" -> "2" and the comment defining both.
