@@ -1,0 +1,215 @@
+{
+  "contract": "P7 PIPELINE CONTRACT V1",
+  "status": "static pre-implementation expectations; NOT pipeline test results",
+  "fixture_scope": "JARVIS-owned synthetic binding projection only; fixture.browser is NOT a registered capability or a frozen live tool mapping",
+  "base": {
+    "correlation": {
+      "session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "requested_model": "recorded-fixture-model",
+    "tool_schemas": [
+      {
+        "tool_name": "fixture.browser",
+        "description": "synthetic recorded boundary only; no live capability grant",
+        "parameters_json": "{}"
+      }
+    ],
+    "created_at": "2026-09-22T00:00:00+00:00",
+    "request": "Open https://example.invalid/",
+    "request_class": "ACTION_REQUEST",
+    "primary_action": "OPEN_URL",
+    "initial_lane": "OPERATIONAL",
+    "capability": "browser.open",
+    "capability_available": true,
+    "target": "https://example.invalid/",
+    "expected_projection": {
+      "tool_name": "fixture.browser",
+      "raw_arguments": {
+        "url": "https://example.invalid/"
+      },
+      "canonical_arguments": {
+        "url": "https://example.invalid/"
+      },
+      "canonicalization_version": "1"
+    }
+  },
+  "cases": [
+    {
+      "id": "C01",
+      "description": "proposal mismatch plus model-claimed success",
+      "recorded_response": "{\"text\":\"The tool succeeded.\",\"proposals\":[{\"tool_name\":\"wrong.tool\",\"raw_arguments\":{\"url\":\"https://example.invalid/\"}}]}",
+      "proposal_ids": [
+        "00000000000000000000000000000001"
+      ],
+      "variation": {},
+      "expected": {
+        "outcome_type": "PipelineStop",
+        "reason": "proposal_tool_mismatch",
+        "stage": "S06_MATCH",
+        "executed": false,
+        "result": null,
+        "approved_operational_response": false,
+        "raw_operational_fallback": false,
+        "dispatcher_calls": 0,
+        "final_lane": "OPERATIONAL",
+        "operational_obligation": null
+      },
+      "assertions": [
+        "Preserve model data as untrusted; stop deterministically without promoting claims."
+      ]
+    },
+    {
+      "id": "C02",
+      "description": "multiple proposals plus actual browser.open ALLOW",
+      "recorded_response": "{\"text\":\"\",\"proposals\":[{\"tool_name\":\"fixture.browser\",\"raw_arguments\":{\"url\":\"https://example.invalid/\"}},{\"tool_name\":\"fixture.browser\",\"raw_arguments\":{\"url\":\"https://example.invalid/\"}}]}",
+      "proposal_ids": [
+        "00000000000000000000000000000001",
+        "00000000000000000000000000000002"
+      ],
+      "variation": {
+        "permission_reference": {
+          "capability": "browser.open",
+          "approval_mode": "balanced",
+          "outcome": "ALLOW",
+          "source": "existing P4 policy row; cannot bypass earlier guard"
+        }
+      },
+      "expected": {
+        "outcome_type": "PipelineStop",
+        "reason": "multiple_proposals",
+        "stage": "S06_CARDINALITY",
+        "executed": false,
+        "result": null,
+        "approved_operational_response": false,
+        "raw_operational_fallback": false,
+        "dispatcher_calls": 0,
+        "final_lane": "OPERATIONAL",
+        "operational_obligation": null
+      },
+      "assertions": [
+        "Reject entire set before permission consumption; neither duplicate may be selected."
+      ]
+    },
+    {
+      "id": "C03",
+      "description": "zero proposal plus fake completion prose",
+      "recorded_response": "{\"text\":\"I already opened the app; completed successfully.\",\"proposals\":[]}",
+      "proposal_ids": [],
+      "variation": {},
+      "expected": {
+        "outcome_type": "PipelineStop",
+        "reason": "proposal_required",
+        "stage": "S06_CARDINALITY",
+        "executed": false,
+        "result": null,
+        "approved_operational_response": false,
+        "raw_operational_fallback": false,
+        "dispatcher_calls": 0,
+        "final_lane": "OPERATIONAL",
+        "operational_obligation": null
+      },
+      "assertions": [
+        "Preserve model data as untrusted; stop deterministically without promoting claims."
+      ]
+    },
+    {
+      "id": "C04",
+      "description": "conversational class plus operational proposal",
+      "recorded_response": "{\"text\":\"Here is an explanation.\",\"proposals\":[{\"tool_name\":\"fixture.browser\",\"raw_arguments\":{\"url\":\"https://example.invalid/\"}}]}",
+      "proposal_ids": [
+        "00000000000000000000000000000001"
+      ],
+      "variation": {
+        "request_override": {
+          "text": "What is a cache?",
+          "request_class": "GENERAL_EXPLANATION",
+          "primary_action": "NONE",
+          "capability_available": false,
+          "expected_projection": null
+        },
+        "initial_lane": "CONVERSATIONAL"
+      },
+      "expected": {
+        "outcome_type": "PipelineStop",
+        "reason": "unexpected_proposal",
+        "stage": "S06_CARDINALITY",
+        "executed": false,
+        "result": null,
+        "approved_operational_response": false,
+        "raw_operational_fallback": false,
+        "dispatcher_calls": 0,
+        "final_lane": "OPERATIONAL",
+        "operational_obligation": null
+      },
+      "assertions": [
+        "Preserve model data as untrusted; stop deterministically without promoting claims."
+      ]
+    },
+    {
+      "id": "C05",
+      "description": "operational failure plus attempted raw-model fallback",
+      "recorded_response": "{\"text\":\"Completed successfully.\",\"proposals\":[{\"tool_name\":\"fixture.browser\",\"raw_arguments\":{\"url\":\"https://example.invalid/\"}}]}",
+      "proposal_ids": [
+        "00000000000000000000000000000001"
+      ],
+      "variation": {
+        "expected_projection": null,
+        "forbidden_candidate_return": {
+          "type": "ModelDraft",
+          "text": "Completed successfully."
+        }
+      },
+      "expected": {
+        "outcome_type": "PipelineStop",
+        "reason": "projection_missing",
+        "stage": "S06_PROJECTION",
+        "executed": false,
+        "result": null,
+        "approved_operational_response": false,
+        "raw_operational_fallback": false,
+        "dispatcher_calls": 0,
+        "final_lane": "OPERATIONAL",
+        "operational_obligation": null
+      },
+      "assertions": [
+        "Preserve model data as untrusted; stop deterministically without promoting claims."
+      ]
+    },
+    {
+      "id": "C06",
+      "description": "conversational audit plus forced operational obligation",
+      "recorded_response": "{\"text\":\"A cache stores reusable data.\",\"proposals\":[]}",
+      "proposal_ids": [],
+      "variation": {
+        "request_override": {
+          "text": "What is a cache?",
+          "request_class": "GENERAL_EXPLANATION",
+          "primary_action": "NONE",
+          "capability_available": false,
+          "expected_projection": null
+        },
+        "initial_lane": "CONVERSATIONAL",
+        "audit_candidate": {
+          "lane": "CONVERSATIONAL",
+          "response_obligation": "REPORT_TOOL_SUCCESS"
+        }
+      },
+      "expected": {
+        "outcome_type": "PipelineStop",
+        "reason": "audit_invalid",
+        "stage": "S13_AUDIT",
+        "executed": false,
+        "result": null,
+        "approved_operational_response": false,
+        "raw_operational_fallback": false,
+        "dispatcher_calls": 0,
+        "final_lane": "CONVERSATIONAL",
+        "operational_obligation": null
+      },
+      "assertions": [
+        "Do not serialize with the current defective validator or fabricate an obligation; eventual corrected validator rejects the forced obligation."
+      ]
+    }
+  ]
+}

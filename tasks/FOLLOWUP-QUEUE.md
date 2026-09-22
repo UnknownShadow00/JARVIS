@@ -58,3 +58,9 @@ Detailed questions, alternatives, recommendations and affected dependencies are 
 P7 contract freeze remains BLOCKED. The detailed review at `task13b11o/FOLLOWUPS.md` narrows the current operator questions to O-B01 (authoritative proposal/tool/argument guard), O-B02 (zero/multiple/mismatched proposal disposition), O-B03 (typed failed-turn/fallback authority), and O-B04 (conversational turn.summary requires an obligation that P6 correctly does not produce). R3's proposals remain unfrozen; no policy or schema changed.
 
 All other deferred items above are preserved. A supported-read end-to-end row cannot be claimed using the current routed vocabulary; keep that gap explicit rather than adding a live grant. Next step is resolving and re-freezing the passive pipeline contract, not implementation, live shadow, P8 or Task 13C.
+
+## Task 13B11O-R1 decision freeze — 2026-09-22
+
+Operator decisions P7-D01–D04 resolve O-B01–O-B04 for the passive recorded/static boundary. P7 PIPELINE CONTRACT V1 is now frozen in task13b11o-r1/; the original blocked documents remain unchanged. Next task is P7 PASSIVE PIPELINE IMPLEMENTATION, not live wiring.
+
+Exact remaining prerequisites: F-TYPE-01 implements the contracted PipelineStop in that next task; F-MAP-01 blocks deriving/executing from an unfrozen production tool/argument binder, but not pure comparison with explicit static caller projections; F-FALLBACK-01 is before live responses/failure audit; F-AUDIT-01 conditionally fixes conversational summary obligation validation before live audit wiring. No fake obligation, guessed capability, schema patch or permission-policy change was made. All prior live/hardening deferrals remain preserved; see task13b11o-r1/FOLLOWUPS.md.
