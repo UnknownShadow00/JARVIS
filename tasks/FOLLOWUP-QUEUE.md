@@ -52,3 +52,9 @@ Destructive, financial, external-messaging, actual capability grants, migrations
 | D-P6-02 | Preserve TIMEOUT mapping until separately reviewed | REPORT_TOOL_ERROR, reason trusted_tool_timeout |
 
 Detailed questions, alternatives, recommendations and affected dependencies are in task13b11n-r3/FOLLOWUPS.md. Proposed contracts are not frozen and grant no permissions.
+
+## Task 13B11O resolution status — 2026-09-22
+
+P7 contract freeze remains BLOCKED. The detailed review at `task13b11o/FOLLOWUPS.md` narrows the current operator questions to O-B01 (authoritative proposal/tool/argument guard), O-B02 (zero/multiple/mismatched proposal disposition), O-B03 (typed failed-turn/fallback authority), and O-B04 (conversational turn.summary requires an obligation that P6 correctly does not produce). R3's proposals remain unfrozen; no policy or schema changed.
+
+All other deferred items above are preserved. A supported-read end-to-end row cannot be claimed using the current routed vocabulary; keep that gap explicit rather than adding a live grant. Next step is resolving and re-freezing the passive pipeline contract, not implementation, live shadow, P8 or Task 13C.
