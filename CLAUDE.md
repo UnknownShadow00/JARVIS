@@ -339,7 +339,7 @@ Phase:        Pre-server local validation nearly complete. Phase 0-3 usable; Pha
               early track landed feature-flagged OFF (dictation, Obsidian, embedding
               routing, Graphiti); rest stays explicit stubs/deferred.
 Tests:        pytest 350 passed / 0 skipped (workspace clone). Production
-              /home/jarvis/JARVIS: 5122 passed / 11 deselected / 0 failed.
+              /home/jarvis/JARVIS: 5245 passed / 11 deselected / 0 failed.
               pre_server_readiness 6/6 PASS
               (pytest, pip-audit, pip check, npm audit, readiness report, tool smoke).
 Hardware:     4070 Ti Super 16GB active. 5090 not yet set up.
@@ -497,8 +497,30 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   Also flagged: R1/R2 record a "bundle SHA-256" no script in either bundle
   computes and 14 formulations failed to reproduce; integrity established three
   other ways instead, nothing modified to make them agree.
-  Next approved unit: P6 unit 2, the deterministic operational response builder
-  (ApprovedOperationalResponse). NOT started. The real registry adapter is P9.
+  P6 unit 2 is completed below. The real registry adapter remains P9.
+
+  P6 unit 2 LANDED as 13B11M (2026-09-22), one focused production commit:
+    4885c4f  P6  response.py + focused response fixtures/tests -- deterministic
+             ApprovedOperationalResponse construction. 8 files, +2381 -5.
+  The existing P0 response type is reused exactly. The public builder consumes
+  an existing ObligationDecision/ObligationState, exact ToolInvocation/result
+  linkage, exact provenance and caller-supplied time. It accepts no model object
+  or request prose, reads no store or clock, and performs no dispatch,
+  permission, confirmation, provenance or audit mutation. All 11 obligations,
+  21 actual reasons and 10 operational sources are covered. (The P6 report's
+  historical claim of 22 reasons is recorded as a documentation discrepancy;
+  the implemented enum has 21.)
+  Response matrix f073cd7f... and 28-template inventory 657443b3... were frozen
+  with response.py absent. Success requires executed trusted SUCCESS; timeout
+  remains outcome-unknown; DENY/no-tool/unavailable/blocked retain distinct
+  wording; user facts/reports remain attributed; result A cannot be attached to
+  invocation B. Compound values fail closed pending the redaction/display
+  policy. Zero live importers. pytest 5122 -> 5245 passed / 11 deselected,
+  golden still 12/20 same eight, probe still fc68a0b0, 24/24 critical files
+  byte-identical, security review 19/19. Mode remains legacy; Hermes disabled.
+  Next smallest unit from the actual dependency graph: passive P7 Hermes adapter
+  boundary against recorded outputs only. NOT started; do not enable Hermes or
+  wire a pipeline.
 
   Classifier version reconciled as 13B11L-R2 (2026-09-20), one focused commit:
     ea0cb32  R2  CLASSIFIER_VERSION "1" -> "2" and the comment defining both.
