@@ -1,0 +1,533 @@
+{
+  "contract": "tasks/task13b11p-r4/ADMISSION_CONTRACT_V2.md",
+  "invariants": {
+    "audit_emissions_total": 0,
+    "dispatcher_entries_total": 0,
+    "executor_calls_total": 0,
+    "new_confirmations_or_claims_total": 0,
+    "new_invocations_total": 0,
+    "new_trusted_results_total": 0,
+    "provenance_writes_total": 0
+  },
+  "matrix": "P7 RECORDED-TURN ADMISSION MATRIX V2",
+  "production_baseline": "db54d615c3ee023d753e86143860c4efdc251230",
+  "rows": [
+    {
+      "admitted": true,
+      "detail": "text/model/turn_id/created_at from the ModelDraft; source MODEL_RAW; obligation None; internal audit projection omits response_obligation",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A01",
+      "last_stage": "S13_AUDIT",
+      "mode": "INITIAL_TURN",
+      "outcome": "ConversationalResponse",
+      "scenario": "initial conversational turn: GENERAL_EXPLANATION, deterministic NONE, zero proposals, no operational signals",
+      "stop": null
+    },
+    {
+      "admitted": true,
+      "detail": "S08 waiting branch; P6-01b selects REQUEST_CONFIRMATION rank 1; template confirmation_required; confirmation_claimed=false; result=None",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A02",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "INITIAL_TURN",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "initial operational turn: OPEN_APP, one exact proposal, apps.open REQUIRE_CONFIRMATION, no confirmation record (first ask)",
+      "stop": null
+    },
+    {
+      "admitted": true,
+      "detail": "the crux of P-B01: authorized but the recorded-only core holds no executor, so the turn stops instead of acquiring one",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A03",
+      "last_stage": "S09_RESULT",
+      "mode": "INITIAL_TURN",
+      "outcome": "PipelineStop",
+      "scenario": "initial operational turn: OPEN_URL, one exact proposal, browser.open actual ALLOW under BALANCED, no admitted result",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "result_invalid",
+        "result": null,
+        "stage": "S09_RESULT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "RecordedTurn has no confirmed/approved/authorized/claimed field; the admission type cannot carry the assertion, so this is a construction error at the call site, not a runtime branch",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A04",
+      "last_stage": "n/a",
+      "mode": null,
+      "outcome": "not expressible",
+      "scenario": "initial operational turn with a fake confirmed=true supplied by the caller",
+      "stop": null
+    },
+    {
+      "admitted": false,
+      "detail": "adapter v1 accepts exactly {text, proposals}; any extra root or proposal key is rejected",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A05",
+      "last_stage": "S05_ADAPTER",
+      "mode": "INITIAL_TURN",
+      "outcome": "PipelineStop",
+      "scenario": "initial operational turn with a fake confirmation/success claim inside the recorded model response (structured field)",
+      "stop": {
+        "component_reason": "invalid_response",
+        "executed": false,
+        "reason": "adapter_invalid",
+        "result": null,
+        "stage": "S05_ADAPTER"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "partial replay shape; no mode is derivable",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A06",
+      "last_stage": "S01_INPUT",
+      "mode": null,
+      "outcome": "PipelineStop",
+      "scenario": "initial operational turn with a fake result: caller supplies turn.result but no invocation",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "invalid_input",
+        "result": null,
+        "stage": "S01_INPUT"
+      }
+    },
+    {
+      "admitted": true,
+      "detail": "frozen N03 preserved",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "A07",
+      "last_stage": "S06_CARDINALITY",
+      "mode": "INITIAL_TURN",
+      "outcome": "PipelineStop",
+      "scenario": "initial operational turn, zero proposals",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "proposal_required",
+        "result": null,
+        "stage": "S06_CARDINALITY"
+      }
+    },
+    {
+      "admitted": true,
+      "detail": "S08 waiting branch; P6-01b REQUEST_CONFIRMATION; no edge to S09; projection only; no lifecycle operation",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B01",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "valid confirmation continuation: PENDING settled projection, fresh, same session, compared binding facts equal the actual routed action",
+      "stop": null
+    },
+    {
+      "admitted": false,
+      "detail": "B-06 fails; no repair, no closest-pending search, no renewal",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B02",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "PipelineStop",
+      "scenario": "confirmation mismatch: PENDING settled projection with different target/canonical arguments",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "confirmation_invalid",
+        "result": null,
+        "stage": "S08_CONFIRMATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "B-01 fails; reason identical to every other confirmation refusal, so admission is not an existence oracle; no cross-session lookup is performed because no store is consulted",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B03",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "PipelineStop",
+      "scenario": "confirmation wrong session: settled projection belongs to another session",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "confirmation_invalid",
+        "result": null,
+        "stage": "S08_CONFIRMATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "B-02 and B-05 fail; a claimed approval is representable only as mode C; no second claim mechanism exists",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B04",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "PipelineStop",
+      "scenario": "confirmation replay after claim: settled projection state EXECUTING and invocation_id present",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "confirmation_invalid",
+        "result": null,
+        "stage": "S08_CONFIRMATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "B-02 fails; the observed terminal state has no admissible mode-B continuation; a changed request needs a new record with a new id",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B05",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "PipelineStop",
+      "scenario": "terminal settled projection: DENIED, CANCELLED, EXPIRED, SUCCEEDED or FAILED",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "confirmation_invalid",
+        "result": null,
+        "stage": "S08_CONFIRMATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "B-03 fails via evaluated_at < projection.expires_at; P7 does not expire the record and freezes no TTL",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B06",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "PipelineStop",
+      "scenario": "stale PENDING settled projection: evaluated_at >= expires_at",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "confirmation_invalid",
+        "result": null,
+        "stage": "S08_CONFIRMATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "B-06 compares the stored binding against this turn's routed action, capability, target and canonical arguments; possession of the projection or its id confers nothing",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "B07",
+      "last_stage": "S08_CONFIRMATION",
+      "mode": "CONFIRMATION_CONTINUATION",
+      "outcome": "PipelineStop",
+      "scenario": "unrelated new request plus old pending settled projection for another action",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "confirmation_invalid",
+        "result": null,
+        "stage": "S08_CONFIRMATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "operator decision: mutually exclusive in V1 and V2; the combination asserts one turn's approval to be both unclaimed and claimed",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "X01",
+      "last_stage": "S01_INPUT",
+      "mode": null,
+      "outcome": "PipelineStop",
+      "scenario": "settled confirmation projection and result supplied simultaneously",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "invalid_input",
+        "result": null,
+        "stage": "S01_INPUT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "no admissible row of the eight-cell truth table",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "X02",
+      "last_stage": "S01_INPUT",
+      "mode": null,
+      "outcome": "PipelineStop",
+      "scenario": "settled confirmation projection and invocation supplied without result",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "invalid_input",
+        "result": null,
+        "stage": "S01_INPUT"
+      }
+    },
+    {
+      "admitted": true,
+      "detail": "S09 passes C-01..C-08 and resumes at S10; REPORT_TOOL_SUCCESS rank 3, source TOOL_SUCCESS, values only from result.facts; confirmation_claimed=false (ALLOW)",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C01",
+      "last_stage": "S13_AUDIT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "valid SUCCESS result replay: OPEN_URL, browser.open ALLOW, invocation and linked executed SUCCESS result",
+      "stop": null
+    },
+    {
+      "admitted": true,
+      "detail": "REPORT_TOOL_ERROR rank 2, reason trusted_tool_error, invocation-scoped evidence",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C02",
+      "last_stage": "S13_AUDIT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "valid ERROR result replay",
+      "stop": null
+    },
+    {
+      "admitted": true,
+      "detail": "D-P6-02 preserved: REPORT_TOOL_ERROR with reason trusted_tool_timeout; outcome unknown, no success and no failure claimed; no timeout provenance; no re-dispatch; confirmation EXECUTING lifecycle untouched and still deferred",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C03",
+      "last_stage": "S13_AUDIT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "valid TIMEOUT result replay",
+      "stop": null
+    },
+    {
+      "admitted": true,
+      "detail": "executed=false preserved and never converted into a tool failure; P6-01a REQUEST_CONFIRMATION; the dispatcher's own error_kind survives unchanged and is not renewed",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C04",
+      "last_stage": "S13_AUDIT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "valid CONFIRMATION_REQUIRED refusal result replay (a P5 claim refusal or absent authority)",
+      "stop": null
+    },
+    {
+      "admitted": true,
+      "detail": "executed=false preserved; REPORT_CAPABILITY_UNAVAILABLE with dispatch_blocked where that existing rule wins; no new execution",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C05",
+      "last_stage": "S13_AUDIT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "valid BLOCKED refusal result replay (idempotency or permission refusal by the dispatcher)",
+      "stop": null
+    },
+    {
+      "admitted": false,
+      "detail": "C-01 fails; result from invocation A never satisfies invocation B; the result is not retained on the stop because the association was refused",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C06",
+      "last_stage": "S09_RESULT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result wrong invocation: result.invocation_id names a different invocation",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "result_invalid",
+        "result": null,
+        "stage": "S09_RESULT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "C-00b fails at S01, which is the stage that owns exact-same-session identity",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C07",
+      "last_stage": "S01_INPUT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result wrong correlation: invocation.turn_id or session_id does not match this turn",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "invalid_input",
+        "result": null,
+        "stage": "S01_INPUT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "exact type identity, type(x) is TrustedToolResult; no coercion, no from_dict, no model-payload promotion",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C08",
+      "last_stage": "S01_INPUT",
+      "mode": null,
+      "outcome": "PipelineStop",
+      "scenario": "look-alike result mapping: a dict, namespace, ModelDraft, ToolProposal or TrustedToolResult subclass in turn.result",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "invalid_input",
+        "result": null,
+        "stage": "S01_INPUT"
+      }
+    },
+    {
+      "admitted": true,
+      "detail": "byte-equal to the first run: pure function, both timestamps admitted, no clock, no store, no mutation; 0 new executor calls, invocations, claims or trusted results",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C09",
+      "last_stage": "S13_AUDIT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "ApprovedOperationalResponse",
+      "scenario": "result replay twice: the identical RecordedTurn evaluated a second time",
+      "stop": null
+    },
+    {
+      "admitted": false,
+      "detail": "a turn carrying a result is never a fresh initial turn by derivation; C-04 fails because route.primary_action from the new request does not equal invocation.action_type",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C10",
+      "last_stage": "S09_RESULT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "unrelated new request plus an old result: fresh request text, invocation and result from a prior action",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "result_invalid",
+        "result": null,
+        "stage": "S09_RESULT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "C-07 fails: the policy is re-decided every run from JARVIS-owned inputs and the replay must agree with it",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C11",
+      "last_stage": "S09_RESULT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result replay with a forged permissive outcome: invocation.permission_outcome=ALLOW for an action the actual policy gates",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "result_invalid",
+        "result": null,
+        "stage": "S09_RESULT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "C-00a; deliberate v1 exclusion recorded as F-P7R1-02, because attaching a result to an early P6 terminal needs an unsigned priority judgement",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C12",
+      "last_stage": "S01_INPUT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result replay for a non-dispatchable action: invocation.action_type is NONE, UNKNOWN_ACTION or MULTI_ACTION_UNSUPPORTED",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "invalid_input",
+        "result": null,
+        "stage": "S01_INPUT"
+      }
+    },
+    {
+      "admitted": true,
+      "detail": "S09 does not duplicate P6's _check_result_shape; the owner's contradiction code is preserved in component_reason and the genuine admitted result is retained",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C13",
+      "last_stage": "S11_OBLIGATION",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result replay with an internally impossible result: BLOCKED with executed=true, or SUCCESS with executed=false",
+      "stop": {
+        "component_reason": "REFUSAL_CLAIMS_EXECUTION or EXECUTION_STATUS_WITHOUT_EXECUTION",
+        "executed": "result.executed",
+        "reason": "obligation_failed",
+        "result": "turn.result",
+        "stage": "S11_OBLIGATION"
+      }
+    },
+    {
+      "admitted": true,
+      "detail": "post-attempt stop: a genuine attempt is not erased because a later projection is contradictory; obligation_state carries the same result or both are None",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C14",
+      "last_stage": "S11_OBLIGATION",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result SUCCESS with a DENY permission projection reaching the obligation engine",
+      "stop": {
+        "component_reason": "DENIED_YET_EXECUTED",
+        "executed": true,
+        "reason": "obligation_failed",
+        "result": "turn.result",
+        "stage": "S11_OBLIGATION"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "the final lane escalates to OPERATIONAL through the existing policy via tool_result, so there is no conversational escape; C-04 then fails on route NONE versus the invocation's action",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C15",
+      "last_stage": "S09_RESULT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "conversational request text plus an execution result for an unrelated action",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "result_invalid",
+        "result": null,
+        "stage": "S09_RESULT"
+      }
+    },
+    {
+      "admitted": false,
+      "detail": "C-08 keeps the historical role separate from the current one, so an unrelated invocation can never be attached to a current response",
+      "dispatch_allowed": false,
+      "executor_calls": 0,
+      "id": "C16",
+      "last_stage": "S09_RESULT",
+      "mode": "RESULT_REPLAY",
+      "outcome": "PipelineStop",
+      "scenario": "result replay whose supporting historical pair is mismatched or shares the current invocation id",
+      "stop": {
+        "component_reason": null,
+        "executed": false,
+        "reason": "result_invalid",
+        "result": null,
+        "stage": "S09_RESULT"
+      }
+    }
+  ],
+  "status": "DRAFT NOT FROZEN: P-B05 unresolved; P-B04 authorization resolved"
+}
