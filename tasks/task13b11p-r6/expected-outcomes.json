@@ -1,0 +1,2636 @@
+{
+  "cases": {
+    "A01": {
+      "outcome_type": "ConversationalResponse",
+      "stage": "S13_AUDIT",
+      "guard": "NONE/zero/non-operational",
+      "reason": null,
+      "operational_obligation": null,
+      "downstream_output": {
+        "text": "A cache stores reusable data.",
+        "model": "recorded-fixture-model",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "CONVERSATIONAL",
+        "source": "MODEL_RAW"
+      },
+      "audit_response_obligation_present": false
+    },
+    "N02": {
+      "outcome_type": "ConversationalResponse",
+      "stage": "S13_AUDIT",
+      "guard": "NONE/zero/non-operational",
+      "reason": null,
+      "operational_obligation": null,
+      "downstream_output": {
+        "text": "A cache stores reusable data.",
+        "model": "recorded-fixture-model",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "CONVERSATIONAL",
+        "source": "MODEL_RAW"
+      },
+      "audit_response_obligation_present": false
+    },
+    "A02": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "A03": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "Mode A has no recorded result",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "A04": {
+      "outcome_type": "construction_error",
+      "stage": "before call",
+      "guard": "closed RecordedTurn schema",
+      "reason": null,
+      "downstream_output": null
+    },
+    "A05": {
+      "outcome_type": "PipelineStop",
+      "stage": "S05_ADAPTER",
+      "guard": "strict adapter root shape",
+      "reason": "adapter_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": "invalid_response",
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "FAKE-PERMISSION": {
+      "outcome_type": "PipelineStop",
+      "stage": "S05_ADAPTER",
+      "guard": "strict adapter root shape",
+      "reason": "adapter_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": "invalid_response",
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "FAKE-SUCCESS": {
+      "outcome_type": "PipelineStop",
+      "stage": "S05_ADAPTER",
+      "guard": "strict adapter root shape",
+      "reason": "adapter_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": "invalid_response",
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "A06": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "C-00 pair shape",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "A07": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "zero executable proposals",
+      "reason": "proposal_required",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B01": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "CONFIRMATION_REQUIRED"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "B02": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B03": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-01",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B04": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B05": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B06": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-03",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B07": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B-STATE-CANCELLED": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B-STATE-EXPIRED": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B-STATE-SUCCEEDED": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "B-STATE-FAILED": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-vocabulary": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "projection member validation",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-aware": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "projection member validation",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-audit-session": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-04",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-audit-turn": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "projection member validation",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-invocation": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-05",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-capability": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-tool": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-class": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-policy": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-canonical-version": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-raw": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-canonical": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-correlation-child": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-04",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-type-dict": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact projection identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-type-subclass": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact projection identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-type-ConfirmationRecord-look-alike": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact projection identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "PB02-allow-not-approval": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06 actual REQUIRE_CONFIRMATION prerequisite",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "X01": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "mutually exclusive mode discriminators",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "X02": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "mutually exclusive mode discriminators",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C01": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C02": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_error",
+        "template": "tool_error",
+        "text": "The trusted tool reported an error for the requested action. No success is claimed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "ERROR",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_error",
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C03": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_timeout",
+        "template": "tool_timeout",
+        "text": "A trusted completion result was not received before the timeout. The action's outcome is unknown.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "TIMEOUT",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_timeout",
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C04": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_result",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "apps",
+          "action_type": "OPEN_APP",
+          "status": "CONFIRMATION_REQUIRED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "confirmation_absent",
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C05": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "dispatch_blocked",
+        "template": "dispatch_blocked",
+        "text": "The dispatcher blocked the requested action before execution. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "BLOCKED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "already_executed",
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C-SUCCESS-CLAIMED": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": true,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "apps",
+          "action_type": "OPEN_APP",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C06": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-01",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C07-turn_id": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "C-00b",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C07-session_id": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "C-00b",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C08-dict": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact TrustedToolResult identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C08-namespace": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact TrustedToolResult identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C08-ModelDraft": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact TrustedToolResult identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C08-ToolProposal": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact TrustedToolResult identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C08-subclass": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "exact TrustedToolResult identity",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C09": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "cccccccccccccccccccccccccccccccc",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "C10": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-04",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C11": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-07",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C12-NONE": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "C-00a",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C12-UNKNOWN_ACTION": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "C-00a",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C12-MULTI_ACTION_UNSUPPORTED": {
+      "outcome_type": "PipelineStop",
+      "stage": "S01_INPUT",
+      "guard": "C-00a",
+      "reason": "invalid_input",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C13-blocked": {
+      "outcome_type": "PipelineStop",
+      "stage": "S11_OBLIGATION",
+      "guard": "P6 result-shape contradiction",
+      "reason": "obligation_failed",
+      "executed": true,
+      "result": "same admitted turn.result",
+      "obligation_state": "assembled actual state with identical result",
+      "component_reason": "C-07-refusal-claims-execution",
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "C13-success": {
+      "outcome_type": "PipelineStop",
+      "stage": "S11_OBLIGATION",
+      "guard": "P6 result-shape contradiction",
+      "reason": "obligation_failed",
+      "executed": false,
+      "result": "same admitted turn.result",
+      "obligation_state": "assembled actual state with identical result",
+      "component_reason": "C-08-execution-status-without-execution",
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "C15-zero": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "Option A: Mode C / NONE / zero",
+      "reason": "projection_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S07_PERMISSION",
+        "S08_CONFIRMATION",
+        "S09_RESULT",
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false,
+      "obligation_engine_calls": 0,
+      "response_builder_calls": 0,
+      "admitted_result": false
+    },
+    "C15-1": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "NONE / nonzero",
+      "reason": "unexpected_proposal",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S07_PERMISSION",
+        "S08_CONFIRMATION",
+        "S09_RESULT",
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false,
+      "obligation_engine_calls": 0,
+      "response_builder_calls": 0,
+      "admitted_result": false
+    },
+    "C15-2": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "NONE / nonzero",
+      "reason": "unexpected_proposal",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S07_PERMISSION",
+        "S08_CONFIRMATION",
+        "S09_RESULT",
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false,
+      "obligation_engine_calls": 0,
+      "response_builder_calls": 0,
+      "admitted_result": false
+    },
+    "N24": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "NONE / nonzero",
+      "reason": "unexpected_proposal",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "ASSOC-description": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-02",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "ASSOC-child": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-03",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "ASSOC-binding": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-05",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "ASSOC-version": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-06",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C16-mismatch": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "C16-same-current": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N08": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "more than one proposal",
+      "reason": "multiple_proposals",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N09": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "more than one proposal",
+      "reason": "multiple_proposals",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N10": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_CARDINALITY",
+      "guard": "more than one proposal",
+      "reason": "multiple_proposals",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N05": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "exact tool identity",
+      "reason": "proposal_tool_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N06": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "exact canonical map equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N07": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "exact canonical map equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N19": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "exact canonical map equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N13": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "required expected+permission pair",
+      "reason": "projection_missing",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N15": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "expected.version current",
+      "reason": "projection_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N21": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "Mode A has no recorded result",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N47": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "expected tool advertised",
+      "reason": "proposal_tool_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N28": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "actual route / P6 owner rule",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "explicit_action_without_tool",
+        "template": "capability_no_tool",
+        "text": "The requested action is not available through the current tools. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "CONFIRMATION_SENSITIVE_ACTION",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "UNKNOWN_ACTION",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N29": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "actual route / P6 owner rule",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_TARGET",
+        "obligation_reason": "ambiguous_action_class",
+        "template": "target_open_app",
+        "text": "Which application should be opened?",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "AMBIGUITY"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 4,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "AMBIGUOUS_ACTION",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": false,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N30": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "actual route / P6 owner rule",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_MULTI_ACTION_LIMIT",
+        "obligation_reason": "multiple_supported_actions",
+        "template": "multi_action_limit",
+        "text": "This request contains multiple supported actions. Submit one action at a time; nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "MULTI_ACTION_UNSUPPORTED"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 5,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "MULTI_ACTION_UNSUPPORTED",
+        "reporting_intent": "NONE",
+        "target_resolved": false,
+        "multi_action": true,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N41": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "actual route / P6 owner rule",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "ACKNOWLEDGE_FACT",
+        "obligation_reason": "user_supplied_operational_fact",
+        "template": "ack_fact_generic",
+        "text": "You supplied an operational fact. It has not been independently verified.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "DECLARATIVE_ACK"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 8,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "DECLARATIVE_FACT",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "NONE",
+        "reporting_intent": "NONE",
+        "target_resolved": null,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N42": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "actual route / P6 owner rule",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_UNVERIFIED_STATUS",
+        "obligation_reason": "status_question_without_trusted_result",
+        "template": "unverified_status_generic",
+        "text": "No trusted tool result is available to verify the current external status.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "UNVERIFIED_STATUS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 9,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "STATUS_CHECK_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "NONE",
+        "reporting_intent": "NONE",
+        "target_resolved": null,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N43": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "actual route / P6 owner rule",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "MISSING_CONTEXT",
+        "obligation_reason": "referenced_value_not_in_context",
+        "template": "missing_context",
+        "text": "The requested operational information is not available in the current context.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "MISSING_CONTEXT"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 11,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "MISSING_CONTEXT_QUERY",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "NONE",
+        "reporting_intent": "NONE",
+        "target_resolved": null,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N22": {
+      "outcome_type": "PipelineStop",
+      "stage": "S02_CLASSIFY",
+      "guard": "declared owner boundary failure",
+      "reason": "classification_failed",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N23-route": {
+      "outcome_type": "PipelineStop",
+      "stage": "S03_ROUTE",
+      "guard": "declared owner boundary failure",
+      "reason": "routing_failed",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N23-permission": {
+      "outcome_type": "PipelineStop",
+      "stage": "S07_PERMISSION",
+      "guard": "declared owner boundary failure",
+      "reason": "permission_failed",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N14": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "declared owner boundary failure",
+      "reason": "proposal_association_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N39-builder": {
+      "outcome_type": "PipelineStop",
+      "stage": "S12_RESPONSE",
+      "guard": "declared owner boundary failure",
+      "reason": "response_failed",
+      "executed": true,
+      "result": "same admitted turn.result",
+      "obligation_state": "assembled actual state with identical result",
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "N46-bool-int": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "recursive scalar-type-sensitive equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N46-int-float": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "recursive scalar-type-sensitive equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N46-array-order": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "recursive scalar-type-sensitive equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N46-omitted": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_MATCH",
+      "guard": "recursive scalar-type-sensitive equality",
+      "reason": "proposal_arguments_mismatch",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N45": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N12": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "P4 registration/action capability absent",
+      "reason": "capability_unavailable",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "N44-read-containment": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "deterministic terminal",
+      "guard": "no supported read route",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "explicit_action_without_tool",
+        "template": "capability_no_tool",
+        "text": "The requested action is not available through the current tools. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "STATUS_CHECK_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "UNKNOWN_ACTION",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "N40-USER_FACT": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "non-action P6",
+      "guard": "P6-07a",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "ANSWER_LEDGER_VALUE",
+        "obligation_reason": "direct_ledger_value_question",
+        "template": "ledger_user_fact",
+        "text": "The value you supplied is 8080. It has not been independently verified.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [
+          "99999999999999999999999999999999"
+        ],
+        "source": "LEDGER"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 7,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "VALUE_QUERY",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "NONE",
+        "reporting_intent": "NONE",
+        "target_resolved": null,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": true,
+          "status": "CURRENT",
+          "trust_class": "SUPPLIED",
+          "source": "USER_FACT",
+          "ambiguous": false
+        }
+      }
+    },
+    "N40-USER_REPORTED": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "non-action P6",
+      "guard": "P6-07a",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "ANSWER_LEDGER_VALUE",
+        "obligation_reason": "direct_ledger_value_question",
+        "template": "ledger_user_reported",
+        "text": "You reported the value as 8080. It has not been independently verified.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [
+          "99999999999999999999999999999999"
+        ],
+        "source": "LEDGER"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 7,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "VALUE_QUERY",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "NONE",
+        "reporting_intent": "NONE",
+        "target_resolved": null,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": true,
+          "status": "CURRENT",
+          "trust_class": "SUPPLIED",
+          "source": "USER_REPORTED",
+          "ambiguous": false
+        }
+      }
+    },
+    "N40-CORRECTION_STATE": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "non-action P6",
+      "guard": "P6-07a",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "ANSWER_LEDGER_VALUE",
+        "obligation_reason": "direct_ledger_value_question",
+        "template": "ledger_correction_state",
+        "text": "The current corrected value is 8080. This reports the supplied value, not an independently verified external state.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [
+          "99999999999999999999999999999999"
+        ],
+        "source": "LEDGER"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 7,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "VALUE_QUERY",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS"
+        ],
+        "primary_action": "NONE",
+        "reporting_intent": "NONE",
+        "target_resolved": null,
+        "multi_action": false,
+        "capability_available": false,
+        "permission_outcome": null,
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": true,
+          "status": "CURRENT",
+          "trust_class": "CONTROL",
+          "source": "CORRECTION_STATE",
+          "ambiguous": false
+        }
+      }
+    },
+    "N39-provenance": {
+      "outcome_type": "PipelineStop",
+      "stage": "S10_PROVENANCE",
+      "guard": "record session mismatch",
+      "reason": "provenance_invalid",
+      "executed": true,
+      "result": "same admitted turn.result",
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "N31-P4-P6-DENY": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S07_PERMISSION terminal",
+      "guard": "P6-06b",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "permission_denied",
+        "template": "permission_denied",
+        "text": "The current permission policy denied the requested action. Nothing has been executed.",
+        "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6
+    },
+    "C14-P6-DENY-EXECUTED": {
+      "outcome_type": "PipelineStop",
+      "stage": "S11_OBLIGATION",
+      "guard": "P6 execution contradiction",
+      "reason": "obligation_failed",
+      "executed": true,
+      "result": "same component input.state.result",
+      "obligation_state": "same component input.state",
+      "component_reason": "C-01-denied-yet-executed",
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "P6-unresolved": {
+      "outcome_type": "PipelineStop",
+      "stage": "S11_OBLIGATION",
+      "guard": "P6 execution contradiction",
+      "reason": "obligation_failed",
+      "executed": true,
+      "result": "same component input.state.result",
+      "obligation_state": "same component input.state",
+      "component_reason": "C-04-unresolved-target-yet-executed",
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "P6-unavailable": {
+      "outcome_type": "PipelineStop",
+      "stage": "S11_OBLIGATION",
+      "guard": "P6 execution contradiction",
+      "reason": "obligation_failed",
+      "executed": true,
+      "result": "same component input.state.result",
+      "obligation_state": "same component input.state",
+      "component_reason": "C-16-unavailable-capability-yet-executed",
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "P6-no-claim": {
+      "outcome_type": "PipelineStop",
+      "stage": "S11_OBLIGATION",
+      "guard": "P6 execution contradiction",
+      "reason": "obligation_failed",
+      "executed": true,
+      "result": "same component input.state.result",
+      "obligation_state": "same component input.state",
+      "component_reason": "C-02-confirmation-required-executed-without-authority",
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "N26": {
+      "outcome_type": "PipelineStop",
+      "stage": "S13_AUDIT",
+      "guard": "lane/obligation applicability",
+      "reason": "audit_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "N27": {
+      "outcome_type": "PipelineStop",
+      "stage": "S13_AUDIT",
+      "guard": "lane/obligation applicability",
+      "reason": "audit_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [],
+      "raw_operational_fallback": false
+    },
+    "PB02-immutable": {
+      "outcome_type": "immutable_boundary_assertion",
+      "stage": "construction / S08 member validation",
+      "guard": "plain immutable snapshots",
+      "reason": null,
+      "downstream_output": null,
+      "expectations": [
+        "frozen assignment rejected",
+        "mapping mutation rejected",
+        "original alias cannot alter admitted value",
+        "non-plain input rejected; no coercion"
+      ]
+    },
+    "PB04-adapter": {
+      "outcome_type": "structural_assertions_pass",
+      "stage": "implementation entry / exit",
+      "guard": "P-B04 exact consumer and phase gates",
+      "reason": null,
+      "downstream_output": null,
+      "assertions": [
+        "Exactly one production adapter consumer: app/execution/pipeline.py.",
+        "Exact static ImportFrom: AdapterRequest, AdapterError, parse_recorded_response.",
+        "No second consumer, wildcard/dynamic access, server/live brain/provider consumer.",
+        "ModelDraft/ToolProposal never supply authority; N16/N17/N18/N19/N21 remain required."
+      ]
+    },
+    "PB04-presence": {
+      "outcome_type": "structural_assertions_pass",
+      "stage": "implementation entry / exit",
+      "guard": "P-B04 exact consumer and phase gates",
+      "reason": null,
+      "downstream_output": null,
+      "assertions": [
+        "Entry pipeline absent; after implementation canonical app/execution/pipeline.py exists.",
+        "Only frozen public definitions; zero production pipeline consumers/callers; app/brain/pipeline.py absent.",
+        "Exact authorized source absence assertion transitions to presence plus isolation; flags/legacy assertions unchanged.",
+        "All historical absence evidence hashes unchanged."
+      ]
+    },
+    "PB04-isolation": {
+      "outcome_type": "structural_assertions_pass",
+      "stage": "implementation entry / exit",
+      "guard": "P-B04 exact consumer and phase gates",
+      "reason": null,
+      "downstream_output": null,
+      "assertions": [
+        "Zero direct/indirect confirmation.py and dispatch.py imports or calls.",
+        "Zero registry, provider/model/Ollama, network, real tool, executor, confirmation mutation calls.",
+        "No callable/store/clock/session/authority boolean in RecordedTurn.",
+        "No ID minting, TrustedToolResult/ToolInvocation construction, ledger write or audit emission.",
+        "Runtime fail-on-call sentinels and AST import/reference checks must both pass."
+      ]
+    }
+  },
+  "global_effect_counts": {
+    "dispatcher_calls": 0,
+    "executor_calls": 0,
+    "registry_calls": 0,
+    "provider_calls": 0,
+    "model_calls": 0,
+    "real_tool_calls": 0,
+    "confirmation_mutations": 0,
+    "new_invocations": 0,
+    "new_results": 0,
+    "audit_emissions": 0,
+    "provenance_writes": 0
+  }
+}

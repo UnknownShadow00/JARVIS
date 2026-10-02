@@ -1,0 +1,41 @@
+[
+  {
+    "authorized_consumer": "app/execution/pipeline.py",
+    "authorized_symbols": [
+      "AdapterRequest",
+      "AdapterError",
+      "parse_recorded_response"
+    ],
+    "current_invariant": "assert consumers == []",
+    "exact_future_change": "Retain whole all-app AST scan. assert consumers == [\"app/execution/pipeline.py\"]. Add exact pipeline AST check: one ImportFrom from app.brain.hermes_adapter; names exactly AdapterRequest, AdapterError, parse_recorded_response; no aliases/star/module imports/dynamic references or module-name string constants. Every other adapter reference remains forbidden.",
+    "id": "P-B04-01",
+    "safety": "The exception names one recorded parser consumer; existing import/purity/hostile-output and mode gates remain unchanged.",
+    "source_line": 49,
+    "source_sha256": "28c2c99387c7a9ea20dd7b4426c7c484924b2757758afa7fd0cbfc29f15769c1",
+    "still_forbidden": "Every other app production consumer, including server, live brain, provider, runtime and sibling modules; every dynamic adapter reference.",
+    "test_file": "tests/execution/hermes_adapter_non_activation_test.py",
+    "test_function": "test_zero_production_consumers_or_dynamic_adapter_references"
+  },
+  {
+    "authorized_consumer": "none: pipeline itself must have zero production consumers",
+    "authorized_symbols": [
+      "run_recorded_turn",
+      "RecordedTurn",
+      "SettledConfirmationProjection",
+      "AdmissionMode",
+      "PipelineStage",
+      "PipelineStopReason",
+      "PipelineStop",
+      "TurnOutcome"
+    ],
+    "current_invariant": "assert not (ROOT / \"app/execution/pipeline.py\").exists()",
+    "exact_future_change": "Replace only absence assertion with assert canonical_path.is_file(), plus the exact presence/isolation checks specified in PIPELINE_GATE_TRANSITION.md. Retain lines 56\u201359 without change. Keep test function name to make diff scope explicit.",
+    "id": "P-B04-02",
+    "safety": "Presence requires positive isolation checks; all four legacy/Hermes assertions survive. Historical absence evidence remains immutable.",
+    "source_line": 55,
+    "source_sha256": "28c2c99387c7a9ea20dd7b4426c7c484924b2757758afa7fd0cbfc29f15769c1",
+    "still_forbidden": "All production imports/callers of pipeline, alternate pipeline path, live activation and execution dependencies.",
+    "test_file": "tests/execution/hermes_adapter_non_activation_test.py",
+    "test_function": "test_p7_pipeline_and_runtime_activation_remain_absent"
+  }
+]

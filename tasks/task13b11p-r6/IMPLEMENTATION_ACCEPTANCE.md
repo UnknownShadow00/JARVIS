@@ -1,0 +1,11 @@
+# Next implementation acceptance
+
+Before implementation: verify final contract, authorization, matrix and fixture manifests; verify production baseline and all evidence; prove canonical pipeline.py absent. Use these expectations unchanged. The next separately authorized task may add app/execution/pipeline.py, new passive pipeline tests, and only the twenty frozen existing assertion transitions at ten sites in five files. All other production files/tests remain outside that authorization.
+
+Public P7 definitions: run_recorded_turn, RecordedTurn, SettledConfirmationProjection, AdmissionMode, PipelineStage, PipelineStopReason, PipelineStop, TurnOutcome. One turn argument; helpers private and pure. Existing imported types are dependencies. Passive dependencies: types; correlation data/validation; classifier; router; lane; canonicalize; permissions; obligations; response; provenance snapshot reads/validation; only AdapterRequest, AdapterError, parse_recorded_response from hermes_adapter. No confirmation/dispatch/registry/server/provider/settings/live imports or dynamic lookup.
+
+Require: complete 21-field schema; exact three modes; immutable minimal 16-field projection; all B/C guards and retention; Option A refusal; no early C-04; exactly-one proposal; actual frozen policy/P6/response engines. Every fixture category and component scope must be exercised. Fault-injection tests may test an owner failure, never fabricate policy reachability in a whole-turn case. Runtime zero-effect sentinels plus structural import/consumer scans are both required.
+
+Entry absence → exit canonical presence and exact diff/commit; no pipeline callers, no second adapter consumer, no exports/live wiring, no Hermes activation. Historical absence artifacts unchanged. Dispatcher/confirmation isolation tests unchanged; exact P-B03/P-B04 inventories only. Any additional old-test assertion change requires new authorization. No expected-outcome adjustment to fit implementation; stop on a true contradiction.
+
+Regression baseline: 5468 passed, 11 deselected, zero failed before implementation; golden 12/20 same eight; legacy hash fc68a0b041c8d0d41f446e9638cae5f888e4f4f6caf84d438ca0e11a30d98291. New tests may increase future count; no baseline test removal. No production code in R6.

@@ -1,0 +1,252 @@
+{
+  "scope": "explicit existing owner/stage-local coverage; never a whole-turn gate bypass",
+  "cases": [
+    {
+      "id": "N31-P4-P6-DENY",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "permission_request": {
+          "capability": "messaging.system_egress",
+          "primary_action": null,
+          "target": null,
+          "canonical_target": null,
+          "raw_arguments": {},
+          "canonical_arguments": {},
+          "target_resolved": true,
+          "approval_mode": "balanced",
+          "satisfied_constraints": [],
+          "overwrite": null
+        },
+        "state": {
+          "lane": "OPERATIONAL",
+          "request_class": "ACTION_REQUEST",
+          "lane_reasons": [
+            "ALWAYS_OPERATIONAL_CLASS"
+          ],
+          "primary_action": "OPEN_URL",
+          "reporting_intent": "NONE",
+          "target_resolved": true,
+          "multi_action": false,
+          "capability_available": true,
+          "permission_outcome": "DENY",
+          "confirmation_claimed": false,
+          "result": null,
+          "value": "NO_VALUE"
+        },
+        "response_context": {
+          "session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "turn_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "created_at": "2026-09-22T00:00:00+00:00",
+          "provenance_records": [],
+          "expected_fact_key": null,
+          "invocation": null,
+          "supporting_result": null,
+          "supporting_invocation": null
+        }
+      },
+      "source_rows": [
+        "N31"
+      ]
+    },
+    {
+      "id": "C14-P6-DENY-EXECUTED",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "state": {
+          "lane": "OPERATIONAL",
+          "request_class": "ACTION_REQUEST",
+          "lane_reasons": [
+            "ALWAYS_OPERATIONAL_CLASS"
+          ],
+          "primary_action": "OPEN_URL",
+          "reporting_intent": "NONE",
+          "target_resolved": true,
+          "multi_action": false,
+          "capability_available": true,
+          "permission_outcome": "DENY",
+          "confirmation_claimed": false,
+          "result": {
+            "action_type": "OPEN_URL",
+            "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "error_kind": null,
+            "error_message": null,
+            "executed": true,
+            "executor": "static-fixture",
+            "facts": {},
+            "finished_at": "2026-09-22T00:00:00+00:00",
+            "invocation_id": "cccccccccccccccccccccccccccccccc",
+            "started_at": "2026-09-22T00:00:00+00:00",
+            "status": "SUCCESS",
+            "tool_name": "fixture.browser"
+          },
+          "value": "NO_VALUE"
+        }
+      },
+      "source_rows": [
+        "C14",
+        "N38"
+      ]
+    },
+    {
+      "id": "P6-unresolved",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "state": {
+          "lane": "OPERATIONAL",
+          "request_class": "ACTION_REQUEST",
+          "lane_reasons": [
+            "ALWAYS_OPERATIONAL_CLASS"
+          ],
+          "primary_action": "OPEN_URL",
+          "reporting_intent": "NONE",
+          "target_resolved": false,
+          "multi_action": false,
+          "capability_available": true,
+          "permission_outcome": "ALLOW",
+          "confirmation_claimed": false,
+          "result": {
+            "action_type": "OPEN_URL",
+            "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "error_kind": null,
+            "error_message": null,
+            "executed": true,
+            "executor": "static-fixture",
+            "facts": {},
+            "finished_at": "2026-09-22T00:00:00+00:00",
+            "invocation_id": "cccccccccccccccccccccccccccccccc",
+            "started_at": "2026-09-22T00:00:00+00:00",
+            "status": "SUCCESS",
+            "tool_name": "fixture.browser"
+          },
+          "value": "NO_VALUE"
+        }
+      },
+      "source_rows": [
+        "N38"
+      ]
+    },
+    {
+      "id": "P6-unavailable",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "state": {
+          "lane": "OPERATIONAL",
+          "request_class": "ACTION_REQUEST",
+          "lane_reasons": [
+            "ALWAYS_OPERATIONAL_CLASS"
+          ],
+          "primary_action": "OPEN_URL",
+          "reporting_intent": "NONE",
+          "target_resolved": true,
+          "multi_action": false,
+          "capability_available": false,
+          "permission_outcome": "ALLOW",
+          "confirmation_claimed": false,
+          "result": {
+            "action_type": "OPEN_URL",
+            "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "error_kind": null,
+            "error_message": null,
+            "executed": true,
+            "executor": "static-fixture",
+            "facts": {},
+            "finished_at": "2026-09-22T00:00:00+00:00",
+            "invocation_id": "cccccccccccccccccccccccccccccccc",
+            "started_at": "2026-09-22T00:00:00+00:00",
+            "status": "SUCCESS",
+            "tool_name": "fixture.browser"
+          },
+          "value": "NO_VALUE"
+        }
+      },
+      "source_rows": [
+        "N38"
+      ]
+    },
+    {
+      "id": "P6-no-claim",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "state": {
+          "lane": "OPERATIONAL",
+          "request_class": "ACTION_REQUEST",
+          "lane_reasons": [
+            "ALWAYS_OPERATIONAL_CLASS"
+          ],
+          "primary_action": "OPEN_URL",
+          "reporting_intent": "NONE",
+          "target_resolved": true,
+          "multi_action": false,
+          "capability_available": true,
+          "permission_outcome": "REQUIRE_CONFIRMATION",
+          "confirmation_claimed": false,
+          "result": {
+            "action_type": "OPEN_URL",
+            "audit_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "error_kind": null,
+            "error_message": null,
+            "executed": true,
+            "executor": "static-fixture",
+            "facts": {},
+            "finished_at": "2026-09-22T00:00:00+00:00",
+            "invocation_id": "cccccccccccccccccccccccccccccccc",
+            "started_at": "2026-09-22T00:00:00+00:00",
+            "status": "SUCCESS",
+            "tool_name": "fixture.browser"
+          },
+          "value": "NO_VALUE"
+        }
+      },
+      "source_rows": [
+        "N38"
+      ]
+    },
+    {
+      "id": "N26",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "audit_candidate": {
+          "lane": "CONVERSATIONAL",
+          "response_obligation": "REPORT_TOOL_SUCCESS"
+        },
+        "source_turn_fixture": "A01",
+        "injection": "internal final audit projection only; no event emission or public injection parameter"
+      },
+      "source_rows": [
+        "N26",
+        "CONTRA-C06"
+      ]
+    },
+    {
+      "id": "N27",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "audit_candidate": {
+          "lane": "OPERATIONAL",
+          "response_obligation": null
+        },
+        "source_turn_fixture": "A02",
+        "injection": "internal final audit projection only; no event emission or public injection parameter"
+      },
+      "source_rows": [
+        "N27"
+      ]
+    },
+    {
+      "id": "PB02-immutable",
+      "scope": "component_boundary_not_whole_turn",
+      "input": {
+        "source_turn_fixture": "B01",
+        "operations": [
+          "assign projection.state",
+          "mutate raw_arguments app",
+          "mutate caller-original mapping after privately copied freeze",
+          "supply callable or arbitrary object as nested argument"
+        ]
+      },
+      "source_rows": [
+        "PB02"
+      ]
+    }
+  ]
+}

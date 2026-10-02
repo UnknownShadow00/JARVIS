@@ -1,0 +1,7 @@
+# Exact passive adapter consumer authorization
+
+Consumer: app/execution/pipeline.py only. Provider module: app/brain/hermes_adapter.py. Required public names: AdapterRequest (RecordedTurn field 6), AdapterError (existing S05 failure code), parse_recorded_response (the recorded parser). No build_request, provider transport, wildcard import or dynamically resolved API. Import these three names in one static ImportFrom statement, without aliases, from app.brain.hermes_adapter. This yields exactly one consumer entry under the existing AST scanner.
+
+Adapter outputs remain ModelDraft and tuple[ToolProposal, ...], untrusted throughout. The caller owns correlation, IDs and timestamps. Neither parsed output nor model prose defines expected binding, capability, route, permission, confirmation projection, result, provenance trust or operational response. All other public authority-producing objects are prohibited by the existing adapter tests.
+
+The exception never applies to app/server.py, live brain modules, provider/runtime modules, another app/execution sibling, arbitrary app/* modules or a second consumer. Every production path except this exact canonical file remains forbidden. Within this file, additional adapter symbols, module imports, computed/dynamic references, getattr/service-locator access and adapter module-path string literals are forbidden. No server integration, live provider, model, network, registry, dispatch or tool execution is authorized.

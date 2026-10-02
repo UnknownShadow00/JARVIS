@@ -1,0 +1,290 @@
+[
+  {
+    "authorized_symbols": [
+      "route",
+      "RouteResult",
+      "RouterContext",
+      "RouterError"
+    ],
+    "current_invariant": "offenders == []",
+    "exact_proposed_additive_change": "Keep the scan unchanged; assert sorted(offenders) == [\"app/execution/pipeline.py\"]. Add exact AST import/call budget assertion for pipeline.",
+    "id": "T01",
+    "parameter": null,
+    "remaining_forbidden": "Every other scanned production path and all existing live-path bans",
+    "source_line": 383,
+    "source_sha256": "7b8ce90009fb0371e2fb29c8022ebf73000e237b909c8988cb3eca9ec4338a09",
+    "test_file": "tests/execution/router_non_activation_test.py",
+    "test_function": "test_no_production_module_imports_the_router",
+    "why_pipeline_is_consumer": "S03 calls actual route"
+  },
+  {
+    "authorized_symbols": [
+      "RouteResult"
+    ],
+    "current_invariant": "offenders == []",
+    "exact_proposed_additive_change": "For name == \"RouteResult\" only, expected offenders = [\"app/execution/pipeline.py\"]; every other parameter retains []. Compare sorted lists.",
+    "id": "T02",
+    "parameter": "RouteResult",
+    "remaining_forbidden": "All other production paths; other nine router parameters remain forbidden in pipeline",
+    "source_line": 397,
+    "source_sha256": "7b8ce90009fb0371e2fb29c8022ebf73000e237b909c8988cb3eca9ec4338a09",
+    "test_file": "tests/execution/router_non_activation_test.py",
+    "test_function": "test_no_router_symbol_is_referenced_outside_the_module",
+    "why_pipeline_is_consumer": "typed actual S03 result"
+  },
+  {
+    "authorized_symbols": [
+      "RouterContext"
+    ],
+    "current_invariant": "offenders == []",
+    "exact_proposed_additive_change": "For name == \"RouterContext\" only, expected offenders = [\"app/execution/pipeline.py\"]; every other parameter retains []. Compare sorted lists.",
+    "id": "T03",
+    "parameter": "RouterContext",
+    "remaining_forbidden": "All other production paths; other nine router parameters remain forbidden in pipeline",
+    "source_line": 397,
+    "source_sha256": "7b8ce90009fb0371e2fb29c8022ebf73000e237b909c8988cb3eca9ec4338a09",
+    "test_file": "tests/execution/router_non_activation_test.py",
+    "test_function": "test_no_router_symbol_is_referenced_outside_the_module",
+    "why_pipeline_is_consumer": "unchanged RecordedTurn field 4"
+  },
+  {
+    "authorized_symbols": [
+      "RouterError"
+    ],
+    "current_invariant": "offenders == []",
+    "exact_proposed_additive_change": "For name == \"RouterError\" only, expected offenders = [\"app/execution/pipeline.py\"]; every other parameter retains []. Compare sorted lists.",
+    "id": "T04",
+    "parameter": "RouterError",
+    "remaining_forbidden": "All other production paths; other nine router parameters remain forbidden in pipeline",
+    "source_line": 397,
+    "source_sha256": "7b8ce90009fb0371e2fb29c8022ebf73000e237b909c8988cb3eca9ec4338a09",
+    "test_file": "tests/execution/router_non_activation_test.py",
+    "test_function": "test_no_router_symbol_is_referenced_outside_the_module",
+    "why_pipeline_is_consumer": "S03 owner error mapped to routing_failed"
+  },
+  {
+    "authorized_symbols": [
+      "PermissionRequest",
+      "PermissionDecision",
+      "PermissionPolicyError",
+      "PERMISSION_POLICY_VERSION",
+      "ACTION_CAPABILITY",
+      "row_for",
+      "decide"
+    ],
+    "current_invariant": "hits == []",
+    "exact_proposed_additive_change": "Keep scan; assert sorted(hits) == [\"app/execution/pipeline.py\"]. Add exact AST import/call budget for pipeline.",
+    "id": "T05",
+    "parameter": null,
+    "remaining_forbidden": "All other paths; no policy override, policy table copying or live registry",
+    "source_line": 88,
+    "source_sha256": "1d3a5ee3f97afa58239ae8ef139f9dc47e9a348620fb0ef61408f5d0fad20f11",
+    "test_file": "tests/execution/permissions_non_activation_test.py",
+    "test_function": "test_no_module_under_app_imports_the_permission_engine",
+    "why_pipeline_is_consumer": "S06 reads static P4 pairing/registration; S07 calls actual decide"
+  },
+  {
+    "authorized_symbols": [
+      "PermissionRequest"
+    ],
+    "current_invariant": "hits == []",
+    "exact_proposed_additive_change": "For symbol == \"PermissionRequest\" only, expected hits = [\"app/execution/pipeline.py\"]; all other parameters retain []. Compare sorted lists.",
+    "id": "T06",
+    "parameter": "PermissionRequest",
+    "remaining_forbidden": "All other paths and the nine remaining permission symbol parameters",
+    "source_line": 142,
+    "source_sha256": "1d3a5ee3f97afa58239ae8ef139f9dc47e9a348620fb0ef61408f5d0fad20f11",
+    "test_file": "tests/execution/permissions_non_activation_test.py",
+    "test_function": "test_no_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "RecordedTurn field 14"
+  },
+  {
+    "authorized_symbols": [
+      "PermissionDecision"
+    ],
+    "current_invariant": "hits == []",
+    "exact_proposed_additive_change": "For symbol == \"PermissionDecision\" only, expected hits = [\"app/execution/pipeline.py\"]; all other parameters retain []. Compare sorted lists.",
+    "id": "T07",
+    "parameter": "PermissionDecision",
+    "remaining_forbidden": "All other paths and the nine remaining permission symbol parameters",
+    "source_line": 142,
+    "source_sha256": "1d3a5ee3f97afa58239ae8ef139f9dc47e9a348620fb0ef61408f5d0fad20f11",
+    "test_file": "tests/execution/permissions_non_activation_test.py",
+    "test_function": "test_no_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "actual S07 output typing"
+  },
+  {
+    "authorized_symbols": [
+      "PermissionPolicyError"
+    ],
+    "current_invariant": "hits == []",
+    "exact_proposed_additive_change": "For symbol == \"PermissionPolicyError\" only, expected hits = [\"app/execution/pipeline.py\"]; all other parameters retain []. Compare sorted lists.",
+    "id": "T08",
+    "parameter": "PermissionPolicyError",
+    "remaining_forbidden": "All other paths and the nine remaining permission symbol parameters",
+    "source_line": 142,
+    "source_sha256": "1d3a5ee3f97afa58239ae8ef139f9dc47e9a348620fb0ef61408f5d0fad20f11",
+    "test_file": "tests/execution/permissions_non_activation_test.py",
+    "test_function": "test_no_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "owner failure becomes permission_failed"
+  },
+  {
+    "authorized_symbols": [
+      "PERMISSION_POLICY_VERSION"
+    ],
+    "current_invariant": "hits == []",
+    "exact_proposed_additive_change": "For symbol == \"PERMISSION_POLICY_VERSION\" only, expected hits = [\"app/execution/pipeline.py\"]; all other parameters retain []. Compare sorted lists.",
+    "id": "T09",
+    "parameter": "PERMISSION_POLICY_VERSION",
+    "remaining_forbidden": "All other paths and the nine remaining permission symbol parameters",
+    "source_line": 142,
+    "source_sha256": "1d3a5ee3f97afa58239ae8ef139f9dc47e9a348620fb0ef61408f5d0fad20f11",
+    "test_file": "tests/execution/permissions_non_activation_test.py",
+    "test_function": "test_no_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "B-06 and C-06 current-version equality"
+  },
+  {
+    "authorized_symbols": [
+      "ACTION_CAPABILITY"
+    ],
+    "current_invariant": "hits == []",
+    "exact_proposed_additive_change": "For symbol == \"ACTION_CAPABILITY\" only, expected hits = [\"app/execution/pipeline.py\"]; all other parameters retain []. Compare sorted lists.",
+    "id": "T10",
+    "parameter": "ACTION_CAPABILITY",
+    "remaining_forbidden": "All other paths and the nine remaining permission symbol parameters",
+    "source_line": 142,
+    "source_sha256": "1d3a5ee3f97afa58239ae8ef139f9dc47e9a348620fb0ef61408f5d0fad20f11",
+    "test_file": "tests/execution/permissions_non_activation_test.py",
+    "test_function": "test_no_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "S06 exact static action/capability pairing"
+  },
+  {
+    "authorized_symbols": [
+      "ObligationState",
+      "ValueProjection",
+      "NO_VALUE",
+      "ObligationError",
+      "ContradictoryObligationState",
+      "NON_ACTION_OUTCOMES",
+      "derive"
+    ],
+    "current_invariant": "hits == [app/execution/response.py]",
+    "exact_proposed_additive_change": "Keep scan; assert sorted(hits) == sorted([existing response path, \"app/execution/pipeline.py\"]). Add exact AST import/call budget.",
+    "id": "T11",
+    "parameter": null,
+    "remaining_forbidden": "Every other path; existing response subset unchanged; RULE_INDEX forbidden",
+    "source_line": 295,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_only_the_passive_response_builder_imports_the_obligation_engine",
+    "why_pipeline_is_consumer": "S11 calls existing derive; B-07/C-00a use existing passive NON_ACTION_OUTCOMES"
+  },
+  {
+    "authorized_symbols": [
+      "ObligationState"
+    ],
+    "current_invariant": "existing response path only",
+    "exact_proposed_additive_change": "Append only \"app/execution/pipeline.py\" to existing allowed for symbol == \"ObligationState\". Keep response allowance for ObligationState/ObligationReason. sorted(hits) == sorted(allowed).",
+    "id": "T12",
+    "parameter": "ObligationState",
+    "remaining_forbidden": "All other paths; ObligationReason still response-only; all other symbol cases unchanged",
+    "source_line": 307,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_no_public_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "S11 assembled input and PipelineStop retained state"
+  },
+  {
+    "authorized_symbols": [
+      "ValueProjection"
+    ],
+    "current_invariant": "[]",
+    "exact_proposed_additive_change": "Append only \"app/execution/pipeline.py\" to existing allowed for symbol == \"ValueProjection\". Keep response allowance for ObligationState/ObligationReason. sorted(hits) == sorted(allowed).",
+    "id": "T13",
+    "parameter": "ValueProjection",
+    "remaining_forbidden": "All other paths; ObligationReason still response-only; all other symbol cases unchanged",
+    "source_line": 307,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_no_public_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "RecordedTurn field 12"
+  },
+  {
+    "authorized_symbols": [
+      "NO_VALUE"
+    ],
+    "current_invariant": "[]",
+    "exact_proposed_additive_change": "Append only \"app/execution/pipeline.py\" to existing allowed for symbol == \"NO_VALUE\". Keep response allowance for ObligationState/ObligationReason. sorted(hits) == sorted(allowed).",
+    "id": "T14",
+    "parameter": "NO_VALUE",
+    "remaining_forbidden": "All other paths; ObligationReason still response-only; all other symbol cases unchanged",
+    "source_line": 307,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_no_public_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "existing field-12 default"
+  },
+  {
+    "authorized_symbols": [
+      "ObligationError"
+    ],
+    "current_invariant": "[]",
+    "exact_proposed_additive_change": "Append only \"app/execution/pipeline.py\" to existing allowed for symbol == \"ObligationError\". Keep response allowance for ObligationState/ObligationReason. sorted(hits) == sorted(allowed).",
+    "id": "T15",
+    "parameter": "ObligationError",
+    "remaining_forbidden": "All other paths; ObligationReason still response-only; all other symbol cases unchanged",
+    "source_line": 307,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_no_public_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "map malformed owner input to obligation_failed"
+  },
+  {
+    "authorized_symbols": [
+      "ContradictoryObligationState"
+    ],
+    "current_invariant": "[]",
+    "exact_proposed_additive_change": "Append only \"app/execution/pipeline.py\" to existing allowed for symbol == \"ContradictoryObligationState\". Keep response allowance for ObligationState/ObligationReason. sorted(hits) == sorted(allowed).",
+    "id": "T16",
+    "parameter": "ContradictoryObligationState",
+    "remaining_forbidden": "All other paths; ObligationReason still response-only; all other symbol cases unchanged",
+    "source_line": 307,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_no_public_symbol_is_referenced_anywhere_under_app",
+    "why_pipeline_is_consumer": "retain owner exception.code.value on contradiction"
+  },
+  {
+    "authorized_symbols": [
+      "derive"
+    ],
+    "current_invariant": "hits == [(response.py, source_for(), (response.py, satisfied()]",
+    "exact_proposed_additive_change": "Retain both existing tuples; add exactly (\"app/execution/pipeline.py\", \"derive(\"); compare sorted tuple lists.",
+    "id": "T17",
+    "parameter": null,
+    "remaining_forbidden": "require(, source_for(, satisfied( remain forbidden in pipeline; every other new consumer forbidden",
+    "source_line": 348,
+    "source_sha256": "93b28158953d8d19eb2baeca0dce67df40a116d3337c77b916364a22592a4a5f",
+    "test_file": "tests/execution/obligations_non_activation_test.py",
+    "test_function": "test_only_the_passive_builder_reads_the_frozen_source_map",
+    "why_pipeline_is_consumer": "S11 selects existing obligation through derive"
+  },
+  {
+    "authorized_symbols": [
+      "build",
+      "ResponseBuildInput",
+      "ResponseBuildError",
+      "ContradictoryResponseState"
+    ],
+    "current_invariant": "final importers == []; LIVE_PATHS assertions unchanged",
+    "exact_proposed_additive_change": "Change only final importers expectation to [\"app/execution/pipeline.py\"]. Keep entire LIVE_PATHS loop. Add exact AST import/call budget.",
+    "id": "T18",
+    "parameter": null,
+    "remaining_forbidden": "All LIVE_PATHS checks, every other production importer, direct construction of ApprovedOperationalResponse",
+    "source_line": 97,
+    "source_sha256": "76c278dd0770c08fa742c0570166d4ee6046ebbd99284f926c2c7d1947841059",
+    "test_file": "tests/execution/response_non_activation_test.py",
+    "test_function": "test_no_live_path_imports_or_calls_the_builder",
+    "why_pipeline_is_consumer": "S12 delegates to existing response.build"
+  }
+]
