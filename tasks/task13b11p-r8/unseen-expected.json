@@ -1,0 +1,2097 @@
+{
+  "cases": {
+    "U001": {
+      "outcome_type": "ConversationalResponse",
+      "stage": "S13_AUDIT",
+      "guard": "NONE/zero/non-operational",
+      "reason": null,
+      "operational_obligation": null,
+      "downstream_output": {
+        "text": "A cache stores reusable data.",
+        "model": "recorded-fixture-model",
+        "turn_id": "00000000000000000000000000001bbd",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "CONVERSATIONAL",
+        "source": "MODEL_RAW"
+      },
+      "audit_response_obligation_present": false
+    },
+    "U002": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000001c22",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U003": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "Mode A has no recorded result",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U004": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000001cea",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "CONFIRMATION_REQUIRED"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U005": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "00000000000000000000000000001d4e",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000001d4f",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000001d4e"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U006": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_error",
+        "template": "tool_error",
+        "text": "The trusted tool reported an error for the requested action. No success is claimed.",
+        "turn_id": "00000000000000000000000000001db2",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000001db3",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "ERROR",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_error",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000001db2"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U007": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_timeout",
+        "template": "tool_timeout",
+        "text": "A trusted completion result was not received before the timeout. The action's outcome is unknown.",
+        "turn_id": "00000000000000000000000000001e16",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000001e17",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "TIMEOUT",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_timeout",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000001e16"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U008": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_result",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000001e7a",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000001e7b",
+          "tool_name": "apps",
+          "action_type": "OPEN_APP",
+          "status": "CONFIRMATION_REQUIRED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "confirmation_absent",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000001e7a"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U009": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "dispatch_blocked",
+        "template": "dispatch_blocked",
+        "text": "The dispatcher blocked the requested action before execution. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000001ede",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000001edf",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "BLOCKED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "already_executed",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000001ede"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U010": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "Option A: Mode C / NONE / zero",
+      "reason": "projection_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S07_PERMISSION",
+        "S08_CONFIRMATION",
+        "S09_RESULT",
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false,
+      "obligation_engine_calls": 0,
+      "response_builder_calls": 0,
+      "admitted_result": false
+    },
+    "U011": {
+      "outcome_type": "ConversationalResponse",
+      "stage": "S13_AUDIT",
+      "guard": "NONE/zero/non-operational",
+      "reason": null,
+      "operational_obligation": null,
+      "downstream_output": {
+        "text": "A cache stores reusable data.",
+        "model": "recorded-fixture-model",
+        "turn_id": "00000000000000000000000000001fa5",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "CONVERSATIONAL",
+        "source": "MODEL_RAW"
+      },
+      "audit_response_obligation_present": false
+    },
+    "U012": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "0000000000000000000000000000200a",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U013": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "Mode A has no recorded result",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U014": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "000000000000000000000000000020d2",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "CONFIRMATION_REQUIRED"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U015": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "00000000000000000000000000002136",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002137",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002136"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U016": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_error",
+        "template": "tool_error",
+        "text": "The trusted tool reported an error for the requested action. No success is claimed.",
+        "turn_id": "0000000000000000000000000000219a",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "0000000000000000000000000000219b",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "ERROR",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_error",
+          "error_message": null,
+          "audit_ref": "0000000000000000000000000000219a"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U017": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_timeout",
+        "template": "tool_timeout",
+        "text": "A trusted completion result was not received before the timeout. The action's outcome is unknown.",
+        "turn_id": "000000000000000000000000000021fe",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "000000000000000000000000000021ff",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "TIMEOUT",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_timeout",
+          "error_message": null,
+          "audit_ref": "000000000000000000000000000021fe"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U018": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_result",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000002262",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002263",
+          "tool_name": "apps",
+          "action_type": "OPEN_APP",
+          "status": "CONFIRMATION_REQUIRED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "confirmation_absent",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002262"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U019": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "dispatch_blocked",
+        "template": "dispatch_blocked",
+        "text": "The dispatcher blocked the requested action before execution. Nothing has been executed.",
+        "turn_id": "000000000000000000000000000022c6",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "000000000000000000000000000022c7",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "BLOCKED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "already_executed",
+          "error_message": null,
+          "audit_ref": "000000000000000000000000000022c6"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U020": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "Option A: Mode C / NONE / zero",
+      "reason": "projection_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S07_PERMISSION",
+        "S08_CONFIRMATION",
+        "S09_RESULT",
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false,
+      "obligation_engine_calls": 0,
+      "response_builder_calls": 0,
+      "admitted_result": false
+    },
+    "U021": {
+      "outcome_type": "ConversationalResponse",
+      "stage": "S13_AUDIT",
+      "guard": "NONE/zero/non-operational",
+      "reason": null,
+      "operational_obligation": null,
+      "downstream_output": {
+        "text": "A cache stores reusable data.",
+        "model": "recorded-fixture-model",
+        "turn_id": "0000000000000000000000000000238d",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "CONVERSATIONAL",
+        "source": "MODEL_RAW"
+      },
+      "audit_response_obligation_present": false
+    },
+    "U022": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "000000000000000000000000000023f2",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U023": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "Mode A has no recorded result",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U024": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "000000000000000000000000000024ba",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "CONFIRMATION_REQUIRED"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U025": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "0000000000000000000000000000251e",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "0000000000000000000000000000251f",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "0000000000000000000000000000251e"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U026": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_error",
+        "template": "tool_error",
+        "text": "The trusted tool reported an error for the requested action. No success is claimed.",
+        "turn_id": "00000000000000000000000000002582",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002583",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "ERROR",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_error",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002582"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U027": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_timeout",
+        "template": "tool_timeout",
+        "text": "A trusted completion result was not received before the timeout. The action's outcome is unknown.",
+        "turn_id": "000000000000000000000000000025e6",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "000000000000000000000000000025e7",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "TIMEOUT",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_timeout",
+          "error_message": null,
+          "audit_ref": "000000000000000000000000000025e6"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U028": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_result",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "0000000000000000000000000000264a",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "0000000000000000000000000000264b",
+          "tool_name": "apps",
+          "action_type": "OPEN_APP",
+          "status": "CONFIRMATION_REQUIRED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "confirmation_absent",
+          "error_message": null,
+          "audit_ref": "0000000000000000000000000000264a"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U029": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "dispatch_blocked",
+        "template": "dispatch_blocked",
+        "text": "The dispatcher blocked the requested action before execution. Nothing has been executed.",
+        "turn_id": "000000000000000000000000000026ae",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "000000000000000000000000000026af",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "BLOCKED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "already_executed",
+          "error_message": null,
+          "audit_ref": "000000000000000000000000000026ae"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U030": {
+      "outcome_type": "PipelineStop",
+      "stage": "S06_PROJECTION",
+      "guard": "Option A: Mode C / NONE / zero",
+      "reason": "projection_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S07_PERMISSION",
+        "S08_CONFIRMATION",
+        "S09_RESULT",
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false,
+      "obligation_engine_calls": 0,
+      "response_builder_calls": 0,
+      "admitted_result": false
+    },
+    "U031": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-01",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U032": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-02",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U033": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-03",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U034": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-04",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U035": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-05",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U036": {
+      "outcome_type": "PipelineStop",
+      "stage": "S08_CONFIRMATION",
+      "guard": "B-06",
+      "reason": "confirmation_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U037": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-01",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U038": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-02",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U039": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-03",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U040": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-05",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U041": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "C-06",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U042": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000002bc2",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U043": {
+      "outcome_type": "PipelineStop",
+      "stage": "S09_RESULT",
+      "guard": "Mode A has no recorded result",
+      "reason": "result_invalid",
+      "executed": false,
+      "result": null,
+      "obligation_state": null,
+      "component_reason": null,
+      "downstream_output": null,
+      "forbidden_stages": [
+        "S10_PROVENANCE",
+        "S11_OBLIGATION",
+        "S12_RESPONSE",
+        "S13_AUDIT"
+      ],
+      "raw_operational_fallback": false
+    },
+    "U044": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000002c8a",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "CONFIRMATION_REQUIRED"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U045": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "00000000000000000000000000002cee",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002cef",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002cee"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U046": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_error",
+        "template": "tool_error",
+        "text": "The trusted tool reported an error for the requested action. No success is claimed.",
+        "turn_id": "00000000000000000000000000002d52",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002d53",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "ERROR",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_error",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002d52"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U047": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_timeout",
+        "template": "tool_timeout",
+        "text": "A trusted completion result was not received before the timeout. The action's outcome is unknown.",
+        "turn_id": "00000000000000000000000000002db6",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002db7",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "TIMEOUT",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_timeout",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002db6"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U048": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_result",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000002e1a",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002e1b",
+          "tool_name": "apps",
+          "action_type": "OPEN_APP",
+          "status": "CONFIRMATION_REQUIRED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "confirmation_absent",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002e1a"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U049": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_CAPABILITY_UNAVAILABLE",
+        "obligation_reason": "dispatch_blocked",
+        "template": "dispatch_blocked",
+        "text": "The dispatcher blocked the requested action before execution. Nothing has been executed.",
+        "turn_id": "00000000000000000000000000002e7e",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CAPABILITY_UNAVAILABLE"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 6,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002e7f",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "BLOCKED",
+          "facts": {},
+          "executed": false,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "already_executed",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002e7e"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U050": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_SUCCESS",
+        "obligation_reason": "trusted_tool_success",
+        "template": "tool_success",
+        "text": "The trusted tool completed the requested action successfully.",
+        "turn_id": "00000000000000000000000000002ee2",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_SUCCESS"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 3,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002ee3",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "SUCCESS",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": null,
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002ee2"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U051": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_error",
+        "template": "tool_error",
+        "text": "The trusted tool reported an error for the requested action. No success is claimed.",
+        "turn_id": "00000000000000000000000000002f46",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002f47",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "ERROR",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_error",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002f46"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U052": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S09_RESULT",
+      "guard": "C-08",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REPORT_TOOL_ERROR",
+        "obligation_reason": "trusted_tool_timeout",
+        "template": "tool_timeout",
+        "text": "A trusted completion result was not received before the timeout. The action's outcome is unknown.",
+        "turn_id": "00000000000000000000000000002faa",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "TOOL_ERROR"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 2,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "TOOL_RESULT"
+        ],
+        "primary_action": "OPEN_URL",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "ALLOW",
+        "confirmation_claimed": false,
+        "result": {
+          "invocation_id": "00000000000000000000000000002fab",
+          "tool_name": "fixture.browser",
+          "action_type": "OPEN_URL",
+          "status": "TIMEOUT",
+          "facts": {},
+          "executed": true,
+          "executor": "static-fixture",
+          "started_at": "2026-09-22T00:00:00+00:00",
+          "finished_at": "2026-09-22T00:00:00+00:00",
+          "error_kind": "fixture_timeout",
+          "error_message": null,
+          "audit_ref": "00000000000000000000000000002faa"
+        },
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    },
+    "U053": {
+      "outcome_type": "ApprovedOperationalResponse",
+      "stage": "S13_AUDIT",
+      "branch_stage": "S08_CONFIRMATION",
+      "guard": "B-07 / waiting",
+      "reason": null,
+      "downstream_output": {
+        "obligation": "REQUEST_CONFIRMATION",
+        "obligation_reason": "confirmation_required_permission",
+        "template": "confirmation_required",
+        "text": "Confirmation is required before the application-opening action can run. Nothing has been executed.",
+        "turn_id": "0000000000000000000000000000300e",
+        "created_at": "2026-09-22T00:00:00+00:00",
+        "lane": "OPERATIONAL",
+        "provenance_record_ids": [],
+        "source": "CONFIRMATION"
+      },
+      "raw_operational_fallback": false,
+      "obligation_priority": 1,
+      "expected_obligation_state": {
+        "lane": "OPERATIONAL",
+        "request_class": "ACTION_REQUEST",
+        "lane_reasons": [
+          "ALWAYS_OPERATIONAL_CLASS",
+          "TOOL_PROPOSAL",
+          "CONFIRMATION_REQUIRED"
+        ],
+        "primary_action": "OPEN_APP",
+        "reporting_intent": "NONE",
+        "target_resolved": true,
+        "multi_action": false,
+        "capability_available": true,
+        "permission_outcome": "REQUIRE_CONFIRMATION",
+        "confirmation_claimed": false,
+        "result": null,
+        "value": {
+          "available": false,
+          "status": null,
+          "trust_class": null,
+          "source": null,
+          "ambiguous": false
+        }
+      }
+    }
+  }
+}
