@@ -530,6 +530,47 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   Hermes disabled. Freeze that adapter boundary before re-running 13B11N; do not
   enable Hermes or wire a pipeline.
 
+  P7 recorded-turn admission contract FROZEN as 13B11P-R1 (2026-10-02), one docs
+  commit, zero production commits. Production byte-identical at db54d615.
+  Resolves P-B01, the blocker 13B11P raised: the complete recorded-turn admission
+  API, especially the S08-S09 confirmation/result replay seam.
+  tasks/task13b11p-r1/, 18 manifest entries, manifest 203eedc6..., additive to and
+  subordinate to the unchanged P7 PIPELINE CONTRACT V1.
+  The choice that makes the rest follow: RecordedTurn (21 fields, all from existing
+  frozen types) carries no callable, store, clock, executor, dispatcher, session
+  object or authority boolean, so zero-execution is STRUCTURAL, not checked.
+  Three admission shapes DERIVED from three presence booleans, never declared, so
+  no caller or model can author a mode; 5 of 8 truth-table cells inadmissible.
+  Confirmation continuation is PENDING-only behind 7 ordered guards incl. full
+  twelve-field binding equality; no resting CONFIRMED, no second claim mechanism,
+  and NO EDGE to S09 -- its only success is P6 REQUEST_CONFIRMATION.
+  Result replay: 8 ordered guards incl. the replayed permission outcome/class
+  having to equal what permissions.decide returns NOW (blocks a forged ALLOW);
+  dispatcher skipped, resume at S10, 0 new executor calls.
+  confirmation_claimed = result.executed and outcome is REQUIRE_CONFIRMATION.
+  NOT invocation.confirmation_id -- dispatcher gate 5 can leave that id present
+  with nothing claimed. Forced by the two frozen P6 contradiction checks.
+  An authorized turn with NO admitted result stops at S09_RESULT. Reachable with
+  the real frozen policy (browser.open is a genuine ALLOW under BALANCED), so no
+  P4 mock was needed -- which the frozen pipeline matrix forbids anyway.
+  Zero new stop reasons or stages: all 7 named failure categories map onto the
+  already-closed PipelineStopReason set; residual coarseness recorded, not fixed
+  by editing a frozen enum.
+  32-row admission matrix 6b454b2c... frozen while pipeline.py was provably
+  absent; 20 security invariants S-01..S-20, each labelled structural or checked.
+  pytest 5468 passed / 11 deselected / 0 failed, golden still 12/20 same eight,
+  probe still fc68a0b0, 337 tracked digests identical, 46 bundles verify 0 fail.
+  New follow-ups: F-P7R1-01 (a TrustedToolResult's dispatcher origin is unprovable
+  from type identity; before live wiring), F-P7R1-02 (replay of a
+  non-dispatchable-action refusal excluded in v1), F-P7R1-03 (coarse reasons;
+  guard identity asserted in tests). F-TYPE-01 now fully specified for both
+  PipelineStop and RecordedTurn. F-MAP-01/FALLBACK-01/AUDIT-01/REPLAY-01 unchanged.
+  Next approved unit: resume 13B11P, P7 PASSIVE PIPELINE IMPLEMENTATION, against
+  the frozen contracts, recorded outputs and static/test-double projections only.
+  Re-verify every digest and freeze the fixtures BEFORE writing code. Do not
+  enable Hermes, call a live model or real tools, wire P7 live, modify the audit
+  schema, or start P8/13C.
+
   Classifier version reconciled as 13B11L-R2 (2026-09-20), one focused commit:
     ea0cb32  R2  CLASSIFIER_VERSION "1" -> "2" and the comment defining both.
              Exactly ONE non-comment line of 319 differs from 9ace0e3.
