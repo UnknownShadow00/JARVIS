@@ -571,6 +571,70 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   enable Hermes, call a live model or real tools, wire P7 live, modify the audit
   schema, or start P8/13C.
 
+  P7 PASSIVE PIPELINE BLOCKED as 13B11P-R2 (2026-10-02) at its §46 frozen-
+  contract gate. One docs commit, ZERO production commits, production
+  byte-identical at db54d615, pipeline.py still absent, empty diff.
+  Canonical identity RESOLVED: app/execution/pipeline.py
+  (tasks/task13b11a/TARGET_COMPONENT_MAP.md:31 "Integration boundary"), entry
+  run_recorded_turn(turn: RecordedTurn) -> TurnOutcome. The task prompt's
+  app/brain/pipeline.py is NOT the plan's path.
+  P-B02 (BLOCKING): frozen RecordedTurn field 15, confirmation:
+  ConfirmationRecord | None with exact type identity, is UNIMPLEMENTABLE. It
+  makes the pipeline the first module under app/ to import
+  app/execution/confirmation.py, against three frozen assertions:
+    confirmation_non_activation_test.py::test_no_module_under_app_imports_the_
+      confirmation_machine  -- assert hits == [], all of app/, NO allowlist
+    test_no_public_symbol_is_referenced_anywhere_under_app -- 19 symbols,
+      SUBSTRING match, anywhere under app/
+    obligations_non_activation_test.py::test_the_confirmation_machine_keeps_
+      its_zero_importers -- docstring states the rule NORMATIVELY: an approval
+      arrives as a settled projection, the record's lifecycle stays P4-internal
+  No conforming implementation exists: function-local import still leaves the
+  substring; sys.modules is the service locator R1 §27 forbids; duck typing
+  breaks the frozen type-identity rule and is weaker. Guards B-02/B-03/B-05/
+  B-07 need five more forbidden references.
+  THIS IS A DEFECT I INTRODUCED IN 13B11P-R1, and the SAME mistake P6 already
+  made and corrected once (confirmation_state -> confirmation_claimed, at the
+  cost of re-freezing a 442-row matrix). Reading the 13 production modules was
+  not enough -- the binding constraint lives in the non-activation TESTS.
+  LESSON: before freezing a type that names a module, read that module's
+  non-activation test, not just the module.
+  Recommended repair (needs operator signature): replace field 15 with a
+  JARVIS-owned settled projection (RecordedConfirmationObservation) built from
+  the record OUTSIDE the pipeline, using only types.py enums and plain data.
+  All seven B-guards survive restated; confirmation keeps ZERO importers; S-14
+  becomes STRONGER (absence, not an allowlist). Modes A and C and 23 of 32
+  admission rows stand as frozen; 9 rows + 7 documents need an explicit V2 with
+  new digests. Full field table + 2 rejected alternatives in
+  tasks/task13b11p-r2/BLOCKER_ANALYSIS.md.
+  P-B03 (scope authorization, NOT the blocker): any integration boundary needs
+  ~41 non-activation allowlist extensions naming the pipeline as a passive
+  importer -- router ~12, permissions ~15, obligations ~12 (extend the existing
+  response.py allowlist), response ~2. Authorized IN KIND by frozen 13B11O-R1
+  IMPLEMENTATION_ACCEPTANCE.md and precedented exactly by obligations naming
+  response.py; weakens nothing in substance. Never quantified before.
+  dispatch_non_activation_test.py needs NO change: obligations.NON_ACTION_
+  OUTCOMES is the identical 3-member set guard C-00a needs, so the dispatcher
+  keeps zero importers permanently. classifier/lane/canonicalize/provenance
+  already exclude app/execution/ -> 0 changes.
+  Deliberately NOT done: no fixture corpus frozen (§44 requires freeze before
+  code; an unresolved input field would force a re-freeze -- the exact failure
+  §44 prevents), no matrix measurement, no generalization corpus, no runtime or
+  structural zero-execution proof, no conformance claim of any kind.
+  pytest 5468 passed / 11 deselected / 0 failed, golden 12/20 same eight, probe
+  fc68a0b0, registry.call still 4 in app/server.py, 46 bundles verify 0 fail,
+  both contract manifests (02d208f7, 203eedc6) verify, security review 21/21
+  with 0 authority bypasses. Hermes 2237be35 clean/disabled/0 procs.
+  Nightly snapshot job inspected READ-ONLY (not modified): /opt/apps/nightly-
+  snapshot.sh, cron "59 23 * * *", sweeps every projects/*/ with a .git except
+  nexus-admin-academy, does git add -A + commit + force-push to
+  origin/snapshot. The workspace clone IS swept; production at 192.168.0.162 is
+  NOT; origin/main is never written. It did not fire during this task.
+  Next: resolve P-B02, authorize P-B03, land admission contract V2 as explicit
+  version history, THEN resume this same unit -- freezing the corpus against the
+  repaired input type before any module code. Not P8, not 13C, not the registry
+  adapter, no live wiring, no Hermes.
+
   Classifier version reconciled as 13B11L-R2 (2026-09-20), one focused commit:
     ea0cb32  R2  CLASSIFIER_VERSION "1" -> "2" and the comment defining both.
              Exactly ONE non-comment line of 319 differs from 9ace0e3.
