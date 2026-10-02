@@ -1,0 +1,3 @@
+# Follow-ups
+
+P-B05 remains OPEN: R5 classification, zero-proposal NONE-route mode-C rejection boundary requires decision A or B in RESOLUTION.md. Nonzero proposal precedence is already settled by higher authority. P-B02/P-B03/P-B04 remain preserved and unopened; R4 authorization manifest remains 5eaffda829d3adb29ebdbd899c143cbf6fa0c25fdac6617544bd484a17dabfd6. F-P7R1-01 origin authentication, F-P7R1-02 non-dispatchable replay and F-P7R1-03 coarse reasons remain OPEN. Next: operator decision, versioned dependent repair, final contract and corpus freeze, then separately authorized implementation.

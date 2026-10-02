@@ -1,0 +1,259 @@
+[
+  {
+    "first_commit": "2c87af3425accd4080972b530fdd16dac6291ee4",
+    "hits": [
+      {
+        "line": 62,
+        "text": "`C15` the conversational-plus-result contradiction, `C16` the historical pair)."
+      }
+    ],
+    "sha256": "52721e230cf3cb34ee13a8a18567076156683f77b498bec37b3321010e3ba3e2",
+    "source": "tasks/task13b11p-r1/ADMISSION_MATRIX.md",
+    "status": "frozen admission origin / direct dependent",
+    "task": "task13b11p-r1"
+  },
+  {
+    "first_commit": "2c87af3425accd4080972b530fdd16dac6291ee4",
+    "hits": [
+      {
+        "line": 46,
+        "text": "    {\"id\": \"C15\", \"scenario\": \"conversational request text plus an execution result for an unrelated action\", \"admitted\": false, \"mode\": \"RESULT_REPLAY\", \"last_stage\": \"S09_RESULT\", \"dispatch_allowed\": false, \"executor_calls\": 0, \"outcome\": \"PipelineStop\", \"detail\": \"the final lane escalates to OPERATIONAL through the existing policy via tool_result, so there is no conversational escape; C-04 then fails on route NONE versus the invocation's action\", \"stop\": {\"stage\": \"S09_RESULT\", \"reason\": \"result_invalid\", \"executed\": false, \"result\": null, \"component_reason\": null}},"
+      }
+    ],
+    "sha256": "6b454b2c8d881327b88cef73ae03a6465286bb7fb589e942f1bc3789d76fb434",
+    "source": "tasks/task13b11p-r1/admission-matrix.json",
+    "status": "frozen admission origin / direct dependent",
+    "task": "task13b11p-r1"
+  },
+  {
+    "first_commit": "d57bef85c60449942a5455311f1802cd77e640cc",
+    "hits": [
+      {
+        "line": 21,
+        "text": "| CONVERSATIONAL + executed result | `C15` | lane escalates via the existing policy, then `STOP(S09_RESULT, result_invalid)` | yes |"
+      }
+    ],
+    "sha256": "ef81d1caf54012265700188b8fa3a8d8a72c72f560f1a63805ec777a1decdae3",
+    "source": "tasks/task13b11p-r2/CONTRADICTION_HANDLING.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r2"
+  },
+  {
+    "first_commit": "347e32fe36be0dc29d7d8327d5e2babbaa8dd5c3",
+    "hits": [
+      {
+        "line": 39,
+        "text": "| C15 | C15 | unchanged | no dependency on repaired observation; row object identical |"
+      }
+    ],
+    "sha256": "82eb0a9fc2521c3356d25a56c60ce55af08e1e21d740e082e39363d0f9f4b585",
+    "source": "tasks/task13b11p-r3/MATRIX_MIGRATION.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r3"
+  },
+  {
+    "first_commit": "347e32fe36be0dc29d7d8327d5e2babbaa8dd5c3",
+    "hits": [
+      {
+        "line": 500,
+        "text": "      \"id\": \"C15\","
+      }
+    ],
+    "sha256": "e3a6696b85b0ced5506570931e753276402bd8620e91382780d79f86ba2b58da",
+    "source": "tasks/task13b11p-r3/admission-matrix-v2.json",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r3"
+  },
+  {
+    "first_commit": "347e32fe36be0dc29d7d8327d5e2babbaa8dd5c3",
+    "hits": [
+      {
+        "line": 299,
+        "text": "    \"v1_row\": \"C15\","
+      },
+      {
+        "line": 301,
+        "text": "    \"v2_row\": \"C15\","
+      }
+    ],
+    "sha256": "e210700ca84d217a6ed0df0a5411b36ca610c9cf24a30c10615e6bf88da5ad32",
+    "source": "tasks/task13b11p-r3/row-mapping.json",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r3"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 7,
+        "text": "Candidate normative content: RECORDED_TURN_V2, CONFIRMATION_PROJECTION, PROJECTION_FIELD_INVENTORY, S08_V2, S09_V2, ASSOCIATION_RULES, RESULT_REPLAY, IDEMPOTENCE, PIPELINE_STOP, SECURITY_INVARIANTS and IMPLEMENTATION_ACCEPTANCE. Unchanged upstream P7 Pipeline Contract V1 and Admission V1 semantics remain binding; C15 cannot be silently moved to resolve P-B05."
+      }
+    ],
+    "sha256": "dc2847a40433ace4b7f23887e72a3b424fde1624064b6cf5af3383d8181fd302",
+    "source": "tasks/task13b11p-r4/ADMISSION_CONTRACT_V2.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 1,
+        "text": "# P-B05 \u2014 unchanged admission C15 conflicts with frozen guard order"
+      },
+      {
+        "line": 9,
+        "text": "Admission V1 admission-matrix.json row C15 requires a conversational request plus an unrelated executed result to reach S09_RESULT and stop with result_invalid at C-04. Its detail explicitly says the existing lane escalates to OPERATIONAL and C-04 then fails on route NONE versus the invocation action. All 23 non-confirmation rows, including C15, must remain unchanged in this repair."
+      },
+      {
+        "line": 17,
+        "text": "| Complete proposal-count partition | Frozen earlier branch | Why C15 cannot reach its required S09 stop |"
+      },
+      {
+        "line": 23,
+        "text": "These exhaust all proposal cardinalities. Using any malformed earlier input only stops sooner. Supplying caller fields to fabricate an executable route contradicts the actual router and S06 consistency guards. Labelling the expected stop S09 while checking C-04 early would change the ordered guard contract; ADMISSION_FAILURES.md says stage attribution is not a convenience reordering. Relabelling C15 as a component-only fixture would change its existing whole-admission meaning and cannot honestly claim coverage of run_recorded_turn."
+      },
+      {
+        "line": 27,
+        "text": "A versioned reconciliation must choose the priority for mode-C results on non-executable routes: explicitly amend the guard walk/association location, or amend C15's expected stage/reason/fixture scope. Both reach beyond P-B02/P-B04 and require a new contract decision. No option is implemented or selected here. No new stop reason is needed merely to document the conflict."
+      },
+      {
+        "line": 29,
+        "text": "The 23/32 versus 9/32 migration count remains verified. C15 remains byte-equivalent as a row object; no unrelated row moved. A complete exact fixture corpus cannot be declared frozen while its binding expected outcome contradicts the guard walk. V2 and fixtures remain unfrozen. P-B04 and its exact authorization records can be sealed independently without claiming final contract completion."
+      }
+    ],
+    "sha256": "0111d2115ac0c78cd3c044422fd97cc4d0ca9021250e1838b6e8d1b2a5e479d1",
+    "source": "tasks/task13b11p-r4/BLOCKER_ANALYSIS.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 7,
+        "text": "New blocker P-B05: Admission V1 row C15 expects S09/result_invalid for a conversational request carrying an unrelated result; the higher-precedence frozen pipeline walk exits on deterministic NONE before S06\u2013S09. Zero proposals select non-action processing; any proposals stop unexpected_proposal. Actual classifier/router/lane observations verify that operational lane escalation does not change NONE into an executable action. An exact C15 implementation fixture cannot satisfy both requirements. No row was changed or relabelled; no early association reordering was invented. BLOCKER_ANALYSIS.md gives the evidence and required versioned decision."
+      }
+    ],
+    "sha256": "cc466953be40fb45156ebbd5369619ea928d2b8e1990df0f920fabc56be85287",
+    "source": "tasks/task13b11p-r4/FINAL-REPORT.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 3,
+        "text": "No final fixture corpus or expected-outcomes artifact is frozen. The required ordering is completed V2 first, exact corpus second, production code later. P-B05 prevents completion of V2 and makes the unchanged whole-admission C15 expectation incompatible with the frozen walk. Pipeline remains absent; nothing was run against a pipeline."
+      },
+      {
+        "line": 9,
+        "text": "Do not freeze contradictory fixtures, label C15 component-only, adjust an unrelated row or implement an alternate guard order. Resolve P-B05 explicitly first. Row-mapping integrity is hashed; absence of corpus/expected-outcome hashes is recorded as a failed acceptance item."
+      }
+    ],
+    "sha256": "252e138488b610d1a97262c2960085ebcadf0dcccf5d5aaed26f1e2dfc9e3854",
+    "source": "tasks/task13b11p-r4/FIXTURE_CORPUS.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 5,
+        "text": "P-B05 OPEN / BLOCKING FINAL CONTRACT FREEZE: unchanged C15 requires S09 after the frozen deterministic NONE branch already exits. A versioned priority/guard-order or matrix decision is required. No semantic change selected by R4."
+      }
+    ],
+    "sha256": "8b8c9419d9cd8d6953cca199f4f37f7cad30923d26019dfee3300af7d1c14ab2",
+    "source": "tasks/task13b11p-r4/FOLLOWUPS.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 9,
+        "text": "The matrix migration remains 23 identical row objects and nine confirmation-only wording repairs. Exact fixture derivation exposed P-B05: unchanged C15 requires S09 despite the frozen NONE-route branch exiting before S06. All proposal counts are covered by the conflict. Pure classifier/router/lane observations confirm NONE remains NONE after operational lane escalation. No pipeline or result was constructed for this analysis."
+      }
+    ],
+    "sha256": "24572efcc580468c7b612770fd217553f1f5e97e762c3902b41155684fb17851",
+    "source": "tasks/task13b11p-r4/IMPLEMENTATION.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 39,
+        "text": "| C15 | C15 | unchanged | no dependency on repaired observation; row object identical |"
+      },
+      {
+        "line": 42,
+        "text": "P-B05: unchanged row C15 conflicts with the inherited guard order. Its expectation was not edited. The 23/9 description count is correct but does not prove semantic consistency or fixture realizability."
+      }
+    ],
+    "sha256": "5123ad2962b498173a98a7f4bc39d94fb56b707c04dcdb0e61f2130426736a81",
+    "source": "tasks/task13b11p-r4/MATRIX_MIGRATION.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 9,
+        "text": "First-hand migration again proves 23 identical row objects and nine confirmation-only descriptive changes, no outcome edits. P-B05 is an independent inherited conflict in C15 versus the frozen walk. No final V2 freeze or fixture freeze is claimed until that conflict is explicitly reconciled. No historical contract, matrix, evidence, test or production file is rewritten."
+      }
+    ],
+    "sha256": "77b32e207ee6864f86eeafab9911327c0a3461392d9e26a1476646473e87e4e6",
+    "source": "tasks/task13b11p-r4/V1_TO_V2.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 5,
+        "text": "Full production pytest 5468 passed, 11 deselected, zero failed; golden 12/20 same eight; legacy hash exact. Existing tests/code/config unchanged. All 48 predecessor seals verify, including R3. Actual pure-component observations confirm the C15 route/lane facts; branch conclusions are labeled contract analysis, not pipeline measurements."
+      }
+    ],
+    "sha256": "6d5bd27380261f131cbb2fdafb8ee1d3ba48d3bf16940f783c5eedd2f0658fac",
+    "source": "tasks/task13b11p-r4/VERIFICATION.md",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 500,
+        "text": "      \"id\": \"C15\","
+      }
+    ],
+    "sha256": "17c58f2bf760e5abebb0b3b6e1f5d07f9c34307d1562e119d7639ec17826795d",
+    "source": "tasks/task13b11p-r4/admission-matrix-v2.json",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  },
+  {
+    "first_commit": "9c5e8c9e1792d845a1d217cd923dc891a651e3e9",
+    "hits": [
+      {
+        "line": 299,
+        "text": "    \"v1_row\": \"C15\","
+      },
+      {
+        "line": 301,
+        "text": "    \"v2_row\": \"C15\","
+      }
+    ],
+    "sha256": "e210700ca84d217a6ed0df0a5411b36ca610c9cf24a30c10615e6bf88da5ad32",
+    "source": "tasks/task13b11p-r4/row-mapping.json",
+    "status": "derived analysis/draft/historical copy; not independent authority",
+    "task": "task13b11p-r4"
+  }
+]

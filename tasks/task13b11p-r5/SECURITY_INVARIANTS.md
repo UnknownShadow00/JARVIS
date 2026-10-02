@@ -1,0 +1,3 @@
+# Security invariants preserved
+
+No resting CONFIRMED. Confirmation machine remains importer-free; confirm validates, claim_for_dispatch owns execution claim; P7 calls neither. Projection remains immutable, owner-produced and non-authoritative; confirmation ID possession grants nothing. Exactly one matched proposal for a supported action; no model-derived binding, selection or fuzzy match. No dispatcher, registry or executor in P7; S09 is recorded-result admission. P6 owns obligation/response and contradiction ordering; DENY/TIMEOUT mappings unchanged. Unassociated results do not reach P6 or establish operational truth. No new stop vocabulary, provider, model, live tool or live wiring. F-P7R1-01/02/03 stay open.
