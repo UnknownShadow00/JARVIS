@@ -1,0 +1,3 @@
+# Immutability and authority limit
+
+Both value types are `@dataclass(frozen=True, slots=True)` and all nested collections are tuples; leaves are strings or integers. No dictionary, list, set, mapping proxy, callable, module, registry object or command array occurs in returned values. Focused tests reject assignments to the snapshot, a row and a tuple element, then recursively check value types. The snapshot grants no execution authority. A caller could manually construct a lookalike dataclass, so future `binding_projection.py` must revalidate digest, source revision and exact reviewed content rather than trusting type identity alone.

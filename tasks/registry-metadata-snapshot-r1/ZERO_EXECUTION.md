@@ -1,0 +1,3 @@
+# Zero execution
+
+The module reads source files, parses AST and constructs frozen data only. It has no `registry.call`, handler invocation, dispatch, executor, network, subprocess, provider/model/Ollama, confirmation mutation, provenance write or audit emission path. An instrumented two-snapshot sentinel forbade execution-capable imports, socket connect and subprocess creation; observed `forbidden_runtime_events=[]`, `registry_call=0`, `handler_calls=0`, `dispatch=0`, and zero provider/audit/provenance/confirmation events. Existing non-activation tests passed in the full suite unchanged. The legacy regression probe separately used existing `registry.list_tools()` solely to compare the legacy baseline; it did not call any tool.

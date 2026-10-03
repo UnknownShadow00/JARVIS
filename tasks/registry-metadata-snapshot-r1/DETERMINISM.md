@@ -1,0 +1,3 @@
+# Determinism and versioning
+
+The factory reads exactly three fixed source files, validates their pinned hashes, parses literal AST declarations, sorts app names and rows, and hashes UTF-8 canonical JSON with `sort_keys=True`, compact separators and `ensure_ascii=False`. `schema_version` is the minimum explicit V1 identifier, `"1"`. No wall clock, randomness, object ID or hash iteration order enters output. Repeated snapshot equality is tested. A source change requires reviewed hash/version handling before this boundary accepts it; there is no automatic migration or fallback to live discovery.

@@ -1,0 +1,3 @@
+# Fail-closed behavior
+
+The factory rejects any changed reviewed source hash before returning metadata. Internal AST parsing also rejects missing or duplicate `_EXPLICIT_TOOL_MODULES` keys, duplicate module paths, malformed/nonliteral identities, unsupported unpacking, duplicate or malformed `_APP_MAP` entries, absent/unsupported `execute(params)`, invalid safety level and unexpected browser/app field/action shape. No malformed declaration is repaired or ignored to obtain a match. Isolated fixtures exercise duplicate/malformed cases without modifying the canonical registry. A valid but unreviewed extra registry key is parseable as data, but does not become a V1 row; changing the production registry source still triggers the reviewed-hash gate.

@@ -1,0 +1,3 @@
+# Test corpus and results
+
+The 17 focused tests were frozen before module implementation (initial collection failed because the module was absent), then passed. Coverage includes two reviewed rows and app allowlist, exact schema, unrelated valid registry declaration, repeated snapshots, sorted order, immutable nested data, no callable/registry leakage, no handler/registry import, zero production consumers, five malformed/duplicate registry fixtures, four malformed/duplicate app fixtures, client/model argument rejection and source-hash drift rejection. Fixtures do not mutate canonical registry declarations. Full suite: **5690 passed, 11 deselected, 0 failed**, two existing warnings. No existing non-activation test was changed.

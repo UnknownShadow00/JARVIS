@@ -1073,3 +1073,9 @@
 - Files changed: tasks/loop-log.md.
 - Result: BLOCKED; Core HEAD and Hermes baseline verified, F-MAP-01 evidence 51/51 verified, but the frozen contract explicitly leaves the snapshot module path unresolved. No production implementation or tests changed.
 - Next: Operator must freeze the canonical production module path and owner for RegistryMetadataSnapshotV1 before implementation.
+
+## [2026-10-03 23:40:05 UTC] Task Completed
+- Task: Implemented the passive registry metadata snapshot boundary at the operator-approved Core path, with focused security and non-activation tests.
+- Files changed: Core app/execution/registry_metadata.py and tests/execution/registry_metadata_test.py; workspace tasks/registry-metadata-snapshot-r1/ and tasks/loop-log.md; sealed Core evidence at /home/jarvis/.hermes-poc/evidence/registry-metadata-snapshot-r1/.
+- Result: PASS; focused 17 passed, full 5690 passed and 11 deselected, golden 12/20 with the same eight failures, legacy digest unchanged, zero production consumers or forbidden runtime events, Hermes disabled.
+- Next: Implement passive app/execution/binding_projection.py against the frozen F-MAP-01 V1 contract and this snapshot in a separate unit; formal P7 exit and P8 entry remain outstanding.

@@ -1,0 +1,3 @@
+# F-MAP-01 compatibility and non-expansion
+
+The two selected metadata rows provide exact registered keys, paths, safety levels and reviewed handler field/action shapes required by the future closed V1 crosswalk: `OPEN_APP → apps.open → apps` and `OPEN_URL → browser.open → browser`. The apps name set is available for exact target validation. The snapshot performs **no** action→capability or capability→tool resolution; P4 and `ADMITTED_MAPPING_V1.md` remain authoritative. No third mapping is added, and browser search is not admitted. The frozen F-MAP-01 docs, target schemas, argument schemas and permission policy are unchanged.
