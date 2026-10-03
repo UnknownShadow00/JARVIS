@@ -1,0 +1,5 @@
+# Owner and location
+
+Existing architecture fixes **conceptual ownership**: JARVIS P7 execution/control-plane integration boundary composes P3 router/canonicalizer and P4 permission inputs. The future transport adapter passes raw request/session context into that boundary. `TARGET_COMPONENT_MAP.md` calls `app/execution/pipeline.py` the orchestration boundary and `app/server.py` its only eventual consumer; it does not assign a separate producer module. P3 router owns route/target; P3 canonicalizer owns normalization; P4 owns policy; P4 confirmation owner supplies its settled V2 projection; P5 alone owns dispatch/result. No one else gains those responsibilities.
+
+**PATH UNRESOLVED.** No frozen production path for a separate binder exists. Selecting a concrete module is required before implementing it, but does not by itself authorize a new component or change `pipeline.py`. The larger blocker is the missing closed binding schema and live capability truth source; a filename cannot solve either. Server/API/UI may adapt transport but may not own policy, mapping by model prose, or target inference.

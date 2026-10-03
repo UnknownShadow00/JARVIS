@@ -1055,3 +1055,9 @@
 - Files changed: tasks/p7-p8-entry-recovery-review/, tasks/loop-log.md; new sealed Core evidence at /home/jarvis/.hermes-poc/evidence/p7-p8-entry-recovery-review/.
 - Result: PASS for canonical production/evidence/regression verification and review; formal P7 exit incomplete, P8 entry blocked; new evidence seal 39/39 with 0 failures.
 - Next: Freeze F-MAP-01 live request-to-binding/projection producer contract for P7 shadow ingress; do not implement or activate during this review.
+
+## [2026-10-03 20:50:21 UTC] Task Completed
+- Task: Reviewed and documented F-MAP-01 live request-to-binding projection contract against canonical Core and frozen task history; identified unapproved binding and capability-source decisions.
+- Files changed: tasks/f-map-01-producer-contract-review/, tasks/loop-log.md; new sealed Core evidence at /home/jarvis/.hermes-poc/evidence/f-map-01-producer-contract-review/.
+- Result: BLOCKED for complete F-MAP-01 contract freeze; canonical regressions passed (5673 pytest, 12/20 golden, legacy digest unchanged), production unchanged, new evidence 49/49 with 0 failures.
+- Next: Obtain operator-approved closed capability-to-tool/argument/target schema, live capability truth source, and producer path/handoff; then freeze exact test expectations before implementation.

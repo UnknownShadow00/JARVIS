@@ -1,0 +1,5 @@
+# ID association
+
+P1 `CorrelationContext` owns `session_id` and `turn_id`; `invocation_id` and `confirmation_id` are children only after their owner stages create them. The current `RecordedTurn` has no `request_id` field; the authoritative per-turn request association is `turn_id`. Transport request IDs may be logged separately but cannot replace P1 IDs or enter a new P7 authority field. `AdapterRequest.turn_id`, each `ToolProposal.turn_id`, P7 correlation and `proposal_ids[0]` must match exactly under S01/S06. `proposal_ids` are unique JARVIS-assigned ordered IDs, not provider-selected.
+
+Mode B receives P4-owned `SettledConfirmationProjection` with the original audit turn/session and same current session; producer never imports `ConfirmationRecord`/store or sets `CONFIRMED`. Mode C receives an existing P5 invocation/result pair whose IDs match and whose action, policy and canonicalization versions are rechecked; producer does not mint invocation IDs or create results. Wrong IDs fail ingress or P7's S01/S06/S08/S09 guards. Client/model/provider replacement of any authoritative ID is forbidden.

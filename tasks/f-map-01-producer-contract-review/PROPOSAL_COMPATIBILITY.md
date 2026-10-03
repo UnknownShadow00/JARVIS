@@ -1,0 +1,5 @@
+# Compatibility with frozen P7 comparison
+
+P7 obtains classification/route internally and parses the recorded adapter output after initial lane validation. For an executable action it requires exactly one proposal. Its ordered S06 guard compares: proposal turn/proposal/model IDs to JARVIS request/correlation; presence/type and route consistency of expected/query; P4 declared action/capability and registered availability; proposal tool name to `expected.tool_name` and JARVIS-advertised tool schema; P3 canonicalization version and lineage; then the **entire** candidate canonical argument map to expected, with exact keys, array order and scalar types. P7 then asks P4 to decide. See production `pipeline.py::_proposal_guard` and frozen `task13b11o-r1/PROPOSAL_GUARD.md`.
+
+The future producer must fix the expected side **before** proposal comparison. It may not rank, merge, pick among multiple proposals, use fuzzy equality, ignore extra keys, coerce booleans/numbers, repair target fields, or replace the expected binding with model values. Zero/multiple proposals retain existing P7 stops. Matching grants only guard passage, never permission, confirmation or execution.
