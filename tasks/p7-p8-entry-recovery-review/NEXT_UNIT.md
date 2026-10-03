@@ -1,0 +1,7 @@
+# Smallest next unit
+
+**Freeze F-MAP-01's JARVIS-owned live request-to-binding/projection producer contract for P7 shadow ingress.** Do not implement it in this review. The passive pipeline consumes settled projections; P7 real-traffic shadow cannot validly compare model proposals without a trusted producer. This contract is narrower than wiring server, provider, audit or dispatcher.
+
+Owner: JARVIS P7 integration boundary, with P3 canonicalization and P4 policy as existing authorities; precise module location remains to be frozen. Inputs: actual user request, deterministic route and approved capability inventory, existing action/capability pairs, canonicalizer version and target facts. Outputs: immutable caller-owned router context, permission request, expected canonical tool/argument/target binding, or a fail-closed missing/invalid projection. Invariants: model output or advertised schema never creates authority; no guessed target field, synthetic live grant, registry discovery or dispatch; P4/P5/confirmation remain sole decision/execution owners; shadow uses inert dispatcher and legacy visible reply. Unresolved decisions: closed capability→tool/argument/target schema, trust source for live inventory, exact ingress owner, failure/audit handling at the projection boundary. The later shadow-measurement freeze must also set provider identity and window/acceptance metrics before activation.
+
+This is a contract freeze recommendation only. No P8, 13C, live wiring, Hermes activation or model/tool call follows automatically.

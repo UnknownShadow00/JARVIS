@@ -1049,3 +1049,9 @@
 - Files changed: tasks/p7-p8-entry-review/ (review and sealed evidence), tasks/loop-log.md
 - Result: PASS for review classification and documentation; BLOCKED for P8 entry and requested fresh production/evidence/regression verification because the named checkout, seal, and Python dependencies are absent.
 - Next: Freeze an operator-approved recorded-only inert conformance entry amendment; obtain the specified production checkout and R8 seal before any entry claim.
+
+## [2026-10-03 20:28:22 UTC] Task Completed
+- Task: Reverified R8 and the formal P7-to-P8 dependency on canonical Core; classified follow-ups and selected the next contract-freeze unit.
+- Files changed: tasks/p7-p8-entry-recovery-review/, tasks/loop-log.md; new sealed Core evidence at /home/jarvis/.hermes-poc/evidence/p7-p8-entry-recovery-review/.
+- Result: PASS for canonical production/evidence/regression verification and review; formal P7 exit incomplete, P8 entry blocked; new evidence seal 39/39 with 0 failures.
+- Next: Freeze F-MAP-01 live request-to-binding/projection producer contract for P7 shadow ingress; do not implement or activate during this review.

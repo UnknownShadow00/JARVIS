@@ -1,0 +1,7 @@
+# Canonical Core environment recovery
+
+Read-only SSH to `jarvis@192.168.0.162` succeeded. Canonical production `/home/jarvis/JARVIS` is clean (zero porcelain entries), HEAD `ac685a898e0fb55cf7c97a3e04e5765bf2e37a41`, parent `db54d615c3ee023d753e86143860c4efdc251230`; `app/execution/pipeline.py` exists. `config.yaml` lines 170–177 have `execution.mode: legacy`, `hermes_brain: false`, `agent.hermes_enabled: false`. Hermes checkout `/home/jarvis/.hermes-poc/hermes-agent` is clean at `2237be355906fbe6065ce1815711eee52b2d646e`; the exact-process scan found zero Hermes/Ollama processes.
+
+The production checkout intentionally has no `tasks/task13b11a` docs. The canonical sealed 13B11A plan copy is in `/home/jarvis/.hermes-poc/evidence/task13b11n-r3-readiness/plans/tasks/task13b11a/`. SHA256 of `IMPLEMENTATION_PHASES.md`, `TARGET_COMPONENT_MAP.md` and `DEPENDENCY_GRAPH.md` matches this documentation workspace byte for byte. R8's sealed `reports-r8/FINAL-REPORT.md` and `FOLLOWUPS.md`, and its `pipeline-v1/P7_PIPELINE_CONTRACT_V1.md`, also match the corresponding workspace documents by SHA256. Thus task-doc analysis uses evidence-backed canonical history, rather than assuming the production repo contains the task records.
+
+The previous documentation commit `14c9b99` is retained as a **PROVISIONAL / NON-CANONICAL ENVIRONMENT REVIEW**. Its graph finding is corroborated below; its failed environment verification has been replaced by this Core run. It is not authority over the production seal.

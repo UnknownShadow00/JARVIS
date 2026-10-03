@@ -1,0 +1,5 @@
+# P7 server/API/UI requirement
+
+`task13b11a/DEPENDENCY_GRAPH.md` lines 53–59 expressly places “server branch + API/UI (P7)” after pipeline/adapter. `FEATURE_FLAG_AND_ROLLBACK.md` lines 16–35 specifies one flag-guarded branch at the top of `app/server.py::_process`, one mode read per turn, legacy reply visible in shadow, and an inert shadow dispatcher. `PRODUCTION_INTEGRATION_PLAN.md` §2 maps HTTP `/chat` or WS `/ws` user input into the pipeline and §7 says the shadow result goes to audit only. This is a production server consumer and existing API/UI ingress, not an authorization for a new public endpoint or visible operational response. Recorded-only `run_recorded_turn` remains a separately finished core; it has no production consumer today.
+
+The plan's target flow describes a later executable control-plane path, but P7 shadow must structurally exclude execution and preserve JARVIS response authority. Exact ingress/projection adapter and server/UI details remain to be frozen before implementation. No server, UI, flag or dispatcher file was edited here.
