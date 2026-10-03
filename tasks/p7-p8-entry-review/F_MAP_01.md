@@ -1,0 +1,7 @@
+# F-MAP-01
+
+Source: `task13b11o-r1/FOLLOWUPS.md` row F-MAP-01, `PROPOSAL_GUARD.md` input table and last paragraph. P4 has action/capability pairs (OPEN_APP→apps.open, OPEN_URL→browser.open), but no authoritative capability→tool namespace→required argument/target field schema or deterministic live request-to-binding producer. P3 canonicalization normalizes supplied tool arguments; it cannot discover the right tool or target field. A model proposal/schema advertisement cannot supply authority.
+
+Ownership is split but bounded: the **JARVIS caller/integration boundary** must supply the trusted request, context, permission projection and expected P3 canonicalization; P7 owns pure comparison, P4 owns policy, P5 owns dispatch. `task13b11a/TARGET_COMPONENT_MAP.md` assigns pipeline orchestration to P7 and P8 only tests; no document assigns a separate concrete live binder module. Before building it, freeze its module owner and schema. This is a future P7 live-integration prerequisite, not a P8 test fixture responsibility.
+
+R8 intentionally consumes externally settled projections (`task13b11p-r8/FINAL-REPORT.md`; `task13b11p-r1/TURN_INPUT_SCHEMA.md`). A passive recorded-only test can be another consumer of frozen projections. Full historical P8 requires the real control plane and thereby inherits the missing producer through P7 exit. The unassigned concrete producer implementation is a live-wiring decision; no model-derived expected map or live registry lookup is permitted.

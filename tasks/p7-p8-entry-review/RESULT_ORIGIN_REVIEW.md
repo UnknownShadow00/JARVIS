@@ -1,0 +1,5 @@
+# Result origin and stop reasons
+
+F-P7R1-01: `task13b11p-r1/FOLLOWUPS.md` row 01 and `SECURITY_INVARIANTS.md` S-04 accept exact `TrustedToolResult` type identity, linkage and agreement with existing owner decisions for fixture-owned replay. The dataclass remains constructible; type identity is not independent dispatcher-origin proof. A recorded-only test can use that frozen limitation. A live consumer must establish dispatcher provenance at its handoff before treating externally supplied results as authoritative. P8 is test-only in 13B11A and owns no authentication scheme. No signature, marker or trust boolean is proposed.
+
+F-P7R1-03: same `FOLLOWUPS.md` row 03 and `ADMISSION_FAILURES.md` record that several guards share a closed `PipelineStopReason`. Guard identity is asserted in tests. This affects diagnostics; no demonstrated correctness or passive P8 blocker. Live observability may benefit from richer reason attribution but the closed enum cannot be silently extended, and uniform confirmation reasons are an anti-oracle property.

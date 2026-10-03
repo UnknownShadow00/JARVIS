@@ -1043,3 +1043,9 @@
 - Files changed: tasks/task13b11p-r8/; tasks/loop-log.md; production app/execution/pipeline.py, focused pipeline tests/corpus and six exact authorized non-activation test files (production commit ac685a898e0fb55cf7c97a3e04e5765bf2e37a41).
 - Result: PASS; frozen corpus 116/116, guard trace 116/116, unseen 53/53, isolation 733 passed, full suite 5673 passed/11 deselected/0 failed; golden and legacy unchanged; no live activity. Final evidence seal receipt records verification.
 - Next: STOP; review remaining passive P7/P8 dependency gaps only in a separately authorized task; live wiring and 13C require operator decision.
+
+## [2026-10-03 20:03:07 UTC] Task Completed
+- Task: Reviewed P7 exit, P8 entry, and open follow-ups against Task 13B11A; documented blocked verdict and evidence limitations.
+- Files changed: tasks/p7-p8-entry-review/ (review and sealed evidence), tasks/loop-log.md
+- Result: PASS for review classification and documentation; BLOCKED for P8 entry and requested fresh production/evidence/regression verification because the named checkout, seal, and Python dependencies are absent.
+- Next: Freeze an operator-approved recorded-only inert conformance entry amendment; obtain the specified production checkout and R8 seal before any entry claim.
