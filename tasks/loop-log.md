@@ -1067,3 +1067,9 @@
 - Files changed: tasks/f-map-01-binding-contract-v1/ (26 documentation files), tasks/loop-log.md; new sealed Core evidence at /home/jarvis/.hermes-poc/evidence/f-map-01-binding-contract-v1/.
 - Result: PASS; two exact V1 mappings frozen, 5673 pytest passed and 11 deselected, golden 12/20 with same eight failures, legacy digest unchanged, evidence 51/51 with zero failures, production unchanged and Hermes disabled.
 - Next: Implement the passive registry-metadata snapshot boundary with zero consumers, then the V1 producer; formal P7 exit and P8 entry remain outstanding.
+
+## [2026-10-03 22:09:24 UTC] Task Completed
+- Task: Verified canonical Core entry and F-MAP-01 V1 seal for the passive registry metadata snapshot task; stopped at the unfrozen module-path gate.
+- Files changed: tasks/loop-log.md.
+- Result: BLOCKED; Core HEAD and Hermes baseline verified, F-MAP-01 evidence 51/51 verified, but the frozen contract explicitly leaves the snapshot module path unresolved. No production implementation or tests changed.
+- Next: Operator must freeze the canonical production module path and owner for RegistryMetadataSnapshotV1 before implementation.
