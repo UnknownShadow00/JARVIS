@@ -1,0 +1,5 @@
+# F-MAP-01 Binding Projection V1 — contract freeze
+
+This task freezes a two-entry, fail-closed **design contract** for future `app/execution/binding_projection.py`. It adds no production module, tests, server consumer, provider, registry call or shadow traffic. Canonical Core source is `ac685a898e0fb55cf7c97a3e04e5765bf2e37a41` and the prior blocked review is preserved at `tasks/f-map-01-producer-contract-review/`.
+
+Only OPEN_APP and OPEN_URL are admitted, and only with the exact V1 target/argument schemas in this directory. All other actions or invalid targets produce no executable expected projection. The future producer composes P3/P4 values, consumes a separately supplied passive registry-metadata snapshot, and outputs typed data for the existing passive P7 `RecordedTurn`. It has no execution authority. The operator decisions in the task prompt resolve the prior owner/source/schema questions; the concrete two rows are proven from production declarations, handlers, router, canonicalizer and policy in `ADMITTED_MAPPING_V1.md`.

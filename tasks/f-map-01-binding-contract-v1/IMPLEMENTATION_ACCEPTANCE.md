@@ -1,0 +1,5 @@
+# Future implementation acceptance
+
+The future `app/execution/binding_projection.py` implementation is accepted only when it implements the exact closed V1 input/output and two mapping rows; consumes a separately supplied, immutable JARVIS registry-metadata snapshot; uses existing P2/P3/P4 APIs; preserves P3 canonicalization version and P1 IDs; rejects missing/ambiguous/drifted values; and remains pure and deterministic. It must have focused tests for every matrix row and zero live production consumers initially.
+
+The metadata-snapshot implementation is a separate predecessor because the current registry has no pure metadata API. It must derive only audited declarations without loading/executing handlers in projection creation, expose no callable/tool instance, and have tests proving zero `registry.call`, model, network, dispatch and mutation. Neither unit authorizes server/API/UI wiring, provider activation or shadow traffic. Later integration must separately demonstrate CT-001/013, audit, rollback and measured inert shadow criteria.

@@ -1,0 +1,5 @@
+# Authoritative capability source
+
+Core `app/tools/registry.py` declares exact keys `apps` → `app.tools.apps` and `browser` → `app.tools.browser` in `_EXPLICIT_TOOL_MODULES`; both modules exist and declare `execute` and `SAFETY_LEVEL`. P4 `ACTION_CAPABILITY` independently declares OPEN_APP → `apps.open` and OPEN_URL → `browser.open`; signed policy rows 10 and 12 are registered. These two owner sources must agree for admission. The V1 crosswalk is **explicitly enumerated** in `ADMITTED_MAPPING_V1.md`; no prefix/suffix/name-similarity algorithm exists.
+
+The registry's legacy `_capability_for()` uses legacy labels `open_app` and `browser_open`, not P4 keys. It is descriptive legacy tracing, **not** the binding source or a third mapping rule. `RouterContext.DEFAULT_ROUTER_CONTEXT`, `ToolSchema` advertisements, client flags and model proposals are not capability evidence. A missing/disagreeing metadata entry removes the action from the V1 available set. The producer receives an immutable passive snapshot; it never imports a tool module to discover a key and never calls `registry.call()`.

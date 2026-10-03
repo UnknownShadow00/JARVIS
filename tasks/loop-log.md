@@ -1061,3 +1061,9 @@
 - Files changed: tasks/f-map-01-producer-contract-review/, tasks/loop-log.md; new sealed Core evidence at /home/jarvis/.hermes-poc/evidence/f-map-01-producer-contract-review/.
 - Result: BLOCKED for complete F-MAP-01 contract freeze; canonical regressions passed (5673 pytest, 12/20 golden, legacy digest unchanged), production unchanged, new evidence 49/49 with 0 failures.
 - Next: Obtain operator-approved closed capability-to-tool/argument/target schema, live capability truth source, and producer path/handoff; then freeze exact test expectations before implementation.
+
+## [2026-10-03 21:14:23 UTC] Task Completed
+- Task: Froze F-MAP-01-R1 Live Binding Projection Contract V1 from operator decisions and canonical Core sources.
+- Files changed: tasks/f-map-01-binding-contract-v1/ (26 documentation files), tasks/loop-log.md; new sealed Core evidence at /home/jarvis/.hermes-poc/evidence/f-map-01-binding-contract-v1/.
+- Result: PASS; two exact V1 mappings frozen, 5673 pytest passed and 11 deselected, golden 12/20 with same eight failures, legacy digest unchanged, evidence 51/51 with zero failures, production unchanged and Hermes disabled.
+- Next: Implement the passive registry-metadata snapshot boundary with zero consumers, then the V1 producer; formal P7 exit and P8 entry remain outstanding.

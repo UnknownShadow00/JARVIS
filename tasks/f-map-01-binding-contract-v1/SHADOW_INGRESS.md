@@ -1,0 +1,5 @@
+# Inert shadow ingress contract
+
+Future transport: server/API/UI shadow ingress → normalized JARVIS request envelope → passive registry-metadata snapshot + `binding_projection.py` → immutable `BindingProjectionV1`. A separate adapter path receives a JARVIS-owned `AdapterRequest` and returns untrusted draft/proposals only when a later provider/model decision authorizes it. The existing passive P7 pipeline receives binding fields, separate adapter output, and any separately owned confirmation/result continuation state.
+
+The shadow consumer observes what would be proposed, matched, authorized or stopped. It may record separately approved audit measurements later, but the binder itself performs zero audit writes. The entire shadow path must have zero registry calls, dispatches, real tools and side effects. A complete binding never authorizes invocation. Recorded fixtures can test the contract without provider activation; whether recorded traffic fulfills the later measured shadow-period criterion is unresolved and belongs to the formal P7 measurement freeze.
