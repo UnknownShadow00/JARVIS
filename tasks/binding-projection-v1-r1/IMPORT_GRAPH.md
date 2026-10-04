@@ -1,0 +1,3 @@
+# Import graph
+
+`binding_projection.py` imports standard `dataclasses`, `typing`, `types` and `urllib.parse`, plus the existing passive P3/P4 classifier, router, canonicalizer, permissions, P1 correlation, P2 provenance types/validation, registry metadata snapshot and action enum. It imports no `app.tools`, server, Hermes/provider, confirmation machine, dispatcher, executor, audit writer or service locator. The import-graph test forbids dynamic `__import__`, `eval`, `exec`, `getattr` and `setattr` call paths; runtime sentinel found no new execution-tool imports. P7 pipeline remains byte-identical.

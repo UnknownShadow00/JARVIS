@@ -1085,3 +1085,9 @@
 - Files changed: tasks/binding-projection-v1/BLOCKER.md, tasks/binding-projection-v1/FINAL-REPORT.md, tasks/loop-log.md; no Core production files remain changed.
 - Result: BLOCKED; 48 focused tests passed in the reversible attempt, but the full suite had nine existing non-activation failures. Candidate changes were removed, Core remains clean at fa8560c943621b9de42aeb5122093b5247c6ccbd.
 - Next: Obtain exact additive authorization for the binder as a passive P3 router/canonicalizer and P4 permission consumer in the listed non-activation tests; then retry implementation.
+
+## [2026-10-04 00:57:19 UTC] Task Completed
+- Task: Implemented passive Binding Projection V1 on canonical Core after freezing the exact nine P3/P4 non-activation assertion transitions.
+- Files changed: Core app/execution/binding_projection.py, three new focused fixture/test files, three authorized P3/P4 non-activation test files, and the previously frozen registry-metadata sole-consumer test; workspace tasks/binding-projection-v1-r1/ and tasks/loop-log.md.
+- Result: PASS; Core d3f44e01e7c63b0c2ba6f52f2dc93c48af34b69c, 281 focused gate passed, full 5721 passed and 11 deselected, golden 12/20 same eight failures, legacy digest unchanged, zero forbidden runtime events and zero live consumers.
+- Next: Freeze the server/API/UI inert shadow-ingress contract for formal P7 exit; do not wire it in this unit.

@@ -1,0 +1,3 @@
+# Passive registry metadata consumption
+
+The only registry source is `RegistryMetadataSnapshotV1` from `app/execution/registry_metadata.py`. The binder requires the exact snapshot type, verifies scalar/tuple row shapes before equality, obtains a fresh reviewed passive snapshot, compares source revision, digest and all values, then uses the fresh trusted rows. Fake, missing, extra or callable-bearing rows fail before route composition. No live registry object, handler, `list_tools`, `registry.call`, dynamic discovery or guessed tool name is reachable. The snapshot's source-pinned V1 row set remains `apps`, `browser`; the binder does not admit other registry entries.

@@ -1,0 +1,3 @@
+# Deferred formal P7 exit work
+
+The producer is implemented but unwired. Formal P7 exit still requires a server/API/UI shadow consumer, integrated CT-001/CT-013 evidence, measured inert shadow period, audit evidence and rollback evidence. Shadow provider/model and measurement window/thresholds remain separate operator/freeze decisions. P8 entry remains blocked until formal P7 exit. The next smallest independently reversible unit is the **server/API/UI shadow-ingress contract freeze**: it must define how a live request becomes the normalized JARVIS envelope and how the passive producer/P7 path is observed without execution or user-visible change. Do not implement that unit here.

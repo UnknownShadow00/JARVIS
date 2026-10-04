@@ -1,0 +1,7 @@
+# Two closed V1 mappings
+
+The module's closed `_ROWS` contains exactly `OPEN_APP → apps.open → apps → app` and `OPEN_URL → browser.open → browser → url`. It compares these rows with P4 `ACTION_CAPABILITY`, P4 registered policy rows and the verified `RegistryMetadataSnapshotV1`; no name similarity or arbitrary registry lookup occurs. `RouterContext.supported_actions` contains only the two matched actions. P3 `classifier.classify` and `router.route` receive the unchanged text and the same context that P7 later recomputes.
+
+For OPEN_APP, the binder takes the resolved route target, constructs only `{"action":"open","app":target}`, invokes P3 `canonicalize("apps", raw)`, then requires the canonical app to be an exact member of the snapshot's reviewed app names. The declared VS Code alias is handled solely by P3. For OPEN_URL, it constructs only `{"action":"open","url":target}`, requires an absolute lowercase HTTP(S) URL with host and no whitespace/control/userinfo, then requires the P3 canonical URL to equal the route target. No fetch, DNS, redirect or tool call occurs.
+
+Both rows produce a P4 `PermissionRequest` with route action/target, canonical target, the P3 raw/canonical maps, JARVIS approval mode, empty satisfied constraints and `overwrite=None`. P7 still owns `permissions.decide()`. The current policy remains apps.open REQUIRE_CONFIRMATION and browser.open ALLOW in BALANCED mode; browser D-01 is unchanged. Every other action yields no expected/query pair.
