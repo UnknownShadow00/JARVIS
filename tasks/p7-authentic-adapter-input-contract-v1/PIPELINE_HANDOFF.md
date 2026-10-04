@@ -1,0 +1,11 @@
+# RecordedTurn retains the parser boundary
+
+The actual pipeline takes **run_recorded_turn(turn: RecordedTurn) -> TurnOutcome**, with the unchanged 21 fields. Adapter-related input fields are adapter_request: AdapterRequest; recording: str; proposal_ids: tuple[str,...]; recorded_at: aware datetime. Other inputs remain existing correlation/request/snapshot/P3/P4/P6 data, evaluated_at and mode discriminators. No ModelDraft/ToolProposal result object or provider client is an input.
+
+Future JARVIS evaluator preserves envelope.request/correlation/snapshot, supplies a same-turn AdapterRequest and its genuinely associated canonical recording, caller-owned unique positional proposal IDs and parser created_at via recorded_at. No timestamp source or proposal-ID minting strategy is selected here: existing adapter accepts aware datetime supplied by JARVIS and P1-shaped str IDs, reads no clock and mints none. Required proposal metadata must be bound to this recording, not provider text. Mere proposal_ids length is not a parsed-count observation.
+
+Pipeline itself invokes parse_recorded_response at S05 after S01–S04. It passes recording, adapter_request, created_at=recorded_at and proposal_ids unchanged. AdapterError yields actual S05_ADAPTER/ADAPTER_INVALID, not repaired output. An early stop may never parse; do not invent output/zero count. A separate observer may only settle actual parse/guard returns under its future reviewed collector contract; no alternate parsing or pipeline API hook implemented now.
+
+Conceptual path: provider response -> separately approved faithful canonical normalization, when required -> canonical Hermes adapter parser inside P7 -> untrusted draft/proposal values -> deterministic P7 guards/outcome. It is not provider JSON directly to engines or an externally constructed proposal injected into P7. Canonical recording stays the existing parser's input, as required by the recorded-only API.
+
+For inert shadow use existing INITIAL_TURN shape: no confirmation/invocation/current result. Do not attach TrustedToolResult, dispatcher, confirmation store or fake result. RESULT_REPLAY is execution-result admission, not the origin category of adapter data. Existing guard checks stamped turn/model/proposal association and canonical arguments; it cannot prove provider origin. No live result path or user response replacement.

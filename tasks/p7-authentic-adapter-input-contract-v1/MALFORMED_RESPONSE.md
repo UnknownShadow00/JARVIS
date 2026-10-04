@@ -1,0 +1,9 @@
+# Reuse strict canonical rejection
+
+Canonical parser consumes a serialized string whose entire document is the canonical recording. Exact required root fields: text (str, including empty) and proposals (array, including empty). Each proposal has exactly tool_name (nonblank str) and raw_arguments (object). All structural extras/null/wrong types fail; argument child values may be JSON-null. Strict duplicate keys at every depth; reject nonfinite values, malformed/trailing/fenced JSON, coercion and stringified argument objects.
+
+Reasoning/thinking/P1 normalized forbidden keys are rejected recursively in canonical structured data. Private provider reasoning must never be mapped to text by future normalization. Ordinary draft text is untrusted; canonical parser does not claim semantic hidden-reasoning detection in prose. Unadvertised tool names are preserved for deterministic guard rejection, not repaired/filtered to a known tool.
+
+Caller metadata is mandatory: exact aware datetime, exact unique P1-shaped ordered proposal IDs, count equal to proposals. Whole response/metadata validation precedes all output constructors; one bad proposal rejects all. Use existing AdapterError fixed codes invalid_input/invalid_json/invalid_response without raw errors or chained decoder input. No nearest-tool repair, missing arguments, merged/conflicting response branches or partial proposal set.
+
+If actual P7 reaches S05 with a malformed genuine canonical recording, existing ADAPTER_INVALID is truthful; count/match remain None because no valid set returned. Earlier pipeline stages may stop before parsing; do not invent a parser observation/ADAPTER_INVALID stop afterward. Provider-native malformed/wire-normalization failure may occur before any canonical input exists and belongs to future evaluator diagnostics, not a fake recording.

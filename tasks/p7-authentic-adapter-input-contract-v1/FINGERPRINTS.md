@@ -1,0 +1,7 @@
+# Existing hash conventions, exact capture references
+
+Use existing SHA256 lowercase-hex conventions. Required request fingerprint = SHA256(build_request(request).encode("utf-8")), hashing the exact returned string. Its serializer stays adapter's json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False), no newline; do not replace it with the registry ensure_ascii=False convention. Ordered message/tool arrays remain ordered.
+
+Required canonical-recording fingerprint = SHA256(recording.encode("utf-8")), of the exact string actually handed to canonical parse/P7, not a reparsed/reserialized approximation. Whitespace/escape differences may change this reference even if parsed logical outputs agree; that is intentional input identity. An input not representable at the defined UTF-8 capture boundary cannot produce that reference and cannot acquire complete authenticity evidence by silent rewriting. No raw body is retained solely to hash it.
+
+Adapter implementation pin = existing file SHA256/source-deployment reference; contract ID is the existing adapter constant. No new UUID, response/measurement ID, crypto envelope, MAC/signature or hash-chain. Hashes identify inputs/source and integrity, not provider generation, association, attempt identity or permission. A native provider-byte digest, parser-result digest or metadata aggregate format is not frozen; native capture/privacy and collector schema require later contracts. Caller IDs/time are associated existing metadata, not origin proof.
