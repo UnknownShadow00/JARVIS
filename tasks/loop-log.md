@@ -1127,3 +1127,9 @@
 - Files changed: tasks/AUTONOMOUS-P7-FORMAL-EXIT-REPORT.md; tasks/loop-log.md
 - Result: PASS safe session scope; A/B frozen, C/D review and preparation complete; formal P7/P8 BLOCKED. Canonical production unchanged and clean, Hermes disabled/0 processes; 5721 pytest passed, 11 deselected; golden 12/20; 568 prior and 74 unit checksum checks passed.
 - Next: Overall session seal receipt; next contract is Shadow Observation Producer Boundary V1 after D03. No independent authorized runtime work remains.
+
+## 2026-10-04T10:19:55.407353+00:00 Task Completed
+- Task: Freeze JARVIS P7 Shadow Observation Producer Boundary Contract V1 and resolve D03 producer scope.
+- Files changed: tasks/p7-shadow-observation-contract-v1/*.md and *.json; tasks/loop-log.md (isolated /tmp/jarvis-p7-observation-docs checkout).
+- Result: PASS contract acceptance; 18-field immutable observational record, 28 static checks, 40 future test cases; canonical pytest 5721 passed, 11 deselected, 0 failed; golden 12/20 same eight. Production unchanged/clean at d3f44e01e7c63b0c2ba6f52f2dc93c48af34b69c; Hermes disabled/0 processes; prior seals 593 checks/0 failures. Focused docs commit and evidence/git-bundle archive; no runtime or push.
+- Next: STOP; D04 sink/clock/retention/failure-loss accounting is the next unresolved downstream decision. Original workspace integration waits for filesystem capacity; no cleanup or infrastructure changes.

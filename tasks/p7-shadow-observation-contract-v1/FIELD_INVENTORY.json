@@ -1,0 +1,182 @@
+[
+  {
+    "name": "correlation",
+    "type": "CorrelationContext",
+    "presence": "required",
+    "source": "Context V1 .correlation",
+    "owner": "P1 through shadow_context",
+    "trust": "JARVIS association; no grant",
+    "meaning": "Exactly one authoritative session/turn; initial child IDs absent",
+    "needed": "Join terminal observation to one turn without a new identity"
+  },
+  {
+    "name": "transport",
+    "type": "Literal[\"http\", \"websocket\"]",
+    "presence": "required",
+    "source": "Already-settled server trace transport vocabulary, server.py:359,524",
+    "owner": "JARVIS ingress/evaluator handoff",
+    "trust": "Observational metadata",
+    "meaning": "http means REST; websocket means WS; never client-authored authority",
+    "needed": "Separate REST/WS coverage required by A/B and later measurement"
+  },
+  {
+    "name": "transport_trace_id",
+    "type": "str | None",
+    "presence": "required, nullable",
+    "source": "Context V1 .transport_trace_id",
+    "owner": "Server tracing through context owner",
+    "trust": "Observational metadata",
+    "meaning": "Associated server trace or None; distinct from P1 turn",
+    "needed": "Join to existing trace without promoting it"
+  },
+  {
+    "name": "outcome_type",
+    "type": "Literal[\"PipelineStop\", \"ApprovedOperationalResponse\", \"ConversationalResponse\"]",
+    "presence": "required",
+    "source": "Exact existing TurnOutcome alternative",
+    "owner": "P7 terminal owner; mechanical projection",
+    "trust": "Observational type tag",
+    "meaning": "Returned alternative; response variants are candidates only",
+    "needed": "Distinguish stopped, operational candidate and conversational candidate without new stop vocabulary"
+  },
+  {
+    "name": "stop_stage",
+    "type": "PipelineStage | None",
+    "presence": "required, nullable",
+    "source": "PipelineStop.stage only",
+    "owner": "P7",
+    "trust": "Observed terminal stage",
+    "meaning": "Exact existing enum if stopped, otherwise None",
+    "needed": "Locate the stopped stage; never invent completion-stage evidence"
+  },
+  {
+    "name": "stop_reason",
+    "type": "PipelineStopReason | None",
+    "presence": "required, nullable",
+    "source": "PipelineStop.reason only",
+    "owner": "P7",
+    "trust": "Observed owner stop code",
+    "meaning": "Exact existing enum if stopped, otherwise None",
+    "needed": "Preserve failure/cardinality/mismatch vocabulary"
+  },
+  {
+    "name": "lane",
+    "type": "Lane | None",
+    "presence": "required, nullable",
+    "source": "Response.lane or PipelineStop.obligation_state.lane if present",
+    "owner": "P3 lane/P6/P7 already settled",
+    "trust": "Observed control-plane outcome",
+    "meaning": "Known terminal lane or None, never guessed from words/action",
+    "needed": "Conversational/operational coverage, CT support"
+  },
+  {
+    "name": "primary_action",
+    "type": "PrimaryAction | None",
+    "presence": "required, nullable",
+    "source": "Settled RouteResult.primary_action and/or stop.obligation_state.primary_action",
+    "owner": "P3/P7",
+    "trust": "Observed JARVIS route",
+    "meaning": "Available actual action; two available sources must agree",
+    "needed": "Unsupported/non-action behavior without copying targets or routing again"
+  },
+  {
+    "name": "binding_metadata_digest",
+    "type": "str | None",
+    "presence": "required, nullable",
+    "source": "BindingProjectionV1.metadata_digest, including valid empty pair",
+    "owner": "Registry metadata producer via binder",
+    "trust": "Observation reference; not grant",
+    "meaning": "Supplied metadata digest, or None if no binding observation",
+    "needed": "Identify the reviewed closed metadata basis; distinguish unobserved from empty binding"
+  },
+  {
+    "name": "binding_action",
+    "type": "PrimaryAction | None",
+    "presence": "required, nullable",
+    "source": "BindingProjectionV1.permission_projection.primary_action",
+    "owner": "Existing binding producer",
+    "trust": "Observed deterministic binding data",
+    "meaning": "Actual admitted binding action; None for valid empty pair or unavailable binding",
+    "needed": "Verify which existing V1 row was observed without mapping anew"
+  },
+  {
+    "name": "binding_capability",
+    "type": "str | None",
+    "presence": "required, nullable",
+    "source": "BindingProjectionV1.permission_projection.capability",
+    "owner": "Existing binding producer",
+    "trust": "Observed data; not permission",
+    "meaning": "Verbatim deterministic capability; never from a proposal/schema",
+    "needed": "Exact row evidence and detection of a third mapping by aggregation"
+  },
+  {
+    "name": "binding_tool_name",
+    "type": "str | None",
+    "presence": "required, nullable",
+    "source": "BindingProjectionV1.expected.tool_name",
+    "owner": "P3 canonicalizer via binding producer",
+    "trust": "Observed expected identity; not model authority",
+    "meaning": "Verbatim expected tool, never model-selected tool",
+    "needed": "Exact OPEN_APP/OPEN_URL binding identity"
+  },
+  {
+    "name": "binding_canonical_fingerprint",
+    "type": "str | None",
+    "presence": "required, nullable",
+    "source": "SHA256 of settled expected tool/version/canonical_arguments; FINGERPRINT.md",
+    "owner": "Observation producer hashes settled values only",
+    "trust": "Observation reference; not grant/anonymity proof",
+    "meaning": "Deterministic digest of entire expected canonical binding, no target text retained",
+    "needed": "Compare exact canonical binding against approved evidence references"
+  },
+  {
+    "name": "proposal_count",
+    "type": "int | None",
+    "presence": "required, nullable",
+    "source": "Externally settled len of successful parser tuple[ToolProposal,...]",
+    "owner": "Recorded adapter/P7 evaluator, when separately available",
+    "trust": "Observed untrusted proposal cardinality",
+    "meaning": "Exact nonnegative int, excluding bool; None when not observed",
+    "needed": "Distinguish zero/one/multiple without storing proposals or parsing"
+  },
+  {
+    "name": "proposal_match",
+    "type": "bool | None",
+    "presence": "required, nullable",
+    "source": "Externally settled P7 full proposal-guard result; PROPOSAL_OBSERVATION.md",
+    "owner": "P7 guard observer/evaluator, when separately available",
+    "trust": "Consistency observation; not authorization",
+    "meaning": "True for full guard pass; False for actual association/tool/arguments mismatch; None when not compared/observed",
+    "needed": "Distinguish one matching/mismatching proposal without comparison inside producer"
+  },
+  {
+    "name": "permission_outcome",
+    "type": "PermissionOutcome | None",
+    "presence": "required, nullable",
+    "source": "Settled PermissionDecision.outcome and/or stop.obligation_state.permission_outcome",
+    "owner": "P4 via P7",
+    "trust": "Observed policy outcome; record grants nothing",
+    "meaning": "Actual ALLOW/REQUIRE_CONFIRMATION/DENY or None; sources must agree",
+    "needed": "Permission-deny and confirmation-required evidence without claiming a confirmation"
+  },
+  {
+    "name": "candidate_obligation",
+    "type": "ResponseObligation | None",
+    "presence": "required, nullable",
+    "source": "ApprovedOperationalResponse.obligation only",
+    "owner": "P6 response output",
+    "trust": "Observed candidate obligation",
+    "meaning": "None for conversation/stop, including a stop with an obligation state",
+    "needed": "Obligation distribution without deriving one after failure"
+  },
+  {
+    "name": "candidate_source",
+    "type": "OperationalResponseSource | ConversationalResponseSource | None",
+    "presence": "required, nullable",
+    "source": "Existing response.source only",
+    "owner": "P6/P7",
+    "trust": "Observed candidate source label",
+    "meaning": "None for stop; conversational MODEL_RAW is a label only; no raw text",
+    "needed": "CT-001/013 source support without operational truth or rendering"
+  }
+]

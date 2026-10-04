@@ -1,0 +1,17 @@
+# JARVIS P7 SHADOW OBSERVATION PRODUCER CONTRACT V1 FROZEN
+
+D03 producer ownership, scope, same-turn settled handoff and producer-to-record semantics are resolved. Future module app/execution/shadow_observation.py returns immutable ShadowObservationRecordV1 with 18 explicit fields. Existing canonical type collision scan found none. No module or tests were implemented or modified.
+
+The record observes only actual INITIAL_TURN P7 terminal alternatives; it preserves exact existing stage/reason/enums and separately available binding/proposal/permission facts. Missing observations remain None. Context/envelope/binding/provider failures without an eligible associated P7 return, producer failures and retry/delivery accounting remain separate follow-ups. No fictional adapter state, guard reason or global once-per-turn guarantee.
+
+Audit-v3/P2 truth remains separate. Raw user/model/candidate text is excluded; a narrow settled canonical-binding SHA256 uses the existing deterministic JSON convention, with dictionary/linkage privacy limits documented. No clock, timing, persistence, retention, loss policy, scheduling, permission/confirmation/browser or CT definition changes. No execution/confirmation/visible-response claim or zero-call counter is fabricated. CT-001/013 support is documented; neither is declared passed.
+
+Canonical pytest: **5721 passed, 11 deselected, 0 failed**, 2 existing deprecation warnings, 9.43s. Deterministic golden: **12/20**, the same eight known failures. Static source/contract validation: **28 checks passed**. No new observation implementation tests were run; the 40-case matrix is future acceptance. Legacy proof uses prior sealed digest `fc68a0b041c8d0d41f446e9638cae5f888e4f4f6caf84d438ca0e11a30d98291` plus unchanged critical production bytes; no fresh probe that might call Ollama. pip_audit is unavailable; no dependency installation/change and no vulnerability-audit pass claimed.
+
+Core remains exact and clean at `d3f44e01e7c63b0c2ba6f52f2dc93c48af34b69c`, zero production changes. Hermes remains exact and clean at `2237be355906fbe6065ce1815711eee52b2d646e`, disabled, zero processes; Ollama zero observed. No provider/model, live tools/registry/dispatch or shadow traffic used.
+
+Evidence: `/home/jarvis/.hermes-poc/evidence/p7-shadow-observation-contract-v1/`; SHA256SUMS excludes itself. Prior seven bundles verify 593 checks, zero failures; 100 authority-file comparisons match. Final evidence receipt and exact documentation commit are stored beside/in the sealed bundle as appropriate after the single commit, avoiding self-reference.
+
+Documentation checkout: `/tmp/jarvis-p7-observation-docs`, branch `docs/p7-shadow-observation-v1`, derived from exact original docs HEAD `0b596d7e127f8239596c7152180843e82a15eec7`. Original filesystem was full; no cleanup/infrastructure change. Original workspace remains clean/unchanged. The focused commit, patch and self-contained git bundle are archived on canonical Core; tmpfs is not the sole durable copy. No manual push.
+
+Formal P7 exit and P8 entry remain **BLOCKED**. After re-reading the original operator packet, the next smallest downstream unresolved decision is **D04: separate observation sink, clock/timing and failure/loss accounting contract**, including pre-terminal failures and duplicate/delivery semantics. D05 authentic adapter input remains an independent prerequisite before real-traffic evaluation. Stop here; no next unit or runtime implementation started.

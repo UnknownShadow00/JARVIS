@@ -1,0 +1,242 @@
+[
+  {
+    "id": "O01",
+    "case": "Completed conversation",
+    "settled_input_or_guard": "actual ConversationalResponse",
+    "required_assertion": "CONVERSATIONAL/MODEL_RAW, no stop/obligation/text; same authoritative turn"
+  },
+  {
+    "id": "O02",
+    "case": "Stopped operation",
+    "settled_input_or_guard": "actual PipelineStop",
+    "required_assertion": "copy exact stage/reason; no candidate obligation/source"
+  },
+  {
+    "id": "O03",
+    "case": "OPEN_APP binding",
+    "settled_input_or_guard": "settled actual V1 apps binding",
+    "required_assertion": "copy OPEN_APP/apps.open/apps; fingerprint full canonical expected binding, no target text"
+  },
+  {
+    "id": "O04",
+    "case": "OPEN_URL binding",
+    "settled_input_or_guard": "settled actual V1 browser binding",
+    "required_assertion": "copy OPEN_URL/browser.open/browser; fingerprint exact canonical URL binding without URL text"
+  },
+  {
+    "id": "O05",
+    "case": "Unsupported action",
+    "settled_input_or_guard": "actual UNKNOWN_ACTION/empty V1 pair and actual terminal",
+    "required_assertion": "metadata digest retained; admitted-binding fields None; actual route/action/outcome copied"
+  },
+  {
+    "id": "O06",
+    "case": "Third mapping/model-selected tool",
+    "settled_input_or_guard": "untrusted proposal names another tool",
+    "required_assertion": "cannot populate binding fields from it; compare copied genuine V1 tuples against frozen closed rows outside producer"
+  },
+  {
+    "id": "O07",
+    "case": "Zero proposals",
+    "settled_input_or_guard": "externally observed successful parser tuple length 0",
+    "required_assertion": "count=0, match=None; preserve actual terminal, do not invent proposal_required for conversation"
+  },
+  {
+    "id": "O08",
+    "case": "One full match",
+    "settled_input_or_guard": "count=1 and externally observed full guard pass",
+    "required_assertion": "match=True; present genuine binding; no permission/execution inferred"
+  },
+  {
+    "id": "O09",
+    "case": "One mismatch",
+    "settled_input_or_guard": "actual S06_MATCH and one of three mismatch reasons, captured guard failure",
+    "required_assertion": "count=1, match=False, exact existing reason"
+  },
+  {
+    "id": "O10",
+    "case": "Multiple proposals",
+    "settled_input_or_guard": "captured count >1 and actual terminal",
+    "required_assertion": "match=None; exact MULTIPLE_PROPOSALS only where P7 actually returned it"
+  },
+  {
+    "id": "O11",
+    "case": "Unknown comparison",
+    "settled_input_or_guard": "count=1, no captured complete guard fact",
+    "required_assertion": "match=None; do not infer it from completion/permission"
+  },
+  {
+    "id": "O12",
+    "case": "Permission deny",
+    "settled_input_or_guard": "already-settled genuine P4 DENY",
+    "required_assertion": "copy DENY; producer does not decide/refuse/rebuild response"
+  },
+  {
+    "id": "O13",
+    "case": "Confirmation required",
+    "settled_input_or_guard": "genuine P4 REQUIRE_CONFIRMATION and applicable actual candidate",
+    "required_assertion": "copy policy/obligation label only; no claimed-confirmation or token"
+  },
+  {
+    "id": "O14",
+    "case": "Trace association",
+    "settled_input_or_guard": "context trace distinct from authoritative turn",
+    "required_assertion": "copy both associations; no conversion/equality assertion"
+  },
+  {
+    "id": "O15",
+    "case": "REST",
+    "settled_input_or_guard": "settled JARVIS transport http",
+    "required_assertion": "retain exact existing http vocabulary"
+  },
+  {
+    "id": "O16",
+    "case": "WebSocket",
+    "settled_input_or_guard": "settled JARVIS transport websocket",
+    "required_assertion": "retain exact existing websocket vocabulary; output chunks are not terminal attempts"
+  },
+  {
+    "id": "O17",
+    "case": "Raw user/target secret",
+    "settled_input_or_guard": "raw text present only in source context/route/binding",
+    "required_assertion": "no request/target/map/clauses in output; only canonical-binding fingerprint can be content-derived"
+  },
+  {
+    "id": "O18",
+    "case": "Raw model/candidate/exception secret",
+    "settled_input_or_guard": "source objects contain model/candidate text or component prose",
+    "required_assertion": "none read/hashed/retained/serialized, including error messages"
+  },
+  {
+    "id": "O19",
+    "case": "Output immutability",
+    "settled_input_or_guard": "attempt assignment and source mutation after returned record",
+    "required_assertion": "frozen/slotted; no mutable backing aliases; logical record unchanged"
+  },
+  {
+    "id": "O20",
+    "case": "Deterministic repeat",
+    "settled_input_or_guard": "same settled facts supplied repeatedly; canonical map key order varies",
+    "required_assertion": "same logical record; same sorted-JSON fingerprint; no new attempt inferred"
+  },
+  {
+    "id": "O21",
+    "case": "Cross-turn/session mismatch",
+    "settled_input_or_guard": "terminal correlation/turn differs from settled context",
+    "required_assertion": "fail closed, no fabricated association"
+  },
+  {
+    "id": "O22",
+    "case": "Contradictory route/permission",
+    "settled_input_or_guard": "available state and settled owner values disagree",
+    "required_assertion": "reject; do not pick majority/re-evaluate"
+  },
+  {
+    "id": "O23",
+    "case": "Bad cardinality/match",
+    "settled_input_or_guard": "negative/bool count; count!=1 with match; actual mismatch with True",
+    "required_assertion": "reject exact malformed/contradictory inputs"
+  },
+  {
+    "id": "O24",
+    "case": "Clock guard",
+    "settled_input_or_guard": "time.time/datetime.now/monotonic/perf_counter/utc_now patched to fail",
+    "required_assertion": "zero clock calls, no time fields read or recorded"
+  },
+  {
+    "id": "O25",
+    "case": "Audit guard",
+    "settled_input_or_guard": "audit writer/to_audit_entry/ExecutionAuditRecord forbidden",
+    "required_assertion": "zero audit calls; no audit-v3 representation"
+  },
+  {
+    "id": "O26",
+    "case": "Provenance guard",
+    "settled_input_or_guard": "P2 constructors/stores/record_* forbidden at producer call",
+    "required_assertion": "zero P2 writes; no snapshot/ledger retained"
+  },
+  {
+    "id": "O27",
+    "case": "Registry and handler guard",
+    "settled_input_or_guard": "registry.call/get/live discovery/handler invocation forbidden",
+    "required_assertion": "zero registry/handler entry; no source-snapshot call/file reads"
+  },
+  {
+    "id": "O28",
+    "case": "Dispatcher/executor guard",
+    "settled_input_or_guard": "dispatch/build_invocation/executor forbidden",
+    "required_assertion": "zero calls and no result/handle input"
+  },
+  {
+    "id": "O29",
+    "case": "Model/provider guard",
+    "settled_input_or_guard": "Hermes/Ollama/provider/model transport forbidden",
+    "required_assertion": "zero calls; no adapter evaluation/parser inside producer"
+  },
+  {
+    "id": "O30",
+    "case": "External I/O guard",
+    "settled_input_or_guard": "filesystem/socket/process/thread/queue writes forbidden after setup",
+    "required_assertion": "zero external I/O and no scheduling/persistence"
+  },
+  {
+    "id": "O31",
+    "case": "Owner evaluation guards",
+    "settled_input_or_guard": "classify/route/canonicalize/decide/derive/build/proposal-guard forbidden",
+    "required_assertion": "only settled projection/validation/hash; no hidden pipeline advancement"
+  },
+  {
+    "id": "O32",
+    "case": "Execution truth injection",
+    "settled_input_or_guard": "executed=True or result object or state confirmation_claimed=True",
+    "required_assertion": "reject, even an unexecuted result object is outside inert V1"
+  },
+  {
+    "id": "O33",
+    "case": "Terminal source injection",
+    "settled_input_or_guard": "forged tool-success/error source or obligation / wrong response lane enum",
+    "required_assertion": "reject inert out-of-scope or malformed candidate; no external operation asserted"
+  },
+  {
+    "id": "O34",
+    "case": "Missing adapter observation",
+    "settled_input_or_guard": "real ADAPTER_INVALID stop with no successful tuple",
+    "required_assertion": "count/match=None; no model-absent success or fake response"
+  },
+  {
+    "id": "O35",
+    "case": "No P7 terminal/no authoritative context",
+    "settled_input_or_guard": "envelope/context/binding/provider/producer failure without eligible TurnOutcome",
+    "required_assertion": "no V1 record; future failure/loss mechanism remains unresolved"
+  },
+  {
+    "id": "O36",
+    "case": "No binding versus empty binding",
+    "settled_input_or_guard": "None versus genuine BinderV1 empty pair",
+    "required_assertion": "all None versus retained metadata digest; no default missing-to-empty conversion"
+  },
+  {
+    "id": "O37",
+    "case": "One-sided/mutable binding",
+    "settled_input_or_guard": "expected without query or mutable/non-primitive canonical map",
+    "required_assertion": "reject, never repair or recanonicalize"
+  },
+  {
+    "id": "O38",
+    "case": "CT-013 structured support",
+    "settled_input_or_guard": "actual conversation candidate without integrated cleaner observation",
+    "required_assertion": "record lane/source only; no invented safety_passed or CT pass"
+  },
+  {
+    "id": "O39",
+    "case": "CT-001 structured support",
+    "settled_input_or_guard": "actual operational candidate with adversarial upstream model text",
+    "required_assertion": "source/obligation support only; no visible delivery/draft-retention/CT pass assertion"
+  },
+  {
+    "id": "O40",
+    "case": "Attempt/delivery ambiguity",
+    "settled_input_or_guard": "two equivalent observations for same turn or repeated producer call",
+    "required_assertion": "deterministic value only; no global dedup/delivery/attempt-count claim"
+  }
+]
