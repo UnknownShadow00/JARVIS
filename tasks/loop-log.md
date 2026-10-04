@@ -1157,3 +1157,27 @@
 - Files changed: Core app/execution/shadow_context.py, tests/execution/shadow_context_test.py, tests/execution/provenance_non_activation_test.py; documentation tasks/p7-shadow-context-implementation-v1/*.md, tasks/loop-log.md.
 - Result: PASS passive implementation gates; production commit ed4ba7c4e25adfb8697aa33dfd49339d4592e369 with required parent; 62 focused passed, 5775 full passed/11 deselected/0 failed, golden12/20 same eight; 54 new frozen cases; ONE existing-test semantic authorization, zero trusted writes/forbidden events/live consumers/authority bypasses; precommit evidence144 checks/0 failures. Final commit/archive/root-seal receipt is recorded in the new Core evidence bundle at closure.
 - Next: STOP. Passive Shadow Ingress V1 is the next separate dependent unit; D06 unload ownership, D07 scheduling, D10 observation exceptions and formal P7/P8 blockers remain. No push.
+
+## [2026-10-04T20:29:15.542577+00:00] Task Completed
+- Task: Provide the full Passive Shadow Context V1 implementation report directly in chat, including the verbatim canonical FINAL-REPORT.md and verified acceptance records.
+- Files changed: tasks/loop-log.md (reporting follow-up only; no production or sealed evidence changes).
+- Result: PASS reporting verification; canonical evidence rechecked177/177 with0 failures; Core and Hermes freshly confirmed clean; ingress and observation freshly confirmed absent; original commit/test/zero-event records preserved.
+- Next: STOP; no next unit, model/provider/Ollama call, Hermes activation, or push.
+
+## [2026-10-04T20:36:35.354042+00:00] Task Completed
+- Task: Verify Passive Shadow Ingress V1 entry and stop at an existing unauthorized context consumer/presence gate.
+- Files changed: tasks/loop-log.md; new Core external evidence p7-shadow-ingress-implementation-v1/ (5 records plus SHA256SUMS); no production/test changes.
+- Result: FAIL implementation acceptance / BLOCKED before coding by tests/execution/shadow_context_test.py::test_exact_import_graph_and_zero_production_consumers lines 482-484. Exact clean entry HEAD and absent module verified; unchanged gate 1 passed; new blocker evidence seal 5/5 checks, zero failures. No implementation or commit/push.
+- Next: Explicit narrow versioned authorization of exactly the ingress settled-context-only consumer/presence transition in this test; preserve other consumer/owner/execution bans and prior sealed corpus. STOP.
+
+## [2026-10-04T20:37:52.937112+00:00] Task Completed
+- Task: Recheck repeated Passive Shadow Ingress V1 implementation request against canonical entry and existing gate.
+- Files changed: tasks/loop-log.md only; no production/test or sealed evidence changes.
+- Result: FAIL implementation acceptance / BLOCKED; required Core HEAD and parent confirmed, clean with no untracked files; context present and ingress/observation absent. Unchanged tests/execution/shadow_context_test.py::test_exact_import_graph_and_zero_production_consumers passes 1/1 but lines 482-484 prohibit the required ingress settled-context consumer and module presence. No new exception granted.
+- Next: Explicit narrow versioned authorization of only this test structural transition for ingress presence and settled-context-only consumption, retaining other bans and prior sealed corpus. STOP; no implementation, model call, commit or push.
+
+## [2026-10-04T21:28:39.347595+00:00] Task Completed
+- Task: Implement Passive Shadow Ingress V1 R1 with exact one-function structural authorization, pre-code frozen corpora and passive settled-context-only handoff.
+- Files changed: Core app/execution/shadow_ingress.py, tests/execution/shadow_ingress_test.py, only tests/execution/shadow_context_test.py::test_exact_import_graph_and_zero_production_consumers; docs tasks/p7-shadow-ingress-implementation-v1-r1/*.md; tasks/loop-log.md.
+- Result: PASS implementation gates; production dd2878754e82b26028593d47562ff0420cc8e0c0 with required parent;64 new cases/52 security,65 focused passed,20 unseen passed,5839 full passed/11 deselected/0 failed;golden12/20 same eight;ONE existing semantic transition;context/legacy bytes unchanged;zero forbidden events/bypasses/live ingress consumers;precommit seal182/182. Final docs commit/archive/repository/root seal records are captured in new Core evidence before closure.
+- Next: STOP. Separate D10 observation exact type-import/structural authorization;D06 shared-model ownership and dependent D07 remain separate;no activation, model/provider call, server wiring or push.
