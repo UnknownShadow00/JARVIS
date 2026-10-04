@@ -1,0 +1,11 @@
+# Passive binding producer non-activation test blocker
+
+Canonical Core entry HEAD `fa8560c943621b9de42aeb5122093b5247c6ccbd` was clean; F-MAP-01 and registry snapshot seals verified 51/51 and 63/63. Entry full suite: 5690 passed, 11 deselected. The focused and unseen producer expectations were frozen before implementation. The candidate producer and its exact first-consumer transition passed 48 combined focused/snapshot tests, but the full suite found **nine failures in earlier phase non-activation gates** (5712 passed, 11 deselected, nine failed). No production commit was made; the attempt's uncommitted files and test change were removed, leaving Core clean at entry HEAD.
+
+| Existing assertion | Exact conflict | Narrow authorization needed before retry |
+|---|---|---|
+| `tests/execution/canonicalize_non_activation_test.py:57` | `callers == ["app/execution/pipeline.py:canonicalize("]` rejects the binder's required direct call to existing P3 `canonicalize()` | Permit exactly one additional caller, `app/execution/binding_projection.py:canonicalize(`, while retaining the pipeline caller and no others |
+| `tests/execution/permissions_non_activation_test.py:150-151` | Exact production-file lists reject binder references to `PermissionRequest`, `PermissionPolicyError`, `ApprovalMode`, `ACTION_CAPABILITY` | Permit these four symbols only in the binder in addition to each existing pipeline allowance; keep all other symbol budgets and policy checks |
+| `tests/execution/router_non_activation_test.py:386,406` | Router import/reference budgets name only pipeline, or no external reference; binder references `RouteResult`, `RouterContext`, `RouterError`, `RouteReason` | Permit the binder as the one additional passive P3 router consumer for those symbols and its import; keep all other consumers forbidden |
+
+The frozen F-MAP-01 design requires use of P3 router/canonicalizer and P4 permission data, but it did not explicitly amend these existing test assertions. The task's stop rule prohibits introducing those exceptions without a narrow authorization. Renaming symbols or hiding imports to evade the assertions would defeat the guard and was not done. The only previously frozen consumer transition was `registry_metadata.py → binding_projection.py`; its exact additive test transition passed and was rolled back with the attempt.

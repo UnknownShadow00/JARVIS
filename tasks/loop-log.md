@@ -1079,3 +1079,9 @@
 - Files changed: Core app/execution/registry_metadata.py and tests/execution/registry_metadata_test.py; workspace tasks/registry-metadata-snapshot-r1/ and tasks/loop-log.md; sealed Core evidence at /home/jarvis/.hermes-poc/evidence/registry-metadata-snapshot-r1/.
 - Result: PASS; focused 17 passed, full 5690 passed and 11 deselected, golden 12/20 with the same eight failures, legacy digest unchanged, zero production consumers or forbidden runtime events, Hermes disabled.
 - Next: Implement passive app/execution/binding_projection.py against the frozen F-MAP-01 V1 contract and this snapshot in a separate unit; formal P7 exit and P8 entry remain outstanding.
+
+## [2026-10-04 00:27:06 UTC] Task Completed
+- Task: Verified Core entry and attempted the frozen passive F-MAP-01 binding producer; stopped on unapproved existing P3/P4 non-activation test assertions.
+- Files changed: tasks/binding-projection-v1/BLOCKER.md, tasks/binding-projection-v1/FINAL-REPORT.md, tasks/loop-log.md; no Core production files remain changed.
+- Result: BLOCKED; 48 focused tests passed in the reversible attempt, but the full suite had nine existing non-activation failures. Candidate changes were removed, Core remains clean at fa8560c943621b9de42aeb5122093b5247c6ccbd.
+- Next: Obtain exact additive authorization for the binder as a passive P3 router/canonicalizer and P4 permission consumer in the listed non-activation tests; then retry implementation.
