@@ -1,0 +1,5 @@
+# Unresolved shared ownership
+
+Canonical resource_manager.py:502 configured_ollama_models() returns current main/coder/router/vision names; :559 unload_all_ollama_models() also discovers every loaded model and unloads the union. Its existing unload API/CLI fallbacks were read, never called. Canonical 13B11A §11 documents a prior candidate unload during C4 and proposes owned-model-only unloading plus no-in-flight gating, explicitly requiring separate approval. §21 repeats no-conflicting-unload as a prerequisite.
+
+D06's one concurrent shadow generation does not bound concurrent legacy generations or stop legacy lifecycle unload. This is a shared ownership blocker, not an alias mismatch. No unload policy, ownership list, lease, preload, legacy pause, resource-manager exception or host restart is invented. See the consolidated operator packet for a narrow decision. A contract can prohibit interference, but cannot truthfully claim exact resource ownership is resolved while the controlling relationship is undecided.

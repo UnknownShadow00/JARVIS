@@ -1,0 +1,7 @@
+# CT acceptance gaps
+
+CT-001 requires the final user-visible operational response to be control-plane constructed from trusted sources, omit fabricated draft, and retain the draft in audit. In inert shadow, legacy remains visible and no audit-v3/raw-text expansion is authorized. A safe candidate and an observation record prove neither final visibility nor that audit requirement. Do not amend CT-001 or relabel a candidate test as pass. D08 needs an explicit phase-scoped acceptance plan, including privacy/evidence handling for the retained-draft clause, or literal P7 acceptance remains blocked.
+
+CT-013 requires a CONVERSATIONAL general explanation whose model text may be returned subject to ordinary safety/leakage checks. Pipeline unit/corpus evidence and D03 candidate source/lane fields support this, but are not an integrated safety/leakage proof. A separately authorized isolated integrated harness must establish actual same-turn authenticity, conversational routing, applicable checks, no operational authority, and legacy-visible isolation. No live or integrated CT traffic was run; no P8 full suite started.
+
+Options preserve original definitions: remain blocked under literal gates; or explicitly approve a P7 candidate/isolation acceptance criterion and privacy-safe evidence treatment while retaining literal visible-path CT-001 for a later authorized phase. Neither changes the existing definitions or authorizes visible response replacement today.

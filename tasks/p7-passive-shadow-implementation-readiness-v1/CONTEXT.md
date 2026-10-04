@@ -1,0 +1,9 @@
+# Context implementation inventory
+
+Inputs: JARVIS-owned session association/continuation resolution and observational trace str|None; exact P1 SessionId/TurnId/CorrelationContext constructors, existing LedgerStore/ProvenanceLedger/LedgerSnapshot. Client strings alone are not accepted session authority. The passive owner may reuse an owner-resolved session; transport handle format, caller binding, retry/lifecycle and concurrent-turn admission are still D01/D02 before wiring.
+
+Output: immutable SettledShadowTurnContextV1(correlation, snapshot, transport_trace_id), no child invocation/confirmation IDs. Order: owner resolves/creates session; mints one turn; captures same-session snapshot; constructs settled view. New-session empty snapshot comes from real P2 store, not fabricated fallback.
+
+Mutable state: instance-owned per-session LedgerStore and identity association, never global; snapshots expose no mutable store. Allowed effects: P1 ID allocation and passive P2 association/snapshot only. No record_* operational writes. Allowed imports: stdlib immutable-container/validation support, app.execution.correlation and app.execution.provenance; no execution-package re-export change. Forbidden: dispatcher, registry, tools, server/frameworks, provider, audit writer, confirmation machine.
+
+Consumers: none, except later shadow_ingress may import the immutable view under Unit E. Tests: new/existing sessions, unique turns, same-session immutable snapshot, client-ID rejection, trace distinction, missing-P2 failure, cross-session isolation, no callable/store leakage, no provenance writes; concurrency only as a separately frozen owner API permits. Original A01–A18 matrix remains unchanged. Gate: provenance_non_activation_test.py:47; exact request in TEST_AUTHORIZATION.md. Rollback: revert one future additive commit with no consumers; no external execution cleanup or evidence deletion.
