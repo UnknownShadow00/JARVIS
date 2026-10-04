@@ -1,0 +1,11 @@
+# UTC acceptance chronology only
+
+Reuse **app.execution.correlation.utc_now** (correlation.py:103–106): existing P1 helper returns datetime.now(UTC). This is an appropriate JARVIS-controlled wall-clock source, already reused by provenance.py:221. Calling that helper does not create an audit/provenance event. No new clock module is required.
+
+At a future sink acceptance attempt, after validation and before committing the entry, sample this source once. Require an aware datetime at UTC offset zero; serialize it with datetime.isoformat(), the existing P1/audit record convention (audit_events.py:486), yielding an explicit +00:00 offset. Do not truncate precision, use naive/local time, infer locale or accept caller-provided timestamps as sink chronology. A test seam may replace the helper with a controlled aware UTC value without changing the source authority. Invalid/unavailable clock means a nonaccepted CLOCK_INVALID receipt and incomplete affected evidence coverage.
+
+persisted_at_utc means the sink sampled its acceptance wall clock for this entry; it is published as durable chronology only after the entry commits. It is not an assertion of the exact physical fsync/transaction completion instant. No second clock sample, elapsed duration or latency is inferred. A nonaccepted receipt has no persisted_at_utc.
+
+Other clock owners are inventoried in CLOCK_INVENTORY.md. Tracing has a millisecond Z format and elapsed timing; legacy audit samples UTC directly; dispatcher uses an injected clock for operational records; resource/scheduler/sensors use domain-local timestamps; boot/report helpers use local time. None supplies authority to this sink. The P1 exact ISO convention is selected for this execution-owned evidence boundary, without changing those owners.
+
+Wall clocks can repeat or move backward. Do not sort committed evidence by timestamp alone, synthesize corrections or declare loss/pass from a clock jump. Durable order is separate. Clock influences no IDs, route, permission, confirmation, success, policy, CT/window threshold or execution. No monotonic/perf_counter/request/model/pipeline latency measurement here; later evaluator timing/schema requires a separate freeze.

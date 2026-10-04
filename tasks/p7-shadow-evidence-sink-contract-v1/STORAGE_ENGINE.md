@@ -1,0 +1,7 @@
+# Backend mechanics deferred; semantics frozen
+
+Inventory: JsonlTraceWriter app/observability/tracing.py:41–81 appends local JSONL but rotates/deletes old files, has no durable receipt/barrier, and emits warnings on failures through tracing. AuditLogger app/logs/audit.py:21–91 queues to a daemon and falls back to audit writes; it cannot truthfully acknowledge durability. TaskQueue/Scheduler/resource state overwrite JSON files, catch failures into audit and do not preserve append-only history. P2 LedgerStore is in-memory and trusted-provenance scoped. None clearly satisfies this contract unchanged.
+
+Existing JSON/SHA256 conventions inform logical serialization; they do not select JSONL, SQLite, a database, queue or transaction engine. Backend selection and framing are implementation details constrained by local-only restart durability, append-only P7 retention, explicit failure/uncertainty, deterministic V1 encoding, integrity detection, recoverable ordering and confined private authority. No dependency or migration framework is introduced.
+
+Before implementation, name one backend and show exact durability/recovery/error/concurrency semantics plus non-live tests. No success based on a queue, inherited rotation, overwrite-in-place state file, warning-only failure or operational audit/provenance fallback. Resource limits/admission require D07; no numeric quota or pruning fallback selected.

@@ -1,0 +1,7 @@
+# Restart and partial-write semantics
+
+Previously committed entries remain available after restart, with the same explicit versions, observation values, UTC chronology, sequence and integrity digest. Recover the existing durable order; never restart sequence numbering over retained history or clear evidence on boot. Complete committed entries remain usable independently of a corrupt tail, but affected coverage cannot be scored as complete while corruption/unresolved calls exist.
+
+Partial/invalid/unsupported/integrity-failed entries are not complete evidence. Detect them through future backend framing/commit rules and the explicit schema/checksum. Preserve damaged bytes/artifacts for diagnosis; no silent truncation, repair, overwrite or deletion. Unknown commitment after crash remains unresolved until authoritative reconciliation, not a fabricated rejection or acceptance. Backend recovery may expose a fixed coarse failure without raw exception content.
+
+D04 requires recoverability of durable evidence. Detecting a window left open or an attempt never submitted additionally needs recoverable upstream scope/admission/submission accounting (D02/D07/controller); this record collection alone cannot prove it. Until such accounting exists, restart interrupts any complete-measurement claim. A process crash may prevent a receipt; do not promise a receipt after termination. No recovery implementation, startup hook or infrastructure change now.

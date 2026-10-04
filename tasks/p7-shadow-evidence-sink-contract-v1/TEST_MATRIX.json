@@ -1,0 +1,232 @@
+[
+  {
+    "id": "S01",
+    "case": "Durable accepted write",
+    "required_assertion": "Complete barrier-satisfied write returns accepted=True with committed sequence, aware UTC and correct digest; queue/buffer alone cannot return success"
+  },
+  {
+    "id": "S02",
+    "case": "UTC helper ownership",
+    "required_assertion": "Only P1 utc_now chronology helper invoked during acceptance, no dispatcher/audit/producer clock ownership"
+  },
+  {
+    "id": "S03",
+    "case": "Timezone awareness",
+    "required_assertion": "Naive or non-UTC injected source rejected with CLOCK_INVALID; no host-locale inference"
+  },
+  {
+    "id": "S04",
+    "case": "UTC ISO representation",
+    "required_assertion": "Persist aware UTC as exact isoformat +00:00, preserve precision, no latency arithmetic"
+  },
+  {
+    "id": "S05",
+    "case": "Record version preservation",
+    "required_assertion": "Persist explicit sink_schema_version=1 and observation_schema_version=1 without changing D03 fields"
+  },
+  {
+    "id": "S06",
+    "case": "Immutable record and receipt",
+    "required_assertion": "Frozen/slotted receipt and record; input unchanged; no mutable source refs retained"
+  },
+  {
+    "id": "S07",
+    "case": "Restart persistence",
+    "required_assertion": "Previously acknowledged entries recover unchanged after process/Core restart; sequence/history not reset"
+  },
+  {
+    "id": "S08",
+    "case": "Stable durable ordering",
+    "required_assertion": "Concurrent commit/restart establishes unique evidence sequence; no timestamp/object/filesystem order inference"
+  },
+  {
+    "id": "S09",
+    "case": "Duplicate attempt ambiguity",
+    "required_assertion": "Same turn/equivalent observations not counted automatically as distinct valid samples; no guessed retry key; D02/D07 dependency explicit"
+  },
+  {
+    "id": "S10",
+    "case": "Storage-position collision",
+    "required_assertion": "Reject conflicting committed sequence/integrity rather than overwrite retained evidence"
+  },
+  {
+    "id": "S11",
+    "case": "Malformed record",
+    "required_assertion": "Wrong shape/extra fields/inert semantic contradiction rejected; no repair or evaluation"
+  },
+  {
+    "id": "S12",
+    "case": "Unsupported version",
+    "required_assertion": "V2/bool version and unknown literals rejected; no silent conversion or migration"
+  },
+  {
+    "id": "S13",
+    "case": "Partial interrupted write",
+    "required_assertion": "Partial entry remains excluded from committed set; preserved diagnostic material, incomplete coverage, no hidden truncation"
+  },
+  {
+    "id": "S14",
+    "case": "Integrity failure",
+    "required_assertion": "Changed observation/sequence/time/version fails digest verification and cannot enter complete measurement set"
+  },
+  {
+    "id": "S15",
+    "case": "Permission denied",
+    "required_assertion": "EACCES creates truthful nonaccepted STORAGE_FAILURE and incomplete affected coverage; no policy/audit fallback"
+  },
+  {
+    "id": "S16",
+    "case": "Disk full",
+    "required_assertion": "Injected ENOSPC produces failure/uncertainty as appropriate; no deletion, pruning, live request failure or fabricated success"
+  },
+  {
+    "id": "S17",
+    "case": "Inode/quota exhaustion",
+    "required_assertion": "Simulated inode/quota creation failure handled as evidence failure without consuming real disk or altering quotas"
+  },
+  {
+    "id": "S18",
+    "case": "Storage unavailable",
+    "required_assertion": "Missing/inaccessible device/root rejects; no remote, audit/P2 or arbitrary-path fallback"
+  },
+  {
+    "id": "S19",
+    "case": "Sink failure receipt",
+    "required_assertion": "accepted=False metadata fields None and fixed failure code; no request/path/exception content"
+  },
+  {
+    "id": "S20",
+    "case": "Uncertain commit",
+    "required_assertion": "Failure after possible write yields COMMIT_UNCERTAIN; not proved absent/durable, no blind retry or count inflation"
+  },
+  {
+    "id": "S21",
+    "case": "Acknowledgment lost",
+    "required_assertion": "Recovered durable entry can exist without caller receipt; require external reconciliation; do not rewrite/retry as success"
+  },
+  {
+    "id": "S22",
+    "case": "Legacy isolation",
+    "required_assertion": "Future isolated caller sink errors/receipt failures/cancellation preserve exact legacy response and streaming; no real traffic"
+  },
+  {
+    "id": "S23",
+    "case": "Raw user text excluded",
+    "required_assertion": "Sink cannot enrich 18-field record with request/target/headers/P2 or failed-input dump"
+  },
+  {
+    "id": "S24",
+    "case": "Raw model text excluded",
+    "required_assertion": "No model/candidate/proposal prose or exception string added to serialized evidence/logging"
+  },
+  {
+    "id": "S25",
+    "case": "No audit fallback",
+    "required_assertion": "Audit imports/writer calls patched to fail; both success and persistence error remain separate"
+  },
+  {
+    "id": "S26",
+    "case": "No provenance fallback",
+    "required_assertion": "P2 store construction/mutations forbidden for success and failure"
+  },
+  {
+    "id": "S27",
+    "case": "No network",
+    "required_assertion": "Socket/http/provider telemetry calls forbidden; only confined local evidence operations"
+  },
+  {
+    "id": "S28",
+    "case": "No registry/handler",
+    "required_assertion": "registry.call/get/discovery and handlers forbidden; no live registry access"
+  },
+  {
+    "id": "S29",
+    "case": "No dispatcher/executor",
+    "required_assertion": "No dispatch or executor import/call in acceptance/recovery/errors"
+  },
+  {
+    "id": "S30",
+    "case": "No model/provider/Ollama",
+    "required_assertion": "No adapter/model/provider query/process or fallback on write error"
+  },
+  {
+    "id": "S31",
+    "case": "Reconciled submission coverage",
+    "required_assertion": "For independent recoverable B with B=C, D=0 and no unknowns/duplicates, sink coverage can reconcile; still no global CT/pass claim"
+  },
+  {
+    "id": "S32",
+    "case": "Known loss invalidates",
+    "required_assertion": "Missing/failed submission marks affected window INCOMPLETE; scored subset cannot hide it"
+  },
+  {
+    "id": "S33",
+    "case": "Persisted count insufficient",
+    "required_assertion": "C alone or max(sequence), no-gap sequences and absent error logs cannot establish B or A"
+  },
+  {
+    "id": "S34",
+    "case": "Upstream attempt dependency",
+    "required_assertion": "No eligible-attempt/turn equality or fake ID for pre-context/no-terminal failure; D02/D07 accounting required"
+  },
+  {
+    "id": "S35",
+    "case": "Open window after restart",
+    "required_assertion": "Without recoverable upstream start/end/submission proof, restarted measurement cannot claim complete"
+  },
+  {
+    "id": "S36",
+    "case": "P7 retention gates",
+    "required_assertion": "No TTL/destructive rotation/prune on window end/restart/rollback/disk full; explicit cleanup only after all gates"
+  },
+  {
+    "id": "S37",
+    "case": "Clock rollback/repetition",
+    "required_assertion": "Repeated/backward UTC values retained without synthesized correction; durable order authoritative only for evidence"
+  },
+  {
+    "id": "S38",
+    "case": "Clock excludes authority/latency",
+    "required_assertion": "No monotonic/perf_counter measurement; timestamp affects no permission/confirmation/CT threshold or IDs"
+  },
+  {
+    "id": "S39",
+    "case": "Serialization allowlist",
+    "required_assertion": "Exactly six outer fields/18 observation fields, enums .value, correlation initial IDs, explicit nullable keys; no generic object conversion"
+  },
+  {
+    "id": "S40",
+    "case": "Canonical integrity",
+    "required_assertion": "Canonical UTF8 sorted compact JSON/digest invariant to map key order; content/time/order/version change alters digest"
+  },
+  {
+    "id": "S41",
+    "case": "Confined private storage",
+    "required_assertion": "Client ID/path/traversal/symlink cannot escape approved namespace; no public mount; verify local access and backup/export scope"
+  },
+  {
+    "id": "S42",
+    "case": "Import/passive boundary",
+    "required_assertion": "Module import performs no filesystem/clock/worker side effect; future code/test importer budget separately authorized"
+  },
+  {
+    "id": "S43",
+    "case": "No upstream reevaluation",
+    "required_assertion": "Classifier/router/binder/proposal/permission/response builders forbidden during persistence"
+  },
+  {
+    "id": "S44",
+    "case": "Cross-session and trace distinction",
+    "required_assertion": "Original correlation copied intact with separate trace; valid record for different session never silently reassociated"
+  },
+  {
+    "id": "S45",
+    "case": "Exact evaluated-set seal",
+    "required_assertion": "Ordered committed set/digests/versions reconciled with independent submissions; missing or duplicated set cannot hide behind equal counts; SHA256SUMS excludes itself"
+  },
+  {
+    "id": "S46",
+    "case": "No real exhaustion or destructive recovery",
+    "required_assertion": "Fault injection only in isolated future tests; never fill live disk, remove evidence, invoke recovery on production or change nightly job"
+  }
+]
