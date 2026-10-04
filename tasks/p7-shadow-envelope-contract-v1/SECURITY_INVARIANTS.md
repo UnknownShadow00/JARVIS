@@ -1,0 +1,3 @@
+# Security boundary preserved
+
+One accepted REST or WS user message may later create at most one shadow envelope, independent of output chunks and `_process_stream` fallback. Legacy request, route, stream, execution and response remain authoritative. Client/model fields cannot supply P1 IDs, P2 facts, route, capability, tool, canonical arguments, permission, confirmation or result. No transport object or mutable payload leaks into the envelope. Missing owner state fails closed with no legacy-path effect. Voice is inventoried but outside this REST/WS unit and cannot be counted as covered. No dispatch, registry.call, model, audit truth or policy change.

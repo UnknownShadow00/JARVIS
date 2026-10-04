@@ -1,0 +1,5 @@
+# P2 type exists; live source does not
+
+`app/execution/provenance.py:241+` defines a per-session ledger; `:522` produces a settled `LedgerSnapshot` of current records; `:563-599` defines the read-only snapshot; `:602-633` defines `LedgerStore`, an instance-owned mapping from session IDs to ledgers. `tasks/task13b11d/LEDGER_API.md:45-52,66-76` explicitly says no production code constructs or owns a store and lifecycle is deferred. `git grep` confirms no server/voice request path reads one.
+
+The snapshot required by `NormalizedJarvisRequestV1` must be request-time, same-session, immutable and sourced from a real P2 owner. Constructing `LedgerSnapshot(session_id, ())` at convenience would assert absence of context without evidence; passing a mutable ledger/store would violate the frozen boundary. **P2 SNAPSHOT SOURCE DECISION REQUIRED:** identify the runtime owner, session binding, read point and lifetime of the P2 ledger/snapshot for REST and WS (and explicitly scope voice). No implementation or synthesized snapshot here.

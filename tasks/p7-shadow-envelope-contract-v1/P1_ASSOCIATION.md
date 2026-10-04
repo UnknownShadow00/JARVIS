@@ -1,0 +1,5 @@
+# P1 constructor exists; live source does not
+
+`app/execution/correlation.py:44-64` defines `new_session_id()` and `new_turn_id()` using `uuid4().hex`, and `:110-159` defines immutable `CorrelationContext` and `new_turn_context(session_id=None)`. These are canonical JARVIS-owned ID constructors. The optional session parameter matters: without a supplied existing session ID, `new_turn_context` mints a new session on every call.
+
+`app/server.py` REST/WS does not import or invoke these constructors, and its request shapes contain no trusted session identity. No frozen rule specifies session assignment, lifetime, REST reuse, WS connection/reconnection continuity, or whether a retry reuses a turn ID. Choosing per-message, per-connection, or client-hinted session would invent behavior. **P1 SESSION/TURN SOURCE DECISION REQUIRED:** assign the JARVIS owner and lifecycle of a session across REST/WS requests, the exact turn-minting point and retry rule using P1 constructors. No client/model/provider value may replace these IDs.

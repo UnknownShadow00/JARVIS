@@ -1,0 +1,3 @@
+# WebSocket candidate capture
+
+The complete user message is available in `app/server.py::ws_endpoint` after `receive_text`/JSON extraction (`:505-509`) and wake check, before `_process_stream` (`:527`). A future capture must happen once for that accepted input, not once per output token or once again on `_process` fallback. The payload's `message` can be non-string after JSON parsing, so shadow validation must reject that input without changing the legacy path. This placement covers streaming and fallback; it is a candidate, not an authorized implementation. P1/P2 source gates remain unresolved.

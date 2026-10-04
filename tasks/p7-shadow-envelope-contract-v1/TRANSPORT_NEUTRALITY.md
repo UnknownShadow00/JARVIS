@@ -1,0 +1,3 @@
+# Safe transport rule, pending source freeze
+
+For equal accepted request text and equal JARVIS-owned session snapshot, REST and WS should produce equal control-plane facts; transport-specific trace metadata must not change route/permission/target. The future composer input should be settled primitives/immutable values, never a framework request/socket, mutable JSON payload or stream callback. Output chunks must not create envelopes. A REST request and a WS message are distinct turns unless an independently frozen idempotency rule says otherwise; no implicit deduplication from text. This rule is design guidance only until P1/P2 and trace sources are assigned.

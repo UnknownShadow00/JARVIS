@@ -1097,3 +1097,9 @@
 - Files changed: tasks/p7-shadow-ingress-contract-v1/ (25 documentation files), tasks/loop-log.md.
 - Result: BLOCKED against full contract-freeze acceptance; REST/WS coverage, live P1/P2 association, model-free P7 handoff, composer path/scheduling, shadow evidence semantics, and CT-001 shadow interpretation lack frozen authority. Core production unchanged; 5721 pytest passed, 11 deselected; golden 12/20 with the same eight failures; four predecessor seals verified.
 - Next: Freeze one transport-to-envelope handoff contract covering REST/WS capture, P1/P2 association, and composer ownership/path before implementation.
+
+## [2026-10-04 01:55:56 UTC] Task Completed
+- Task: Reviewed the canonical REST/WS transport-to-shadow-envelope boundary and operator-approved shadow_ingress.py ownership.
+- Files changed: tasks/p7-shadow-envelope-contract-v1/ (19 documentation files), tasks/loop-log.md.
+- Result: BLOCKED against full V1 freeze because production REST/WS paths have no JARVIS-owned P1 session/turn source or P2 snapshot owner, and trace-to-turn association is unfrozen. Core production unchanged; 5721 pytest passed, 11 deselected; golden 12/20 with the same eight failures; predecessor evidence verified.
+- Next: Obtain an explicit P1 session/turn lifecycle, P2 store/snapshot owner, and trace association decision before retrying the envelope freeze.

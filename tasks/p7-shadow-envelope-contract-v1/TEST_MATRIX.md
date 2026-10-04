@@ -1,0 +1,3 @@
+# Future tests, not executed here
+
+REST and WS: conversational, OPEN_APP and OPEN_URL messages produce equivalent normalized facts given the same JARVIS session/snapshot; WS stream/fallback each creates one envelope, not one per chunk. Reject client fake session/turn/trace, missing P1 session/turn, missing/mismatched P2 snapshot, malformed string/JSON, and wrong trace association. Verify retry/reconnection semantics only after frozen P1 decision. Verify immutability, no framework objects, failure leaves legacy reply/stream unchanged, and 0 registry.call/dispatch/model/tool/mutation. Voice coverage gets a separate explicit scope test. Expectations need the missing source decisions before fixture freeze.
