@@ -1121,3 +1121,9 @@
 - Files changed: tasks/p7-post-envelope-exit-review/*.md; tasks/p7-formal-exit-preparation/*.md and *.json; tasks/loop-log.md
 - Result: PASS review/preparation; measurement contract BLOCKED on missing observation-source authority. 39 static closure checks; checklist 5/20 DONE, 2/20 CONTRACT FROZEN; 26 exact test sites; ten operator decisions. No production changes.
 - Next: Seal session evidence and report; observation producer contract awaits D03, all live/P8 work blocked.
+
+## 2026-10-04T02:53:05.531956+00:00 Task Completed
+- Task: Report autonomous P7 formal-exit contract closure and shadow preparation.
+- Files changed: tasks/AUTONOMOUS-P7-FORMAL-EXIT-REPORT.md; tasks/loop-log.md
+- Result: PASS safe session scope; A/B frozen, C/D review and preparation complete; formal P7/P8 BLOCKED. Canonical production unchanged and clean, Hermes disabled/0 processes; 5721 pytest passed, 11 deselected; golden 12/20; 568 prior and 74 unit checksum checks passed.
+- Next: Overall session seal receipt; next contract is Shadow Observation Producer Boundary V1 after D03. No independent authorized runtime work remains.
