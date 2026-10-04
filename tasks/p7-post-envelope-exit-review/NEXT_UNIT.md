@@ -1,0 +1,5 @@
+# Smallest next unit
+
+Recommended next contract unit after the recorded operator choice: **freeze the JARVIS-owned shadow observation producer boundary and its field-availability/failure-coverage contract**, before ShadowMeasurementRecordV1 schema or evaluator implementation. Inputs should be existing immutable envelope/recorded input and actual observed P7 stage facts; it may not infer execution counters from result flags. Exact instrumentation ownership and any new pipeline output are decisions, not an implementation detail hidden in a logger.
+
+Other independent preparation available in this session is Unit D; it is completed in tasks/p7-formal-exit-preparation. Once its source/test/security/rollback/decision inventories are sealed, no further contract freeze or runtime unit is fully determined by current authority. The read-only closure audit of A/B contracts, source anchors, exact test excerpts and historical non-change is now complete (39 checks). It does not close unresolved measurement or live gates. After final evidence sealing, the independent safe work queue for this session is exhausted.

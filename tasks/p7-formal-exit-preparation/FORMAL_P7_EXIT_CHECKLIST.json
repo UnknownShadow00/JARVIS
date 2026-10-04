@@ -1,0 +1,142 @@
+[
+  {
+    "id": "P7-01",
+    "requirement": "P0\u2013P6 foundation prerequisites",
+    "status": "DONE",
+    "source": "13B11A IMPLEMENTATION_PHASES:16-22; current canonical app/execution and 5721-test regression",
+    "limitation": "Historical prerequisite completion; no new live-use claim"
+  },
+  {
+    "id": "P7-02",
+    "requirement": "P7 recorded adapter foundation",
+    "status": "DONE",
+    "source": "13B11N-R1 HERMES_ADAPTER_CONTRACT_V1; canonical app/brain/hermes_adapter.py",
+    "limitation": "Recorded parser implemented, live transport remains P7-09"
+  },
+  {
+    "id": "P7-03",
+    "requirement": "Passive pipeline and frozen/unseen corpus",
+    "status": "DONE",
+    "source": "13B11P-R8 seal: first-scored-run.json, unseen-first.json, zero-execution-proof.json",
+    "limitation": "116/116 and 53/53; historical passive proof only"
+  },
+  {
+    "id": "P7-04",
+    "requirement": "F-MAP-01 reviewed request/binding producer and metadata",
+    "status": "DONE",
+    "source": "f-map-01-binding-contract-v1; registry-metadata-snapshot-r1; binding-projection-v1-r1 seals",
+    "limitation": "Two mappings only; no live consumer"
+  },
+  {
+    "id": "P7-05",
+    "requirement": "Session/turn/P2 context contract",
+    "status": "CONTRACT FROZEN",
+    "source": "tasks/p7-shadow-context-contract-v1; commit 63984ca",
+    "limitation": "IMPLEMENTATION MISSING; protocol separately P7-07"
+  },
+  {
+    "id": "P7-06",
+    "requirement": "REST/WS envelope contract",
+    "status": "CONTRACT FROZEN",
+    "source": "tasks/p7-shadow-envelope-contract-v1-r1; commit 4fb1d4d",
+    "limitation": "IMPLEMENTATION MISSING; no live wiring"
+  },
+  {
+    "id": "P7-07",
+    "requirement": "Continuation/admission/lifecycle authority",
+    "status": "OPERATOR DECISION",
+    "source": "Operator A3; P2 LEDGER_API \u00a7\u00a75\u20136; Context V1 SESSION_LIFECYCLE",
+    "limitation": "Handle representation/binding, retry identity, limits and teardown before wiring"
+  },
+  {
+    "id": "P7-08",
+    "requirement": "Passive owner/composer/evaluator consumers",
+    "status": "IMPLEMENTATION MISSING",
+    "source": "13B11A component graph; pipeline RecordedTurn API; A/B contracts",
+    "limitation": "Exact test exceptions and evaluator input/observability contract required"
+  },
+  {
+    "id": "P7-09",
+    "requirement": "Current-turn adapter input and provider/model identity",
+    "status": "OPERATOR DECISION",
+    "source": "13B11A TEST_STRATEGY:12,42; 13B11O LIVE-01; Unit C adapter review",
+    "limitation": "Live proposal path absent; replay does not meet live-model exit"
+  },
+  {
+    "id": "P7-10",
+    "requirement": "Evaluator scheduling/failure/resource isolation",
+    "status": "OPERATOR DECISION",
+    "source": "13B11A PRODUCTION_INTEGRATION_PLAN \u00a77; actual server.py async graph",
+    "limitation": "No canonical task/thread/queue mechanism or bounds selected"
+  },
+  {
+    "id": "P7-11",
+    "requirement": "Truthful shadow observation/measurement contract",
+    "status": "BLOCKED",
+    "source": "Operator C1\u2013C2; Unit C SHADOW_MEASUREMENT_FIELD_PROVENANCE",
+    "limitation": "Separate-record direction approved; full fact sources/completeness not defined"
+  },
+  {
+    "id": "P7-12",
+    "requirement": "Measurement collection, storage and loss accounting",
+    "status": "IMPLEMENTATION MISSING",
+    "source": "13B11A \u00a77 comparison metrics; LIVE-04; F-AUDIT-01",
+    "limitation": "Storage/redaction/retention and writer failure contract unresolved"
+  },
+  {
+    "id": "P7-13",
+    "requirement": "CT-001 phase acceptance",
+    "status": "OPERATOR DECISION",
+    "source": "13B10D CONFORMANCE_TESTS:26-32; 13B11A P7 phase row and \u00a77",
+    "limitation": "Final-user-visible control-plane response conflicts with legacy-visible shadow"
+  },
+  {
+    "id": "P7-14",
+    "requirement": "CT-013 integrated conversation/safety proof",
+    "status": "MEASUREMENT MISSING",
+    "source": "13B10D CONFORMANCE_TESTS:117-123; 13B11O-R1 pipeline conversation boundary",
+    "limitation": "Compatible in principle; raw candidate alone is insufficient"
+  },
+  {
+    "id": "P7-15",
+    "requirement": "Scored window and acceptance thresholds",
+    "status": "OPERATOR DECISION",
+    "source": "13B11A P7 exit measured-period clause; LIVE-01; Unit C recommendation",
+    "limitation": "No duration/sample/rate/latency threshold frozen"
+  },
+  {
+    "id": "P7-16",
+    "requirement": "Measured zero shadow effects and unchanged visible legacy",
+    "status": "MEASUREMENT MISSING",
+    "source": "13B11A IMPLEMENTATION_PHASES:23; \u00a77; RISK_REGISTER R-13/R-14",
+    "limitation": "No shadow traffic authorized or run; fixtures do not substitute"
+  },
+  {
+    "id": "P7-17",
+    "requirement": "Server/API/UI shadow integration with mode off by default",
+    "status": "IMPLEMENTATION MISSING",
+    "source": "13B11A DEPENDENCY_GRAPH \u00a7\u00a71,4; EC-12; Envelope REST/WS points",
+    "limitation": "No server/API/UI edits; continuation transport still open"
+  },
+  {
+    "id": "P7-18",
+    "requirement": "Rollback drill and noninterference proof",
+    "status": "MEASUREMENT MISSING",
+    "source": "13B11A EC-10; FEATURE_FLAG_AND_ROLLBACK \u00a73; R-18",
+    "limitation": "Plan prepared; no activation or drill executed"
+  },
+  {
+    "id": "P7-19",
+    "requirement": "Shared model ownership/in-flight lifecycle",
+    "status": "OPERATOR DECISION",
+    "source": "13B11A PRODUCTION_INTEGRATION_PLAN \u00a711 and \u00a720 no-conflicting-unload",
+    "limitation": "Conditional on chosen provider path; no resource manager/infrastructure changes"
+  },
+  {
+    "id": "P7-20",
+    "requirement": "Current legacy/regression safety baseline",
+    "status": "DONE",
+    "source": "Unit A/B pytest/golden; sealed legacy digest + 361 unchanged tracked files",
+    "limitation": "Continuous gate currently met; eight golden failures preserved"
+  }
+]

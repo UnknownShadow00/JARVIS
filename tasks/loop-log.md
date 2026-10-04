@@ -1115,3 +1115,9 @@
 - Files changed: tasks/p7-shadow-envelope-contract-v1-r1/*.md; tasks/loop-log.md
 - Result: PASS contract freeze; canonical 5721 pytest passed, 11 deselected, 0 failed; golden 12/20 unchanged. Pure two-field envelope; no production/runtime changes.
 - Next: Review measurement record feasibility and prepare remaining decision/test/rollback inventories; P8 blocked.
+
+## 2026-10-04T02:50:11.626627+00:00 Task Completed
+- Task: Complete post-envelope P7 exit review and independent preparation inventories.
+- Files changed: tasks/p7-post-envelope-exit-review/*.md; tasks/p7-formal-exit-preparation/*.md and *.json; tasks/loop-log.md
+- Result: PASS review/preparation; measurement contract BLOCKED on missing observation-source authority. 39 static closure checks; checklist 5/20 DONE, 2/20 CONTRACT FROZEN; 26 exact test sites; ten operator decisions. No production changes.
+- Next: Seal session evidence and report; observation producer contract awaits D03, all live/P8 work blocked.
