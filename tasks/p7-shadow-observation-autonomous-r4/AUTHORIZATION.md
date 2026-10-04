@@ -1,0 +1,7 @@
+# Bounded authorization
+
+The R4 operator instruction preserves exactly ten pre-existing structural transitions and permits ordinary corrections inside new observation implementation/tests/fixtures/corpora/documentation/harness when frozen D03/D05 gives an unambiguous answer and existing security/live boundaries remain intact. C01 explicitly approves only 12 focused and 9 unseen PipelineStop candidate_source expectations changing MODEL_RAW to None. Original values remain in c01/original/ and the prior R3 seal.
+
+authorization/ten-row-freeze.json records exact old/new functions and assertions before production code. Its ten replacements match the original R3 ten-row freeze exactly; existing parameter decorators also remain unchanged. Whole-tree scan: 151 pre-existing Python test files, 3082 assertions, 170 candidate functions, zero additional authorizations. The actual candidate passes all unchanged tests. Task-local hardening/import-budget changes live only in the newly created observation test helper; approved canonical owner symbols were never broadened.
+
+R3 clarification permits transitive canonicalizer module loading through pipeline/binding type owners; it does not authorize direct observer import/reference/call. The tenth transition permits only the settled canonicalization_version fingerprint key. No server, provider, model, scheduler, sink, audit, P2 or lifecycle authorization was inferred.

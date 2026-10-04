@@ -1,0 +1,3 @@
+# Frozen corpus and C01
+
+Reused R3 focused65 and unseen12 with original hashes 5e0fb6c46ebce03739a20bef2f0b1095166995557b90fb8714d7d702849a144a and 4255cee552b8f747d94b821758cd72b2c0249867fa28dd616f99427599dd6344. R3 first run79 passed/12 failed; full5921 passed/21 failed is preserved history, not current acceptance. C01 corrections are exactly12 focused+9 unseen field-only null replacements; originals/new values/case IDs/D03 reasons are archived. After repairing one added enum fixture, R4 absent-module focused65 all fail solely ModuleNotFoundError. Current117 all pass. Extra bounded hardening changes and their pre-run cases are separately preserved, not disguised as original frozen expectations.

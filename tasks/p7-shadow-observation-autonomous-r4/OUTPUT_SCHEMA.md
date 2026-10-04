@@ -1,0 +1,3 @@
+# Exact eighteen-field schema
+
+Fields in frozen order: correlation; transport; transport_trace_id; outcome_type; stop_stage; stop_reason; lane; primary_action; binding_metadata_digest; binding_action; binding_capability; binding_tool_name; binding_canonical_fingerprint; proposal_count; proposal_match; permission_outcome; candidate_obligation; candidate_source. Frozen/slotted dataclass, no defaults, no speculative fields or wire serializer. PipelineStop always has stage/reason and None candidate fields. Response alternatives have no stop fields and retain exact existing source/lane/obligation. No execution/result/audit/provenance/clock/persistence claim is a field.

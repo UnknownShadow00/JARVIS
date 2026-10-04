@@ -1,0 +1,3 @@
+# Exactly ten transitions
+
+Eight pre-existing files contain exactly the ten frozen function changes in TEN_GATE_TRANSITIONS.md. AST audit compares all other top-level nodes and parameter decorators unchanged, and matches each replacement against its pre-code freeze. Every other tracked test byte is unchanged. Four new files: producer, observation test harness and two corpus JSON files. New test helper hardening does not expand canonical owner symbols or introduce a production consumer. Existing gate run548 passes; complete full regression5956 passes/11 deselected. No dependencies changed; requested pip_audit was attempted but unavailable, pip check passes; no package installation.

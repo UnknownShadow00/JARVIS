@@ -1,0 +1,9 @@
+# Frozen scoring and evidence honesty
+
+R1/R2 contained no frozen observation corpus. R3 independently froze 65 focused cases (43 security), 12 unseen cases and the structural test/helper before production creation. Original focused JSON SHA256: 5e0fb6c46ebce03739a20bef2f0b1095166995557b90fb8714d7d702849a144a. Unseen JSON SHA256: 4255cee552b8f747d94b821758cd72b2c0249867fa28dd616f99427599dd6344. Pre-code seal: 141 checks, zero failures. Missing-module first fail: 65 cases failed solely with ModuleNotFoundError, all other new cases deselected.
+
+First implementation focused/security run: 79 passed, 12 failed, 12 unseen deselected. Candidate full: 5,921 passed, 21 failed, 11 deselected. All failures are the frozen PipelineStop expected candidate_source=MODEL_RAW defect. The independent unseen corpus has nine of the same expectation error. Unseen score is 3 passed/9 failed; no corrected score is claimed. No expectations were altered after scoring. Candidate-runtime-sentinels.json reports all instrumented forbidden counts zero.
+
+Entry and restored final full regression: 5,839 passed, 11 deselected, zero failed (two existing deprecation warnings). Golden re-run safely with registry/network/model/trace traps: 12/20, same eight failures. Legacy normalized digest fc68a0b041c8d0d41f446e9638cae5f888e4f4f6caf84d438ca0e11a30d98291 is retained from the verified seal plus unchanged critical source bytes; no model-capable probe was run.
+
+No production or documentation commit was created because acceptance did not pass. Reports/logs remain local documentation work. All production files/tests are restored, Core clean, observation absent. The external evidence root contains original corpora, first scores, archived candidate/full diff, exact ten-test audit and review-only revision proposals.

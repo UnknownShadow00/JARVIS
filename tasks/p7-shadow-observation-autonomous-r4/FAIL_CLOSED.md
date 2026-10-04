@@ -1,0 +1,3 @@
+# Reject contradictory settled facts
+
+Fixed TypeError for wrong exact owner/ordinary frozen types; ValueError for malformed/inconsistent structure. Reject cross-turn/session IDs, child/noninitial association, invalid transport/count/match/enum, one-sided/mutable/behavior-bearing binding, duplicated action/permission conflict and execution/result/confirmation claims. False match requires the actual S06_MATCH mismatch terminal; True needs count=1, present binding and a compatible later stage, never an earlier/mismatch stop. Direct public record construction enforces these record-shape contradictions too. No fallback, repair, new pipeline reason or inferred success.

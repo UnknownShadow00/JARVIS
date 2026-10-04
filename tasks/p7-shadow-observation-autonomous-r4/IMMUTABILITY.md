@@ -1,0 +1,3 @@
+# Native immutable value
+
+Record retains exact immutable correlation, enums, scalars or None; no input owner, collection or source object is retained. Ordinary frozen native slots and dataclass metadata are checked before nested reads. A native MappingProxyType can wrap a custom Mapping, so in-memory gc.get_referents checks its immediate backing is exact dict before any mapping method; exact primitive keys/values are checked before a temporary copy. This is shape validation, not authority or object-identity-based output. Caller backing-map mutation cannot alter an issued fingerprint/record. Arbitrary hostile object.__setattr__ remains outside a trusted-process frozen-dataclass boundary.

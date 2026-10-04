@@ -1,0 +1,3 @@
+# Exact settled handoff
+
+Exactly ten required keyword-only inputs: correlation, transport_trace_id, transport, admission_mode, terminal, binding, route, proposal_count, proposal_match, permission. Initial P1 association has no child IDs. Transport is http/websocket; trace is observational. Terminal is an existing exact PipelineStop, ApprovedOperationalResponse or ConversationalResponse. Optional settled observations are explicitly None. No request, context owner, envelope, ledger, snapshot, proposal list, model draft, service or callable is accepted. The future evaluator owns same-attempt association of ID-less facts and genuine owner provenance; type/UUID/fingerprint shape cannot prove authenticity.

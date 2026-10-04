@@ -1,0 +1,3 @@
+# Security review result
+
+Zero authority bypasses found across client/identity/trace, passive-type-to-engine, hidden routing/permission/binding/pipeline/canonicalization, raw text, mutable P2/context/store, execution-truth promotion, audit/provenance, dynamic import/service locator, clock/persistence and consumer checks. Seventy-four selected security cases pass; new negative AST mutations reject unapproved imports/calls and fingerprint key/live lookup changes. Primitive key hashes and custom mapping methods remain uncalled on rejection; forged metadata property remains unread. Exactly ten old security transitions, none additional. Transitive definition loading is deliberately distinguished from direct dependencies and observed execution.
