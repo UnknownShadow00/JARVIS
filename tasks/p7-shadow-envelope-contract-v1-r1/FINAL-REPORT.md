@@ -1,0 +1,5 @@
+# JARVIS P7 SHADOW ENVELOPE CONTRACT V1 FROZEN
+
+Versioned continuation uses frozen Context V1. ShadowIngressEnvelopeV1 has exact request text and settled context only. Future pure composer is app/execution/shadow_ingress.py. REST captures immediately before server.py:370; WS captures immediately before :527, once across stream/fallback. Authority, snapshot, failure and transport-neutrality rules are frozen. Historical blocked review is untouched.
+
+No module or server/API/UI change; no scheduling/model/audit decision is smuggled into the envelope. Adapter input and CT-001 remain open. Canonical regression: **5721 passed, 11 deselected, 0 failed**; deterministic golden **12/20**, same eight failures. Production remains exact and clean at d3f44e01e7c63b0c2ba6f52f2dc93c48af34b69c; Hermes clean, disabled, zero processes. Evidence: /home/jarvis/.hermes-poc/evidence/p7-formal-exit-autonomous-session/unit-b/. Safe legacy verification reuses the prior sealed digest plus unchanged production; no fresh Ollama-capable probe. Formal P7 incomplete; P8 blocked. Next: post-envelope measurement/output contract feasibility review.

@@ -1109,3 +1109,9 @@
 - Files changed: tasks/p7-shadow-context-contract-v1/*.md; tasks/loop-log.md
 - Result: PASS contract freeze; 5721 pytest passed, 11 deselected, 0 failed; golden 12/20 unchanged; production unchanged. No implementation or live authorization.
 - Next: Resume Shadow Envelope V1 continuation; preserve continuation protocol and test-exception decisions.
+
+## 2026-10-04T02:35:43.555369+00:00 Task Completed
+- Task: Freeze P7 Shadow Envelope Contract V1 continuation with both REST and WS capture.
+- Files changed: tasks/p7-shadow-envelope-contract-v1-r1/*.md; tasks/loop-log.md
+- Result: PASS contract freeze; canonical 5721 pytest passed, 11 deselected, 0 failed; golden 12/20 unchanged. Pure two-field envelope; no production/runtime changes.
+- Next: Review measurement record feasibility and prepare remaining decision/test/rollback inventories; P8 blocked.
