@@ -1,0 +1,3 @@
+# Initial request vs replay
+
+Initial inert shadow uses `AdmissionMode.INITIAL_TURN`: no invocation/result, no confirmation claim and no result replay. F-REPLAY-01 (`task13b11o-r1/FOLLOWUPS.md:11`; `task13b11p-r1/CONFIRMATION_CONTINUATION.md:21-25`) concerns a live executor entered with a lost result/cancellation. It is irrelevant while the new shadow path has no executor. F-P7R1-02 remains excluded non-dispatchable refusal replay; no widening. Later result-stage coverage would require separately trusted recorded results and cannot be manufactured by shadow. CT-001/013 initial scenarios do not require replay integration.

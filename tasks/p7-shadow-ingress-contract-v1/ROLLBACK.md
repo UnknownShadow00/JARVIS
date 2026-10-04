@@ -1,0 +1,3 @@
+# Rollback contract
+
+Primary runtime rollback is `execution.mode: legacy` followed by the existing config reload/restart procedure (`task13b11a/FEATURE_FLAG_AND_ROLLBACK.md:38-56`). Legacy-only request flow must resume with no persistent shadow execution state or external side-effect cleanup. No client/UI flag is required. A separate later measurement store must be retained or purged only under its own frozen retention rule; rollback must never silently delete evidence. Source rollback is a separate revert of the eventual ingress implementation commit. This task has no runtime rollback because it changes docs only.

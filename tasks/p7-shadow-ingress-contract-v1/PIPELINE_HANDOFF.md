@@ -1,0 +1,5 @@
+# P7 handoff and unresolved adapter
+
+Only `run_recorded_turn(RecordedTurn)` exists (`app/execution/pipeline.py:104-125,402+`). RecordedTurn needs P1 correlation, request, classifier context, binder router/expected/permission fields, P2 snapshot, `AdapterRequest`, `recording`, `proposal_ids`, aware `recorded_at`/`evaluated_at`, and `LaneSignals`. Optional continuation/result/provenance fields remain absent on an initial inert request; shadow must never fabricate `TrustedToolResult`, `ToolInvocation` or confirmation state. P7 recomputes classifier/route/lane and checks the proposal.
+
+`app/brain/hermes_adapter.py` parses recorded JSON; it has no live transport API. A real request without an authorized model has no valid `recording` for the current P7 API. An empty or synthetic recording is not equivalent to a model-free mode. The exact owner and API for building AdapterRequest, source/format of recorded response, and non-model observation behavior must be frozen separately. Do not add a server-convenience P7 API or modify pipeline in this task.

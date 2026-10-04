@@ -1,0 +1,3 @@
+# Immutable security constraints
+
+Legacy output and legacy execution remain authoritative in shadow. Shadow observations never control live routing, response, confirmation or dispatch. Client/model text cannot author route, tool, capability, target, arguments, permission or trusted result. Closed V1 mappings remain the only admitted bindings. The shadow branch has no registry.call, dispatcher, handler, executor, confirmation mutation, provenance truth write or operational audit fabrication. An internal failure cannot break legacy. A request is never operationally duplicated by shadow. Shadow can be independently disabled and defaults off/legacy. No shadow operational prose enters REST, WS, TTS or UI. A verified zero-side-effect test is mandatory before activation.
