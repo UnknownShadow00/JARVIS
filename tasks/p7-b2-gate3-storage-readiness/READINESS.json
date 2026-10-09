@@ -1,0 +1,129 @@
+{
+  "utc": "2026-10-09T04:05:44.651820+00:00",
+  "verdict": "COMPLETE",
+  "entry_head": "6fe0e864f53270d2948a33edb88e9833c483b746",
+  "D06_READY": true,
+  "STORAGE_READY": true,
+  "BACKUP_READY": true,
+  "AUTH_CREDENTIAL_PRESENT": true,
+  "SERVICE_RELOADED": false,
+  "SHADOW_ACTIVE": false,
+  "PILOT_ATTEMPTS": 0,
+  "service": {
+    "ActiveState": "inactive",
+    "SubState": "dead",
+    "FragmentPath": "/home/jarvis/.config/systemd/user/jarvis.service",
+    "DropInPaths": "",
+    "Restart": "on-failure",
+    "MainPID": "0",
+    "EnvironmentFiles": "/home/jarvis/.config/jarvis/jarvis.env (ignore_errors=no)",
+    "UMask": "0027"
+  },
+  "execution_mode": "LEGACY",
+  "hermes_enabled": false,
+  "hermes_brain": false,
+  "credential_verification": "metadata only; contents/value/entropy/authentication uninspected; neither environment file opened/copied/hashed",
+  "credential_metadata_preserved": true,
+  "unit_and_dropin_preserved": true,
+  "installed_unit_paths": [
+    "/home/jarvis/.config/systemd/user/jarvis.service",
+    "/home/jarvis/.config/systemd/user/jarvis.service.d/p7-b2.conf"
+  ],
+  "unit_search_paths": [
+    "/home/jarvis/.config/systemd/user.control",
+    "/run/user/1000/systemd/user.control",
+    "/run/user/1000/systemd/transient",
+    "/run/user/1000/systemd/generator.early",
+    "/home/jarvis/.config/systemd/user",
+    "/etc/systemd/user",
+    "/run/user/1000/systemd/user",
+    "/run/systemd/user",
+    "/run/user/1000/systemd/generator",
+    "/home/jarvis/.local/share/systemd/user",
+    "/usr/local/share/systemd/user",
+    "/usr/share/systemd/user",
+    "/usr/local/lib/systemd/user",
+    "/usr/lib/systemd/user",
+    "/run/user/1000/systemd/generator.late"
+  ],
+  "production_namespaces": {
+    "p7-b2-pilot-controller-v1": false,
+    "p7-shadow-controller-v1": false,
+    "p7-shadow-evidence-v1": false
+  },
+  "controller_status": "EXPECTED PENDING INITIALIZATION at separately approved activation; no D09 epoch, D04 receipt or accepted attempt",
+  "disk": {
+    "available_bytes": 68118978560,
+    "available_inodes": 4902264
+  },
+  "contracts_actual_location_and_verified_hashes": {
+    "/home/jarvis/.hermes-poc/evidence/p7-long-wave-d06-d05-d07-d09/documentation/D06_FINAL_CONTRACT.md": "677e0e72bfe2a243618daaede80da645d5f8442139bc6b1f9e5da3ba46d5f4ca",
+    "/home/jarvis/.hermes-poc/evidence/p7-long-wave-d06-d05-d07-d09/documentation/D06_CALLSITE_AUDIT.md": "8d85988dc86084fe778f856ae357367405ccf6f760bfe0df67d045f5691088a7"
+  },
+  "source_test_changes": false,
+  "source_paths_unchanged": 543,
+  "focused_tests": {
+    "passed": 787,
+    "failures": 0
+  },
+  "additional_offline_backup_stop_rehearsal": {
+    "passed": 1,
+    "failures": 0
+  },
+  "golden": {
+    "passed": 12,
+    "total": 20,
+    "same_eight_known_failures": true
+  },
+  "historical_full_regression": {
+    "passed": 7110,
+    "deselected": 11,
+    "failures": 0,
+    "fresh_run": false
+  },
+  "forbidden_event_counts": {
+    "production_credential_reads": 0,
+    "credential_hashes": 0,
+    "environment_dumps": 0,
+    "systemd_reloads": 0,
+    "service_start_stop_restart_signals": 0,
+    "real_generation_requests": 0,
+    "model_load_unload_restart": 0,
+    "production_generation_leases": 0,
+    "production_D09_epochs": 0,
+    "production_D04_receipts": 0,
+    "real_pilot_acceptances": 0,
+    "production_tool_execution": 0,
+    "Hermes_enablement": 0,
+    "measurement_start": 0,
+    "backup_automation_changes": 0,
+    "evidence_pruning": 0,
+    "pushes": 0
+  },
+  "forbidden_count_basis": "this supervised task operations, audit guards, unchanged source/config/unit/credential metadata, inactive manager and absent pilot namespaces; not a claim about arbitrary external actors",
+  "new_baseline": {
+    "bundle": "/home/jarvis/.hermes-poc/backups/p7-b2/baseline-42c254d5310248a09e31f50c32aab787",
+    "identifier": "baseline-42c254d5310248a09e31f50c32aab787",
+    "manifest_sha256": "bda218a58b4e9fffd03f40633f3a703084f79c6ea441c2b057d37809fff6d049",
+    "seal_sha256": "89afed2aa4704680f66bbc2672f1e81050c0720137e09cb653312bb9e269f34d",
+    "entries_verified": 7,
+    "mode_directory": "0500",
+    "mode_files": "0400",
+    "owner": "1000:1000",
+    "exclusive_creation": true,
+    "fsync_completed": true,
+    "state_snapshot": "D06 initialized state only; no live D04/D09 pilot state exists",
+    "host_loss_protection": false,
+    "verified": true
+  },
+  "Gate4": "NOT APPROVED",
+  "next": "Review Gate3 evidence; separately authorize exact Gate4 configuration/supervisor operations, then Gate5 zero-generation startup verification; Gate6 traffic remains separately unapproved",
+  "limits": [
+    "Core-local backups do not protect against total Core host loss or privileged tampering",
+    "D06 excludes arbitrary remote callers, runtime eviction and daemon restart; participating Core callers quiescent",
+    "VM24GiB/balloon0 is operator reaffirmation, not a fresh Proxmox probe",
+    "Fixture coordinated snapshot consistency depends on sole controller writer, pinned SQLite read transaction, D04/D06 locks; no distributed cross-component atomicity claim",
+    "Restore stopped flag requires independently verified supervisor state; no production restore performed",
+    "No initialized pilot/startup/attempt/final runtime checkpoint exists yet; baseline is configuration/source/unit/D06 initial state only"
+  ]
+}

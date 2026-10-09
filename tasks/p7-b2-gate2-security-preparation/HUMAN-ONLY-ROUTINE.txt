@@ -1,0 +1,24 @@
+import getpass, os, re, secrets, stat
+from pathlib import Path
+parent = Path('/home/jarvis/.config/jarvis')
+assert not parent.is_symlink()
+assert parent.stat().st_uid == os.geteuid()
+assert stat.S_IMODE(parent.stat().st_mode) == 0o700
+token = getpass.getpass('Private deployment token: ')
+confirm = getpass.getpass('Confirm privately: ')
+assert re.fullmatch(r'[A-Za-z0-9_-]{43,256}', token)
+assert secrets.compare_digest(token, confirm)
+os.umask(0o077)
+fd = os.open(parent/'p7-b2.env', os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW, 0o600)
+try:
+    with os.fdopen(fd, 'w', closefd=False) as stream:
+        stream.write('JARVIS_API_TOKEN=' + token + '\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+finally:
+    os.close(fd)
+directory = os.open(parent, os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+try:
+    os.fsync(directory)
+finally:
+    os.close(directory)
