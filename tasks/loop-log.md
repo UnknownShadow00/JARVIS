@@ -1247,3 +1247,15 @@
 - Files changed: tasks/p7-b2-gate3-storage-readiness/{STATUS.md,FUTURE-GATES.md,TEST-COVERAGE.md,READINESS.json,RECEIPT.json}; tasks/loop-log.md; canonical Core documentation/checklist commit 5ee57fd26eaa0d6b06c400ee13fcb29d3573e599.
 - Result: PASS; D06 fresh provision/private permissions/durable reopen verified; storage ready; both old baselines and new 7-entry baseline verified; 787 focused tests plus 1 blocked-backup-stop rehearsal pass; golden12/20 same8; evidence35/35; credential metadata only; service inactive/LEGACY; no reload/SHADOW/epoch/traffic/push.
 - Next: Review Gate3 receipt and separately authorize exact Gate4 configuration/supervisor actions, then scoped Gate5 zero-generation verification.
+
+## [2026-10-09T22:43:47.586753+00:00] Task Completed
+- Task: JARVIS P7 Gate5 extended supervised zero-generation verification on canonical Core; mirror sealed final report locally.
+- Files changed: tasks/p7-b2-gate5-zero-generation-verification/FINAL-REPORT.md; tasks/p7-b2-gate5-zero-generation-verification/SEAL.txt; tasks/loop-log.md. Core also has the new sealed Gate5 evidence bundle and corresponding documentation/log append.
+- Result: PARTIAL against Gate5 acceptance:30.00-minute sampled CLOSED/zero-count verification and backup/source integrity passed;426 deployed-profile tests and550 baseline-fixture tests passed; original537-pass/13-failure fixture mismatch preserved. Live REST/WS require human-private authentication; fresh Ollama host counters blocked by SSH host-key verification. No production change, generation, restart or safety stop. Evidence seal4e37e3c34e46129fa9e0d87d21ca64913920ebc06dca733b46ab3f084782a999.
+- Next: Human-private correct-Bearer GET404 and zero-frame WS handshake/normal-close followed by independent unchanged zero-state readback; obtain trusted remote lifecycle metadata; stop at separate Gate6 authorization boundary.
+
+## [2026-10-10T03:13:27.882445+00:00] Task Completed
+- Task: Gate5B human-only authentication verification preparation, source/security review, isolated qualification and private operator handoff; no live authentication execution.
+- Files changed: tasks/p7-b2-gate5-human-auth-handoff/ (auth utility, read-only preflight, tests, seven Markdown deliverables, SEAL.txt); tasks/loop-log.md; new secret-free Gate5B evidence bundle.
+- Result: PASS for private-execution readiness;135 offline tests passed with zero network/credential/production-access guard counts. Helper SHA256 437276dda518b6e5f7196d38c1399fbe53df47a40aa0ac79065546f05070ee51. Runtime remains PID594042, CLOSED, zero attempts; live checks and independent post-probe proof NOT performed. AI-host SSH fingerprint remains unverified; existing trust entries absent in examined paths.
+- Next: Human reviews hashes/source, runs private preflight and the auth utility once, shares sanitized status/time; Codex then performs separately requested post-probe readback. Human independently verifies AI public host key. Gate6 remains unauthorized.
