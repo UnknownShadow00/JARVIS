@@ -1,0 +1,13 @@
+# Gate6C isolated candidate scope
+
+Option L is selected: legacy owns the conversational reply; Granite remains observational. This authorizes this isolated engineering candidate, not live legacy bindings, deployment, opening, or a provider call. The candidate is additive to Gate6B revision2; original proposals and approvals are unchanged.
+
+Candidate: `/tmp/jarvis-gate6c-candidate-thseen50/repo` on canonical Core. Base source HEAD: `bd53dbc799fb9284a21fae8cce3f5d9539e31141`. Content revision (SHA256 of CANDIDATE-SOURCE-SHA256SUMS): `0d81f9fd49217ac0ac672aeefd1abb0190071c93da291a0ad92947636f8e738c`. Patch SHA256: `62c3683203dd67720dbd42e745d6dd4996a159e634abc4826a27d5a33e3872ea`. This is a private copied checkout with a content-addressed patch, not a Git commit or deployed release. The evidence archives all 13 candidate/test/harness files; canonical source identity and per-file hashes make reconstruction reviewable.
+
+Implemented standalone `candidate_v3`: typed injected resource/release contracts; bounded legacy and Granite orchestration; pure canonical observational bridge; unregistered in-process ASGI REST/WS adapter; source/config/runtime/epoch-bound operator verifier seam; one-use permits; schema 5 disposable ledger; endpoint-qualified serialized leases; manifest 3 coordinated backups; durable stop and recovery hold. Tests inject fake providers, dummy API/signing credentials and disposable storage. No live transport, secret loader, privileged helper, real peer-credential extractor, unit, startup factory or production migration is installed. `build_production_runtime()` always refuses.
+
+The candidate first lived under the isolated copy's app/execution directory. The unchanged frozen consumer-graph tests correctly rejected that placement. It now resides outside app as a quarantined package. The rejected revision and failures are preserved. Passing canonical tests does not approve adding the new observer/import edges to the frozen application graph; that is an explicit later source/security contract decision.
+
+119 canonical app files and 208 original test files remain byte-identical to the entry copy and production source. The isolated config uses the committed LEGACY baseline, SHA256 `247633cbd58a6297cbf94e7b293da905fbe521f1f2964b33bfa10d91c41875a3`, solely for canonical unit fixtures. Production retains the approved SHADOW config hash. No production code/config or approved historical test expectations were edited.
+
+No commit, merge, installation or push occurred. The task packet and completion log are documentation additions only. See UNRESOLVED-RELEASE-BINDINGS.md for implementation seams and release decisions that remain open.

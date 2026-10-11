@@ -1,0 +1,461 @@
+--- /dev/null
++++ b/design_model.py
+@@ -0,0 +1,192 @@
++"""DISPOSABLE DESIGN MODEL, not an opener, service module, or credential client.
++
++Root-peer and operator-auth checks below are supplied fixture facts, not actual
++SO_PEERCRED, PAM, FIDO or signature verification. No network or JARVIS imports.
++"""
++from dataclasses import dataclass
++import sqlite3
++import threading
++
++
++class Refused(Exception):
++    pass
++
++
++@dataclass(frozen=True)
++class Binding:
++    source: str = 'dummy-reviewed-source'
++    config: str = 'dummy-reviewed-config'
++    epoch: str = 'dummy-successor-epoch'
++    predecessor: str = 'dummy-retained-v2-epoch'
++    pid: int = 12345
++    invocation: str = 'dummy-invocation'
++    boot: str = 'dummy-boot'
++    start_tick: int = 700
++    runtime_nonce: str = 'dummy-runtime-challenge'
++    resource: str = 'dummy-endpoint-qualified-resource'
++    profile: str = 'dummy-native-profile'
++    checkpoint: str = 'dummy-verified-checkpoint'
++    contract: str = 'dummy-contract-v3'
++    gate5: str = 'dummy-renewed-gate5-seal'
++
++
++@dataclass(frozen=True)
++class Grant:
++    nonce: str
++    binding: Binding
++    action: str = 'OPEN_INITIAL'
++    peer_uid: int = 0
++    operator_verified: bool = True
++    expired: bool = False
++
++
++class Model:
++    sequence = ('http', 'http', 'websocket', 'websocket')
++
++    def __init__(self, db, *, create=False, binding=Binding(), legacy_count=0, d06_state='CLEAN'):
++        self.db, self.binding = db, binding
++        self.lock = threading.Lock()
++        self.d06 = d06_state  # Independent fixture fact, not inferred from D09.
++        self.backup_valid = True
++        self.endpoint_exclusive = True
++        self.control_valid = True
++        self.fake_transmissions = self.tool_dispatches = self.legacy_calls = 0
++        self.permit = None
++        self.state = 'CLOSED'
++        if create:
++            # Fixture provisioning only: production migration is NOT implemented.
++            if legacy_count or binding.epoch == binding.predecessor:
++                raise Refused('UNAPPROVED_OR_NONZERO_LEGACY_TRANSITION')
++            db.executescript('''
++CREATE TABLE predecessor (id TEXT PRIMARY KEY, accepted INTEGER NOT NULL CHECK(accepted=0), status TEXT NOT NULL CHECK(status='CLOSED_COMPLETE'));
++CREATE TABLE control (id INTEGER PRIMARY KEY CHECK(id=1), opened INTEGER NOT NULL, terminal TEXT, backup_count INTEGER NOT NULL);
++CREATE TABLE grants (nonce TEXT PRIMARY KEY, action TEXT NOT NULL);
++CREATE TABLE attempts (ordinal INTEGER PRIMARY KEY CHECK(ordinal BETWEEN 1 AND 4), transport TEXT NOT NULL, status TEXT NOT NULL, origin TEXT NOT NULL CHECK(origin='LIVE'), eligible INTEGER NOT NULL CHECK(eligible=0));
++''')
++            db.execute('INSERT INTO predecessor VALUES (?,0,?)', (binding.predecessor, 'CLOSED_COMPLETE'))
++            db.execute('INSERT INTO control VALUES (1,0,NULL,0)')
++            db.commit()
++        try:
++            if db.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
++                raise Refused('CORRUPT')
++            if db.execute('SELECT id,accepted,status FROM predecessor').fetchall() != [(binding.predecessor, 0, 'CLOSED_COMPLETE')]:
++                raise Refused('LINEAGE')
++            row = db.execute('SELECT opened,terminal,backup_count FROM control WHERE id=1').fetchone()
++            if row is None or row[0] not in (0, 1) or row[2] > self.accepted:
++                raise Refused('CONTROL')
++            if row[1] is not None:
++                self.state = 'TERMINAL'
++            elif row[0]:
++                self.state = 'RECOVERY_HOLD'
++            # Unresolved accepted rows independently block recovery below.
++            # Never fabricate or clear a D06 state from controller/runner absence.
++        except sqlite3.Error as e:
++            raise Refused('MISSING_OR_CORRUPT_STATE') from None
++
++    @property
++    def accepted(self):
++        return self.db.execute('SELECT count(*) FROM attempts').fetchone()[0]
++
++    def _require(self, condition, code):
++        if not condition:
++            raise Refused(code)
++
++    def _prerequisites(self, grant, action):
++        self._require(grant.peer_uid == 0 and grant.operator_verified, 'OPERATOR_AUTHORITY')
++        self._require(grant.binding == self.binding and not grant.expired and grant.action == action, 'BINDING')
++        self._require(self.control_valid, 'CONTROL_STATE')
++        self._require(self.d06 == 'CLEAN' and self.endpoint_exclusive, 'OWNERSHIP_OR_ENDPOINT')
++        row = self.db.execute('SELECT terminal,backup_count FROM control').fetchone()
++        self._require(row[0] is None and self.backup_valid and row[1] == self.accepted, 'TERMINAL_OR_BACKUP')
++        self._require(not self.db.execute('SELECT 1 FROM attempts WHERE status!=?', ('COMMITTED',)).fetchone(), 'UNRESOLVED_ACCEPTANCE')
++
++    def _spend(self, grant):
++        try:
++            self.db.execute('INSERT INTO grants VALUES (?,?)', (grant.nonce, grant.action))
++        except sqlite3.IntegrityError:
++            raise Refused('REPLAY') from None
++
++    def open(self, grant, *, recovery=False, fault=None):
++        action = 'RECOVER' if recovery else 'OPEN_INITIAL'
++        self._prerequisites(grant, action)
++        self._require(self.state == ('RECOVERY_HOLD' if recovery else 'CLOSED'), 'RUNTIME_STATE')
++        if not recovery:
++            self._require(self.accepted == 0 and self.db.execute('SELECT opened FROM control').fetchone()[0] == 0, 'INITIAL_ZERO_ONLY')
++        self._require(self.accepted < 4, 'CAP')
++        with self.db:
++            self._spend(grant)
++            self.db.execute('UPDATE control SET opened=1')
++            if fault == 'before_commit':
++                raise Refused('INJECTED_PARTIAL_WRITE')
++        # Durable grant consumption never restores a runnable OPEN state.
++        if fault == 'after_commit':
++            raise Refused('INJECTED_CRASH_BEFORE_RUNTIME_RELEASE')
++        self.state = 'HOLD'
++
++    def arm(self, grant, transport, *, client='dummy-approved-session', scope='dummy-pilot-scope'):
++        self._prerequisites(grant, 'ARM_NEXT')
++        self._require(self.state == 'HOLD' and self.accepted < 4, 'HOLD_OR_CAP')
++        self._require(transport == self.sequence[self.accepted], 'TRANSPORT_QUOTA')
++        with self.db:
++            self._spend(grant)
++        self.permit = (transport, client, scope)
++        self.state = 'ARMED'
++
++    def accept(self, transport, *, authenticated=True, client='dummy-approved-session', scope='dummy-pilot-scope'):
++        with self.lock:
++            if self.state == 'INFLIGHT':
++                self.stop('CONCURRENT_INTAKE')
++                return False
++            if self.state != 'ARMED':
++                return False
++            if not authenticated or self.permit != (transport, client, scope):
++                self.stop('AUTH_OR_SCOPE')
++                return False
++            if self.d06 != 'CLEAN' or not self.endpoint_exclusive or not self.control_valid or not self.backup_valid:
++                self.stop('PREREQUISITE_CHANGED')
++                return False
++            with self.db:
++                self.db.execute('INSERT INTO attempts VALUES (?,?,?,\'LIVE\',0)',
++                                (self.accepted + 1, transport, 'INFLIGHT'))
++            self.permit = None
++            self.state = 'INFLIGHT'
++            return True
++
++    def transmit_fake(self):
++        self._require(self.state == 'INFLIGHT' and self.d06 == 'CLEAN', 'NO_ACTIVE_ATTEMPT')
++        self.d06 = 'ACTIVE'
++        self.fake_transmissions += 1
++
++    def complete(self, *, known_terminal=True, receipt_valid=True, tool_proposal=False, backup_ok=True):
++        self._require(self.db.execute('SELECT 1 FROM attempts WHERE status=\'INFLIGHT\'').fetchone() is not None, 'NO_PENDING')
++        if not known_terminal:
++            self.d06 = 'UNKNOWN'
++            self.stop('REMOTE_UNKNOWN')
++            return
++        self.d06 = 'CLEAN'
++        terminal = 'COMMITTED' if receipt_valid and not tool_proposal else 'FAILED'
++        with self.db:
++            self.db.execute('UPDATE attempts SET status=? WHERE status=\'INFLIGHT\'', (terminal,))
++        if terminal != 'COMMITTED':
++            self.stop('TOOL_OR_RECEIPT_FAILURE')
++            return
++        if not backup_ok:
++            self.backup_valid = False
++            self.stop('BACKUP_FAILURE')
++            return
++        with self.db:
++            self.db.execute('UPDATE control SET backup_count=?', (self.accepted,))
++        if self.state != 'TERMINAL':
++            self.state = 'HOLD'
++        if self.accepted == 4:
++            self.stop('CAP_REACHED')
++
++    def stop(self, reason='OPERATOR_STOP'):
++        self.permit = None
++        self.state = 'TERMINAL'
++        with self.db:
++            self.db.execute('UPDATE control SET terminal=COALESCE(terminal,?)', (reason,))
++
++    def snapshot(self):
++        return (self.accepted, tuple(self.db.execute('SELECT * FROM attempts ORDER BY ordinal')),
++                tuple(self.db.execute('SELECT * FROM grants ORDER BY nonce')))
+--- /dev/null
++++ b/test_design.py
+@@ -0,0 +1,236 @@
++"""Offline model tests: disposable SQLite only, no production imports or clients."""
++from dataclasses import replace, fields
++import itertools
++import sqlite3
++import threading
++import unittest
++from design_model import Binding, Grant, Model, Refused
++
++
++def fixture():
++    db = sqlite3.connect(':memory:', check_same_thread=False)
++    return Model(db, create=True)
++
++
++def initial(m):
++    return Grant('dummy-open', m.binding)
++
++
++def arm(m, index=None):
++    index = m.accepted if index is None else index
++    return Grant('dummy-arm-' + str(index), m.binding, action='ARM_NEXT')
++
++
++class DesignTests(unittest.TestCase):
++    def test_fresh_closed_no_fake_acceptance(self):
++        m = fixture()
++        self.assertFalse(m.accept('http'))
++        self.assertEqual((m.state, m.accepted, m.fake_transmissions), ('CLOSED', 0, 0))
++
++    def test_valid_open_no_generation_lease_or_acceptance(self):
++        m = fixture();m.open(initial(m))
++        self.assertEqual((m.state,m.d06,m.accepted,m.fake_transmissions), ('HOLD','CLEAN',0,0))
++        self.assertFalse(m.accept('http'))
++
++    def test_exact_four_and_two_each_no_automatic_next(self):
++        m = fixture();m.open(initial(m))
++        for transport in m.sequence:
++            m.arm(arm(m),transport)
++            self.assertTrue(m.accept(transport))
++            m.transmit_fake();m.complete()
++            self.assertFalse(m.accept(transport))
++        self.assertEqual(m.accepted,4)
++        self.assertEqual(m.fake_transmissions,4)
++        self.assertEqual(m.state,'TERMINAL')
++        self.assertEqual(m.db.execute('SELECT transport,count(*) FROM attempts GROUP BY transport').fetchall(), [('http',2),('websocket',2)])
++        self.assertEqual(m.db.execute('SELECT DISTINCT origin,eligible FROM attempts').fetchall(), [('LIVE',0)])
++        self.assertEqual((m.tool_dispatches,m.legacy_calls),(0,0))
++
++    def test_repeated_open_refused_without_mutation(self):
++        m=fixture();m.open(initial(m));s=m.snapshot()
++        with self.assertRaises(Refused):m.open(initial(m))
++        self.assertEqual(s,m.snapshot())
++
++    def test_accepted_attempt_blocks_initial_open_after_restart(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http');m.accept('http');m.complete()
++        restarted=Model(m.db,binding=replace(m.binding,pid=12346,runtime_nonce='new'))
++        with self.assertRaises(Refused):restarted.open(initial(restarted))
++        self.assertEqual((restarted.state,restarted.accepted),('RECOVERY_HOLD',1))
++
++    def test_separate_recovery_preserves_high_water_quota_and_eligibility(self):
++        m=fixture();m.open(initial(m))
++        for _ in range(2):m.arm(arm(m),'http');m.accept('http');m.complete()
++        r=Model(m.db,binding=replace(m.binding,pid=12346,runtime_nonce='new'))
++        self.assertFalse(r.accept('websocket'))
++        r.open(Grant('dummy-recovery',r.binding,action='RECOVER'),recovery=True)
++        with self.assertRaises(Refused):r.arm(arm(r),'http')
++        for _ in range(2):r.arm(arm(r),'websocket');r.accept('websocket');r.complete()
++        self.assertEqual(r.accepted,4)
++
++    def test_crash_after_acceptance_preserves_unknown_and_blocks_recovery(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http');m.accept('http');m.transmit_fake()
++        r=Model(m.db,binding=replace(m.binding,pid=12346),d06_state=m.d06)
++        with self.assertRaises(Refused):r.open(Grant('recovery',r.binding,action='RECOVER'),recovery=True)
++        self.assertEqual((r.accepted,r.d06), (1,'ACTIVE'))
++
++    def test_crash_after_open_commit_spends_nonce_but_never_autoopens(self):
++        m=fixture()
++        with self.assertRaises(Refused):m.open(initial(m),fault='after_commit')
++        r=Model(m.db)
++        self.assertEqual(r.state,'RECOVERY_HOLD')
++        self.assertFalse(r.accept('http'))
++        self.assertEqual(r.db.execute('SELECT nonce FROM grants').fetchall(), [('dummy-open',)])
++        with self.assertRaises(Refused):r.open(initial(r))
++
++    def test_partial_write_rolls_back_durable_open(self):
++        m=fixture()
++        with self.assertRaises(Refused):m.open(initial(m),fault='before_commit')
++        self.assertEqual(m.db.execute('SELECT opened FROM control').fetchone(), (0,))
++        self.assertEqual(m.db.execute('SELECT count(*) FROM grants').fetchone(), (0,))
++        self.assertEqual(m.state,'CLOSED')
++
++    def test_stop_irreversible_even_with_new_operator_grant(self):
++        m=fixture();m.open(initial(m));m.stop()
++        r=Model(m.db)
++        for action in ('OPEN_INITIAL','RECOVER'):
++            with self.assertRaises(Refused):r.open(Grant(action,r.binding,action=action),recovery=action=='RECOVER')
++        self.assertEqual(r.state,'TERMINAL')
++
++    def test_recovery_never_reuses_an_old_runtime_grant(self):
++        m=fixture();m.open(initial(m));r=Model(m.db,binding=replace(m.binding,invocation='new'))
++        with self.assertRaises(Refused):r.open(Grant('recover',m.binding,action='RECOVER'),recovery=True)
++
++    def test_cap_enforced_after_restart(self):
++        m=fixture();m.open(initial(m))
++        for t in m.sequence:m.arm(arm(m),t);m.accept(t);m.complete()
++        r=Model(m.db)
++        with self.assertRaises(Refused):r.open(Grant('recover',r.binding,action='RECOVER'),recovery=True)
++        self.assertEqual(r.accepted,4)
++
++    def test_concurrent_rest_ws_reserves_at_most_one_no_queue(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http')
++        barrier=threading.Barrier(3);results=[]
++        def offer(t):barrier.wait();results.append(m.accept(t))
++        threads=[threading.Thread(target=offer,args=(t,)) for t in ('http','websocket')]
++        for t in threads:t.start()
++        barrier.wait()
++        for t in threads:t.join(2);self.assertFalse(t.is_alive())
++        self.assertLessEqual(sum(results),1)
++        self.assertLessEqual(m.accepted,1)
++        self.assertEqual(m.state,'TERMINAL')
++
++    def test_tool_proposal_never_dispatches_and_blocks_next(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http');m.accept('http');m.transmit_fake();m.complete(tool_proposal=True)
++        self.assertEqual((m.state,m.tool_dispatches),('TERMINAL',0))
++        with self.assertRaises(Refused):m.arm(arm(m),'http')
++
++    def test_unknown_never_inferred_complete_or_released(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http');m.accept('http');m.transmit_fake();m.complete(known_terminal=False)
++        self.assertEqual((m.state,m.d06),('TERMINAL','UNKNOWN'))
++        self.assertEqual(m.db.execute('SELECT status FROM attempts').fetchone(),('INFLIGHT',))
++
++    def test_backup_failure_preserves_accepted_and_stops_next(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http');m.accept('http');m.complete(backup_ok=False)
++        self.assertEqual((m.accepted,m.state), (1,'TERMINAL'))
++        with self.assertRaises(Refused):m.arm(arm(m),'http')
++
++    def test_receipt_join_failure_stops_next(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http');m.accept('http');m.complete(receipt_valid=False)
++        self.assertEqual((m.accepted,m.state), (1,'TERMINAL'))
++
++    def test_missing_control_refuses_startup(self):
++        m=fixture();m.db.execute('DELETE FROM control');m.db.commit()
++        with self.assertRaises(Refused):Model(m.db)
++
++    def test_corrupt_control_refuses_startup(self):
++        m=fixture();m.db.execute('UPDATE control SET opened=99');m.db.commit()
++        with self.assertRaises(Refused):Model(m.db)
++
++    def test_missing_database_is_not_initialized_on_restart(self):
++        with self.assertRaises(Refused):Model(sqlite3.connect(':memory:'))
++
++    def test_existing_accepted_set_cannot_be_hidden_by_transition(self):
++        with self.assertRaises(Refused):Model(sqlite3.connect(':memory:'),create=True,legacy_count=1)
++
++    def test_same_legacy_epoch_cannot_be_relabeled_successor(self):
++        with self.assertRaises(Refused):Model(sqlite3.connect(':memory:'),create=True,binding=replace(Binding(),epoch=Binding().predecessor))
++
++    def test_permit_replay_refused(self):
++        m=fixture();m.open(initial(m));g=arm(m);m.arm(g,'http');m.accept('http');m.complete()
++        with self.assertRaises(Refused):m.arm(g,'http')
++
++    def test_zero_existing_accepted_backup_does_not_authorize_open(self):
++        m=fixture()
++        with self.assertRaises(Refused):m.open(Grant('unapproved',m.binding,operator_verified=False))
++        self.assertEqual(m.accepted,0)
++
++    def test_runtime_prerequisites_rechecked_before_acceptance(self):
++        for attribute,value in [('d06','ACTIVE'),('endpoint_exclusive',False),('control_valid',False),('backup_valid',False)]:
++            with self.subTest(attribute=attribute):
++                m=fixture();m.open(initial(m));m.arm(arm(m),'http');setattr(m,attribute,value)
++                self.assertFalse(m.accept('http'));self.assertEqual(m.accepted,0)
++
++    def test_bounded_event_sequences_preserve_core_invariants(self):
++        for actions in itertools.product(('open','arm','accept','complete','stop'),repeat=4):
++            m=fixture();previous=0
++            for action in actions:
++                try:
++                    if action=='open':m.open(initial(m))
++                    elif action=='arm':m.arm(arm(m),m.sequence[min(m.accepted,3)])
++                    elif action=='accept':m.accept('http')
++                    elif action=='complete':m.complete()
++                    else:m.stop()
++                except Refused:pass
++                self.assertGreaterEqual(m.accepted,previous);previous=m.accepted
++                self.assertLessEqual(m.accepted,4)
++                self.assertEqual((m.tool_dispatches,m.legacy_calls),(0,0))
++            m.db.close()
++
++
++def binding_test(field):
++    def test(self):
++        m=fixture();v=getattr(m.binding,field);wrong=v+1 if isinstance(v,int) else v+'-WRONG'
++        with self.assertRaises(Refused):m.open(Grant('wrong-'+field,replace(m.binding,**{field:wrong})))
++        self.assertEqual((m.state,m.accepted),('CLOSED',0))
++    return test
++
++
++for field in fields(Binding):setattr(DesignTests,'test_wrong_binding_'+field.name,binding_test(field.name))
++
++
++def guard_test(attribute,value):
++    def test(self):
++        m=fixture();setattr(m,attribute,value)
++        with self.assertRaises(Refused):m.open(initial(m))
++        self.assertEqual(m.accepted,0)
++    return test
++
++
++for label,attribute,value in [('d06_active','d06','ACTIVE'),('d06_unknown','d06','UNKNOWN'),('backup_invalid','backup_valid',False),('control_corrupt','control_valid',False),('endpoint_conflict','endpoint_exclusive',False)]:
++    setattr(DesignTests,'test_refuse_'+label,guard_test(attribute,value))
++
++
++def grant_test(field,value):
++    def test(self):
++        m=fixture()
++        with self.assertRaises(Refused):m.open(replace(initial(m),**{field:value}))
++    return test
++
++
++for label,field,value in [('same_uid_agent','peer_uid',1000),('untrusted_uid','peer_uid',4567),('wrong_dummy_operator_credential','operator_verified',False),('expired','expired',True),('wrong_action','action','ARM_NEXT')]:
++    setattr(DesignTests,'test_refuse_'+label,grant_test(field,value))
++
++
++def ingress_test(transport,kw):
++    def test(self):
++        m=fixture();m.open(initial(m));m.arm(arm(m),'http')
++        self.assertFalse(m.accept(transport,**kw))
++        self.assertEqual((m.accepted,m.fake_transmissions,m.tool_dispatches),(0,0,0))
++    return test
++
++
++for label,transport,kw in [('voice','voice',{}),('direct','direct',{}),('wrong_scope','http',{'scope':'wrong'}),('untrusted_client','http',{'client':'wrong'}),('wrong_dummy_api_credential','http',{'authenticated':False})]:
++    setattr(DesignTests,'test_ingress_refuse_'+label,ingress_test(transport,kw))
++
++
++if __name__ == '__main__':unittest.main(verbosity=2)
+--- /dev/null
++++ b/run_guarded.py
+@@ -0,0 +1,24 @@
++import sys,os,json,time,unittest,socket,contextlib,io,platform
++from pathlib import Path
++sys.dont_write_bytecode=True
++root=Path(__file__).parent.resolve();sys.path.insert(0,str(root))
++counts={'network':0,'production_or_credential_open':0,'external_write':0,'process_execution':0}
++def guard(event,args):
++ if event in ('socket.connect','socket.bind','socket.sendto','socket.getaddrinfo'):
++  counts['network']+=1;raise RuntimeError('NETWORK_FORBIDDEN')
++ if event in ('subprocess.Popen','os.system'):
++  counts['process_execution']+=1;raise RuntimeError('EXECUTION_FORBIDDEN')
++ if event=='open' and isinstance(args[0],(str,bytes,os.PathLike)):
++  p=Path(os.fsdecode(args[0])).absolute()
++  if str(p).startswith(('/home/jarvis/JARVIS','/home/jarvis/.config/jarvis','/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS')):
++   counts['production_or_credential_open']+=1;raise RuntimeError('PRODUCTION_FORBIDDEN')
++  if (args[2] or 0)&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND) and not p.is_relative_to(root):
++   counts['external_write']+=1;raise RuntimeError('EXTERNAL_WRITE_FORBIDDEN')
++sys.addaudithook(guard)
++start=time.monotonic();suite=unittest.defaultTestLoader.discover(str(root),pattern='test_design.py')
++with (root/'design-tests.txt').open('w') as out:
++ result=unittest.TextTestRunner(stream=out,verbosity=2).run(suite)
++r={'tests':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'seconds':round(time.monotonic()-start,4),'guards':counts,'python':platform.python_version(),'sqlite':__import__('sqlite3').sqlite_version,'bounded_event_sequences':625,'isolation':str(root),'production_implementation':False}
++(root/'design-test-results.json').write_text(json.dumps(r,indent=2)+'\n')
++print(json.dumps(r,indent=2));print((root/'design-tests.txt').read_text()[-1800:])
++raise SystemExit(not result.wasSuccessful())

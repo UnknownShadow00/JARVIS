@@ -1,0 +1,33 @@
+# Proposed Startup/Opening Contract V3
+
+**DRAFT — OPERATOR REVIEW REQUIRED — NOT IMPLEMENTED OR DEPLOYED.** This supersedes no current approval. V2 contract c40de55208296b3607c000164238bdf50c8097edb087c2c929cc03fa195e4458 and original Gate1–5 evidence remain immutable historical authorities for their reviewed deployments.
+
+## Transition and persistence
+
+- V2 running PID594042 remains unchanged until a separate deployment authorization. No in-process upgrade or same-ID reopen is permitted.
+- Explicitly approve planned zero-use V2 retirement. Preserve OPERATOR_STOP and terminal status, complete controller/ownership/receipt truth, original checkpoint and final coordinated evidence. Abort/failure/incomplete/nonzero predecessor blocks the proposed narrow transition.
+- Separately authorize exactly one new V3 deployment/epoch lineage, retaining the original V2 namespace. Proposed new controller namespace p7-b2-pilot-controller-v2, schema4, records predecessor identity/immutable archive and successor, accepted IDs/ordinals/transports, LIVE/eligible=false facts, grants/permit consumption, actual operator audit and remaining global budget. Names/schema are proposals, not current storage.
+- Global cap4 includes all ancestors; no second successor, count reset, duplicate masking, V2 status rewrite, automatic initialization/reconciliation/restore or retroactive eligibility. V2's exact schema3/one-epoch validator is unchanged; new versioned validators must separately validate V3 and retained legacy artifacts.
+- New coordinated backup manifest version3 must bind lineage, control ledger, source/config/release/unit/runtime, exact accepted high-water/transport/session associations and D04/D06 state. Include verified startup, after-attempt and final checkpoints. Preserve original manifest2 and baseline. Hashes do not provide host-loss or privileged-tamper protection; accepted local-only exposure needs explicit renewal for this bounded pilot.
+
+## Runtime and authority
+
+- Dedicated non-login service UID and protected system-supervised unit, root-owned immutable release/config/dependencies and fixed control helper. Exact identities are chosen only during approved implementation. Restart=no, autostart disabled and umask0077 remain required. No general sudo or operator credentials available to Codex's jarvis account.
+- New UID/supervisor, D06/backup ownership compatibility and private service credential provisioning are new approvals. Preserve resource/state bytes/associations; no blind chown, lease reset or permissive reader. Legacy artifact ownership validation needs explicit versioned compatibility; never claim that current effective-UID readers already support migration.
+- Startup creates only CLOSED_INITIAL or CLOSED_RECOVERY_HOLD. It performs no provider request or automatic opening. Reusing a V3 epoch is explicit attach/validation of that exact epoch, not creation; hydrate accepted/transport/spent-authority truth before exposing listeners. Terminal and corrupt/incomplete states refuse.
+- Fixed-schema AF_UNIX control only. Require authenticated privileged operator action, verified peer UID/PID/start/boot/invocation, exact deployment/epoch/profile/resource/backup/evidence/nonce/expiry/approval bindings and repeat refusal. Existing Bearer is API authentication only. No REST/WS/model/continuation/timer/restart opening authority.
+- Initial opening requires accepted/submitted/receipt zero and valid fresh zero checkpoint. Opening grants a held session; each ordinal needs a separate one-use local permit. Recheck ownership, endpoint exclusivity, checkpoint/high-water and terminal state transactionally. Durable opening audit is not evidence of accepted work; acknowledge readiness only after durable authority and runtime validation.
+- Accept and consume permit in one sole-writer transaction before work/ack/provider start. Queue0/intake1, no backlog. Concurrent or unexpected ingress freezes subsequent admissions and preserves existing work. Grant/permit/root authority cannot be supplied by client headers.
+
+## Data path and frozen bounds
+
+- Dedicated PILOT-only REST/WS fast branches; never enter legacy processing, registry execution, TTS/voice/direct/confirmation/resource handlers. Lifecycle suppression remains unconditional for PILOT after opening, cap, stop and drain. No legacy fallthrough if factory/control/backup fails.
+- Exactly two REST and two WS conversational attempts, selected in reviewed ordinal order, LIVE and measurement-ineligible throughout. Only the pinned endpoint/model/profile; context64000, output128, keep_alive60, stream=false, think=false, response/request native bound16384, provider deadline180s, local drain30s. Preserve existing history8messages/8192bytes, session capacity2/idle300s/max-age1800s unless separately requalified.
+- Preserve authenticated REST continuation header and reviewed WS continuation schema with exact Core-owned pilot/runtime/epoch/session scope. Invalid/replayed/stale scope aborts; reconnect never replays or grants authority. Voice/direct/tool routes cannot consume a pilot permit.
+- One reviewed D06 lease precedes possible provider dispatch. No fallback/retry or operational tool schemas/dispatch. Tool proposals, unknown, auth mismatch, lifecycle conflict, parse/association/receipt/backup failure terminally close subsequent admissions. Never infer remote completion or clear ownership from process absence.
+- Associated terminal, D04 join and coordinated verified checkpoint precede another permit. Terminal manual stop is permanent; bounded drain preserves remote uncertainty. Final CLOSED_COMPLETE/CLOSED_INCOMPLETE must reflect reconciled facts, not desired completion.
+- Restart opens nothing; initial opener cannot accept a preexisting accepted set. Any hypothetical recovery requires a new distinct approval, exact same V3 epoch/high-water/quotas, clean independently read D06 and fully associated terminal/backup evidence, no terminal stop/abort, and explicitly re-established session semantics. Default first-pilot policy is halt/review on interruption.
+
+## Approval delta from V2
+
+New reviewed source/ingress; new in-memory state machine; local authority interface/operator authentication; separated UID/system unit and credential/ownership deployment; planned stop/new process; explicitly linked successor epoch/new controller schema; versioned restart attach behavior and quota persistence; backup/control-audit sequencing and manifest version; stop/drain integration and new audit obligations. **Every item needs new approval.** A design review or offline model pass grants none of these production actions. New source/config/unit/PID/epoch require renewed startup and Gate5 evidence before actual opening.

@@ -1,0 +1,22 @@
+# Separately authorized V2 retirement — not executed
+
+The exact current epoch remains real and immutable in meaning. PID594042 cannot open through any reviewed interface. PilotAdmissionFenceV1 has only CLOSED/TERMINAL and always refuses conversation. PilotControllerV1.open_epoch refuses every existing epoch. Normal close records terminal stop and final accounting; a restart cannot attach/reopen this epoch. Editing source, hot injection, forced exit to retain OPEN, or redefining terminal stop as pause is rejected.
+
+Retirement must occur only after a complete approved V3 release, migration procedure and credentials are ready. Its approval identifies the expected PID/invocation/source/config/unit, V2 epoch, original baseline/checkpoint and intended successor reservation authority. A general implementation approval does not authorize retirement.
+
+1. Independently verify unchanged CLOSED/zero-use state, all accepted/provider-start/collector/submission/receipt counts, exact epoch/schema/input completeness, no auth abort or stop, D06 clean and D04 absent/zero. Record selected supervisor properties and all source/config/unit hashes. Any drift suspends retirement.
+2. Verify original baseline/startup components and preservation space, private ownership, sole controller writer, no unexpected ownership lock. Verify the reviewed final backup path/cadence and bounded-stop behavior. Do not invoke a second writer's backup while the runtime owns the controller.
+3. Preserve nonsecret pre-stop evidence and the explicit retirement authorization. The human-supervised authorized operation verifies the installed PILOT SIGUSR1 handler and exact MainPID immediately before one stop-admissions signal. Allow the existing bounded 30-second local drain; inspect terminal state. An authorized unit stop, if included in that separate retirement approval, follows to take the old service offline. No signal or unit command is supplied for execution in this task.
+4. Independently inspect durable terminal accounting after the writer has quiesced. Require CLOSED_COMPLETE/input complete, accepted0, no provider-start/receipt, no remote unknown and an exact final coordinated backup that passes the existing V2 validator. Preserve expected OPERATOR_STOP as terminal, linked to the retirement approval; it is not silently removed or renamed in the database. Existing source may complete a zero-attempt epoch; that does not mean a pilot ran.
+5. Preserve the original namespaces, original startup checkpoint and final backup. A privileged archival procedure copies verified final artifacts into a root-protected archive, records original UID/mode/inode/timestamps and hashes, fsyncs files/directories and verifies a versioned archival manifest. It never edits old DB rows or manufactures a missing checkpoint. Source/config/unit/epoch/D04/D06/approval/stop evidence are bound together.
+6. Only a distinct approval can reserve exactly one successor against that immutable predecessor archive. Then approved versioned interfaces initialize V3 in a new namespace, validate all lineage/ownership associations and create a new zero-use CLOSED baseline/checkpoint. No attempt is inherited as unused capacity by ignoring an ancestor.
+
+| Departure | Required outcome |
+| --- | --- |
+| Unexpected old-service exit before approved retirement | Preserve it and all durable uncertainty; no automatic restart or successor. Independent review must establish cause and a new explicit decision |
+| Writer/filesystem task exceeds drain | Keep writer/OPEN/incomplete evidence; never declare safe closure, force a competing writer, or fabricate final backup |
+| CLOSED_INCOMPLETE, missing final receipt/backup, active/unknown D06 | No successor reservation; no reset, reconciliation, restore, downgrade or epoch reuse |
+| Any V2 acceptance or auth/terminal abort other than approved zero-use retirement stop | Narrow retirement eligibility fails, even if the count is below four |
+| Crash while archiving/reserving | Preserve partial artifacts and reservation; both services stay closed/offline as applicable; reconcile only under a separately approved exact-reservation procedure |
+
+Old terminal authority stays terminal permanently. “Exactly one successor” is a new explicitly approved pilot deployment rooted in the retired zero-use deployment, not interrupted-pilot recovery. Future interrupted V3 work defaults to permanent closure/review; no terminal abort is reusable. Preserve all accepted IDs/high-water truth regardless of outcome.

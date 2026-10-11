@@ -1,0 +1,328 @@
+--- /dev/null
++++ isolated-gate6b/ledger_model.py
+@@ -0,0 +1,114 @@
++"""Nondeployable Gate6B model. Dummy authority, fake providers, disposable SQLite only."""
++import sqlite3, threading
++from contextlib import contextmanager
++
++class Refused(Exception): pass
++class Crash(Exception): pass
++
++class Ledger:
++ def __init__(self, path, create=False):
++  self.db=sqlite3.connect(path,timeout=0,check_same_thread=False,isolation_level=None)
++  self.lock=threading.Lock(); self.runtime='CLOSED'; self.binding=('source','config','release','pid','invocation','epoch')
++  self.d06=None;self.checkpoint=True;self.conflict=False;self.sends=[];self.tools=0;self.lifecycle=0;self.visible=[];self.history=[]
++  self.db.execute('PRAGMA synchronous=FULL'); self.db.execute('PRAGMA journal_mode=DELETE')
++  if create:
++   self.db.executescript('''
++   CREATE TABLE predecessor(id TEXT PRIMARY KEY,status TEXT,complete INTEGER,accepted INTEGER,unknown INTEGER,reason TEXT,archive TEXT);
++   CREATE TABLE successor(parent TEXT PRIMARY KEY,child TEXT UNIQUE,phase TEXT,archive TEXT);
++   CREATE TABLE accepted(id TEXT PRIMARY KEY,epoch TEXT,ordinal INTEGER UNIQUE,transport TEXT CHECK(transport IN ('REST','WS')),permit TEXT UNIQUE,terminal TEXT,origin TEXT CHECK(origin='LIVE'),eligible INTEGER CHECK(eligible=0));
++   CREATE TABLE permits(nonce TEXT PRIMARY KEY,ordinal INTEGER,transport TEXT,spent INTEGER CHECK(spent IN(0,1)),binding TEXT);
++   CREATE TABLE control(nonce TEXT PRIMARY KEY,kind TEXT,binding TEXT);
++   CREATE TABLE terminal(reason TEXT);
++   ''')
++ @contextmanager
++ def tx(self):
++  self.db.execute('BEGIN IMMEDIATE')
++  try: yield; self.db.execute('COMMIT')
++  except BaseException:
++   if self.db.in_transaction:self.db.execute('ROLLBACK')
++   raise
++ def predecessor(self,**changes):
++  v=dict(id='v2',status='CLOSED_COMPLETE',complete=1,accepted=0,unknown=0,reason='APPROVED_RETIREMENT_OPERATOR_STOP',archive='verified-archive');v.update(changes)
++  self.db.execute('INSERT INTO predecessor VALUES(?,?,?,?,?,?,?)',tuple(v.values()))
++ def reserve_successor(self,child='v3',fault=None):
++  with self.lock,self.tx():
++   p=self.db.execute('SELECT * FROM predecessor').fetchone()
++   if p!=('v2','CLOSED_COMPLETE',1,0,0,'APPROVED_RETIREMENT_OPERATOR_STOP','verified-archive'): raise Refused('PREDECESSOR')
++   if self.db.execute('SELECT count(*) FROM successor').fetchone()[0]:raise Refused('ALREADY_RESERVED')
++   self.db.execute('INSERT INTO successor VALUES(?,?,?,?)',('v2',child,'PREPARED',p[-1]))
++   if fault=='before_commit':raise Crash()
++  if fault=='after_commit':raise Crash()
++ def initialize(self,fault=None):
++  with self.lock,self.tx():
++   row=self.db.execute('SELECT phase FROM successor').fetchone()
++   if row!=('PREPARED',):raise Refused('INITIALIZATION_PHASE')
++   self.db.execute("UPDATE successor SET phase='INITIALIZED'")
++   if fault=='partial':raise Crash()
++  if fault=='after_commit':raise Crash()
++ def publish(self):
++  with self.lock,self.tx():
++   if not self.checkpoint or self.d06 or self.db.execute('SELECT phase FROM successor').fetchone()!=('INITIALIZED',):raise Refused('CHECKPOINT')
++   self.db.execute("UPDATE successor SET phase='READY'")
++ def count(self):return self.db.execute('SELECT count(*) FROM accepted').fetchone()[0]
++ def validate(self,authority,binding):
++  if authority!=('human-presence','dedicated-operator','root-helper'):raise Refused('AUTHORITY')
++  if tuple(binding)!=self.binding:raise Refused('BINDING')
++  if self.db.execute('SELECT count(*) FROM terminal').fetchone()[0]:raise Refused('TERMINAL')
++  if self.d06 is not None or self.conflict or not self.checkpoint:raise Refused('SAFETY')
++  if self.db.execute('SELECT phase FROM successor').fetchone()!=('READY',):raise Refused('NOT_READY')
++ def open(self,authority,binding,nonce='opening',fault=None):
++  with self.lock,self.tx():
++   self.validate(authority,binding)
++   if self.runtime!='CLOSED' or self.count()!=0:raise Refused('INITIAL_ZERO_ONLY')
++   self.db.execute('INSERT INTO control VALUES(?,?,?)',(nonce,'OPEN',repr(binding)))
++   if fault=='before_commit':raise Crash()
++  if fault=='after_commit':raise Crash()
++  self.runtime='HOLD'
++ def arm(self,transport,nonce,authority,binding):
++  with self.lock,self.tx():
++   self.validate(authority,binding)
++   n=self.count(); expected=('REST','REST','WS','WS')
++   if self.runtime!='HOLD' or n>=4 or transport!=expected[n]:raise Refused('QUOTA_OR_STATE')
++   if self.db.execute('SELECT count(*) FROM accepted WHERE terminal IS NULL').fetchone()[0]:raise Refused('UNSETTLED')
++   self.db.execute('INSERT INTO permits VALUES(?,?,?,?,?)',(nonce,n+1,transport,0,repr(binding)))
++  self.runtime='ARMED'
++ def accept(self,transport,nonce,fault=None):
++  with self.lock,self.tx():
++   self.validate(('human-presence','dedicated-operator','root-helper'),self.binding)
++   n=self.count(); p=self.db.execute('SELECT ordinal,transport,spent,binding FROM permits WHERE nonce=?',(nonce,)).fetchone()
++   if self.runtime!='ARMED' or n>=4 or p!=(n+1,transport,0,repr(self.binding)):raise Refused('PERMIT')
++   # Global ordinal counts all ancestor/successor rows, never receipt count.
++   self.db.execute('UPDATE permits SET spent=1 WHERE nonce=?',(nonce,))
++   if fault=='partial':raise Crash()
++   self.db.execute('INSERT INTO accepted VALUES(?,?,?,?,?,?,?,?)',(f'attempt-{n+1}','v3',n+1,transport,nonce,None,'LIVE',0))
++   if fault=='before_commit':raise Crash()
++  if fault=='after_commit':raise Crash()
++  self.runtime='INFLIGHT'; self.checkpoint=False
++ def fake_work(self,legacy='legacy reply',candidate='shadow candidate',proposal=False,stop=False,granite_proposal=False):
++  # No network or executable transport. This models response ownership, not legacy equivalence.
++  if self.runtime!='INFLIGHT':raise Refused('NO_ACCEPTED_WORK')
++  if self.d06 is not None or self.conflict:self.stop('PRE_DISPATCH_CONFLICT');return
++  self.sends.append('FAKE_LEGACY'); self.d06='active'
++  if stop:self.d06='remote_unknown';self.stop('STOP_INFLIGHT');return
++  self.d06=None
++  if proposal:self.stop('TOOL_PROPOSAL');return
++  self.visible.append(legacy);self.history.append(('assistant',legacy))
++  self.sends.append('FAKE_GRANITE');self.d06='active'
++  # Deliberately never persist/return candidate text.
++  self.d06=None
++  if granite_proposal:self.stop('GRANITE_TOOL_PROPOSAL');return
++  self.db.execute("UPDATE accepted SET terminal='KNOWN_TERMINAL' WHERE terminal IS NULL")
++  self.runtime='SETTLING'
++ def backup(self,valid=True):
++  if self.runtime!='SETTLING':raise Refused('NOT_SETTLED')
++  if not valid:self.stop('BACKUP_FAILURE');return
++  self.checkpoint=True;self.runtime='HOLD'
++ def stop(self,reason='OPERATOR_STOP'):
++  self.db.execute('INSERT INTO terminal VALUES(?)',(reason,));self.runtime='TERMINAL'
++ def close(self):self.db.close()
++
++AUTH=('human-presence','dedicated-operator','root-helper')
++def permission(identity,obj,access):
++ # Policy model only; not OS provisioning or a kernel DAC test.
++ policy={('service','credential'):'r',('supervisor','credential'):'r',('operator','credential'):'w',('service','d06'):'rw',('service','controller'):'rw',('helper','control'):'x',('operator','helper'):'x',('service','release'):'rx',('helper','release'):'r',('service','archive'):'r'}
++ return all(c in policy.get((identity,obj),'') for c in access)
+--- /dev/null
++++ isolated-gate6b/test_design.py
+@@ -0,0 +1,185 @@
++import unittest,tempfile,threading,sqlite3,ast,re,types
++from pathlib import Path
++from ledger_model import Ledger,AUTH,Refused,Crash,permission
++
++class Design(unittest.TestCase):
++ def setUp(self):
++  self.tmp=tempfile.TemporaryDirectory(dir=Path(__file__).parent);self.p=Path(self.tmp.name)/'ledger.sqlite';self.m=Ledger(self.p,True)
++ def tearDown(self):self.m.close();self.tmp.cleanup()
++ def ready(self):self.m.predecessor();self.m.reserve_successor();self.m.initialize();self.m.publish()
++ def opened(self):self.ready();self.m.open(AUTH,self.m.binding)
++ def accept(self,t='REST',nonce='one',fault=None):self.m.arm(t,nonce,AUTH,self.m.binding);self.m.accept(t,nonce,fault)
++ def test_closed(self):
++  self.ready()
++  with self.assertRaises(Refused):self.m.accept('REST','x')
++  self.assertEqual(self.m.count(),0)
++ def test_successor_unique(self):
++  self.ready()
++  with self.assertRaises(Refused):self.m.reserve_successor('other')
++ def test_successor_crash_before(self):
++  self.m.predecessor()
++  with self.assertRaises(Crash):self.m.reserve_successor(fault='before_commit')
++  self.assertEqual(self.m.db.execute('SELECT count(*) FROM successor').fetchone()[0],0)
++ def test_successor_crash_after(self):
++  self.m.predecessor()
++  with self.assertRaises(Crash):self.m.reserve_successor(fault='after_commit')
++  with self.assertRaises(Refused):self.m.reserve_successor('duplicate')
++  self.assertEqual(self.m.db.execute('SELECT phase FROM successor').fetchone(),('PREPARED',))
++ def test_partial_initialization(self):
++  self.m.predecessor();self.m.reserve_successor()
++  with self.assertRaises(Crash):self.m.initialize('partial')
++  with self.assertRaises(Refused):self.m.open(AUTH,self.m.binding)
++  self.assertEqual(self.m.db.execute('SELECT phase FROM successor').fetchone(),('PREPARED',))
++ def test_publish_requires_checkpoint(self):
++  self.m.predecessor();self.m.reserve_successor();self.m.initialize();self.m.checkpoint=False
++  with self.assertRaises(Refused):self.m.publish()
++ def test_concurrent_successors(self):
++  self.m.predecessor();other=Ledger(self.p);bar=threading.Barrier(2);out=[]
++  def go(m,name):
++   bar.wait()
++   try:m.reserve_successor(name);out.append('success')
++   except (Refused,sqlite3.OperationalError):out.append('refused')
++  a=threading.Thread(target=go,args=(self.m,'a'));b=threading.Thread(target=go,args=(other,'b'));a.start();b.start();a.join();b.join();other.close()
++  self.assertEqual(out.count('success'),1);self.assertEqual(self.m.db.execute('SELECT count(*) FROM successor').fetchone()[0],1)
++ def test_four_and_transports(self):
++  self.opened()
++  for i,t in enumerate(('REST','REST','WS','WS')):
++   self.accept(t,str(i));self.m.fake_work();self.m.backup()
++  self.assertEqual(self.m.count(),4)
++  with self.assertRaises(Refused):self.m.arm('WS','fifth',AUTH,self.m.binding)
++  self.assertEqual(self.m.db.execute('SELECT transport,count(*) FROM accepted GROUP BY transport').fetchall(),[('REST',2),('WS',2)])
++ def test_global_ancestor_cap(self):
++  # Synthetic imported history tests defense-in-depth; nonzero V2 is still ineligible.
++  self.opened()
++  for i in range(4):self.m.db.execute('INSERT INTO accepted VALUES(?,?,?,?,?,?,?,?)',(f'old-{i}','ancestor',i+1,('REST','REST','WS','WS')[i],f'oldp-{i}','KNOWN_TERMINAL','LIVE',0))
++  with self.assertRaises(Refused):self.m.arm('REST','new',AUTH,self.m.binding)
++  self.assertEqual(self.m.count(),4)
++ def test_replayed_permit(self):
++  self.opened();self.accept();self.m.fake_work();self.m.backup()
++  with self.assertRaises(sqlite3.IntegrityError):self.m.arm('REST','one',AUTH,self.m.binding)
++  with self.assertRaises(Refused):self.m.accept('REST','one')
++  self.assertEqual(self.m.count(),1)
++ def test_concurrent_transports(self):
++  self.opened();self.m.arm('REST','one',AUTH,self.m.binding);bar=threading.Barrier(2);out=[]
++  def go(t):
++   bar.wait()
++   try:self.m.accept(t,'one');out.append(t)
++   except Refused:pass
++  a=threading.Thread(target=go,args=('REST',));b=threading.Thread(target=go,args=('WS',));a.start();b.start();a.join();b.join()
++  self.assertEqual(out,['REST']);self.assertEqual(self.m.count(),1)
++ def test_backup_failure(self):
++  self.opened();self.accept();self.m.fake_work();self.m.backup(False)
++  with self.assertRaises(Refused):self.m.arm('REST','two',AUTH,self.m.binding)
++ def test_stop_inflight_preserves_unknown(self):
++  self.opened();self.accept();self.m.fake_work(stop=True)
++  self.assertEqual(self.m.d06,'remote_unknown');self.assertEqual(self.m.count(),1);self.assertEqual(self.m.sends,['FAKE_LEGACY'])
++  with self.assertRaises(Refused):self.m.open(AUTH,self.m.binding,'again')
++ def test_legacy_visible_candidate_discarded(self):
++  self.opened();self.accept();self.m.fake_work('LEGACY_FIXTURE','CANDIDATE_MUST_NOT_LEAK');self.m.backup()
++  self.assertEqual(self.m.visible,['LEGACY_FIXTURE']);self.assertEqual(self.m.history,[('assistant','LEGACY_FIXTURE')])
++  self.assertNotIn('CANDIDATE_MUST_NOT_LEAK','\n'.join(self.m.db.iterdump()))
++  self.assertEqual((self.m.tools,self.m.lifecycle),(0,0))
++ def test_tool_proposal(self):
++  self.opened();self.accept();self.m.fake_work(proposal=True)
++  self.assertEqual(self.m.runtime,'TERMINAL');self.assertEqual(self.m.tools,0);self.assertEqual(self.m.visible,[])
++ def test_restart_never_opens(self):
++  self.opened();self.accept();self.m.close();self.m=Ledger(self.p)
++  self.assertEqual(self.m.runtime,'CLOSED');self.assertEqual(self.m.count(),1)
++  with self.assertRaises(Refused):self.m.open(AUTH,self.m.binding,'again')
++ def test_missing_schema(self):
++  self.m.db.execute('DROP TABLE permits');self.ready()
++  with self.assertRaises(sqlite3.OperationalError):self.m.accept('REST','x')
++ def test_terminal_restart(self):
++  self.opened();self.m.stop();self.m.close();self.m=Ledger(self.p)
++  with self.assertRaises(Refused):self.m.open(AUTH,self.m.binding,'again')
++ def test_repeated_open(self):
++  self.opened()
++  with self.assertRaises(Refused):self.m.open(AUTH,self.m.binding,'again')
++ def test_granite_proposal_never_visible_or_executed(self):
++  self.opened();self.accept();self.m.fake_work(legacy='legacy',granite_proposal=True)
++  self.assertEqual(self.m.visible,['legacy']);self.assertEqual(self.m.runtime,'TERMINAL');self.assertEqual(self.m.tools,0)
++  with self.assertRaises(Refused):self.m.arm('REST','two',AUTH,self.m.binding)
++ def test_conflict_after_accept_before_dispatch(self):
++  self.opened();self.accept();self.m.conflict=True;self.m.fake_work()
++  self.assertEqual(self.m.sends,[]);self.assertEqual(self.m.count(),1);self.assertEqual(self.m.runtime,'TERMINAL')
++ def test_corrupt_control_binding(self):
++  self.opened();self.m.arm('REST','one',AUTH,self.m.binding);self.m.db.execute("UPDATE permits SET binding='corrupt'")
++  with self.assertRaises(Refused):self.m.accept('REST','one')
++  self.assertEqual(self.m.count(),0)
++ def test_initialize_committed_crash_refuses_repeat(self):
++  self.m.predecessor();self.m.reserve_successor()
++  with self.assertRaises(Crash):self.m.initialize('after_commit')
++  with self.assertRaises(Refused):self.m.initialize()
++  self.assertEqual(self.m.db.execute('SELECT phase FROM successor').fetchone(),('INITIALIZED',))
++ def test_opening_commit_spent_on_restart(self):
++  self.ready()
++  with self.assertRaises(Crash):self.m.open(AUTH,self.m.binding,fault='after_commit')
++  self.m.close();self.m=Ledger(self.p)
++  with self.assertRaises(sqlite3.IntegrityError):self.m.open(AUTH,self.m.binding)
++  self.assertEqual(self.m.runtime,'CLOSED');self.assertEqual(self.m.count(),0)
++
++def bad_predecessor(field,value):
++ def test(self):
++  self.m.predecessor(**{field:value})
++  with self.assertRaises(Refused):self.m.reserve_successor()
++ return test
++for field,value in [('status','OPEN'),('complete',0),('accepted',1),('unknown',1),('reason','AUTH_ABORT'),('archive','unverified')]:setattr(Design,'test_predecessor_'+field,bad_predecessor(field,value))
++def bad_binding(i):
++ def test(self):
++  self.ready();binding=list(self.m.binding);binding[i]='wrong'
++  with self.assertRaises(Refused):self.m.open(AUTH,binding)
++ return test
++for i in range(6):setattr(Design,'test_binding_'+str(i),bad_binding(i))
++def bad_authority(authority):
++ def test(self):
++  self.ready()
++  with self.assertRaises(Refused):self.m.open(authority,self.m.binding)
++ return test
++for i,a in enumerate([None,('jarvis',),('api-token',),('root-helper',),('human-presence','codex','root-helper')]):setattr(Design,'test_authority_'+str(i),bad_authority(a))
++def bad_safety(field,value):
++ def test(self):
++  self.ready();setattr(self.m,field,value)
++  with self.assertRaises(Refused):self.m.open(AUTH,self.m.binding)
++ return test
++for name,field,v in [('active','d06','active'),('unknown','d06','remote_unknown'),('checkpoint','checkpoint',False),('lifecycle','conflict',True)]:setattr(Design,'test_safety_'+name,bad_safety(field,v))
++def permit_crash(where):
++ def test(self):
++  self.opened()
++  with self.assertRaises(Crash):self.accept(fault=where)
++  count=1 if where=='after_commit' else 0
++  self.assertEqual(self.m.count(),count)
++  self.assertEqual(self.m.db.execute('SELECT spent FROM permits').fetchone()[0],count)
++  self.assertEqual(self.m.sends,[])
++  self.m.close();self.m=Ledger(self.p);self.assertEqual(self.m.runtime,'CLOSED');self.assertEqual(self.m.count(),count)
++ return test
++for w in ('partial','before_commit','after_commit'):setattr(Design,'test_permit_crash_'+w,permit_crash(w))
++def opening_crash(where):
++ def test(self):
++  self.ready()
++  with self.assertRaises(Crash):self.m.open(AUTH,self.m.binding,fault=where)
++  self.assertEqual(self.m.runtime,'CLOSED');self.assertEqual(self.m.count(),0);self.assertEqual(self.m.sends,[])
++ return test
++for w in ('before_commit','after_commit'):setattr(Design,'test_opening_crash_'+w,opening_crash(w))
++def wrong_transport(t):
++ def test(self):
++  self.opened();self.m.arm('REST','one',AUTH,self.m.binding)
++  with self.assertRaises(Refused):self.m.accept(t,'one')
++  self.assertEqual(self.m.count(),0)
++ return test
++for t in ('WS','VOICE','DIRECT'):setattr(Design,'test_ingress_'+t,wrong_transport(t))
++class AccessPolicy(unittest.TestCase):
++ def test_positive_required_access(self):
++  for i,o,a in [('service','credential','r'),('service','d06','rw'),('service','controller','rw'),('operator','helper','x'),('helper','control','x')]:self.assertTrue(permission(i,o,a))
++ def test_cross_identity_denial(self):
++  for i in ('codex','jarvis','model','client'):
++   for o in ('credential','d06','controller','helper','control'):
++    for a in ('r','w','x'):self.assertFalse(permission(i,o,a))
++ def test_service_cannot_mutate_release_or_self_authorize(self):
++  self.assertFalse(permission('service','release','w'));self.assertFalse(permission('service','helper','x'))
++
++class SourceSemantics(unittest.TestCase):
++ def test_original_proposed_inputs_are_not_direct_replies(self):
++  p=Path(__file__).parent/'reviewed-source/app/brain/direct_responder.py';scope={};exec(compile(p.read_text(),str(p),'exec'),scope)
++  for text in ('Hello. Reply briefly.','What is two plus two?','Name one primary colour.','Please give a brief friendly greeting.'):
++   self.assertIsNone(scope['try_direct_reply'](text))
++  self.assertEqual(scope['try_direct_reply']('What is 2+2?'),'4, sir.')
+--- /dev/null
++++ isolated-gate6b/run_guarded.py
+@@ -0,0 +1,20 @@
++import os,sys,json,unittest,time
++from pathlib import Path
++sys.dont_write_bytecode=True
++ROOT=Path(__file__).parent.resolve();counts={'network':0,'secret_or_production':0,'external_write':0,'execution':0}
++def guard(ev,a):
++ if ev.startswith('socket.'):
++  counts['network']+=1;raise RuntimeError('NETWORK_FORBIDDEN')
++ if ev in ('subprocess.Popen','os.system','os.exec','os.posix_spawn'):
++  counts['execution']+=1;raise RuntimeError('EXECUTION_FORBIDDEN')
++ if ev=='open' and isinstance(a[0],(str,bytes,os.PathLike)):
++  p=Path(os.fsdecode(a[0])).absolute()
++  if str(p).startswith(('/home/jarvis/JARVIS','/home/jarvis/.config','/proc/')):
++   counts['secret_or_production']+=1;raise RuntimeError('PRODUCTION_FORBIDDEN')
++  if (a[2] or 0)&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND) and ROOT not in p.parents:
++   counts['external_write']+=1;raise RuntimeError('EXTERNAL_WRITE_FORBIDDEN')
++sys.addaudithook(guard)
++start=time.monotonic();suite=unittest.defaultTestLoader.discover(str(ROOT),pattern='test_design.py')
++with (ROOT/'design-tests.txt').open('w') as stream:result=unittest.TextTestRunner(stream=stream,verbosity=2).run(suite)
++summary={'tests':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'seconds':time.monotonic()-start,'guards':counts,'model_not_production':True,'limitations':['dummy authority and access policy, not OS enforcement','SQLite logical crash points, not power-loss/fsync qualification','fake legacy/Granite outputs, not production equivalence']}
++(ROOT/'design-test-results.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary));sys.exit(not result.wasSuccessful())

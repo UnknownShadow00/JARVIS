@@ -1,0 +1,1393 @@
+--- /dev/null
++++ candidate_v3/__init__.py
+@@ -0,0 +1 @@
++"""Isolated Gate6C candidate. Not imported or registered by the production server."""
+--- /dev/null
++++ candidate_v3/authority.py
+@@ -0,0 +1,38 @@
++from __future__ import annotations
++from dataclasses import dataclass
++import json, math
++from typing import Protocol
++from .contracts import Bindings, Refused, canonical, digest, strict_json
++
++@dataclass(frozen=True)
++class VerifiedOperator:
++    identity: str
++    user_present: bool
++
++class Verifier(Protocol):
++    def verify(self, body: bytes, signature: bytes) -> VerifiedOperator: ...
++
++class Authority:
++    """Pure verifier seam. Kernel peer extraction and human signer are not installed."""
++    def __init__(self, bindings: Bindings, verifier: Verifier, *, clock, operator_id: str):
++        self.bindings, self.verifier, self.clock, self.operator_id = bindings, verifier, clock, operator_id
++
++    def check(self, raw: bytes, signature: bytes, peer: tuple[int, int], verb: str) -> dict:
++        if peer[0] != 0 or type(peer[1]) is not int or peer[1] <= 0: raise Refused('CONTROL_PEER')
++        if type(raw) is not bytes or len(raw) > 8192 or type(signature) is not bytes: raise Refused('CONTROL_SIZE')
++        try:
++            a = strict_json(raw)
++            if canonical(a) != raw: raise Refused('NONCANONICAL_CONTROL')
++        except (ValueError, TypeError, RecursionError): raise Refused('CONTROL_SCHEMA') from None
++        if type(a) is not dict or set(a) != {'verb','nonce','expires','bindings','checkpoint','payload'}: raise Refused('CONTROL_SCHEMA')
++        if type(a['checkpoint']) is not str or len(a['checkpoint'])!=64:raise Refused('CONTROL_CHECKPOINT')
++        if a['verb'] != verb or verb not in ('OPEN_HOLD','AUTHORIZE_ONE','TERMINAL_STOP'): raise Refused('CONTROL_VERB')
++        if type(a['nonce']) is not str or len(a['nonce']) != 32 or any(c not in '0123456789abcdef' for c in a['nonce']): raise Refused('CONTROL_NONCE')
++        if type(a['expires']) not in (int,float) or not math.isfinite(a['expires']) or not self.clock() < a['expires'] <= self.clock()+60: raise Refused('CONTROL_EXPIRED')
++        if a['bindings'] != self.bindings.as_dict() or type(a['payload']) is not dict: raise Refused('CONTROL_BINDING')
++        keys = {'transport','session','request_commitment'} if verb == 'AUTHORIZE_ONE' else set()
++        if set(a['payload']) != keys: raise Refused('CONTROL_PAYLOAD')
++        try: operator = self.verifier.verify(raw, signature)
++        except Exception: raise Refused('CONTROL_SIGNATURE') from None
++        if type(operator) is not VerifiedOperator or operator.identity != self.operator_id or operator.user_present is not True: raise Refused('OPERATOR_PRESENCE')
++        return dict(a, _verified_operator=operator.identity, _signed_digest=digest(raw))
+--- /dev/null
++++ candidate_v3/contracts.py
+@@ -0,0 +1,146 @@
++from __future__ import annotations
++
++from dataclasses import dataclass, field
++from hashlib import sha256
++import json
++from urllib.parse import urlsplit
++
++class Refused(RuntimeError):
++    """Fixed nonsecret diagnostic only; never attach provider exceptions or content."""
++
++def canonical(value: object) -> bytes:
++    return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode()
++
++def digest(value: bytes) -> str:
++    return sha256(value).hexdigest()
++
++def strict_json(raw):
++    """Reject ambiguous keys and nonfinite constants at every JSON boundary."""
++    def unique(pairs):
++        result = {}
++        for key, value in pairs:
++            if key in result: raise Refused('DUPLICATE_JSON_KEY')
++            result[key] = value
++        return result
++    try:
++        return json.loads(raw, object_pairs_hook=unique,
++            parse_constant=lambda _: (_ for _ in ()).throw(Refused('NONFINITE_JSON')))
++    except (ValueError, UnicodeError, RecursionError):
++        raise Refused('INVALID_JSON') from None
++
++@dataclass(frozen=True)
++class Resource:
++    endpoint: str
++    model: str
++    profile: str
++
++    def __post_init__(self):
++        p = urlsplit(self.endpoint)
++        if (p.scheme != 'http' or not p.hostname or p.username or p.password or p.query or p.fragment
++                or p.path not in ('', '/') or p.port is None or self.endpoint.endswith('/')
++                or not self.model or not self.profile):
++            raise Refused('RESOURCE_BINDING')
++
++@dataclass(frozen=True)
++class Limits:
++    context: int
++    output: int
++    native_bytes: int
++    request_bytes: int
++    deadline: float
++    keep_alive: int
++
++    def __post_init__(self):
++        import math
++        for v in (self.context, self.output, self.native_bytes, self.request_bytes, self.keep_alive):
++            if type(v) is not int or v <= 0: raise Refused('LIMIT_BINDING')
++        if type(self.deadline) not in (int, float) or not math.isfinite(self.deadline) or self.deadline <= 0:
++            raise Refused('DEADLINE_BINDING')
++
++@dataclass(frozen=True)
++class StepContract:
++    resource: Resource
++    limits: Limits
++    system_prompt: str = field(repr=False)
++    qualification: str
++
++    def __post_init__(self):
++        if not self.system_prompt or not self.qualification: raise Refused('PROMPT_QUALIFICATION_BINDING')
++
++@dataclass(frozen=True)
++class Bindings:
++    source: str
++    config: str
++    release: str
++    pid: str
++    invocation: str
++    epoch: str
++    boot: str
++    start: str
++    challenge: str
++
++    def as_dict(self):
++        from dataclasses import asdict
++        return asdict(self)
++
++@dataclass(frozen=True)
++class LegacyRelease:
++    responder: StepContract | None = None
++    router: StepContract | None = None
++    router_policy: str | None = None
++    memory_policy: str | None = None
++    memory_snapshot: str | None = field(default=None, repr=False)
++    policy_approval: str | None = None
++    min_confidence: float | None = None
++    delivery_deadline: float | None = None
++
++    def validate(self):
++        if (self.responder is None or self.router_policy not in ('L1', 'L2_FOUR_INPUTS')
++                or self.memory_policy not in ('NONE', 'SNAPSHOT') or self.memory_snapshot is None
++                or not self.policy_approval or self.router_policy == 'L1' and self.router is None):
++            raise Refused('UNRESOLVED_RELEASE_BINDINGS')
++        if self.memory_policy == 'NONE' and self.memory_snapshot: raise Refused('MEMORY_BINDING')
++        import math
++        if (type(self.min_confidence) not in (int,float) or not math.isfinite(self.min_confidence)
++                or not 0<=self.min_confidence<=1 or type(self.delivery_deadline) not in (int,float)
++                or not math.isfinite(self.delivery_deadline) or self.delivery_deadline<=0):raise Refused('UNRESOLVED_RELEASE_BINDINGS')
++
++@dataclass(frozen=True)
++class ProviderRequest:
++    attempt: str
++    substep: str
++    resource: Resource
++    body: bytes = field(repr=False)
++    request_digest: str
++    deadline: float
++
++@dataclass(frozen=True)
++class ProviderResult:
++    attempt: str
++    substep: str
++    resource: Resource
++    request_digest: str
++    body: bytes = field(repr=False)
++    known_terminal: bool
++
++@dataclass(frozen=True)
++class ViewStatus:
++    dry_run: bool
++    active: bool
++
++    def __post_init__(self):
++        if type(self.dry_run) is not bool or type(self.active) is not bool:raise Refused('VIEW_STATUS_BINDING')
++
++def decode(body: bytes, limit: int) -> dict:
++    if type(body) is not bytes or len(body) > limit: raise Refused('NATIVE_LIMIT')
++    value = strict_json(body)
++    if type(value) is not dict or type(value.get('message')) is not dict: raise Refused('NATIVE_SHAPE')
++    m = value['message']
++    if 'tool_calls' in m or 'tool_calls' in value: raise Refused('TOOL_PROPOSAL')
++    if type(m.get('content')) is not str: raise Refused('CONTENT_SHAPE')
++    if '[action:' in m['content'].lower(): raise Refused('ACTION_PROPOSAL')
++    return value
++
++def build_production_runtime(*args, **kwargs):
++    # Deliberate unavailable release boundary: no live backend/privilege/credential adapter exists.
++    raise Refused('PRODUCTION_BINDINGS_NOT_APPROVED')
+--- /dev/null
++++ candidate_v3/ingress.py
+@@ -0,0 +1,93 @@
++"""Unregistered ASGI candidate. Test it in-process; contains no socket/listener setup."""
++import asyncio,hmac,json
++from .contracts import Refused,canonical,strict_json
++
++class Ingress:
++    def __init__(self,runtime,*,api_token: bytes):
++        if type(api_token) is not bytes or not api_token:raise Refused('AUTH_REQUIRED')
++        self.runtime,self._token=runtime,api_token
++
++    async def __call__(self,scope,receive,send):
++        kind,path=scope.get('type'),scope.get('path')
++        if kind not in ('http','websocket'):raise Refused('UNSUPPORTED_ASGI_SCOPE')
++        headers=scope.get('headers',[])
++        auth=[v for k,v in headers if k.lower()==b'authorization']
++        ok=len(auth)==1 and hmac.compare_digest(auth[0],b'Bearer '+self._token)
++        if not ok:
++            self.runtime.stop('AUTHENTICATION_MISMATCH')
++            if kind=='websocket':await send({'type':'websocket.close','code':1008})
++            else:await self._http(send,401,{'error':'UNAUTHORIZED'})
++            return
++        if kind=='http':
++            if path!='/chat':await self._http(send,404,{'error':'NOT_FOUND'});return
++            if scope.get('method')!='POST':await self._http(send,405,{'error':'METHOD_NOT_ALLOWED'});return
++            body=b''
++            try:
++                async with asyncio.timeout(self.runtime.legacy.delivery_deadline):
++                    while True:
++                        msg=await receive()
++                        if msg['type']=='http.disconnect':self.runtime.stop('CLIENT_DISCONNECT');return
++                        if msg['type']!='http.request' or type(msg.get('body',b'')) is not bytes:raise Refused('HTTP_PROTOCOL')
++                        body+=msg.get('body',b'')
++                        if len(body)>16384:raise Refused('REQUEST_LIMIT')
++                        if not msg.get('more_body'):break
++            except (TimeoutError,Refused):
++                self.runtime.stop('INGRESS_BODY_REFUSED');await self._http(send,400,{'error':'REQUEST_REFUSED'});return
++            try:
++                value=strict_json(body)
++                if type(value) is not dict or set(value)!={'message'}:raise Refused('REQUEST_SCHEMA')
++                tokens=[v for k,v in headers if k.lower()==b'x-jarvis-continuation']
++                if len(tokens)!=1:raise Refused('CONTINUATION')
++                token=tokens[0].decode('ascii')
++            except (ValueError,UnicodeError,Refused):
++                self.runtime.stop('INGRESS_REFUSAL');await self._http(send,400,{'error':'REQUEST_REFUSED'});return
++            sink=HttpDelivery(send,token)
++            try:await self.runtime.request(transport='REST',token=token,message=value['message'],authenticated=True,delivery=sink)
++            except Refused:
++                if not sink.started:await self._http(send,423,{'error':'PILOT_REFUSED'})
++            return
++        if path!='/ws':await send({'type':'websocket.close','code':1008});return
++        try:
++            first=await asyncio.wait_for(receive(),self.runtime.legacy.delivery_deadline)
++            if first['type']!='websocket.connect':raise Refused('WS_PROTOCOL')
++        except (TimeoutError,Refused):
++            self.runtime.stop('WS_PROTOCOL');await send({'type':'websocket.close','code':1008});return
++        await send({'type':'websocket.accept'});token=None
++        while True:
++            try:message=await asyncio.wait_for(receive(),300)
++            except asyncio.TimeoutError:self.runtime.stop('WS_IDLE');await send({'type':'websocket.close','code':1000});return
++            if message['type']=='websocket.disconnect':return
++            text=message.get('text')
++            if type(text) is not str or len(text.encode())>16384:
++                self.runtime.stop('WS_INPUT');await send({'type':'websocket.close','code':1008});return
++            if text.lstrip().startswith('{'):
++                from app.execution.shadow_admission import parse_continuation_frame
++                try:
++                    control,candidate=parse_continuation_frame(text)
++                    if not control:raise Refused('WS_CONTROL')
++                    self.runtime.session(candidate,'WS');token=candidate
++                except ValueError:
++                    self.runtime.stop('CONTINUATION_MISMATCH');await send({'type':'websocket.close','code':1008});return
++                except Refused:
++                    self.runtime.stop('CONTINUATION_MISMATCH');await send({'type':'websocket.close','code':1008});return
++                continue
++            try:await self.runtime.request(transport='WS',token=token,message=text,authenticated=True,delivery=WsDelivery(send))
++            except Refused:await send({'type':'websocket.close','code':1008});return
++
++    @staticmethod
++    async def _http(send,status,value):
++        await send({'type':'http.response.start','status':status,'headers':[(b'content-type',b'application/json')]})
++        await send({'type':'http.response.body','body':canonical(value)})
++
++class HttpDelivery:
++    def __init__(self,send,token):self.send_frame,self.token,self.started=send,token,False
++    async def send(self,envelope):
++        self.started=True
++        await self.send_frame({'type':'http.response.start','status':200,'headers':[(b'content-type',b'application/json'),(b'x-jarvis-continuation',self.token.encode())]})
++        await self.send_frame({'type':'http.response.body','body':canonical(envelope)})
++        return True  # ASGI send completed; not proof the remote human rendered the reply.
++
++class WsDelivery:
++    def __init__(self,send):self.send_frame=send
++    async def send(self,envelope):
++        await self.send_frame({'type':'websocket.send','text':canonical(envelope).decode()});return True
+--- /dev/null
++++ candidate_v3/observation.py
+@@ -0,0 +1,43 @@
++"""Canonical passive evaluation bridge; no registry handlers, sink or network client."""
++from dataclasses import dataclass
++from datetime import datetime,UTC
++import json
++from .contracts import Refused
++
++@dataclass(frozen=True)
++class Observation:
++    projection: dict
++    parser_input_sha256: str
++    canonical_request_sha256: str
++    profile: str
++
++class CanonicalObserver:
++    def __init__(self,metadata,approval_mode):
++        self.metadata,self.approval_mode=metadata,approval_mode
++        self.owners={}
++
++    def capture(self,session,message,history,transport):
++        from app.execution.shadow_context import ShadowContextV1
++        from app.execution.shadow_admission import CapturedDeliveryV1,HistoryMessageV1
++        from app.execution.shadow_ingress import ShadowIngressEnvelopeV1
++        from app.execution.shadow_pilot import prepare_pilot_request
++        if session not in self.owners:self.owners[session]=ShadowContextV1()
++        owner=self.owners[session]
++        delivery=CapturedDeliveryV1(ShadowIngressEnvelopeV1(message,owner.create_turn()),
++            tuple(HistoryMessageV1(m['role'],m['content']) for m in history),
++            'http' if transport=='REST' else 'websocket',session)
++        return delivery,prepare_pilot_request(delivery)
++
++    def check_request(self,capture,body):
++        if json.loads(body)!=json.loads(capture[1].native_json):raise Refused('CANONICAL_REQUEST_MISMATCH')
++
++    def observe(self,capture,body):
++        from app.execution.shadow_provider_ollama import normalize_qualified_native
++        from app.execution.shadow_evaluator import evaluate_shadow
++        from app.execution.shadow_observation_sink import _observation
++        normalized=normalize_qualified_native(body)
++        evaluated=evaluate_shadow(capture[0],capture[1],normalized,metadata=self.metadata,
++            approval_mode=self.approval_mode,recorded_at=datetime.now(UTC),proposal_ids=())
++        if evaluated.facts.proposal_count!=0 or evaluated.observation is None:raise Refused('CANONICAL_EVALUATION_FAILED')
++        return Observation(_observation(evaluated.observation),normalized.parser_input_sha256,
++                           capture[1].canonical_request_sha256,capture[1].native_profile_id)
+--- /dev/null
++++ candidate_v3/runtime.py
+@@ -0,0 +1,196 @@
++from __future__ import annotations
++import asyncio, hmac, json, secrets, time, uuid
++from dataclasses import dataclass, field
++from pathlib import Path
++from typing import Protocol
++from .authority import Authority
++from .contracts import Bindings, LegacyRelease, ProviderRequest, ProviderResult, Refused, StepContract, ViewStatus, canonical, decode, digest, strict_json
++from .storage import Store, checkpoint, verify_checkpoint
++
++ORIGINAL_INPUTS = ('Hello. Reply briefly.', 'What is two plus two?', 'Name one primary colour.', 'Please give a brief friendly greeting.')
++
++class Provider(Protocol):
++    async def request(self, request: ProviderRequest) -> ProviderResult: ...
++
++class Delivery(Protocol):
++    async def send(self, envelope: dict) -> bool: ...
++
++@dataclass
++class Session:
++    id: str
++    transport: str
++    created: float
++    used: float
++    history: list[dict] = field(default_factory=list, repr=False)
++
++class Runtime:
++    """Dependency-injected isolated owner; no legacy handler, HTTP client or service registration."""
++    def __init__(self, store: Store, bindings: Bindings, legacy: LegacyRelease,
++                 granite: StepContract, authority: Authority, provider: Provider,
++                 backups: Path, *, commitment_key: bytes, observer, view_status, clock=time.monotonic):
++        legacy.validate()
++        if type(commitment_key) is not bytes or len(commitment_key)<32:raise Refused('COMMITMENT_KEY')
++        if json.loads(store.db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0])!=bindings.as_dict():raise Refused('PERSISTED_BINDINGS')
++        if store.db.execute('SELECT child FROM lineage').fetchone()[0]!=bindings.epoch:raise Refused('EPOCH_BINDING')
++        self.store,self.bindings,self.legacy,self.granite,self.authority,self.provider=store,bindings,legacy,granite,authority,provider
++        self.backups,self.key,self.clock=backups,commitment_key,clock
++        self.observer,self.view_status=observer,view_status
++        self.sessions={};self.busy=False;self.stop_event=asyncio.Event();self.pending=set();self.last_checkpoint=None
++        self.state='CLOSED_RECOVERY_HOLD' if store.db.execute('SELECT 1 FROM control').fetchone() or store.count() else 'CLOSED_INITIAL'
++        if store.terminal():self.state=store.terminal()
++
++    def new_session(self,transport):
++        """Core-owner preparation only; not a public endpoint or an admission grant."""
++        if self.store.terminal() or transport not in ('REST','WS'):raise Refused('SESSION_TRANSPORT')
++        now=self.clock()
++        self.sessions={k:v for k,v in self.sessions.items() if now-v.used<300 and now-v.created<1800}
++        if len(self.sessions)>=2:raise Refused('SESSION_CAPACITY')
++        token=secrets.token_urlsafe(32);session=Session(uuid.uuid4().hex,transport,now,now);self.sessions[token]=session
++        return token,session.id
++
++    def session(self,token,transport):
++        if type(token) is not str or len(token)!=43:raise Refused('CONTINUATION')
++        s=self.sessions.get(token);now=self.clock()
++        if s is None or s.transport!=transport or now-s.used>=300 or now-s.created>=1800:raise Refused('CONTINUATION')
++        return s
++
++    def commitment(self,message):
++        if type(message) is not str:raise Refused('REQUEST_TYPE')
++        try:raw=message.encode('utf-8')
++        except UnicodeError:raise Refused('REQUEST_UTF8') from None
++        if not raw or len(raw)>8192:raise Refused('REQUEST_LIMIT')
++        return hmac.digest(self.key,raw,'sha256').hex()
++
++    def _checkpoint(self):
++        root=checkpoint(self.store,self.backups);self.last_checkpoint=root;return root
++
++    def control(self,raw,signature,peer,verb):
++        a=self.authority.check(raw,signature,peer,verb)
++        if verb=='TERMINAL_STOP':
++            with self.store.tx():self.store.control(a)
++            self.stop('OPERATOR_STOP');return
++        if self.last_checkpoint is None:raise Refused('CHECKPOINT_REQUIRED')
++        m=verify_checkpoint(self.last_checkpoint)
++        actual_digest=digest((self.last_checkpoint/'manifest.json').read_bytes())
++        recorded=self.store.db.execute('SELECT manifest_digest FROM checkpoints WHERE id=?',(self.last_checkpoint.name,)).fetchone()
++        if m['purpose']!='READY' or m['accepted']!=self.store.count() or recorded!=(actual_digest,) or a['checkpoint']!=actual_digest:raise Refused('STALE_CHECKPOINT')
++        if verb=='OPEN_HOLD':
++            if self.state!='CLOSED_INITIAL':raise Refused('OPEN_STATE')
++            self.store.opening(a);self.state='OPEN_HOLD'
++        else:
++            if self.state not in ('OPEN_HOLD','CHECKPOINT_HOLD') or self.busy:raise Refused('ARM_STATE')
++            p=a['payload']
++            if not any(s.id==p['session'] and s.transport==p['transport'] for s in self.sessions.values()):raise Refused('PERMIT_SESSION')
++            if type(p['request_commitment']) is not str or len(p['request_commitment'])!=64:raise Refused('PERMIT_COMMITMENT')
++            self.store.arm(a);self.state='ARMED_ONE'
++
++    def stop(self,reason):
++        self.stop_event.set();self.store.stop(reason);self.state=self.store.terminal()
++
++    async def drain(self,seconds=30):
++        self.stop('OPERATOR_STOP')
++        if type(seconds) not in (int,float) or not 0<=seconds<=30:raise Refused('DRAIN_BOUND')
++        for task in self.pending:task.cancel()
++        if self.pending:await asyncio.wait(tuple(self.pending),timeout=seconds)
++        return {'pending':sum(not t.done() for t in self.pending),'terminal':self.store.terminal(),'ownership_clean':self.store.clean()}
++
++    def _retire_task(self,task):
++        self.pending.discard(task)
++        if not task.cancelled():task.exception()  # consume late exception, never late-replay/evaluate
++
++    async def _generate(self,aid,kind,contract,messages,capture=None):
++        if self.stop_event.is_set():raise Refused('STOPPED')
++        body=canonical({'model':contract.resource.model,'messages':messages,'stream':False,'think':False,
++                        'keep_alive':contract.limits.keep_alive,'options':{'num_ctx':contract.limits.context,'num_predict':contract.limits.output}})
++        if len(body)>contract.limits.request_bytes:raise Refused('SERIALIZED_REQUEST_LIMIT')
++        if capture is not None:self.observer.check_request(capture,body)
++        sid=self.store.begin(aid,kind,contract.resource,digest(body))
++        req=ProviderRequest(aid,sid,contract.resource,body,digest(body),self.clock()+contract.limits.deadline)
++        if self.stop_event.is_set():
++            # Possible-send was recorded conservatively; no fabricated release on interrupted ordering.
++            self.store.unknown(sid);raise Refused('STOPPED')
++        task=asyncio.create_task(self.provider.request(req));self.pending.add(task)
++        waiter=asyncio.create_task(self.stop_event.wait())
++        try:
++            done,_=await asyncio.wait((task,waiter),timeout=contract.limits.deadline,return_when=asyncio.FIRST_COMPLETED)
++            if task not in done or self.stop_event.is_set():raise Refused('PROVIDER_UNCERTAIN')
++            result=task.result()
++            if (type(result) is not ProviderResult or result.known_terminal is not True or (result.attempt,result.substep,result.resource,result.request_digest)!=(aid,sid,contract.resource,digest(body))):raise Refused('PROVIDER_ASSOCIATION')
++            self.store.known_terminal(sid)
++            value=decode(result.body,contract.limits.native_bytes)
++            return value['message']['content'],sid,digest(result.body),result.body
++        except BaseException:
++            # known-terminal parse/proposal failures retain terminal ownership; otherwise unknown.
++            self.store.unknown(sid)
++            if not task.done():task.cancel()
++            raise
++        finally:
++            waiter.cancel()
++            await asyncio.gather(waiter,return_exceptions=True)
++            if task.done():self._retire_task(task)
++            else:task.add_done_callback(self._retire_task)
++
++    def _append(self,s,message):
++        s.history.append(message)
++        while s.history and (len(s.history)>8 or sum(len(m['content'].encode()) for m in s.history)>8192):s.history.pop(0)
++
++    async def _deliver(self,delivery,envelope):
++        task=asyncio.create_task(delivery.send(envelope));self.pending.add(task)
++        waiter=asyncio.create_task(self.stop_event.wait())
++        try:
++            done,_=await asyncio.wait((task,waiter),timeout=self.legacy.delivery_deadline,return_when=asyncio.FIRST_COMPLETED)
++            if task not in done or self.stop_event.is_set() or task.result() is not True:raise Refused('DELIVERY_INTERRUPTED')
++        finally:
++            waiter.cancel();await asyncio.gather(waiter,return_exceptions=True)
++            if task.done():self._retire_task(task)
++            else:task.cancel();task.add_done_callback(self._retire_task)
++
++    async def request(self,*,transport,token,message,authenticated,delivery: Delivery):
++        if self.busy:
++            self.stop('CONCURRENT_INGRESS');raise Refused('BUSY_NO_QUEUE')
++        if authenticated is not True:
++            self.stop('AUTHENTICATION_MISMATCH');raise Refused('AUTHENTICATION_MISMATCH')
++        try:
++            s=self.session(token,transport);commitment=self.commitment(message)
++            if self.state!='ARMED_ONE':raise Refused('ADMISSION_CLOSED')
++            aid=self.store.accept(transport,s.id,commitment,now=self.authority.clock())
++        except Exception:
++            self.stop('INGRESS_REFUSAL');raise Refused('INGRESS_REFUSAL') from None
++        self.busy=True;self.state='INFLIGHT';history=list(s.history);s.used=self.clock();self._append(s,{'role':'user','content':message})
++        try:
++            capture=self.observer.capture(s.id,message,history,transport)
++            if self.legacy.router_policy=='L1':
++                route,_,_,_=await self._generate(aid,'LEGACY_ROUTER',self.legacy.router,[{'role':'system','content':self.legacy.router.system_prompt},{'role':'user','content':message}])
++                # No fallback on malformed/non-conversational classification.
++                r=strict_json(route)
++                if (type(r) is not dict or set(r)!={'intent','confidence'} or r['intent']!='respond'
++                        or type(r['confidence']) not in (int,float) or not self.legacy.min_confidence<=r['confidence']<=1):raise Refused('NONCONVERSATIONAL_ROUTE')
++                confidence=r['confidence']
++            else:
++                if message not in ORIGINAL_INPUTS:raise Refused('L2_UNAPPROVED_INPUT')
++                confidence=0.9  # Versioned L2 fixture policy; not a claim about original model routing.
++            system=self.legacy.responder.system_prompt
++            if self.legacy.memory_policy=='SNAPSHOT':system+='\n'+self.legacy.memory_snapshot
++            legacy,_,_,_=await self._generate(aid,'LEGACY_RESPONDER',self.legacy.responder,[{'role':'system','content':system},{'role':'user','content':message}])
++            if self.stop_event.is_set():raise Refused('STOPPED')
++            status=self.view_status()
++            if type(status) is not ViewStatus:raise Refused('VIEW_STATUS_BINDING')
++            envelope={'reply':legacy,'intent':'respond','confidence':confidence,'dry_run':status.dry_run,'active':status.active}
++            if transport=='WS':envelope={'type':'reply',**envelope}
++            try:
++                await self._deliver(delivery,envelope)
++            except BaseException:
++                self.store.delivery(aid,'INTERRUPTED_UNKNOWN');raise
++            self.store.delivery(aid,'LOCAL_SEND_COMPLETED');self._append(s,{'role':'assistant','content':legacy})
++            # Granite sees pre-turn bounded history, never its own output in future history.
++            _,sid,native_digest,native=await self._generate(aid,'GRANITE',self.granite,[{'role':'system','content':self.granite.system_prompt},*history,{'role':'user','content':message}],capture=capture)
++            observation=self.observer.observe(capture,native)
++            self.store.receipt(aid,sid,native_digest,observation);self.store.settle(aid);self.state='SETTLING'
++            self._checkpoint();self.state='CHECKPOINT_HOLD'
++            if self.store.count()==4:self.stop('CAP_COMPLETE')
++            return {'attempt':aid,'legacy_delivery':'LOCAL_SEND_COMPLETED','granite':'OBSERVED','checkpoint':self.last_checkpoint.name}
++        except asyncio.CancelledError:
++            self.stop('CLIENT_DISCONNECT');raise
++        except Exception:
++            self.stop('ATTEMPT_FAILURE');raise Refused('ATTEMPT_FAILED') from None
++        finally:self.busy=False
+--- /dev/null
++++ candidate_v3/storage.py
+@@ -0,0 +1,277 @@
++from __future__ import annotations
++import fcntl, hashlib, json, os, sqlite3, stat, threading, uuid
++from contextlib import contextmanager
++from pathlib import Path
++from .contracts import Refused, Resource, canonical, digest, strict_json
++
++SCHEMA = (
++ 'CREATE TABLE lineage(parent TEXT PRIMARY KEY, child TEXT UNIQUE NOT NULL, archive TEXT NOT NULL, ancestor_count INTEGER NOT NULL CHECK(ancestor_count>=0))',
++ 'CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)',
++ 'CREATE TABLE control(nonce TEXT PRIMARY KEY, verb TEXT NOT NULL, body_digest TEXT NOT NULL, operator TEXT NOT NULL)',
++ 'CREATE TABLE permits(nonce TEXT PRIMARY KEY REFERENCES control(nonce), ordinal INTEGER UNIQUE NOT NULL, transport TEXT NOT NULL, session TEXT NOT NULL, commitment TEXT NOT NULL, expires REAL NOT NULL, spent INTEGER NOT NULL CHECK(spent IN(0,1)))',
++ "CREATE TABLE attempts(id TEXT PRIMARY KEY, ordinal INTEGER UNIQUE NOT NULL CHECK(ordinal BETWEEN 1 AND 4), transport TEXT NOT NULL CHECK(transport IN ('REST','WS')), session TEXT NOT NULL, permit TEXT UNIQUE NOT NULL REFERENCES permits(nonce), origin TEXT NOT NULL CHECK(origin='LIVE'), eligible INTEGER NOT NULL CHECK(eligible=0), delivery TEXT NOT NULL, terminal TEXT)",
++ 'CREATE TABLE steps(id TEXT PRIMARY KEY, attempt TEXT NOT NULL REFERENCES attempts(id), kind TEXT NOT NULL, endpoint TEXT NOT NULL, model TEXT NOT NULL, profile TEXT NOT NULL, request_digest TEXT NOT NULL, state TEXT NOT NULL, UNIQUE(attempt,kind))',
++ 'CREATE TABLE leases(step TEXT PRIMARY KEY REFERENCES steps(id), endpoint TEXT NOT NULL, state TEXT NOT NULL)',
++ 'CREATE UNIQUE INDEX endpoint_exclusion ON leases(endpoint) WHERE state IN (\'ACTIVE\',\'REMOTE_UNKNOWN\')',
++ 'CREATE TABLE receipts(attempt TEXT PRIMARY KEY REFERENCES attempts(id), step TEXT UNIQUE NOT NULL REFERENCES steps(id), sequence INTEGER UNIQUE NOT NULL, digest TEXT NOT NULL)',
++ 'CREATE TABLE checkpoints(id TEXT PRIMARY KEY, accepted INTEGER NOT NULL, event_highwater INTEGER NOT NULL, manifest_digest TEXT NOT NULL)',
++ 'CREATE TABLE events(sequence INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, attempt TEXT, step TEXT)',
++ "CREATE TRIGGER accepted_immutable BEFORE UPDATE OF id,ordinal,transport,session,permit,origin,eligible ON attempts BEGIN SELECT RAISE(ABORT,'IMMUTABLE_ACCEPTANCE'); END",
++ "CREATE TRIGGER accepted_no_delete BEFORE DELETE ON attempts BEGIN SELECT RAISE(ABORT,'IMMUTABLE_ACCEPTANCE'); END",
++)
++
++def private(path: Path, directory=False):
++    s=path.lstat()
++    if (s.st_uid != os.geteuid() or stat.S_IMODE(s.st_mode) != (0o700 if directory else 0o600)
++            or not (stat.S_ISDIR(s.st_mode) if directory else stat.S_ISREG(s.st_mode)) or not directory and s.st_nlink != 1):
++        raise Refused('UNSAFE_STORAGE')
++
++def sync_dir(path):
++    fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
++    try:os.fsync(fd)
++    finally:os.close(fd)
++
++class Store:
++    """Disposable candidate schema5. One lifetime writer; no migration/restore entry point."""
++    def __init__(self, root: Path, *, predecessor=None, child=None, bindings=None, fault=lambda _:None):
++        self.root=Path(root);self.fault=fault;self.lock=threading.RLock();self.db=None;self.lockfd=None
++        if not self.root.is_absolute():raise Refused('ABSOLUTE_PRIVATE_ROOT_REQUIRED')
++        # Refuse production namespaces even before the independent kernel sandbox.
++        if str(self.root).startswith(('/home/jarvis/JARVIS','/home/jarvis/.hermes-poc','/home/jarvis/.config')):raise Refused('PRODUCTION_PATH_FORBIDDEN')
++        private(self.root.parent,True)
++        fresh=predecessor is not None
++        if fresh:
++            if (set(predecessor) != {'epoch','status','accepted','complete','unknown','retirement','archive'}
++                    or predecessor['status']!='CLOSED_COMPLETE' or predecessor['accepted']!=0
++                    or predecessor['complete'] is not True or predecessor['unknown'] is not False
++                    or predecessor['retirement']!='EXPLICIT_ZERO_USE_RETIREMENT'
++                    or not predecessor['archive'] or not predecessor['epoch'] or child==predecessor['epoch'] or not child):raise Refused('PREDECESSOR_REFUSED')
++            # One authority file per deployment root, before any child DB exists.
++            # A second directory cannot mint a second successor for this lineage.
++            reservation=canonical({'parent':predecessor['epoch'],'child':child,'archive':predecessor['archive'],
++                                   'namespace':self.root.name,'bindings':bindings})
++            try:fd=os.open(self.root.parent/'lineage-reservation.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++            except FileExistsError:raise Refused('SUCCESSOR_ALREADY_RESERVED') from None
++            try:
++                if os.write(fd,reservation)!=len(reservation):raise Refused('RESERVATION_PARTIAL_WRITE')
++                os.fsync(fd)
++            finally:os.close(fd)
++            sync_dir(self.root.parent);self.fault('successor_reserved')
++            self.root.mkdir(mode=0o700)  # Existing partial roots never reinitialize.
++            sync_dir(self.root.parent)
++        private(self.root,True)
++        try:
++            self.lockfd=os.open(self.root/'writer.lock',os.O_RDWR|os.O_NOFOLLOW|(os.O_CREAT|os.O_EXCL if fresh else 0),0o600)
++            fcntl.flock(self.lockfd,fcntl.LOCK_EX|fcntl.LOCK_NB)
++            private(self.root/'writer.lock')
++            p=self.root/'controller.sqlite3'
++            if fresh:
++                fd=os.open(p,os.O_CREAT|os.O_EXCL|os.O_RDWR|os.O_NOFOLLOW,0o600);os.close(fd)
++            private(p);self.inode=p.stat().st_ino
++            self.db=sqlite3.connect(p,timeout=0,isolation_level=None,check_same_thread=False)
++            self.db.execute('PRAGMA foreign_keys=ON');self.db.execute('PRAGMA synchronous=FULL');self.db.execute('PRAGMA journal_mode=DELETE')
++            if fresh:
++                with self.tx():
++                    for sql in SCHEMA:self.db.execute(sql)
++                    self.db.execute('PRAGMA user_version=5')
++                    self.db.execute('INSERT INTO lineage VALUES(?,?,?,0)',(predecessor['epoch'],child,predecessor['archive']))
++                    self.db.executemany('INSERT INTO meta VALUES(?,?)',[('bindings',json.dumps(bindings,sort_keys=True)),('terminal',''),('lineage_hash',digest(reservation))])
++                    self.fault('initialize_before_commit')
++                sync_dir(self.root)
++                self.fault('initialize_after_commit')
++            self.validate()
++        except BaseException:
++            self.close();raise
++
++    def validate(self):
++        private(self.root,True);private(self.root/'controller.sqlite3')
++        private(self.root.parent/'lineage-reservation.json')
++        if (self.root/'controller.sqlite3').stat().st_ino != self.inode:raise Refused('DATABASE_REPLACED')
++        if self.db.execute('PRAGMA user_version').fetchone()[0]!=5 or self.db.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise Refused('SCHEMA_INTEGRITY')
++        expected=set(SCHEMA);actual={r[0] for r in self.db.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name!='sqlite_sequence'")}
++        if actual!=expected or self.db.execute('PRAGMA foreign_key_check').fetchall():raise Refused('SCHEMA_INTEGRITY')
++        if self.db.execute('SELECT count(*) FROM lineage').fetchone()[0]!=1:raise Refused('LINEAGE_INTEGRITY')
++        raw=(self.root.parent/'lineage-reservation.json').read_bytes()
++        try:r=strict_json(raw)
++        except ValueError:raise Refused('LINEAGE_MANIFEST') from None
++        if (set(r)!={'parent','child','archive','namespace','bindings'} or r['namespace']!=self.root.name
++                or (r['parent'],r['child'],r['archive'],0)!=self.db.execute('SELECT * FROM lineage').fetchone()
++                or r['bindings']!=strict_json(self.db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0])
++                or self.db.execute("SELECT value FROM meta WHERE key='lineage_hash'").fetchone()!=(digest(raw),)):raise Refused('LINEAGE_MANIFEST')
++
++    @contextmanager
++    def tx(self):
++        with self.lock:
++            if self.db.in_transaction:raise Refused('NESTED_TRANSACTION')
++            self.db.execute('BEGIN IMMEDIATE')
++            try:yield;self.db.execute('COMMIT')
++            except BaseException:
++                if self.db.in_transaction:self.db.execute('ROLLBACK')
++                raise
++
++    def event(self,code,attempt=None,step=None):
++        self.db.execute('INSERT INTO events(code,attempt,step) VALUES(?,?,?)',(code,attempt,step))
++    def count(self):return self.db.execute('SELECT count(*) FROM attempts').fetchone()[0]+self.db.execute('SELECT ancestor_count FROM lineage').fetchone()[0]
++    def terminal(self):return self.db.execute("SELECT value FROM meta WHERE key='terminal'").fetchone()[0]
++    def clean(self):return not self.db.execute("SELECT 1 FROM leases WHERE state IN ('ACTIVE','REMOTE_UNKNOWN')").fetchone()
++    def ready(self):
++        return self.db.execute('SELECT 1 FROM checkpoints WHERE accepted=? ORDER BY rowid DESC LIMIT 1',(self.count(),)).fetchone() is not None and not self.db.execute('SELECT 1 FROM attempts WHERE terminal IS NULL').fetchone()
++    def control(self,a):
++        self.db.execute('INSERT INTO control VALUES(?,?,?,?)',(a['nonce'],a['verb'],a['_signed_digest'],a['_verified_operator']))
++        self.event(a['verb'])
++    def opening(self,a):
++        with self.tx():
++            self.validate()
++            if self.count() or self.terminal() or not self.clean() or not self.ready() or self.db.execute("SELECT 1 FROM control WHERE verb='OPEN_HOLD'").fetchone():raise Refused('OPEN_PREREQUISITE')
++            self.control(a);self.fault('open_before_commit')
++        self.fault('open_after_commit')
++    def arm(self,a):
++        with self.tx():
++            n=self.count();p=a['payload']
++            if self.terminal() or not self.clean() or not self.ready() or n>=4 or p['transport']!=('REST','REST','WS','WS')[n]:raise Refused('PERMIT_PREREQUISITE')
++            if self.db.execute('SELECT 1 FROM permits WHERE spent=0').fetchone():raise Refused('OUTSTANDING_PERMIT')
++            self.control(a)
++            self.db.execute('INSERT INTO permits VALUES(?,?,?,?,?,?,0)',(a['nonce'],n+1,p['transport'],p['session'],p['request_commitment'],a['expires']))
++    def accept(self,transport,session,commitment,*,now):
++        with self.tx():
++            self.validate()
++            p=self.db.execute('SELECT nonce,ordinal,transport,session,commitment,expires FROM permits WHERE spent=0').fetchone()
++            if self.terminal() or not self.clean() or self.count()>=4 or p is None or p[1:5]!=(self.count()+1,transport,session,commitment) or not now<p[5]:raise Refused('ADMISSION_REFUSED')
++            aid=uuid.uuid4().hex
++            self.db.execute('UPDATE permits SET spent=1 WHERE nonce=?',(p[0],));self.fault('permit_spent_before_insert')
++            self.db.execute("INSERT INTO attempts VALUES(?,?,?,?,?,'LIVE',0,'NOT_ATTEMPTED',NULL)",(aid,p[1],transport,session,p[0]))
++            self.event('ACCEPTED',aid);self.fault('accept_before_commit')
++        self.fault('accept_after_commit');return aid
++    def begin(self,attempt,kind,resource,request_digest):
++        with self.tx():
++            if self.terminal() or not self.clean():raise Refused('OWNERSHIP_UNAVAILABLE')
++            sid=uuid.uuid4().hex
++            self.db.execute('INSERT INTO steps VALUES(?,?,?,?,?,?,?,?)',(sid,attempt,kind,resource.endpoint,resource.model,resource.profile,request_digest,'POSSIBLE_SEND'))
++            self.db.execute("INSERT INTO leases VALUES(?,?,'ACTIVE')",(sid,resource.endpoint));self.event('POSSIBLE_SEND',attempt,sid)
++        self.fault('possible_send_committed');return sid
++    def known_terminal(self,sid):
++        with self.tx():
++            if self.db.execute('SELECT state FROM steps WHERE id=?',(sid,)).fetchone()!=('POSSIBLE_SEND',):raise Refused('TERMINAL_ASSOCIATION')
++            self.db.execute("UPDATE steps SET state='KNOWN_TERMINAL' WHERE id=?",(sid,));self.db.execute("UPDATE leases SET state='KNOWN_TERMINAL' WHERE step=?",(sid,));self.event('KNOWN_TERMINAL',step=sid)
++            self.event('KNOWN_TRANSMITTED',step=sid)
++        self.fault('provider_terminal_committed')
++    def unknown(self,sid):
++        with self.tx():
++            if self.db.execute('SELECT state FROM steps WHERE id=?',(sid,)).fetchone()!=('POSSIBLE_SEND',):return
++            self.db.execute("UPDATE steps SET state='REMOTE_UNKNOWN' WHERE id=? AND state='POSSIBLE_SEND'",(sid,));self.db.execute("UPDATE leases SET state='REMOTE_UNKNOWN' WHERE step=? AND state='ACTIVE'",(sid,));self.event('REMOTE_UNKNOWN',step=sid)
++    def delivery(self,aid,status):
++        with self.tx():
++            self.db.execute('UPDATE attempts SET delivery=? WHERE id=? AND delivery=\'NOT_ATTEMPTED\'',(status,aid));self.event(status,aid)
++    def receipt(self,aid,sid,native_digest,observation):
++        with self.lock:
++            return self._receipt(aid,sid,native_digest,observation)
++
++    def _receipt(self,aid,sid,native_digest,observation):
++        """Candidate minimized D04 sink; exact join, no raw output. Not production D04 adapter."""
++        if self.db.execute('SELECT attempt,kind,state FROM steps WHERE id=?',(sid,)).fetchone()!=(aid,'GRANITE','KNOWN_TERMINAL'):raise Refused('RECEIPT_ASSOCIATION')
++        path=self.root/'receipts.jsonl'
++        seq=self.db.execute('SELECT count(*) FROM receipts').fetchone()[0]+1
++        from .observation import Observation
++        if type(observation) is not Observation or observation.projection.get('proposal_count')!=0:raise Refused('OBSERVATION_REQUIRED')
++        from dataclasses import asdict
++        record=canonical({'attempt':aid,'step':sid,'sequence':seq,'native_digest':native_digest,'proposal_count':0,'origin':'LIVE','eligible':False,'observation':asdict(observation)})+b'\n'
++        flags=os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW
++        if not path.exists():flags|=os.O_CREAT|os.O_EXCL
++        fd=os.open(path,flags,0o600)
++        try:
++            private(path)
++            # No retry after an uncertain/partial append.
++            if os.write(fd,record)!=len(record):raise Refused('D04_PARTIAL_APPEND')
++            os.fsync(fd)
++        finally:os.close(fd)
++        sync_dir(self.root);self.fault('receipt_append_before_join')
++        with self.tx():
++            self.db.execute('INSERT INTO receipts VALUES(?,?,?,?)',(aid,sid,seq,digest(record)));self.event('D04_JOINED',aid,sid)
++        self.fault('receipt_joined')
++    def settle(self,aid):
++        with self.tx():
++            if not self.clean() or self.terminal() or not self.db.execute('SELECT 1 FROM receipts WHERE attempt=?',(aid,)).fetchone():raise Refused('SETTLEMENT_REFUSED')
++            self.db.execute("UPDATE attempts SET terminal='SETTLED' WHERE id=? AND delivery='LOCAL_SEND_COMPLETED'",(aid,))
++            if self.db.execute('SELECT terminal FROM attempts WHERE id=?',(aid,)).fetchone()!=('SETTLED',):raise Refused('DELIVERY_UNPROVEN')
++            self.event('SETTLED',aid)
++    def stop(self,reason='STOP'):
++        with self.tx():
++            if not self.terminal():
++                complete=reason in ('OPERATOR_STOP','CAP_COMPLETE') and self.clean() and self.ready()
++                self.db.execute("UPDATE meta SET value=? WHERE key='terminal'",('CLOSED_COMPLETE' if complete else 'CLOSED_INCOMPLETE',));self.event(reason)
++    def close(self):
++        if self.db is not None:self.db.close();self.db=None
++        if self.lockfd is not None:os.close(self.lockfd);self.lockfd=None
++
++def checkpoint(store: Store, parent: Path, *, forensic=False):
++    """Exclusive manifest-last snapshot; never replace/prune/restore an existing bundle."""
++    private(parent,True)
++    if not forensic and (not store.clean() or store.db.execute('SELECT 1 FROM attempts WHERE terminal IS NULL').fetchone()):raise Refused('CHECKPOINT_NOT_QUIESCENT')
++    with store.lock:
++        store.validate();bid=uuid.uuid4().hex;root=parent/bid;root.mkdir(mode=0o700);sync_dir(parent)
++        dbpath=root/'controller.sqlite3';copy=sqlite3.connect(dbpath)
++        try:store.db.backup(copy)
++        finally:copy.close()
++        dbpath.chmod(0o600)
++        fd=os.open(dbpath,os.O_RDONLY|os.O_NOFOLLOW)
++        try:os.fsync(fd)
++        finally:os.close(fd)
++        store.fault('backup_database_synced')
++        raw=(store.root/'receipts.jsonl').read_bytes() if (store.root/'receipts.jsonl').exists() else b''
++        fd=os.open(root/'receipts.jsonl',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++        try:
++            if os.write(fd,raw)!=len(raw):raise Refused('BACKUP_SHORT_WRITE')
++            os.fsync(fd)
++        finally:os.close(fd)
++        lineage=(store.root.parent/'lineage-reservation.json').read_bytes()
++        fd=os.open(root/'lineage-reservation.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++        try:
++            if os.write(fd,lineage)!=len(lineage):raise Refused('BACKUP_SHORT_WRITE')
++            os.fsync(fd)
++        finally:os.close(fd)
++        manifest={'version':3,'purpose':'FORENSIC_INCOMPLETE' if forensic else 'READY','id':bid,'accepted':store.count(),'event_highwater':store.db.execute('SELECT coalesce(max(sequence),0) FROM events').fetchone()[0],'lineage':store.db.execute('SELECT * FROM lineage').fetchall(),'bindings':strict_json(store.db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0]),'files':{n:digest((root/n).read_bytes()) for n in ('controller.sqlite3','receipts.jsonl','lineage-reservation.json')}}
++        store.fault('backup_before_manifest')
++        body=canonical(manifest);fd=os.open(root/'manifest.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++        try:
++            if os.write(fd,body)!=len(body):raise Refused('BACKUP_SHORT_WRITE')
++            os.fsync(fd)
++        finally:os.close(fd)
++        sync_dir(root);verify_checkpoint(root)
++        if not forensic:
++            with store.tx():store.db.execute('INSERT INTO checkpoints VALUES(?,?,?,?)',(bid,manifest['accepted'],manifest['event_highwater'],digest(body)))
++        return root
++
++def verify_checkpoint(root: Path, *, current_highwater=None):
++    private(root,True)
++    for n in ('manifest.json','controller.sqlite3','receipts.jsonl','lineage-reservation.json'):private(root/n)
++    if set(p.name for p in root.iterdir())!={'manifest.json','controller.sqlite3','receipts.jsonl','lineage-reservation.json'}:raise Refused('BACKUP_MEMBERS')
++    try:m=strict_json((root/'manifest.json').read_bytes())
++    except (ValueError,UnicodeError):raise Refused('BACKUP_MANIFEST') from None
++    if set(m)!={'version','purpose','id','accepted','event_highwater','lineage','bindings','files'} or m['version']!=3 or m['purpose'] not in ('READY','FORENSIC_INCOMPLETE') or m['id']!=root.name or set(m['files'])!={'controller.sqlite3','receipts.jsonl','lineage-reservation.json'}:raise Refused('BACKUP_MANIFEST')
++    if any(digest((root/n).read_bytes())!=h for n,h in m['files'].items()):raise Refused('BACKUP_CHECKSUM')
++    if current_highwater is not None and current_highwater>m['event_highwater']:raise Refused('NEWER_EVIDENCE_RESTORE_REFUSED')
++    db=sqlite3.connect((root/'controller.sqlite3').as_uri()+'?mode=ro',uri=True)
++    try:
++        db.execute('PRAGMA query_only=ON')
++        if db.execute('PRAGMA integrity_check').fetchall()!=[('ok',)] or db.execute('PRAGMA foreign_key_check').fetchall():raise Refused('BACKUP_DATABASE')
++        if db.execute('PRAGMA user_version').fetchone()[0]!=5:raise Refused('BACKUP_SCHEMA')
++        if {x[0] for x in db.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name!='sqlite_sequence'")}!=set(SCHEMA):raise Refused('BACKUP_SCHEMA')
++        if [list(x) for x in db.execute('SELECT * FROM lineage')]!=m['lineage']:raise Refused('BACKUP_LINEAGE')
++        if strict_json(db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0])!=m['bindings']:raise Refused('BACKUP_BINDINGS')
++        lr=(root/'lineage-reservation.json').read_bytes();reservation=strict_json(lr)
++        if db.execute("SELECT value FROM meta WHERE key='lineage_hash'").fetchone()!=(digest(lr),) or [reservation['parent'],reservation['child'],reservation['archive'],0]!=m['lineage'][0] or reservation['bindings']!=m['bindings']:raise Refused('BACKUP_LINEAGE_HASH')
++        if db.execute('SELECT count(*) FROM attempts').fetchone()[0]+db.execute('SELECT ancestor_count FROM lineage').fetchone()[0]!=m['accepted']:raise Refused('BACKUP_ACCEPTED_SET')
++        if db.execute('SELECT coalesce(max(sequence),0) FROM events').fetchone()[0]!=m['event_highwater']:raise Refused('BACKUP_EVENT_HIGHWATER')
++        if m['purpose']=='READY':
++            if db.execute("SELECT 1 FROM leases WHERE state IN ('ACTIVE','REMOTE_UNKNOWN')").fetchone():raise Refused('BACKUP_UNKNOWN')
++            if db.execute("SELECT 1 FROM attempts WHERE terminal IS NULL OR terminal!='SETTLED' OR delivery!='LOCAL_SEND_COMPLETED'").fetchone():raise Refused('BACKUP_UNSETTLED')
++            if db.execute("SELECT 1 FROM steps WHERE state!='KNOWN_TERMINAL'").fetchone():raise Refused('BACKUP_SUBSTEP_UNSETTLED')
++            if db.execute('SELECT count(*) FROM receipts').fetchone()[0]!=m['accepted']:raise Refused('BACKUP_MISSING_RECEIPT')
++        lines=(root/'receipts.jsonl').read_bytes().splitlines(keepends=True);joins=db.execute('SELECT attempt,step,sequence,digest FROM receipts ORDER BY sequence').fetchall()
++        if len(lines)!=len(joins) and m['purpose']=='READY':raise Refused('BACKUP_RECEIPT_COUNT')
++        for i,(line,join) in enumerate(zip(lines,joins),1):
++            v=strict_json(line)
++            if join!=(v['attempt'],v['step'],i,digest(line)) or v['sequence']!=i or v['proposal_count']!=0 or v['eligible'] is not False or v['origin']!='LIVE':raise Refused('BACKUP_RECEIPT_JOIN')
++            if db.execute('SELECT attempt,kind,state FROM steps WHERE id=?',(v['step'],)).fetchone()!=(v['attempt'],'GRANITE','KNOWN_TERMINAL'):raise Refused('BACKUP_STEP_JOIN')
++    finally:db.close()
++    return m
+--- /dev/null
++++ qualification/guard/sitecustomize.py
+@@ -0,0 +1,38 @@
++import atexit,json,os,socket,sys
++from pathlib import Path
++sys.dont_write_bytecode=True
++stage=Path(os.environ['P7_OFFLINE_STAGE']).resolve()
++production=Path('/home/jarvis/JARVIS')
++network=[]
++counts={'blocked_inet':0,'blocked_production_access':0,'blocked_credential_access':0,'blocked_external_write':0,'blocked_execution':0,'approved_offline_children':0}
++def under(path,root):return path==root or root in path.parents
++def hook(event,args):
++    if event=='open' and isinstance(args[0],(str,bytes,os.PathLike)):
++        p=Path(os.fsdecode(args[0])).absolute()
++        if under(p,Path('/home/jarvis/.config/jarvis')):
++            counts['blocked_credential_access']+=1;raise AssertionError('PRODUCTION_CREDENTIAL_ACCESS_FORBIDDEN')
++        if under(p,production) and not under(p,production/'.venv'):
++            counts['blocked_production_access']+=1;raise AssertionError('CANONICAL_RUNTIME_ACCESS_FORBIDDEN')
++        flags=args[2] or 0
++        if flags & (os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND):
++            if not under(p,stage) and p!=Path('/dev/null'):
++                counts['blocked_external_write']+=1;raise AssertionError('EXTERNAL_WRITE_FORBIDDEN')
++    if event in ('socket.connect','socket.sendto') and getattr(args[0],'family',None) in (socket.AF_INET,socket.AF_INET6):
++        network.append({'event':event,'destination':args[1]});counts['blocked_inet']+=1;raise ConnectionRefusedError('OFFLINE_INET_BLOCKED_BEFORE_SEND')
++    if event=='socket.getaddrinfo':
++        network.append({'event':event,'host':args[0],'port':args[1]});counts['blocked_inet']+=1;raise socket.gaierror('OFFLINE_DNS_BLOCKED')
++    if event=='subprocess.Popen':
++        executable,argv,cwd,env=args
++        allowed=(isinstance(argv,(list,tuple)) and len(argv)>1 and
++            (str(argv[0]).startswith('/home/jarvis/JARVIS/.venv/bin/python') and
++             (argv[1]=='-c' or str(argv[1])==str(stage/'repo/scripts/switch_models.py'))
++             or argv[0]=='bash' and str(argv[1])==str(stage/'repo/scripts/backup_restic.sh')))
++        if not allowed:
++            counts['blocked_execution']+=1;raise AssertionError('NON_FIXTURE_EXECUTION_FORBIDDEN')
++        counts['approved_offline_children']+=1
++    if event=='os.system':
++        counts['blocked_execution']+=1;raise AssertionError('SHELL_EXECUTION_FORBIDDEN')
++sys.addaudithook(hook)
++def finish():
++    (stage/('audit-'+str(os.getpid())+'.json')).write_text(json.dumps({'counts':counts,'network':network},sort_keys=True))
++atexit.register(finish)
+--- /dev/null
++++ qualification/kernel_guard.py
+@@ -0,0 +1,41 @@
++"""Per-process Linux restrictions; no system configuration or privilege changes."""
++import ctypes,errno,os
++from pathlib import Path
++def restrict(stage,venv):
++ libc=ctypes.CDLL(None,use_errno=True);libc.syscall.restype=ctypes.c_long
++ abi=libc.syscall(444,0,0,1)
++ if abi<3:raise RuntimeError('LANDLOCK_REQUIRED')
++ class Ruleset(ctypes.Structure):_fields_=[('handled_access_fs',ctypes.c_uint64)]
++ class Beneath(ctypes.Structure):_pack_=1;_fields_=[('allowed_access',ctypes.c_uint64),('parent_fd',ctypes.c_int)]
++ handled=(1<<15)-1;read=(1<<0)|(1<<2)|(1<<3)
++ rules=Ruleset(handled);fd=libc.syscall(444,ctypes.byref(rules),ctypes.sizeof(rules),0)
++ if fd<0:raise RuntimeError('LANDLOCK_CREATE')
++ try:
++  # READ_DIR alone allows no-follow directory walks, not file content access.
++  for p,access in [(Path('/'),1<<3),(Path(stage),handled),(Path(venv),read),*( (Path(p),read) for p in ['/usr','/lib','/lib64','/bin','/etc','/dev/null','/dev/urandom','/dev/random'])]:
++   if not p.exists():continue
++   f=os.open(p,os.O_PATH|os.O_CLOEXEC)
++   try:
++    a=access if p.is_dir() else access&~(1<<3)
++    if p==Path('/dev/null'):a=(1<<1)|(1<<2)
++    rule=Beneath(a,f)
++    if libc.syscall(445,fd,1,ctypes.byref(rule),0)<0:raise RuntimeError('LANDLOCK_RULE')
++   finally:os.close(f)
++  if libc.prctl(38,1,0,0,0):raise RuntimeError('NO_NEW_PRIVS')
++  if libc.syscall(446,fd,0):raise RuntimeError('LANDLOCK_ENFORCE')
++ finally:os.close(fd)
++ sec=ctypes.CDLL('libseccomp.so.2');sec.seccomp_init.argtypes=[ctypes.c_uint32];sec.seccomp_init.restype=ctypes.c_void_p
++ sec.seccomp_syscall_resolve_name.argtypes=[ctypes.c_char_p];sec.seccomp_syscall_resolve_name.restype=ctypes.c_int
++ sec.seccomp_rule_add.argtypes=[ctypes.c_void_p,ctypes.c_uint32,ctypes.c_int,ctypes.c_uint];sec.seccomp_rule_add.restype=ctypes.c_int
++ sec.seccomp_load.argtypes=[ctypes.c_void_p];sec.seccomp_release.argtypes=[ctypes.c_void_p]
++ ctx=sec.seccomp_init(0x7fff0000)
++ class Compare(ctypes.Structure):_fields_=[('arg',ctypes.c_uint),('op',ctypes.c_int),('a',ctypes.c_uint64),('b',ctypes.c_uint64)]
++ try:
++  for name in ('connect','ptrace','process_vm_readv','process_vm_writev','kill','tkill','tgkill','pidfd_send_signal','rt_sigqueueinfo','rt_tgsigqueueinfo','mount','umount2','reboot','bpf','io_uring_setup'):
++   nr=sec.seccomp_syscall_resolve_name(name.encode())
++   if nr>=0 and sec.seccomp_rule_add(ctx,0x50000|errno.EPERM,nr,0):raise RuntimeError('SECCOMP_RULE')
++  for family in (2,10,17):
++   if sec.seccomp_rule_add(ctx,0x50000|errno.EPERM,sec.seccomp_syscall_resolve_name(b'socket'),1,Compare(0,4,family,0)):raise RuntimeError('SECCOMP_SOCKET')
++  if sec.seccomp_load(ctx):raise RuntimeError('SECCOMP_LOAD')
++ finally:sec.seccomp_release(ctx)
++ return {'landlock_abi':abi,'filesystem':'candidate writable; system/venv read-only; home/production state denied','syscalls':'INET/PACKET sockets, all connect, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied'}
+--- /dev/null
++++ qualification/offline_fixtures.py
+@@ -0,0 +1,15 @@
++"""Test-only dependency fixtures; no expectations or production source changed."""
++import sys,types
++import pytest
++
++@pytest.fixture(autouse=True)
++def fake_host_statistics(request,monkeypatch):
++    if request.node.path.name not in ('test_system_stats_tool.py','test_tool_readiness_smoke.py'):
++        return
++    from app.tools import system_stats
++    sample=types.SimpleNamespace(total=16_000_000_000,used=4_000_000_000,percent=25.0)
++    monkeypatch.setattr(system_stats.psutil,'cpu_percent',lambda interval=None:12.5)
++    monkeypatch.setattr(system_stats.psutil,'virtual_memory',lambda:sample)
++    monkeypatch.setattr(system_stats.psutil,'disk_usage',lambda path:sample)
++    monkeypatch.setattr(system_stats.psutil,'process_iter',lambda attrs:iter(()))
++    monkeypatch.setitem(sys.modules,'GPUtil',types.SimpleNamespace(getGPUs=lambda:[]))
+--- /dev/null
++++ qualification/run_tests.py
+@@ -0,0 +1,27 @@
++"""Run copied-source tests under kernel restrictions plus the reviewed Python audit guard."""
++import json,os,sys,time
++from pathlib import Path
++stage=Path(__file__).parent;repo=stage/'repo';label=sys.argv[1]
++os.chdir(repo);sys.path.insert(0,str(repo));sys.dont_write_bytecode=True
++from kernel_guard import restrict
++policy=restrict(stage,Path('/home/jarvis/JARVIS/.venv'))
++# The trusted supervisor is not a general signal proxy: it independently checks
++# parent PID, UID, executable and private candidate cwd, then signals a pidfd.
++if 'P7_TEST_REQUEST_FD' in os.environ:
++ import subprocess,select
++ request_fd=int(os.environ['P7_TEST_REQUEST_FD']);answer_fd=int(os.environ['P7_TEST_ANSWER_FD'])
++ def fixture_signal(self,sig):
++  if self.poll() is not None:return
++  os.write(request_fd,(json.dumps({'pid':self.pid,'signal':int(sig)})+'\n').encode())
++  if not select.select([answer_fd],[],[],5)[0]:raise RuntimeError('BROKER_TIMEOUT')
++  if os.read(answer_fd,128)!=b'DISPOSABLE_CHILD_SIGNALED\n':raise PermissionError('BROKER_REFUSED')
++ subprocess.Popen.send_signal=fixture_signal
++# The Python audit guard is loaded by sitecustomize before this launcher.
++import pytest
++start=time.monotonic()
++with (stage/(label+'.txt')).open('w') as log:
++ oldout,olderr=sys.stdout,sys.stderr;sys.stdout=sys.stderr=log
++ try:status=pytest.main([*sys.argv[2:],'-q','--capture=sys','-p','pytest_asyncio.plugin','-p','offline_fixtures','-p','no:cacheprovider','--basetemp',str(stage/('fixtures-'+label))])
++ finally:sys.stdout,sys.stderr=oldout,olderr
++result={'label':label,'exit':int(status),'seconds':time.monotonic()-start,'kernel_restrictions':policy,'candidate':str(repo)}
++(stage/(label+'-result.json')).write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result));print((stage/(label+'.txt')).read_text()[-4500:]);sys.exit(status)
+--- /dev/null
++++ qualification/supervise_tests.py
+@@ -0,0 +1,47 @@
++"""Ephemeral test supervisor: only signal a verified direct disposable child via pidfd.
++
++The sandbox still denies every signal syscall. This broker supports two canonical
++writer-crash tests without granting the candidate a signal capability over JARVIS.
++"""
++import json,os,select,signal,subprocess,sys
++from pathlib import Path
++stage=Path(__file__).parent;label=sys.argv[1]
++request_r,request_w=os.pipe();answer_r,answer_w=os.pipe()
++env={k:v for k,v in os.environ.items() if k in ('PATH','HOME','PYTHONPATH','PYTHONDONTWRITEBYTECODE','PYTEST_DISABLE_PLUGIN_AUTOLOAD','P7_OFFLINE_STAGE','TMPDIR','JARVIS_API_TOKEN')}
++env.update(P7_TEST_REQUEST_FD=str(request_w),P7_TEST_ANSWER_FD=str(answer_r))
++env['PYTHONPATH']=str(stage/'guard')+':'+str(stage/'repo')+':'+str(stage)
++child=subprocess.Popen([sys.executable,str(stage/'run_tests.py'),*sys.argv[1:]],env=env,pass_fds=(request_w,answer_r))
++os.close(request_w);os.close(answer_r);records=[];buffer=b''
++try:
++    while child.poll() is None:
++        if not select.select([request_r],[],[],0.1)[0]:continue
++        chunk=os.read(request_r,512)
++        if not chunk:continue
++        buffer+=chunk
++        if len(buffer)>1024:raise RuntimeError('BROKER_PROTOCOL_SIZE')
++        if b'\n' not in buffer:continue
++        line,buffer=buffer.split(b'\n',1);result='REFUSED';pid=None;fd=None
++        try:
++            request=json.loads(line)
++            if type(request) is not dict or set(request)!={'pid','signal'}:raise ValueError()
++            pid=request['pid'];sig=request['signal']
++            if type(pid) is not int or pid<=1 or sig not in (9,15):raise ValueError()
++            fd=os.pidfd_open(pid) # Bind identity before inspecting; prevent PID-reuse signalling.
++            status=dict(x.split(':',1) for x in (Path('/proc')/str(pid)/'status').read_text().splitlines() if ':' in x)
++            if int(status['PPid'])!=child.pid or not all(int(x)==os.getuid() for x in status['Uid'].split()):raise ValueError()
++            cwd=Path(os.readlink(Path('/proc')/str(pid)/'cwd')).resolve()
++            if stage not in cwd.parents:raise ValueError()
++            args=(Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
++            if args[0]!=b'/home/jarvis/JARVIS/.venv/bin/python' or args[1]!=b'-c':raise ValueError()
++            # Never preserve the inline fixture program or request content in broker evidence.
++            signal.pidfd_send_signal(fd,sig);result='DISPOSABLE_CHILD_SIGNALED'
++        except (ValueError,OSError,KeyError,IndexError):pass
++        finally:
++            if fd is not None:os.close(fd)
++        records.append({'target_pid':pid,'result':result,'verified_parent':child.pid})
++        os.write(answer_w,(result+'\n').encode())
++    rc=child.wait()
++finally:
++    os.close(request_r);os.close(answer_w)
++    (stage/(label+'-broker.json')).write_text(json.dumps(records,indent=2)+'\n')
++sys.exit(rc)
+--- /dev/null
++++ tests/execution/v3_candidate_test.py
+@@ -0,0 +1,392 @@
++import asyncio,ast,dataclasses,hashlib,hmac,json,os,re,sqlite3,tempfile,unittest,uuid
++from pathlib import Path
++from collections import namedtuple
++from candidate_v3.contracts import *
++from candidate_v3.authority import Authority,VerifiedOperator
++from candidate_v3.storage import Store,checkpoint,verify_checkpoint
++from candidate_v3.runtime import Runtime,ORIGINAL_INPUTS
++from candidate_v3.observation import Observation,CanonicalObserver
++
++KEY=b'DUMMY-OPERATOR-KEY-NOT-PRODUCTION-0000'
++class Crash(BaseException):pass
++class Signer:
++ def verify(self,body,sig):
++  if not hmac.compare_digest(hmac.digest(KEY,body,'sha256'),sig):raise ValueError('dummy authentication error')
++  return VerifiedOperator('dummy-human',True)
++class FakeProvider:
++ def __init__(self):self.calls=[];self.active=0;self.peak=0;self.block=None;self.fail=None;self.modify=None;self.started=asyncio.Event()
++ async def request(self,r):
++  self.calls.append(r);self.active+=1;self.peak=max(self.peak,self.active)
++  try:
++   self.started.set()
++   if self.block==r.resource.model:await asyncio.Event().wait()
++   if self.fail==r.resource.model:raise TimeoutError('DUMMY-PRIVATE-EXCEPTION-MUST-NOT-ESCAPE')
++   text=json.dumps({'intent':'respond','confidence':0.9}) if r.resource.model=='fixture-router' else 'LEGACY_FIXTURE_REPLY' if r.resource.model=='fixture-legacy' else 'GRANITE_MUST_NOT_BE_VISIBLE'
++   result=ProviderResult(r.attempt,r.substep,r.resource,r.request_digest,canonical({'done':True,'message':{'content':text}}),True)
++   return self.modify(result) if self.modify else result
++  finally:self.active-=1
++class Sink:
++ def __init__(self,mode='ok'):self.messages=[];self.mode=mode
++ async def send(self,e):
++  self.messages.append(e)
++  if self.mode=='fail':raise ConnectionError('DUMMY-DELIVERY-ERROR')
++  if self.mode=='block':await asyncio.Event().wait()
++  return self.mode=='ok'
++class DummyObserver:
++ def capture(self,*args):return ('dummy-capture',)
++ def check_request(self,*args):pass
++ def observe(self,*args):return Observation({'proposal_count':0},'f'*64,'e'*64,'OFFLINE_DUMMY')
++
++class Fixture:
++ def __init__(self,base,policy='L1'):
++  self.base=base;self.bind=Bindings(*('source','config','release','pid','invocation','successor','boot','start','challenge'))
++  self.pred=dict(epoch='predecessor',status='CLOSED_COMPLETE',accepted=0,complete=True,unknown=False,retirement='EXPLICIT_ZERO_USE_RETIREMENT',archive='pinned-archive')
++  self.store=Store(base/'state',predecessor=self.pred,child='successor',bindings=self.bind.as_dict())
++  self.back=base/'backups';self.back.mkdir(mode=0o700)
++  limits=Limits(1024,32,2048,16384,0.05,1) # Dummy test budgets only; not proposed live defaults.
++  self.router=StepContract(Resource('http://192.0.2.1:11434','fixture-router','fixture-router-profile'),limits,'router fixture','OFFLINE_ONLY')
++  self.responder=StepContract(Resource('http://192.0.2.1:11434','fixture-legacy','fixture-legacy-profile'),limits,'legacy fixture','OFFLINE_ONLY')
++  self.granite=StepContract(Resource('http://192.0.2.1:11434','fixture-granite','fixture-granite-profile'),limits,'shadow fixture','OFFLINE_ONLY')
++  self.legacy=LegacyRelease(self.responder,self.router,policy,'NONE','','DUMMY_POLICY',0.75,0.05)
++  self.provider=FakeProvider();self.authority=Authority(self.bind,Signer(),clock=lambda:100.,operator_id='dummy-human')
++  self.runtime=Runtime(self.store,self.bind,self.legacy,self.granite,self.authority,self.provider,self.back,commitment_key=b'DUMMY_REQUEST_COMMITMENT_KEY_123456',observer=DummyObserver(),view_status=lambda:ViewStatus(False,True))
++  self.runtime._checkpoint();self.tokens={}
++ def approval(self,verb,payload=None,**changes):
++  a=dict(verb=verb,nonce=uuid.uuid4().hex,expires=130.,bindings=self.bind.as_dict(),checkpoint=digest((self.runtime.last_checkpoint/'manifest.json').read_bytes()),payload=payload or {});a.update(changes)
++  raw=canonical(a);return raw,hmac.digest(KEY,raw,'sha256')
++ def control(self,verb,payload=None,**changes):
++  raw,sig=self.approval(verb,payload,**changes);self.runtime.control(raw,sig,(0,99),verb);return raw,sig
++ def opened(self):self.control('OPEN_HOLD')
++ def arm(self,t='REST',message=ORIGINAL_INPUTS[0]):
++  if t not in self.tokens:self.tokens[t]=self.runtime.new_session(t)
++  token,sid=self.tokens[t]
++  self.control('AUTHORIZE_ONE',dict(transport=t,session=sid,request_commitment=self.runtime.commitment(message)))
++  return token
++ async def turn(self,t='REST',message=ORIGINAL_INPUTS[0],sink=None):
++  token=self.arm(t,message);sink=sink or Sink()
++  result=await self.runtime.request(transport=t,token=token,message=message,authenticated=True,delivery=sink)
++  return result,sink
++
++class Candidate(unittest.IsolatedAsyncioTestCase):
++ def setUp(self):
++  self.tmp=tempfile.TemporaryDirectory();self.base=Path(self.tmp.name);self.f=Fixture(self.base)
++ async def asyncTearDown(self):
++  for task in tuple(self.f.runtime.pending):task.cancel()
++  if self.f.runtime.pending:await asyncio.gather(*tuple(self.f.runtime.pending),return_exceptions=True)
++  self.f.store.close();self.tmp.cleanup()
++ async def test_four_original_turns_legacy_visible_and_granite_observed(self):
++  self.f.opened()
++  for t,message in zip(('REST','REST','WS','WS'),ORIGINAL_INPUTS):
++   result,sink=await self.f.turn(t,message)
++   self.assertEqual(sink.messages[0]['reply'],'LEGACY_FIXTURE_REPLY')
++   self.assertEqual(set(sink.messages[0]),{'reply','intent','confidence','dry_run','active'}|({'type'} if t=='WS' else set()))
++   self.assertEqual(result['granite'],'OBSERVED');verify_checkpoint(self.f.runtime.last_checkpoint)
++  s=self.f.store
++  self.assertEqual(s.count(),4);self.assertEqual(len(self.f.provider.calls),12);self.assertEqual(self.f.provider.peak,1)
++  self.assertEqual(s.db.execute('SELECT count(*) FROM receipts').fetchone()[0],4)
++  self.assertEqual(s.db.execute('SELECT transport,count(*) FROM attempts GROUP BY transport').fetchall(),[('REST',2),('WS',2)])
++  self.assertEqual(self.f.runtime.state,'CLOSED_COMPLETE')
++  self.assertNotIn('GRANITE_MUST_NOT_BE_VISIBLE',str([x.history for x in self.f.runtime.sessions.values()]))
++  persisted='\n'.join(s.db.iterdump())+(s.root/'receipts.jsonl').read_text()
++  for private in (*ORIGINAL_INPUTS,'LEGACY_FIXTURE_REPLY','GRANITE_MUST_NOT_BE_VISIBLE'):self.assertNotIn(private,persisted)
++  with self.assertRaises(Refused):self.f.arm('REST')
++ async def test_opening_sends_nothing(self):
++  self.f.opened();self.assertEqual(self.f.provider.calls,[]);self.assertEqual(self.f.store.count(),0)
++ async def test_operator_attribution_binds_exact_signed_bytes(self):
++  raw,sig=self.f.control('OPEN_HOLD')
++  self.assertEqual(self.f.store.db.execute('SELECT operator,body_digest FROM control').fetchone(),('dummy-human',digest(raw)))
++ async def test_request_result_reprs_do_not_expose_content(self):
++  self.f.opened();await self.f.turn()
++  for request in self.f.provider.calls:
++   self.assertNotIn('body=',repr(request))
++   self.assertNotIn(ORIGINAL_INPUTS[0],repr(request))
++   result=ProviderResult(request.attempt,request.substep,request.resource,request.request_digest,b'DUMMY_PRIVATE_CONTENT',True)
++   self.assertNotIn('DUMMY_PRIVATE_CONTENT',repr(result))
++  self.assertNotIn('LEGACY_FIXTURE_REPLY',repr(self.f.runtime.sessions))
++  self.assertNotIn('router fixture',repr(self.f.router))
++ async def test_ambiguous_json_at_boundaries_refused(self):
++  for raw in (b'{"message":"one","message":"two"}',b'{"confidence":NaN}',b'{"x":Infinity}'):
++   with self.assertRaises(Refused):strict_json(raw)
++ async def test_router_duplicate_intent_never_falls_back(self):
++  self.f.opened()
++  self.f.provider.modify=lambda r:dataclasses.replace(r,body=canonical({'message':{'content':'{"intent":"execute","intent":"respond","confidence":0.9}'}}))
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertEqual(len(self.f.provider.calls),1);self.assertTrue(self.f.store.terminal())
++ async def test_short_d04_append_never_joins_or_refunds(self):
++  from unittest.mock import patch
++  self.f.opened();original=os.write
++  def short(fd,body):
++   return original(fd,body[:3]) if b'"native_digest"' in body else original(fd,body)
++  with patch('candidate_v3.storage.os.write',short):
++   with self.assertRaises(Refused):await self.f.turn()
++  self.assertEqual(self.f.store.count(),1)
++  self.assertEqual(self.f.store.db.execute('SELECT count(*) FROM receipts').fetchone()[0],0)
++  self.assertEqual(self.f.store.db.execute('SELECT delivery FROM attempts').fetchone()[0],'LOCAL_SEND_COMPLETED')
++  self.assertEqual(self.f.store.terminal(),'CLOSED_INCOMPLETE')
++ async def test_native_size_bound_stops_next_substep(self):
++  self.f.opened();self.f.provider.modify=lambda r:dataclasses.replace(r,body=b'x'*2049)
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertEqual(len(self.f.provider.calls),1);self.assertTrue(self.f.store.clean())
++ async def test_l2_preserves_all_four_inputs_but_skips_router(self):
++  self.f.runtime.legacy=dataclasses.replace(self.f.legacy,router_policy='L2_FOUR_INPUTS');self.f.opened()
++  for t,m in zip(('REST','REST','WS','WS'),ORIGINAL_INPUTS):await self.f.turn(t,m)
++  self.assertEqual(len(self.f.provider.calls),8)
++ async def test_original_router_differences(self):
++  p=Path('app/brain/router.py');tree=ast.parse(p.read_text());node=next(n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and n.name=='_classify_by_rules')
++  scope={'re':re,'RouterResult':namedtuple('RouterResult','intent confidence suggested_tool reasoning')};exec(compile(ast.Module(body=[node],type_ignores=[]),str(p),'exec'),scope)
++  result=[scope['_classify_by_rules'](None,m) for m in ORIGINAL_INPUTS]
++  self.assertEqual([r.intent if r else None for r in result],[None,'respond',None,None])
++ async def test_restart_closed_no_automatic_open(self):
++  self.f.opened();await self.f.turn();self.f.store.close()
++  s=Store(self.base/'state');self.f.store=s
++  r=Runtime(s,self.f.bind,self.f.legacy,self.f.granite,self.f.authority,self.f.provider,self.f.back,commitment_key=b'x'*32,observer=DummyObserver(),view_status=lambda:ViewStatus(False,True))
++  self.assertEqual(r.state,'CLOSED_RECOVERY_HOLD');self.assertEqual(s.count(),1)
++  with self.assertRaises(Refused):s.opening(json.loads(self.f.approval('OPEN_HOLD')[0]))
++ async def test_terminal_irreversible(self):
++  self.f.opened();self.f.control('TERMINAL_STOP')
++  with self.assertRaises(Refused):self.f.control('OPEN_HOLD')
++ async def test_replayed_control(self):
++  raw,sig=self.f.control('OPEN_HOLD')
++  with self.assertRaises(Refused):self.f.runtime.control(raw,sig,(0,99),'OPEN_HOLD')
++ async def test_duplicate_permit(self):
++  self.f.opened();self.f.arm()
++  with self.assertRaises(Refused):self.f.arm()
++ async def test_no_client_permit_or_model_override(self):
++  self.f.opened();token=self.f.arm()
++  with self.assertRaises(TypeError):await self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink(),model='attacker')
++  self.assertEqual(self.f.store.count(),0)
++ async def test_no_unrestricted_imports(self):
++  paths=list(Path('candidate_v3').glob('*.py'));imports=[]
++  for p in paths:
++   for n in ast.walk(ast.parse(p.read_text())):
++    if isinstance(n,ast.Import):imports.extend(a.name for a in n.names)
++    if isinstance(n,ast.ImportFrom):imports.append(n.module or '')
++  for bad in ('app.server','app.tools','app.voice','app.brain.llm_client','subprocess','httpx','socket'):self.assertFalse(any(x.startswith(bad) for x in imports))
++ async def test_concurrent_ingress_no_queue(self):
++  self.f.opened();token=self.f.arm();self.f.provider.block='fixture-router'
++  task=asyncio.create_task(self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink()))
++  await asyncio.wait_for(self.f.provider.started.wait(),1)
++  with self.assertRaises(Refused):await self.f.runtime.request(transport='WS',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++  with self.assertRaises(Refused):await task
++  self.assertEqual(self.f.store.count(),1);self.assertEqual(len(self.f.provider.calls),1);self.assertFalse(self.f.store.clean())
++ async def test_granite_failure_preserves_delivered_legacy(self):
++  self.f.opened();self.f.provider.fail='fixture-granite';sink=Sink()
++  with self.assertRaisesRegex(Refused,'ATTEMPT_FAILED'):await self.f.turn(sink=sink)
++  self.assertEqual(sink.messages[0]['reply'],'LEGACY_FIXTURE_REPLY')
++  self.assertEqual(self.f.store.db.execute('SELECT delivery FROM attempts').fetchone()[0],'LOCAL_SEND_COMPLETED')
++  self.assertIn('LEGACY_FIXTURE_REPLY',str(next(iter(self.f.runtime.sessions.values())).history))
++  self.assertEqual(self.f.store.count(),1);self.assertFalse(self.f.store.clean())
++ async def test_continuation_history_uses_delivered_legacy(self):
++  self.f.opened();await self.f.turn();await self.f.turn(message=ORIGINAL_INPUTS[1])
++  messages=json.loads(self.f.provider.calls[-1].body)['messages']
++  self.assertEqual(messages[2],{'role':'assistant','content':'LEGACY_FIXTURE_REPLY'})
++ async def test_unknown_blocks_other_model_same_endpoint(self):
++  self.f.opened();self.f.provider.fail='fixture-router'
++  with self.assertRaises(Refused):await self.f.turn()
++  with self.assertRaises(Refused):self.f.store.begin('x','OTHER',self.f.responder.resource,'x')
++ async def test_controller_writer_exclusion(self):
++  with self.assertRaises(BlockingIOError):Store(self.base/'state')
++ async def test_schema_corruption_refused(self):
++  self.f.store.db.execute('DROP TRIGGER accepted_no_delete')
++  with self.assertRaises(Refused):self.f.store.validate()
++ async def test_backup_corruption_refused(self):
++  p=self.f.runtime.last_checkpoint/'receipts.jsonl';p.write_bytes(b'bad')
++  with self.assertRaises(Refused):verify_checkpoint(self.f.runtime.last_checkpoint)
++ async def test_newer_evidence_restore_refused(self):
++  with self.assertRaisesRegex(Refused,'NEWER_EVIDENCE'):verify_checkpoint(self.f.runtime.last_checkpoint,current_highwater=100)
++ async def test_invalid_checkpoint_blocks_operator(self):
++  (self.f.runtime.last_checkpoint/'manifest.json').write_text('{}')
++  with self.assertRaises(Refused):self.f.opened()
++ async def test_production_factory_unavailable(self):
++  with self.assertRaisesRegex(Refused,'PRODUCTION_BINDINGS'):build_production_runtime()
++  with self.assertRaisesRegex(Refused,'UNRESOLVED'):LegacyRelease().validate()
++ async def test_delivery_timeout_bounded(self):
++  self.f.opened()
++  with self.assertRaises(Refused):await self.f.turn(sink=Sink('block'))
++  self.assertEqual(len(self.f.provider.calls),2)
++  self.assertEqual(self.f.store.db.execute('SELECT delivery FROM attempts').fetchone()[0],'INTERRUPTED_UNKNOWN')
++ async def test_no_checkpoint_after_unjoined_receipt(self):
++  self.f.opened();self.f.store.fault=lambda p: (_ for _ in ()).throw(OSError('dummy')) if p=='receipt_append_before_join' else None
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertEqual(self.f.store.db.execute('SELECT count(*) FROM receipts').fetchone()[0],0)
++  self.assertEqual(self.f.store.db.execute('SELECT delivery FROM attempts').fetchone()[0],'LOCAL_SEND_COMPLETED')
++  with self.assertRaises(Refused):checkpoint(self.f.store,self.f.back)
++  forensic=checkpoint(self.f.store,self.f.back,forensic=True)
++  self.assertEqual(verify_checkpoint(forensic)['purpose'],'FORENSIC_INCOMPLETE')
++ async def test_other_namespace_cannot_create_duplicate_successor(self):
++  with self.assertRaisesRegex(Refused,'SUCCESSOR_ALREADY_RESERVED'):Store(self.base/'other',predecessor=self.f.pred,child='other-child',bindings=self.f.bind.as_dict())
++ async def test_lineage_tampering_refused(self):
++  (self.base/'lineage-reservation.json').write_text('{}')
++  with self.assertRaises(Refused):self.f.store.validate()
++ async def test_backup_failure_terminal_and_no_next_permit(self):
++  self.f.opened();self.f.store.fault=lambda p: (_ for _ in ()).throw(OSError('dummy fsync')) if p=='backup_before_manifest' else None
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertEqual(self.f.store.terminal(),'CLOSED_INCOMPLETE')
++  with self.assertRaises(Refused):self.f.arm()
++ async def test_partial_successor_cannot_be_reinitialized(self):
++  other=self.base/'separate';other.mkdir(mode=0o700)
++  def crash(p):
++   if p=='successor_reserved':raise Crash()
++  with self.assertRaises(Crash):Store(other/'state',predecessor=self.f.pred,child='other',bindings=self.f.bind.as_dict(),fault=crash)
++  with self.assertRaises(Refused):Store(other/'state',predecessor=self.f.pred,child='other2',bindings=self.f.bind.as_dict())
++ async def test_endpoint_exclusion_before_terminal(self):
++  self.f.opened();token=self.f.arm();aid=self.f.store.accept('REST',self.f.tokens['REST'][1],self.f.runtime.commitment(ORIGINAL_INPUTS[0]),now=100)
++  self.f.store.begin(aid,'LEGACY_ROUTER',self.f.router.resource,'digest')
++  with self.assertRaises(Refused):self.f.store.begin(aid,'LEGACY_RESPONDER',self.f.responder.resource,'digest')
++ async def test_no_terminal_claim_without_provider_proof(self):
++  self.f.opened();self.f.provider.modify=lambda r:dataclasses.replace(r,known_terminal=False)
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertFalse(self.f.store.clean())
++ async def test_canonical_passive_pipeline_bridge(self):
++  from app.execution.registry_metadata import snapshot_registry_metadata
++  from app.execution.permissions import ApprovalMode
++  from app.execution.shadow_provider_ollama import RESOURCE,PROFILE_ID
++  from app.brain.prompts import P7_SHADOW_PROMPT_V1
++  self.f.runtime.observer=CanonicalObserver(snapshot_registry_metadata(),ApprovalMode.BALANCED)
++  self.f.runtime.granite=StepContract(Resource(RESOURCE.endpoint,RESOURCE.model,PROFILE_ID),Limits(64000,128,16384,16384,180,60),P7_SHADOW_PROMPT_V1,'CANONICAL_OFFLINE_BRIDGE')
++  def modify(r):
++   if r.resource.model==RESOURCE.model:return dataclasses.replace(r,body=canonical({'model':RESOURCE.model,'done':True,'done_reason':'stop','message':{'role':'assistant','content':'GRANITE_MUST_NOT_BE_VISIBLE'}}))
++   return r
++  self.f.provider.modify=modify;self.f.opened();_,sink=await self.f.turn()
++  record=json.loads((self.f.store.root/'receipts.jsonl').read_text())
++  self.assertEqual(record['observation']['profile'],PROFILE_ID)
++  self.assertEqual(record['observation']['projection']['proposal_count'],0)
++  self.assertNotIn('GRANITE_MUST_NOT_BE_VISIBLE',str(record))
++  self.assertEqual(sink.messages[0]['reply'],'LEGACY_FIXTURE_REPLY')
++ async def test_permit_expiry_at_acceptance(self):
++  self.f.opened();token=self.f.arm();self.f.authority.clock=lambda:131.
++  with self.assertRaises(Refused):await self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++  self.assertEqual(self.f.store.count(),0)
++ async def test_stale_continuation_refused(self):
++  self.f.opened();token=self.f.arm();s=self.f.runtime.sessions[token];self.f.runtime.clock=lambda:s.used+301
++  with self.assertRaises(Refused):await self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++ async def test_disconnect_preserves_unknown_delivery(self):
++  self.f.opened();token=self.f.arm();sink=Sink('block')
++  task=asyncio.create_task(self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=sink))
++  async with asyncio.timeout(1):
++   while not sink.messages:await asyncio.sleep(0)
++  task.cancel()
++  with self.assertRaises(asyncio.CancelledError):await task
++  self.assertEqual(self.f.store.db.execute('SELECT delivery FROM attempts').fetchone()[0],'INTERRUPTED_UNKNOWN')
++  self.assertNotIn('LEGACY_FIXTURE_REPLY',str(self.f.runtime.sessions[token].history))
++ async def test_kernel_sandbox_canaries(self):
++  import ctypes,errno
++  libc=ctypes.CDLL(None,use_errno=True)
++  # Explicit harmless canary, never the real credential or production storage.
++  fd=libc.open(b'/tmp/jarvis-gate6c-denied-dummy.txt',os.O_RDONLY)
++  self.assertEqual(fd,-1);self.assertIn(ctypes.get_errno(),(errno.EACCES,errno.EPERM))
++  fd=libc.socket(2,1,0);self.assertEqual(fd,-1);self.assertEqual(ctypes.get_errno(),errno.EPERM)
++ async def asgi(self,scope,frames):
++  from candidate_v3.ingress import Ingress
++  app=Ingress(self.f.runtime,api_token=b'DUMMY_API');out=[];iterator=iter(frames)
++  async def receive():return next(iterator)
++  async def send(message):out.append(message)
++  await app(scope,receive,send);return out
++ async def test_asgi_rest_envelope(self):
++  self.f.opened();token=self.f.arm()
++  out=await self.asgi({'type':'http','path':'/chat','method':'POST','headers':[(b'authorization',b'Bearer DUMMY_API'),(b'x-jarvis-continuation',token.encode())]},[{'type':'http.request','body':canonical({'message':ORIGINAL_INPUTS[0]})}])
++  self.assertEqual(out[0]['status'],200);self.assertEqual(json.loads(out[1]['body'])['reply'],'LEGACY_FIXTURE_REPLY')
++  self.assertNotIn('GRANITE_MUST_NOT_BE_VISIBLE',str(out))
++ async def test_asgi_ws_envelope_no_tts(self):
++  self.f.opened();await self.f.turn();await self.f.turn(message=ORIGINAL_INPUTS[1]);token=self.f.arm('WS',ORIGINAL_INPUTS[2])
++  out=await self.asgi({'type':'websocket','path':'/ws','headers':[(b'authorization',b'Bearer DUMMY_API')]},[{'type':'websocket.connect'},{'type':'websocket.receive','text':canonical({'type':'jarvis.continuation','version':1,'token':token}).decode()},{'type':'websocket.receive','text':ORIGINAL_INPUTS[2]},{'type':'websocket.disconnect'}])
++  self.assertEqual(out[0]['type'],'websocket.accept');self.assertEqual(json.loads(out[1]['text'])['reply'],'LEGACY_FIXTURE_REPLY');self.assertEqual(len(out),2)
++ async def test_asgi_handshake_no_generation(self):
++  out=await self.asgi({'type':'websocket','path':'/ws','headers':[(b'authorization',b'Bearer DUMMY_API')]},[{'type':'websocket.connect'},{'type':'websocket.disconnect'}])
++  self.assertEqual(out,[{'type':'websocket.accept'}]);self.assertEqual(self.f.store.count(),0);self.assertFalse(self.f.store.terminal())
++ async def test_asgi_no_public_opening_endpoint(self):
++  out=await self.asgi({'type':'http','path':'/open','method':'POST','headers':[(b'authorization',b'Bearer DUMMY_API')]},[])
++  self.assertEqual(out[0]['status'],404);self.assertEqual(self.f.runtime.state,'CLOSED_INITIAL')
++ async def test_asgi_auth_mismatch_terminal_offline_only(self):
++  out=await self.asgi({'type':'http','path':'/chat','method':'POST','headers':[(b'authorization',b'Bearer WRONG_DUMMY')]},[])
++  self.assertEqual(out[0]['status'],401);self.assertTrue(self.f.store.terminal());self.assertEqual(self.f.provider.calls,[])
++ async def test_asgi_duplicate_message_rejected_before_acceptance(self):
++  out=await self.asgi({'type':'http','path':'/chat','method':'POST','headers':[(b'authorization',b'Bearer DUMMY_API')]},[{'type':'http.request','body':b'{"message":"one","message":"two"}'}])
++  self.assertEqual(out[0]['status'],400);self.assertEqual(self.f.store.count(),0);self.assertTrue(self.f.store.terminal())
++ async def test_asgi_slow_body_timeout_closes(self):
++  from candidate_v3.ingress import Ingress
++  async def receive():await asyncio.sleep(1)
++  out=[]
++  async def send(x):out.append(x)
++  await Ingress(self.f.runtime,api_token=b'DUMMY_API')({'type':'http','path':'/chat','method':'POST','headers':[(b'authorization',b'Bearer DUMMY_API')]},receive,send)
++  self.assertEqual(out[0]['status'],400);self.assertTrue(self.f.store.terminal());self.assertEqual(self.f.provider.calls,[])
++ async def test_request_bounds(self):
++  self.f.opened()
++  with self.assertRaises(Refused):self.f.arm(message='x'*8193)
++ async def test_restart_old_token_does_not_replay(self):
++  self.f.opened();await self.f.turn();self.f.runtime.stop('OPERATOR_STOP');token=self.f.tokens['REST'][0]
++  with self.assertRaises(Refused):await self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++  self.assertEqual(self.f.store.count(),1)
++
++def bad_control(field,value):
++ async def test(self):
++  a=json.loads(self.f.approval('OPEN_HOLD')[0]);a[field]=value;raw=canonical(a);sig=hmac.digest(KEY,raw,'sha256')
++  with self.assertRaises(Refused):self.f.runtime.control(raw,sig,(0,99),'OPEN_HOLD')
++  self.assertEqual(self.f.provider.calls,[])
++ return test
++for field,v in [('expires',99),('nonce','bad'),('verb','exec'),('payload',{'command':'sh'}),('checkpoint','a'*64)]:setattr(Candidate,'test_bad_control_'+field,bad_control(field,v))
++def wrong_binding(field):
++ async def test(self):
++  b=self.f.bind.as_dict();b[field]='wrong';raw,sig=self.f.approval('OPEN_HOLD',bindings=b)
++  with self.assertRaises(Refused):self.f.runtime.control(raw,sig,(0,99),'OPEN_HOLD')
++ return test
++for field in Bindings.__dataclass_fields__:setattr(Candidate,'test_wrong_'+field,wrong_binding(field))
++def forged(peer,signature):
++ async def test(self):
++  raw,sig=self.f.approval('OPEN_HOLD')
++  with self.assertRaises(Refused):self.f.runtime.control(raw,sig if signature else b'forged',peer,'OPEN_HOLD')
++ return test
++for n,peer,signature in [('peer',(1000,99),True),('signature',(0,99),False)]:setattr(Candidate,'test_forged_'+n,forged(peer,signature))
++def bad_ingress(field,value):
++ async def test(self):
++  self.f.opened();token=self.f.arm();args=dict(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink());args[field]=value
++  with self.assertRaises(Refused):await self.f.runtime.request(**args)
++  self.assertEqual(self.f.store.count(),0);self.assertEqual(self.f.provider.calls,[])
++ return test
++for n,field,v in [('auth','authenticated',False),('voice','transport','VOICE'),('transport','transport','WS'),('continuation','token','x'*43),('payload','message','changed')]:setattr(Candidate,'test_ingress_'+n,bad_ingress(field,v))
++def timeout_step(model):
++ async def test(self):
++  self.f.opened();self.f.provider.block=model
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertFalse(self.f.store.clean());self.assertEqual(self.f.provider.peak,1)
++  self.assertEqual(sum(r.resource.model==model for r in self.f.provider.calls),1)
++ return test
++for model in ('fixture-router','fixture-legacy','fixture-granite'):setattr(Candidate,'test_timeout_'+model,timeout_step(model))
++def proposal_step(model,malformed=False):
++ async def test(self):
++  self.f.opened()
++  def modify(r):
++   if r.resource.model==model:return dataclasses.replace(r,body=b'bad' if malformed else canonical({'message':{'content':'dummy','tool_calls':[]}}))
++   return r
++  self.f.provider.modify=modify
++  with self.assertRaises(Refused):await self.f.turn()
++  self.assertTrue(self.f.store.clean());self.assertTrue(self.f.store.terminal())
++  self.assertFalse(self.f.store.db.execute("SELECT 1 FROM events WHERE code='REMOTE_UNKNOWN'").fetchone())
++ return test
++for model in ('fixture-router','fixture-legacy','fixture-granite'):
++ for malformed in (False,True):setattr(Candidate,'test_proposal_'+model+str(malformed),proposal_step(model,malformed))
++def crash_at(point,accepted):
++ async def test(self):
++  self.f.opened();token=self.f.arm();self.f.store.fault=lambda p: (_ for _ in ()).throw(Crash()) if p==point else None
++  with self.assertRaises(Crash):await self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++  self.assertEqual(self.f.store.count(),accepted)
++  self.assertEqual(self.f.store.db.execute('SELECT spent FROM permits').fetchone()[0],accepted)
++ return test
++for point,count in [('permit_spent_before_insert',0),('accept_before_commit',0),('accept_after_commit',1),('possible_send_committed',1),('provider_terminal_committed',1),('receipt_append_before_join',1),('receipt_joined',1)]:setattr(Candidate,'test_crash_'+point,crash_at(point,count))
++def predecessor_bad(field,value):
++ async def test(self):
++  p=dict(self.f.pred);p[field]=value
++  with self.assertRaises(Refused):Store(self.base/'other',predecessor=p,child='new',bindings=self.f.bind.as_dict())
++ return test
++for field,v in [('accepted',1),('status','OPEN'),('complete',False),('unknown',True),('retirement','ABORT'),('archive','')]:setattr(Candidate,'test_predecessor_'+field,predecessor_bad(field,v))
++def stop_at(model):
++ async def test(self):
++  self.f.opened();token=self.f.arm();self.f.provider.block=model
++  task=asyncio.create_task(self.f.runtime.request(transport='REST',token=token,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink()))
++  async with asyncio.timeout(1):
++   while not any(r.resource.model==model for r in self.f.provider.calls):await asyncio.sleep(0)
++  result=await self.f.runtime.drain(0.02)
++  with self.assertRaises(Refused):await task
++  self.assertEqual(self.f.store.count(),1);self.assertFalse(self.f.store.clean());self.assertTrue(result['terminal'])
++ return test
++for model in ('fixture-router','fixture-legacy','fixture-granite'):setattr(Candidate,'test_stop_'+model,stop_at(model))
