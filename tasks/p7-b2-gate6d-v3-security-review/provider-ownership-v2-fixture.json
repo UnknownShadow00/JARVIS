@@ -1,0 +1,35 @@
+{
+  "version": "G6D-D06-2",
+  "status": "ISOLATED_CONTRACT_FIXTURE_ONLY",
+  "production_d06_changed": false,
+  "implementation": "candidate schema5 steps/leases; NOT a ModelOwnershipCoordinatorV1 adapter",
+  "resources": [
+    {
+      "kind": "LEGACY_ROUTER",
+      "endpoint": "http://192.0.2.1:11434",
+      "model": "fixture-router",
+      "profile": "fixture-router-profile"
+    },
+    {
+      "kind": "LEGACY_RESPONDER",
+      "endpoint": "http://192.0.2.1:11434",
+      "model": "fixture-legacy",
+      "profile": "fixture-legacy-profile"
+    },
+    {
+      "kind": "GRANITE",
+      "endpoint": "http://192.0.2.1:11434",
+      "model": "fixture-granite",
+      "profile": "fixture-granite-profile"
+    }
+  ],
+  "endpoint_exclusion": "one ACTIVE or REMOTE_UNKNOWN owner per endpoint; global clean gate even stronger",
+  "test_evidence": [
+    "Candidate.test_four_original_turns_legacy_visible_and_granite_observed",
+    "Candidate.test_endpoint_exclusion_before_terminal",
+    "Candidate.test_unknown_blocks_other_model_same_endpoint",
+    "test_arbitrary_provider_substep_is_refused",
+    "test_settled_attempt_cannot_start_new_substep"
+  ],
+  "missing": "root-protected real D06 scope, alias topology, migration, real terminal transport evidence and external actor control"
+}

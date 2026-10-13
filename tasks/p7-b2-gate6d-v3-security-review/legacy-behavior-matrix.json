@@ -1,0 +1,71 @@
+{
+  "method": "AST-isolated pure original rules; configured model names only; no real model output or effective environment claim",
+  "rows": [
+    {
+      "input": "Hello. Reply briefly.",
+      "direct_reply_available": false,
+      "intent_rule": null,
+      "rule_confidence": null,
+      "model_router_required": true,
+      "if_respond_complexity": {
+        "tier": "trivial",
+        "model": "gemma3:4b",
+        "think": false,
+        "num_predict": 80,
+        "reason": "Short direct request can use the router model."
+      }
+    },
+    {
+      "input": "What is two plus two?",
+      "direct_reply_available": false,
+      "intent_rule": "respond",
+      "rule_confidence": 0.9,
+      "model_router_required": false,
+      "if_respond_complexity": {
+        "tier": "normal",
+        "model": "qwen3-nothink",
+        "think": false,
+        "num_predict": 150,
+        "reason": "Default fast no-think response path."
+      }
+    },
+    {
+      "input": "Name one primary colour.",
+      "direct_reply_available": false,
+      "intent_rule": null,
+      "rule_confidence": null,
+      "model_router_required": true,
+      "if_respond_complexity": {
+        "tier": "normal",
+        "model": "qwen3-nothink",
+        "think": false,
+        "num_predict": 150,
+        "reason": "Default fast no-think response path."
+      }
+    },
+    {
+      "input": "Please give a brief friendly greeting.",
+      "direct_reply_available": false,
+      "intent_rule": null,
+      "rule_confidence": null,
+      "model_router_required": true,
+      "if_respond_complexity": {
+        "tier": "normal",
+        "model": "qwen3-nothink",
+        "think": false,
+        "num_predict": 150,
+        "reason": "Default fast no-think response path."
+      }
+    }
+  ],
+  "sha256": {
+    "app/brain/router.py": "dc2856974cc62fdda48dee835a826bf817b69b47a2e8b2dbeb3be104e8a528f2",
+    "app/brain/complexity_router.py": "f3f3f7531bc0a54bd1292403f3affbfcc568540d6e6c239819cc52a5a732d9e6",
+    "app/brain/direct_responder.py": "efe89f2762318c87436372f96d7ac027abc12ccd2b308a9d340de5552a28fae9",
+    "app/brain/prompts.py": "fe51f5ab19ff014890dad170c7ea6e151fcab69571c369cf020de139493f2dd0",
+    "app/brain/llm_client.py": "39068dd123c7b126336707c265399f6b11e92591a29319c4e23a1f626f72b87b",
+    "app/server.py": "cb16b2e95729e55e053de3a647905e028859589698abf28870c6fd3dcd59c57d",
+    "app/config.py": "56654ba5081dd1a3151509cef715ede6a4f346aba7b33da50a4c3a34a7d70b97",
+    "config.yaml": "247633cbd58a6297cbf94e7b293da905fbe521f1f2964b33bfa10d91c41875a3"
+  }
+}

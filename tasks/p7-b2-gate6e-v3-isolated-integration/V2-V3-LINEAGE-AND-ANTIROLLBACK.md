@@ -1,0 +1,11 @@
+# Lineage and antirollback
+
+Nonproduction Gate 6E reference implementation. No production installation, experiment approval, model traffic, credential use or measurement. G6D-LP-1 remains a proposal.
+
+`validate_v2_archive` is read-only: bounded strict JSON, original V2 validate_bundle/schema/source hashes, exact epoch, CLOSED_COMPLETE/input_complete, zero accepted/submitted/receipt evidence, empty D06 current, and an OPERATOR_STOP retirement event. OPEN or false-complete/nonzero/mismatched source records refuse. Tests generate synthetic actual V2 bundles, never retire the real V2 epoch. A validated synthetic archive is consumed by the full isolated graph.
+
+HighWater reserves one singleton predecessor/archive/successor/bindings record through a required authorization callback. It checks that the controller lineage matches that predecessor/archive, not only successor identity. Competing/duplicate roots at the same protected interface refuse. Four durable ordinal reservations bind REST,REST,WS,WS permits/session/commitment; controller acceptance is then joined without refunds. A crash after the global reservation but before local acceptance leaves an unresolved reservation and blocks further work; it is not silently reported as a completed accepted attempt. Backup rollback to a smaller accepted set refuses.
+
+Root/attempt writes use SQLite FULL transactions. Actual child-process exits test reservation and checkpoint boundaries; baseline crash tests cover acceptance, successor creation and permit consumption. Restart recovery remains closed and never creates a second successor automatically. Terminal final-checkpoint failure can only downgrade COMPLETE to INCOMPLETE.
+
+This is an implemented isolated interface, not a protected production global root. Same-UID storage, copied older roots, arbitrary separately provisioned roots and dummy authorization are not defeated by hashes. Future independent privileged root selection, immutable root identity/authorization verification and antirollback storage protection require OS provisioning/qualification. Source checks cannot prevent Codex from rewriting files it owns. Production V2 remains untouched and cannot currently supply an authorized retired predecessor archive.
