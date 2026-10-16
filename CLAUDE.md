@@ -659,6 +659,22 @@ Agent Execution Contract v1 — control-plane track (2026-09-18/19, production
   That re-run is done: see 13B11L-P6 above. Do not overwrite the blocked 13B11L
   analysis; it is history.
 
+Gate 6F (2026-10-15, Claude-executed, isolated only): PARTIAL, EXTERNAL OR PRIVILEGED
+  QUALIFICATION REQUIRED. Production V2 jarvis.service is STOPPED since an external
+  Core power-off (ACPI power key, 2026-10-15T03:42:17Z); epoch 606a991a CLOSED_COMPLETE,
+  unattributed OPERATOR_STOP, zero use; preserved, not restarted. Candidate ff2444df…
+  (/home/jarvis/.hermes-poc/gate6f-candidates/release-r1), evidence seal df3090b9…,
+  focused 303 / full 7469 passed. Packet: tasks/p7-b2-gate6f-v3-release-qualification/.
+  Next: operator decision 0 (V2 state + power event), then AI-host/legacy attestation.
+  Gate 6F VM-event addendum (2026-10-15, read-only): VM EVENT CONFIRMED, OPERATOR
+  ATTRIBUTION UNRESOLVED. Core ACPI power-off 03:42:17Z (no guest agent; password SSH
+  from Proxmox .50 open then, again 2.8 s after reboot) -- plausible operator, unproven.
+  Nexus agent-shutdown 17:03Z for 4->6 vCPU / 8->12 GiB, unrelated in time. No Proxmox
+  access from Claude; VMIDs/UPIDs unverified. V2 truthful zero-use CLOSED_COMPLETE,
+  OPERATOR_STOP = lifespan default, not intent. No candidate defect; H-1..H-4 hardening.
+  Packet tasks/p7-b2-gate6f-vm-event-addendum/, seal d6ff3802... Next: decision 0a
+  (operator runs read-only Proxmox task-log commands), then 0b V2 disposition.
+
 Phase 4+ queue (after 500 interactions):
   - OpenJarvis / hermes-agent-self-evolution skill catalog sync
   - Flip feature flags ON when ready: dictation, Obsidian vault, embedding
