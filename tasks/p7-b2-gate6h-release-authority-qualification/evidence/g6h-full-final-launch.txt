@@ -1,0 +1,65 @@
+STAGE=/tmp/jarvis-gate6h-g6h-full-final-nRNcaVUv RC=1
+{"label": "g6h-full-final", "exit": 1, "seconds": 34.22726093500387, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "INET/PACKET sockets, all connect, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/tmp/jarvis-gate6h-g6h-full-final-nRNcaVUv/repo"}
+.................................... [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 80%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 86%]
+........................................................................ [ 87%]
+.........F.............................................................. [ 88%]
+........................................................................ [ 89%]
+........................................................................ [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 91%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 94%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+........................................................................ [ 99%]
+..........................................                               [100%]
+=================================== FAILURES ===================================
+____________________ Candidate.test_no_unrestricted_imports ____________________
+
+self = <tests.execution.v3_candidate_test.Candidate testMethod=test_no_unrestricted_imports>
+
+    async def test_no_unrestricted_imports(self):
+     paths=list(Path('candidate_v3').glob('*.py'));imports=[]
+     for p in paths:
+      for n in ast.walk(ast.parse(p.read_text())):
+       if isinstance(n,ast.Import):imports.extend(a.name for a in n.names)
+       if isinstance(n,ast.ImportFrom):imports.append(n.module or '')
+     for bad in ('app.server','app.tools','app.voice','app.brain.llm_client','subprocess'):self.assertFalse(any(x.startswith(bad) for x in imports))
+     for p in paths:
+      tree=ast.parse(p.read_text())
+      names=[a.name for n in ast.walk(tree) if isinstance(n,ast.Import) for a in n.names]+[n.module or '' for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)]
+      if 'httpx' in names:self.assertEqual(p.name,'transport.py')
+>     if 'socket' in names:self.assertEqual(p.name,'local_control.py')
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     AssertionError: 'protected_authority.py' != 'local_control.py'
+E     - protected_authority.py
+E     + local_control.py
+
+tests/execution/v3_candidate_test.py:191: AssertionError
+=============================== warnings summary ===============================
+../../../home/jarvis/JARVIS/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/jarvis/JARVIS/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../../home/jarvis/JARVIS/.venv/lib/python3.14/site-packages/starlette/testclient.py:53
+  /home/jarvis/JARVIS/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/execution/v3_candidate_test.py::Candidate::test_no_unrestricted_imports
+1 failed, 7601 passed, 11 deselected, 2 warnings in 33.99s
+

@@ -1,0 +1,168 @@
+{
+ "utc": "2026-10-20T13:58:04.685469+00:00",
+ "host": "jarvis",
+ "boot_id": "2486e474-da43-4cdc-94c8-83b2cc52a763",
+ "service": {
+  "ActiveState": "inactive",
+  "SubState": "dead",
+  "UnitFileState": "disabled",
+  "InactiveEnterTimestamp": "",
+  "NeedDaemonReload": "no",
+  "InvocationID": "",
+  "Restart": "no",
+  "MainPID": "0",
+  "Result": "success",
+  "NRestarts": "0",
+  "ExecMainStartTimestamp": "",
+  "ExecMainExitTimestamp": "",
+  "ExecMainStatus": "0"
+ },
+ "source_head": "bd53dbc799fb9284a21fae8cce3f5d9539e31141",
+ "working_tree_short": "M config.yaml\n M tasks/loop-log.md\n?? tasks/p7-b2-gate5-human-auth-handoff/\n?? tasks/p7-b2-gate5-post-auth-readback/\n?? tasks/p7-b2-gate5-zero-generation-verification/\n?? tasks/p7-b2-gate6a-readiness-design/\n?? tasks/p7-b2-gate6b-v3-contract-reconciliation/\n?? tasks/p7-b2-gate6c-isolated-v3-engineering/\n?? tasks/p7-b2-gate6d-v3-security-review/\n?? tasks/p7-b2-gate6e-v3-isolated-integration/",
+ "config_sha256": "00d7b460932a9434d947cf3a08d7bfbe5d5c4b15ce06a57d53779d0f7bf4350c",
+ "source_mismatches": [],
+ "identity_ok": true,
+ "credential_metadata_matches_gate4": true,
+ "D06_state": {
+  "current": null,
+  "last": null,
+  "version": 1
+ },
+ "D09_file": {
+  "writer.lock": {
+   "mode": "0o600",
+   "uid": 1000,
+   "inode": 3033102,
+   "mtime_ns": 1791581132816988063,
+   "ctime_ns": 1791581132816988063
+  },
+  "controller.sqlite3": {
+   "mode": "0o600",
+   "uid": 1000,
+   "inode": 3033103,
+   "mtime_ns": 1792035737655974797,
+   "ctime_ns": 1792035737655974797
+  }
+ },
+ "D09": {
+  "journal_mode": "delete",
+  "quick_check": [
+   [
+    "ok"
+   ]
+  ],
+  "table_counts": {
+   "epochs": 1,
+   "attempts": 0,
+   "attempt_events": 0,
+   "submissions": 0,
+   "receipt_joins": 0,
+   "resource_resolutions": 0,
+   "collector_facts": 0,
+   "receipt_resolutions": 0,
+   "pilot_context": 1,
+   "pilot_events": 1,
+   "pilot_refusals": 0
+  },
+  "epochs": [
+   {
+    "id": "606a991a06b74fd79ed72b308417cc3f",
+    "status": "CLOSED_COMPLETE",
+    "input_complete": 1
+   }
+  ],
+  "pilot_events": [
+   {
+    "position": 1,
+    "attempt": null,
+    "code": "OPERATOR_STOP"
+   }
+  ],
+  "pilot_context": [
+   {
+    "purpose": "PILOT",
+    "resource": "[\"ollama\", \"http://192.168.0.200:11434\", \"hermes-candidate-granite41-30b-q3km-64k\"]",
+    "profile": "jarvis.p7.ollama.granite41.b1r2.v1",
+    "accepted_limit": 4
+   }
+  ]
+ },
+ "D04": {
+  "namespace_exists": false,
+  "files": []
+ },
+ "backups": {
+  "baseline-5244a125c27e41bb844781032d4f59ff": {
+   "manifest_match": true,
+   "components_ok": true,
+   "n": 7
+  },
+  "9315a199492449709dfd6bd51b2666a5": {
+   "manifest_match": true,
+   "components_ok": true,
+   "n": 5
+  }
+ },
+ "backup_directories": [
+  "62f417a21a524499b92316b58f6fbd64",
+  "9315a199492449709dfd6bd51b2666a5",
+  "baseline-18f5872a8bae43cd8a023e6907b401ce",
+  "baseline-42c254d5310248a09e31f50c32aab787",
+  "baseline-5244a125c27e41bb844781032d4f59ff",
+  "baseline-6c313f0cd7bc4707aae69f1ec93b1706"
+ ],
+ "audit_since_gate4_boundary": {
+  "rotated": false,
+  "events": [
+   {
+    "event_type": "server_start",
+    "ts": "2026-10-09T21:25:32.920267+00:00"
+   },
+   {
+    "event_type": "ws_connect",
+    "ts": "2026-10-10T19:27:29.815368+00:00"
+   },
+   {
+    "event_type": "ws_disconnect",
+    "ts": "2026-10-10T19:27:29.816121+00:00"
+   },
+   {
+    "event_type": "server_stop",
+    "ts": "2026-10-15T03:42:17.597100+00:00"
+   }
+  ],
+  "counts": {
+   "server_start": 1,
+   "ws_connect": 1,
+   "ws_disconnect": 1,
+   "server_stop": 1
+  }
+ },
+ "user_journal_since_gate4": {
+  "markers": {
+   "Started server process": 1,
+   "Application startup complete": 1,
+   "Finished server process": 1,
+   "Stopped jarvis.service": 1
+  },
+  "server_process_lines": [
+   [
+    "3a86fab97ae74fc88cd1bb2f8b450294",
+    "2026-10-09T21:25:32.774903+00:00",
+    "INFO:     Started server process [594042]"
+   ],
+   [
+    "3a86fab97ae74fc88cd1bb2f8b450294",
+    "2026-10-15T03:42:17.766566+00:00",
+    "INFO:     Finished server process [594042]"
+   ]
+  ]
+ },
+ "python_processes": [
+  "  33974 jarvis   Tue Oct 20 13:58:04 2026 python3"
+ ],
+ "listening_8000": "",
+ "http_ws_probes": 0,
+ "provider_requests": 0,
+ "writes": 0
+}

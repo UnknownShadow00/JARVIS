@@ -1,0 +1,31 @@
+# Multi-UID qualification — NOT QUALIFIED
+
+No real distinct-UID tests ran. Nexus uid1000 only. unshare --user --map-root-user refused uid_map (EPERM). Non-setuid unprivileged bubblewrap works but maps exactly one kernel UID, 1000→1000 length1. No sudo, Docker/LXD, uidmap installation, user/group creation, sysctl, privileged helper or production permission change occurred. Administrative group membership was not treated as elevation authority.
+
+| Evidence layer | Actual result | Scope |
+|---|---|---|
+| Distinct UID/DAC | NOT RUN | No production root/service/operator separation claim |
+| Namespace/mount | Same UID; write/chmod/unlink/symlink EROFS, cross-mount hardlink EXDEV; unchanged fixture | Kernel-real mount restriction, not multi-UID isolation |
+| Filesystem policy | Actual lstat/mode/link/inode/ancestor checks; wrong configured owner rejected | Numeric wrong-owner policy fixtures are not different OS identities |
+| AF_UNIX | Real socketpair SO_PEERCRED, current UID accepted/different allowlist refused | Not a connection from a real second UID; socketpair credentials reflect creation |
+| Transactions/crypto/crash | Real SQLite races, Ed25519 signatures, disposable child exits at durable boundaries | Synthetic identities/readers; no VM power-cut proof |
+| Whole-authority rollback | Owner negative control succeeds | Confirms root/off-host limitation |
+
+Evidence: unprivileged-facilities.json, confinement.json, retained tests and source manifests. Initial confinement launch failed creating a mountpoint under read-only root, before testing; confinement-attempt1.json retained. Corrected tool uses mountpoints under ephemeral /tmp. No host authority permissions were loosened.
+
+## Human-only disposable privileged procedure — not executed
+
+Prerequisites: separately approved throwaway VM/console/snapshot, no production/AI routes or credentials/mounts, verified candidate manifest, offline pinned dependencies and correct clock. Never run on Core, Nexus, management or AI host. If unavailable, leave OS qualification pending.
+
+1. Console human records node/VM/guest/kernel/filesystem and creates disposable g6h-auth, g6h-svc, g6h-op, g6h-agent accounts with useradd --system --no-create-home --shell /usr/sbin/nologin NAME. Record actual id -u/id -G. Use root runuser solely inside this disposable VM; no keys/passwords shared.
+2. As root, install -d with exact owner/group/mode: /opt/g6h/release root0755 (files0644); /var/lib/g6h root0755; authority child g6h-auth0700; app child g6h-svc0700; operator child g6h-op0700. Verify namei -l/stat/getfacl of every ancestor and release/import/config/dependency path. Generate only ephemeral test Ed25519 material, key0600 in operator0700; helper receives protected public key only.
+3. Run separate processes using runuser -u g6h-svc and g6h-agent. Fixed-path tests attempt open write/truncate, chmod, unlink, rename authority from parent, symlink/hardlink substitution, signer-key read and release/config/venv writes. Require kernel EACCES/EPERM or reviewed EROFS; compare unchanged protected readback. Test g6h-op cannot modify authority/app state. Never widen ACLs to pass.
+4. Run companion transaction tests as g6h-auth with explicit offline Python/crypto dependencies and private0700 fixture root. Example command: runuser -u g6h-auth -- env -i PATH=/usr/bin:/bin HOME=/var/lib/g6h/authority PYTHONDONTWRITEBYTECODE=1 PINNED_PYTHON -B -m pytest tests/execution/v3_protected_authority_test.py -q -p no:cacheprovider --basetemp /var/lib/g6h/authority/test-tmp. Use a read-only verified release cwd. This step alone remains same-UID engine testing.
+5. Implement/review a disposable accept()-based listener around AuthoritySocket running as g6h-auth. Bind only /run/g6h/operator/control.sock under root0750/operator group, socket0660. Genuine g6h-op process sends synthetic signed request; separate g6h-svc/g6h-agent processes send valid packets and forged UID/PID fields → DAC/peer refusal and unchanged nonce/root. Never use a socketpair created before switching UID as cross-UID evidence. Separate service read/checkpoint client must first be implemented and reviewed.
+6. Race two g6h-op client processes with distinct valid successor signatures; exactly one root. Race two permits; one ordinal. Replay after helper restart; stale PID/start/invocation/challenge refuse. Reject SIGN, shell/path/SQL/unknown verbs. Partial/trickling/oversize20,001-byte request and nonreading peer must not stall writer. Remove/revoke operator rights and test new connections; account for already-connected descriptors.
+7. Human supervisor uses verified pidfd to interrupt only disposable helper children before/after commits for succession/ACCEPT/SEND/SETTLE. Restart without create. Before commit absent; after commit consumed/burned/pending. Missing/corrupt/incomplete authority refuses, no reinitialization. Older controller/ledger/backup or all app files together must mismatch protected seq/pending. Root replacement of authority is a documented negative control.
+8. Test service unit restrictions, no_new_privs, no capabilities/admin groups, read-only release, private temp, allowed roots, blocked provider network. Inspect inherited descriptors, supplementary groups, socket transfer, /proc/ptrace and writable import/working directories. Service cannot read operator key or share operator authentication.
+9. If claiming stronger guarantees, use a separately administered disposable external witness and require durable-before-ack receipt plus startup/progression reconciliation. Test unavailable/conflicting/stale witness, local VM rollback and incomplete recovery refusal. No witness implementation/test exists in Gate6H.
+10. Separately approved power-cut/VM-snapshot rollback tests qualify storage/host durability. Preserve minimized actual UID/owner/kernel outcomes, source manifests and seal. Export no private keys/raw environment. Cleanup of the throwaway VM requires its owner's authorization.
+
+Acceptance: all actual UID/kernel/transaction checks pass and independent review confirms terminal/readers/witness trust. Only then separately approve production provisioning. This document grants no privilege or infrastructure-change authority.

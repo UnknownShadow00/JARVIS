@@ -1,0 +1,156 @@
+{
+  "cap_bytes": 16384,
+  "max_by_kind": {
+    "GRANITE": 820,
+    "LEGACY_RESPONDER": 4696,
+    "LEGACY_ROUTER": 1176
+  },
+  "memory_snapshot_bytes": 1877,
+  "offline_turn_seconds_including_checkpoint": [
+    0.029770747001748532,
+    0.027373349003028125,
+    0.03198067599441856,
+    0.043451094010379165
+  ],
+  "qualification": "OFFLINE_FIXTURE_MOCK_TRANSPORT",
+  "turns": [
+    {
+      "input": 1,
+      "operations": [
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_ROUTER",
+          "model": "gemma3:4b",
+          "num_ctx": 4096,
+          "num_predict": 64,
+          "request_bytes": 1159,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_RESPONDER",
+          "model": "gemma3:4b",
+          "num_ctx": 4096,
+          "num_predict": 80,
+          "request_bytes": 4673,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "GRANITE",
+          "model": "hermes-candidate-granite41-30b-q3km-64k",
+          "num_ctx": 64000,
+          "num_predict": 128,
+          "request_bytes": 687,
+          "url_path": "/api/chat"
+        }
+      ],
+      "rule_intent": null,
+      "transport": "REST"
+    },
+    {
+      "input": 2,
+      "operations": [
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_RESPONDER",
+          "model": "qwen3-nothink",
+          "num_ctx": 32768,
+          "num_predict": 150,
+          "request_bytes": 4679,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 2,
+          "keep_alive": 60,
+          "kind": "GRANITE",
+          "model": "hermes-candidate-granite41-30b-q3km-64k",
+          "num_ctx": 64000,
+          "num_predict": 128,
+          "request_bytes": 800,
+          "url_path": "/api/chat"
+        }
+      ],
+      "rule_intent": "respond",
+      "transport": "REST"
+    },
+    {
+      "input": 3,
+      "operations": [
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_ROUTER",
+          "model": "gemma3:4b",
+          "num_ctx": 4096,
+          "num_predict": 64,
+          "request_bytes": 1162,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_RESPONDER",
+          "model": "qwen3-nothink",
+          "num_ctx": 32768,
+          "num_predict": 150,
+          "request_bytes": 4682,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "GRANITE",
+          "model": "hermes-candidate-granite41-30b-q3km-64k",
+          "num_ctx": 64000,
+          "num_predict": 128,
+          "request_bytes": 690,
+          "url_path": "/api/chat"
+        }
+      ],
+      "rule_intent": null,
+      "transport": "WS"
+    },
+    {
+      "input": 4,
+      "operations": [
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_ROUTER",
+          "model": "gemma3:4b",
+          "num_ctx": 4096,
+          "num_predict": 64,
+          "request_bytes": 1176,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 0,
+          "keep_alive": 60,
+          "kind": "LEGACY_RESPONDER",
+          "model": "qwen3-nothink",
+          "num_ctx": 32768,
+          "num_predict": 150,
+          "request_bytes": 4696,
+          "url_path": "/api/chat"
+        },
+        {
+          "history_messages": 2,
+          "keep_alive": 60,
+          "kind": "GRANITE",
+          "model": "hermes-candidate-granite41-30b-q3km-64k",
+          "num_ctx": 64000,
+          "num_predict": 128,
+          "request_bytes": 820,
+          "url_path": "/api/chat"
+        }
+      ],
+      "rule_intent": null,
+      "transport": "WS"
+    }
+  ]
+}

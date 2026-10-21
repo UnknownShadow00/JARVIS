@@ -1,0 +1,1046 @@
+--- gate6f/repo/candidate_v3/application.py
++++ gate6g/repo/candidate_v3/application.py
+@@ -1,5 +1,6 @@
+ """Complete isolated consumer graph, never imported by production startup."""
+ from fastapi import FastAPI
++from contextlib import asynccontextmanager
+ from .contracts import Refused
+ from .legacy import RulesFirstL1
+ from .ownership import OwnedProvider
+@@ -17,6 +18,14 @@
+         or type(runtime.checkpoint_writer) is not CheckpointWriter
+         or type(runtime.provider.topology) is not Topology):raise Refused('INCOMPLETE_ISOLATED_GRAPH')
+     runtime.acceptance_guard.check(runtime.store)
+-    app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
++    @asynccontextmanager
++    async def lifespan(app):
++        runtime.acceptance_guard.check(runtime.store)
++        try:
++            yield
++        finally:
++            # ASGI tells us this is a lifespan shutdown, not who requested it.
++            await runtime.drain(mechanism='LIFESPAN_SHUTDOWN')
++    app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
+     app.mount('/',Ingress(runtime,api_token=api_token,allowed_origins=allowed_origins))
+     return app
+--- gate6f/repo/candidate_v3/authority.py
++++ gate6g/repo/candidate_v3/authority.py
+@@ -3,6 +3,10 @@
+ import json, math
+ from typing import Protocol
+ from .contracts import Bindings, Refused, canonical, digest, strict_json
++
++SUCCESSOR_VERB = 'RETIRE_AND_RESERVE_SUCCESSOR'
++SUCCESSOR_KEYS = {'predecessor','archive','source','config','controller','live_state',
++                  'bindings','stop_attribution','retirement'}
+ 
+ @dataclass(frozen=True)
+ class VerifiedOperator:
+@@ -29,11 +33,11 @@
+         except (ValueError, TypeError, RecursionError): raise Refused('CONTROL_SCHEMA') from None
+         if type(a) is not dict or set(a) != {'verb','nonce','expires','bindings','checkpoint','payload'}: raise Refused('CONTROL_SCHEMA')
+         if type(a['checkpoint']) is not str or len(a['checkpoint'])!=64 or any(c not in '0123456789abcdef' for c in a['checkpoint']):raise Refused('CONTROL_CHECKPOINT')
+-        if a['verb'] != verb or verb not in ('OPEN_HOLD','AUTHORIZE_ONE','TERMINAL_STOP'): raise Refused('CONTROL_VERB')
++        if a['verb'] != verb or verb not in ('OPEN_HOLD','AUTHORIZE_ONE','TERMINAL_STOP',SUCCESSOR_VERB): raise Refused('CONTROL_VERB')
+         if type(a['nonce']) is not str or len(a['nonce']) != 32 or any(c not in '0123456789abcdef' for c in a['nonce']): raise Refused('CONTROL_NONCE')
+         if type(a['expires']) not in (int,float) or not math.isfinite(a['expires']) or not self.clock() < a['expires'] <= self.clock()+60: raise Refused('CONTROL_EXPIRED')
+         if a['bindings'] != self.bindings.as_dict() or type(a['payload']) is not dict: raise Refused('CONTROL_BINDING')
+-        keys = {'transport','session','request_commitment'} if verb == 'AUTHORIZE_ONE' else set()
++        keys = SUCCESSOR_KEYS if verb == SUCCESSOR_VERB else {'transport','session','request_commitment'} if verb == 'AUTHORIZE_ONE' else set()
+         if set(a['payload']) != keys: raise Refused('CONTROL_PAYLOAD')
+         try: operator = self.verifier.verify(raw, signature)
+         except Exception: raise Refused('CONTROL_SIGNATURE') from None
+--- gate6f/repo/candidate_v3/checkpoints.py
++++ gate6g/repo/candidate_v3/checkpoints.py
+@@ -83,12 +83,18 @@
+             dbs[n].execute('PRAGMA query_only=ON')
+             if dbs[n].execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise Refused('COORDINATED_DATABASE')
+         c=dbs['controller.sqlite3'];h=dbs['highwater.sqlite3']
++        from .lineage import HIGHWATER_SCHEMA, validate_succession
++        if (h.execute('PRAGMA user_version').fetchone()!=(2,)
++            or {r[0] for r in h.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL")}!=set(HIGHWATER_SCHEMA)):
++            raise Refused('COORDINATED_HIGHWATER_SCHEMA')
++        payload=validate_succession(h,strict_json(m['bindings']))
+         from .storage import validate_accounting,SCHEMA
+         validate_accounting(c)
+         if {x[0] for x in c.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name!='sqlite_sequence'")}!=set(SCHEMA):raise Refused('COORDINATED_CONTROLLER_SCHEMA')
+         lineage=strict_json((root/'lineage.json').read_bytes())
+         if c.execute("SELECT value FROM meta WHERE key='lineage_hash'").fetchone()!=(digest((root/'lineage.json').read_bytes()),):raise Refused('COORDINATED_LINEAGE_HASH')
+         if h.execute('SELECT predecessor,successor,archive FROM root').fetchall()!=[(lineage['parent'],lineage['child'],lineage['archive'])]:raise Refused('COORDINATED_LINEAGE_ROOT')
++        if (payload['predecessor'],payload['archive'])!=(lineage['parent'],lineage['archive']):raise Refused('COORDINATED_SUCCESSION')
+         if c.execute('SELECT parent,child,archive FROM lineage').fetchall()!=[(lineage['parent'],lineage['child'],lineage['archive'])]:raise Refused('COORDINATED_LINEAGE_CONTROLLER')
+         from app.brain.model_ownership import ModelOwnershipCoordinatorV1,qualify_endpoint
+         scope_names=sorted(n for n in m['files'] if n.startswith('d06-') and n.endswith('-scope.json'))
+@@ -114,6 +120,9 @@
+         actual=c.execute('SELECT ordinal,transport,session,permit,id FROM attempts ORDER BY ordinal').fetchall()
+         protected=h.execute('SELECT ordinal,transport,session,permit,attempt FROM accepted ORDER BY ordinal').fetchall()
+         if actual!=protected and (m['purpose']=='READY' or protected[:len(actual)]!=actual or any(row[4] is not None for row in protected[len(actual):])):raise Refused('COORDINATED_ACCEPTED_SET')
++        for ordinal,transport,session,permit,aid in actual:
++            commitment=h.execute('SELECT commitment FROM accepted WHERE ordinal=?',(ordinal,)).fetchone()[0]
++            if c.execute('SELECT ordinal,transport,session,commitment,spent FROM permits WHERE nonce=?',(permit,)).fetchone()!=(ordinal,transport,session,commitment,1):raise Refused('COORDINATED_COMMITMENT')
+         if c.execute('SELECT count(*) FROM attempts').fetchone()[0]!=m['accepted']:raise Refused('COORDINATED_COUNT')
+         if m['purpose']=='READY' and dbs['domains.sqlite3'].execute('SELECT 1 FROM holds').fetchone():raise Refused('COORDINATED_UNKNOWN')
+         if c.execute("SELECT value FROM meta WHERE key='terminal'").fetchone()!=(m['terminal'],):raise Refused('COORDINATED_TERMINAL')
+--- gate6f/repo/candidate_v3/ingress.py
++++ gate6g/repo/candidate_v3/ingress.py
+@@ -68,7 +68,8 @@
+         while True:
+             try:message=await asyncio.wait_for(receive(),300)
+             except asyncio.TimeoutError:self.runtime.stop('WS_IDLE');await send({'type':'websocket.close','code':1000});return
+-            if type(message) is dict and message.get('type')=='websocket.disconnect':return
++            if type(message) is dict and message.get('type')=='websocket.disconnect':
++                self.runtime.stop('CLIENT_DISCONNECT');return
+             text=message.get('text') if type(message) is dict else None
+             try:size=len(text.encode('utf-8')) if type(text) is str else 16385
+             except UnicodeError:size=16385
+--- gate6f/repo/candidate_v3/lineage.py
++++ gate6g/repo/candidate_v3/lineage.py
+@@ -6,6 +6,7 @@
+ from dataclasses import dataclass
+ from .contracts import Refused,digest,canonical,strict_json
+ from .storage import private,sync_dir
++from .authority import Authority, SUCCESSOR_VERB
+ 
+ # V2 lifespan shutdown calls stop_admissions() whose default reason is
+ # OPERATOR_STOP, so a host power-off, SIGTERM or systemctl stop all produce the
+@@ -21,6 +22,9 @@
+     accepted: int
+     source_digest: str
+     stop_attribution: str = 'UNATTRIBUTED_V2_SHUTDOWN_HOOK'
++    config_digest: str = ''
++    controller_digest: str = ''
++    live_state_digest: str = ''
+ 
+ def validate_v2_archive(bundle,*,epoch,implementation_hashes):
+     from app.execution.shadow_backup import validate_bundle
+@@ -46,53 +50,198 @@
+     finally:db.close()
+     return PredecessorProof(epoch,digest((bundle/'manifest.json').read_bytes()),0,digest(canonical(implementation_hashes)))
+ 
++def successor_payload(proof, bindings):
++    if (type(proof) is not PredecessorProof or type(proof.accepted) is not int
++            or proof.accepted != 0 or proof.stop_attribution not in STOP_ATTRIBUTIONS):
++        raise Refused('PREDECESSOR_PROOF')
++    for value in (proof.archive_digest, proof.source_digest, proof.config_digest,
++                  proof.controller_digest, proof.live_state_digest):
++        if type(value) is not str or len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
++            raise Refused('PREDECESSOR_FRESH_PROOF_REQUIRED')
++    return {'predecessor': proof.epoch, 'archive': proof.archive_digest,
++            'source': proof.source_digest, 'config': proof.config_digest,
++            'controller': proof.controller_digest, 'live_state': proof.live_state_digest,
++            'bindings': bindings, 'stop_attribution': proof.stop_attribution,
++            'retirement': 'EXPLICIT_OPERATOR_ZERO_USE_RETIREMENT'}
++
++
++HIGHWATER_SCHEMA = (
++    'CREATE TABLE root(singleton INTEGER PRIMARY KEY CHECK(singleton=1), predecessor TEXT UNIQUE, archive TEXT, successor TEXT UNIQUE, bindings TEXT, terminal TEXT)',
++    'CREATE TABLE succession(nonce TEXT PRIMARY KEY, body_digest TEXT NOT NULL, operator TEXT NOT NULL, payload TEXT NOT NULL)',
++    "CREATE TABLE accepted(ordinal INTEGER PRIMARY KEY CHECK(ordinal BETWEEN 1 AND 4), transport TEXT NOT NULL CHECK(transport IN ('REST','WS')), session TEXT NOT NULL, commitment TEXT NOT NULL, permit TEXT UNIQUE NOT NULL, attempt TEXT UNIQUE)",
++    "CREATE TRIGGER highwater_no_delete BEFORE DELETE ON accepted BEGIN SELECT RAISE(ABORT,'HIGHWATER_IMMUTABLE'); END",
++    "CREATE TRIGGER highwater_identity BEFORE UPDATE OF ordinal,transport,session,commitment,permit ON accepted BEGIN SELECT RAISE(ABORT,'HIGHWATER_IMMUTABLE'); END",
++    "CREATE TRIGGER highwater_attempt BEFORE UPDATE OF attempt ON accepted WHEN OLD.attempt IS NOT NULL OR NEW.attempt IS NULL BEGIN SELECT RAISE(ABORT,'HIGHWATER_IMMUTABLE'); END",
++)
++
++
++def validate_succession(db, bindings):
++    """Also used on read-only coordinated snapshots; no signature is re-invented."""
++    approvals = db.execute('SELECT nonce,body_digest,operator,payload FROM succession').fetchall()
++    if len(approvals) != 1:
++        raise Refused('HIGHWATER_SUCCESSION')
++    nonce, body_digest, operator, raw_payload = approvals[0]
++    if (type(nonce) is not str or len(nonce) != 32 or any(x not in '0123456789abcdef' for x in nonce)
++            or type(body_digest) is not str or len(body_digest) != 64 or any(x not in '0123456789abcdef' for x in body_digest)
++            or type(operator) is not str or not operator):
++        raise Refused('HIGHWATER_SUCCESSION')
++    payload = strict_json(raw_payload)
++    try:
++        proof = PredecessorProof(payload['predecessor'], payload['archive'], 0, payload['source'],
++                                 payload['stop_attribution'], payload['config'], payload['controller'], payload['live_state'])
++        if payload != successor_payload(proof, bindings):
++            raise Refused('HIGHWATER_SUCCESSION')
++    except (KeyError, TypeError):
++        raise Refused('HIGHWATER_SUCCESSION') from None
++    return payload
++
++
+ class HighWater:
+-    def __init__(self,root,*,create=False):
+-        self.root=Path(root);private(self.root,True);self.lock=threading.RLock();p=self.root/'highwater.sqlite3'
++    """Local prototype, NOT an antirollback authority against a same-UID actor.
++
++    Reservation and its signed nonce commit together. A reserved ordinal burns
++    capacity before local acceptance, including a crash; no refund/recovery API.
++    """
++    def __init__(self, root, *, create=False):
++        self.root = Path(root)
++        private(self.root, True)
++        self.lock = threading.RLock()
++        p = self.root / 'highwater.sqlite3'
+         if create:
+-            fd=os.open(p,os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_RDWR,0o600);os.close(fd)
+-        private(p);self.db=sqlite3.connect(p,isolation_level=None,check_same_thread=False,timeout=1)
+-        self.db.execute('PRAGMA synchronous=FULL');self.db.execute('PRAGMA journal_mode=DELETE')
+-        if create:
+-            self.db.execute('CREATE TABLE root(singleton INTEGER PRIMARY KEY CHECK(singleton=1), predecessor TEXT UNIQUE, archive TEXT, successor TEXT UNIQUE, bindings TEXT, terminal TEXT)')
+-            self.db.execute('CREATE TABLE accepted(ordinal INTEGER PRIMARY KEY CHECK(ordinal BETWEEN 1 AND 4), transport TEXT, session TEXT, commitment TEXT, permit TEXT UNIQUE, attempt TEXT UNIQUE)');sync_dir(self.root)
+-        if self.db.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise Refused('HIGHWATER_INTEGRITY')
+-    def reserve_successor(self,proof,bindings,*,authorize):
+-        if type(proof) is not PredecessorProof or proof.accepted!=0 or proof.stop_attribution not in STOP_ATTRIBUTIONS:raise Refused('PREDECESSOR_PROOF')
+-        # The signer explicitly acknowledges that the archive does not attribute the stop.
+-        payload={'predecessor':proof.epoch,'archive':proof.archive_digest,'source':proof.source_digest,'bindings':bindings,
+-                 'stop_attribution':proof.stop_attribution,'retirement':'EXPLICIT_OPERATOR_ZERO_USE_RETIREMENT'}
+-        if authorize(payload) is not True:raise Refused('SUCCESSOR_AUTHORITY')
+-        if bindings['epoch']==proof.epoch:raise Refused('SUCCESSOR_EPOCH')
+-        try:self.db.execute('INSERT INTO root VALUES(1,?,?,?,?,?)',(proof.epoch,proof.archive_digest,bindings['epoch'],canonical(bindings).decode(),''))
+-        except sqlite3.Error:raise Refused('SUCCESSOR_ALREADY_RESERVED') from None
+-    def check(self,store,*,allow_terminal=False):
+-        row=self.db.execute('SELECT successor,bindings,terminal,predecessor,archive FROM root WHERE singleton=1').fetchone()
+-        local=store.db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0]
+-        if row is None or row[0]!=strict_json(local)['epoch'] or strict_json(row[1])!=strict_json(local):raise Refused('HIGHWATER_BINDING')
+-        if store.db.execute('SELECT parent,child,archive,ancestor_count FROM lineage').fetchall()!=[(row[3],row[0],row[4],0)]:raise Refused('HIGHWATER_PREDECESSOR_ASSOCIATION')
+-        records=self.db.execute('SELECT ordinal,transport,session,permit,attempt FROM accepted ORDER BY ordinal').fetchall()
+-        actual=store.db.execute('SELECT ordinal,transport,session,permit,id FROM attempts ORDER BY ordinal').fetchall()
+-        if records!=actual:raise Refused('HIGHWATER_ROLLBACK_OR_INCOMPLETE_COMMIT')
+-        if not allow_terminal and (row[2] or store.terminal()):raise Refused('HIGHWATER_TERMINAL')
+-        if allow_terminal and row[2]!=store.terminal():raise Refused('HIGHWATER_TERMINAL_MISMATCH')
+-    def before_accept(self,store,transport,session,commitment):
++            fd = os.open(p, os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_RDWR, 0o600)
++            os.close(fd)
++        private(p)
++        self.inode = p.stat().st_ino
++        self.db = sqlite3.connect(p, isolation_level=None, check_same_thread=False, timeout=1)
++        try:
++            self.db.execute('PRAGMA synchronous=FULL')
++            self.db.execute('PRAGMA journal_mode=DELETE')
++            if create:
++                self.db.execute('BEGIN IMMEDIATE')
++                try:
++                    for sql in HIGHWATER_SCHEMA:
++                        self.db.execute(sql)
++                    self.db.execute('PRAGMA user_version=2')
++                    self.db.execute('COMMIT')
++                except BaseException:
++                    self.db.execute('ROLLBACK')
++                    raise
++                sync_dir(self.root)
++            self.validate()
++        except BaseException:
++            self.db.close()
++            raise
++
++    def validate(self):
++        private(self.root, True)
++        p = self.root / 'highwater.sqlite3'
++        private(p)
++        if p.stat().st_ino != self.inode:
++            raise Refused('HIGHWATER_REPLACED')
++        schema = {r[0] for r in self.db.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL")}
++        if (self.db.execute('PRAGMA user_version').fetchone() != (2,)
++                or schema != set(HIGHWATER_SCHEMA)
++                or self.db.execute('PRAGMA integrity_check').fetchall() != [('ok',)]):
++            raise Refused('HIGHWATER_INTEGRITY')
++
++    def reserve_successor(self, proof, bindings, *, authority, raw, signature, peer, revalidate):
++        payload = successor_payload(proof, bindings)
++        if type(authority) is not Authority or authority.bindings.as_dict() != bindings:
++            raise Refused('SUCCESSOR_AUTHORITY')
++        if bindings['epoch'] == proof.epoch:
++            raise Refused('SUCCESSOR_EPOCH')
++        with self.lock:
++            self.db.execute('BEGIN IMMEDIATE')
++            try:
++                self.validate()
++                if self.db.execute('SELECT 1 FROM root').fetchone():
++                    raise Refused('SUCCESSOR_ALREADY_RESERVED')
++                if revalidate() != proof:
++                    raise Refused('PREDECESSOR_CHANGED')
++                a = authority.check(raw, signature, peer, SUCCESSOR_VERB)
++                if a['payload'] != payload or a['checkpoint'] != digest(canonical(payload)):
++                    raise Refused('SUCCESSOR_SIGNED_BINDING')
++                # Signature verification is a boundary at which state can drift.
++                if revalidate() != proof:
++                    raise Refused('PREDECESSOR_CHANGED')
++                if not authority.clock() < a['expires']:
++                    raise Refused('CONTROL_EXPIRED')
++                self.db.execute('INSERT INTO succession VALUES(?,?,?,?)',
++                                (a['nonce'], a['_signed_digest'], a['_verified_operator'], canonical(payload).decode()))
++                self.db.execute('INSERT INTO root VALUES(1,?,?,?,?,?)',
++                                (proof.epoch, proof.archive_digest, bindings['epoch'], canonical(bindings).decode(), ''))
++                self.db.execute('COMMIT')
++            except BaseException:
++                if self.db.in_transaction:
++                    self.db.execute('ROLLBACK')
++                raise
++
++    def check(self, store, *, allow_terminal=False):
++        with self.lock:
++            self.validate()
++            row = self.db.execute('SELECT successor,bindings,terminal,predecessor,archive FROM root WHERE singleton=1').fetchone()
++            local = store.db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0]
++            if row is None or row[0] != strict_json(local)['epoch'] or strict_json(row[1]) != strict_json(local):
++                raise Refused('HIGHWATER_BINDING')
++            if store.db.execute('SELECT parent,child,archive,ancestor_count FROM lineage').fetchall() != [(row[3], row[0], row[4], 0)]:
++                raise Refused('HIGHWATER_PREDECESSOR_ASSOCIATION')
++            payload = validate_succession(self.db, strict_json(local))
++            if (payload['predecessor'], payload['archive'], payload['bindings']) != (row[3], row[4], strict_json(local)):
++                raise Refused('HIGHWATER_SUCCESSION')
++            records = self.db.execute('SELECT ordinal,transport,session,permit,attempt FROM accepted ORDER BY ordinal').fetchall()
++            actual = store.db.execute('SELECT ordinal,transport,session,permit,id FROM attempts ORDER BY ordinal').fetchall()
++            if records != actual:
++                raise Refused('HIGHWATER_ROLLBACK_OR_INCOMPLETE_COMMIT')
++            # Commitment was missing from the old join. Validate it against the
++            # signed permit, and enforce the global order even in restored state.
++            sessions = {}
++            for n, (ordinal, transport, session, permit, aid) in enumerate(records, 1):
++                if ordinal != n or transport != ('REST', 'REST', 'WS', 'WS')[n-1]:
++                    raise Refused('HIGHWATER_ORDINAL')
++                if transport in sessions and sessions[transport] != session:
++                    raise Refused('HIGHWATER_SESSION')
++                sessions[transport] = session
++                commitment = self.db.execute('SELECT commitment FROM accepted WHERE ordinal=?', (n,)).fetchone()[0]
++                if store.db.execute('SELECT ordinal,transport,session,commitment,spent FROM permits WHERE nonce=?', (permit,)).fetchone() != (n, transport, session, commitment, 1):
++                    raise Refused('HIGHWATER_COMMITMENT')
++            if not allow_terminal and (row[2] or store.terminal()):
++                raise Refused('HIGHWATER_TERMINAL')
++            if allow_terminal and row[2] != store.terminal():
++                raise Refused('HIGHWATER_TERMINAL_MISMATCH')
++
++    def before_accept(self, store, transport, session, commitment):
+         with self.lock:
+             self.db.execute('BEGIN IMMEDIATE')
+             try:
+                 self.check(store)
+-                p=store.db.execute('SELECT nonce,ordinal,transport,session,commitment FROM permits WHERE spent=0').fetchone()
+-                if p is None or p[2:]!=(transport,session,commitment) or p[1]!=store.count()+1:raise Refused('HIGHWATER_PERMIT')
+-                # Reservation before local acceptance may burn capacity on crash;
+-                # it can never refund or grant another acceptance automatically.
+-                self.db.execute('INSERT INTO accepted VALUES(?,?,?,?,?,NULL)',(p[1],transport,session,commitment,p[0]));self.db.execute('COMMIT')
++                p = store.db.execute('SELECT nonce,ordinal,transport,session,commitment FROM permits WHERE spent=0').fetchone()
++                n = store.count()
++                if (n >= 4 or p is None or p[2:] != (transport, session, commitment)
++                        or p[1] != n+1 or transport != ('REST','REST','WS','WS')[n]):
++                    raise Refused('HIGHWATER_PERMIT')
++                prior = self.db.execute('SELECT DISTINCT session FROM accepted WHERE transport=?', (transport,)).fetchall()
++                if prior and prior != [(session,)]:
++                    raise Refused('HIGHWATER_SESSION')
++                self.db.execute('INSERT INTO accepted VALUES(?,?,?,?,?,NULL)', (p[1], transport, session, commitment, p[0]))
++                self.db.execute('COMMIT')
+             except BaseException:
+-                self.db.execute('ROLLBACK');raise
+-    def after_accept(self,store):
+-        row=store.db.execute('SELECT ordinal,permit,id FROM attempts ORDER BY ordinal DESC LIMIT 1').fetchone()
+-        cursor=self.db.execute('UPDATE accepted SET attempt=? WHERE ordinal=? AND permit=? AND attempt IS NULL',(row[2],row[0],row[1]))
+-        if cursor.rowcount!=1:raise Refused('HIGHWATER_ASSOCIATION')
+-        self.check(store)
+-    def terminal(self,store):
+-        self.db.execute("UPDATE root SET terminal=? WHERE singleton=1 AND (terminal='' OR (terminal='CLOSED_COMPLETE' AND ?='CLOSED_INCOMPLETE'))",(store.terminal(),store.terminal()))
+-    def close(self):self.db.close()
++                if self.db.in_transaction:
++                    self.db.execute('ROLLBACK')
++                raise
++
++    def after_accept(self, store):
++        with self.lock:
++            row = store.db.execute('SELECT ordinal,permit,id FROM attempts ORDER BY ordinal DESC LIMIT 1').fetchone()
++            if row is None:
++                raise Refused('HIGHWATER_ASSOCIATION')
++            cursor = self.db.execute('UPDATE accepted SET attempt=? WHERE ordinal=? AND permit=? AND attempt IS NULL', (row[2], row[0], row[1]))
++            if cursor.rowcount != 1:
++                raise Refused('HIGHWATER_ASSOCIATION')
++            self.check(store)
++
++    def terminal(self, store):
++        with self.lock:
++            self.db.execute("UPDATE root SET terminal=? WHERE singleton=1 AND (terminal='' OR (terminal='CLOSED_COMPLETE' AND ?='CLOSED_INCOMPLETE'))", (store.terminal(), store.terminal()))
++
++    def close(self):
++        self.db.close()
+--- gate6f/repo/candidate_v3/predecessor.py
++++ gate6g/repo/candidate_v3/predecessor.py
+@@ -0,0 +1,97 @@
++"""Read-only transition checks. A protected reader/root is still a release requirement.
++
++No service control, credentials, network or production writes. Re-run at signing;
++an archive-only proof cannot authorize a successor. Do not log file contents.
++"""
++from dataclasses import replace
++from pathlib import Path
++import sqlite3
++
++from .contracts import Refused, canonical, digest, strict_json
++from .lineage import validate_v2_archive
++from .storage import no_symlink_ancestors
++
++
++def logical_controller_digest(path):
++    path = Path(path)
++    no_symlink_ancestors(path)
++    db = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=1)
++    try:
++        db.execute('PRAGMA query_only=ON')
++        db.execute('BEGIN')
++        if db.execute('PRAGMA quick_check').fetchall() != [('ok',)]:
++            raise Refused('PREDECESSOR_DATABASE')
++        schema = db.execute('SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name').fetchall()
++        tables = {}
++        for kind, name, _, _ in schema:
++            if kind != 'table':
++                continue
++            rows = db.execute('SELECT * FROM "' + name.replace('"', '""') + '"').fetchall()
++            # Preserve SQLite types, including BLOBs, without depending on row order.
++            typed = [[['blob', x.hex()] if isinstance(x, bytes) else [type(x).__name__, x]
++                      for x in row] for row in rows]
++            tables[name] = sorted(typed, key=canonical)
++        return digest(canonical({'schema': schema, 'tables': tables,
++                                 'user_version': db.execute('PRAGMA user_version').fetchone()[0]}))
++    finally:
++        db.close()
++
++
++class PredecessorReader:
++    """Pinned paths and expected digests; service_state is a read-only host seam.
++
++    Invoke before preparing an approval and immediately before/after verifying it.
++    This bounds drift at the transition boundary; it cannot prevent an adversarial
++    same-UID writer or replace privilege separation and operator presence.
++    """
++    def __init__(self, *, bundle, controller, ownership, source_root, epoch,
++                 implementation_hashes, config_digest, service_state):
++        self.bundle, self.controller, self.ownership, self.source_root = map(
++            Path, (bundle, controller, ownership, source_root))
++        self.epoch = epoch
++        self.hashes = dict(implementation_hashes)
++        self.config_digest = config_digest
++        self.service_state = service_state
++
++    def __call__(self):
++        try:
++            return self._read()
++        except Refused:
++            raise
++        except Exception:
++            raise Refused('PREDECESSOR_READ_FAILED') from None
++
++    def _read(self):
++        proof = validate_v2_archive(self.bundle, epoch=self.epoch,
++                                    implementation_hashes=self.hashes)
++        for name, expected in self.hashes.items():
++            if Path(name).is_absolute() or '..' in Path(name).parts:
++                raise Refused('PREDECESSOR_SOURCE_PATH')
++            p = self.source_root / 'app' / 'execution' / name
++            no_symlink_ancestors(p)
++            if digest(p.read_bytes()) != expected:
++                raise Refused('PREDECESSOR_SOURCE_DRIFT')
++        config = self.source_root / 'config.yaml'
++        no_symlink_ancestors(config)
++        actual_config = digest(config.read_bytes())
++        if actual_config != self.config_digest:
++            raise Refused('PREDECESSOR_CONFIG_DRIFT')
++        state_file = self.ownership / 'state.json'
++        no_symlink_ancestors(state_file)
++        state = strict_json(state_file.read_bytes())
++        if state != {'version': 1, 'current': None, 'last': None}:
++            raise Refused('PREDECESSOR_D06_UNCERTAIN')
++        service = self.service_state()
++        expected_service = {'ActiveState': 'inactive', 'SubState': 'dead',
++                            'MainPID': '0', 'UnitFileState': 'disabled', 'Restart': 'no'}
++        if type(service) is not dict or service != expected_service:
++            raise Refused('PREDECESSOR_SERVICE_STATE')
++        archived = logical_controller_digest(self.bundle / 'controller.sqlite3')
++        live = logical_controller_digest(self.controller)
++        if live != archived:
++            raise Refused('PREDECESSOR_LIVE_ARCHIVE_MISMATCH')
++        live_state = digest(canonical({'controller': live, 'config': actual_config,
++                                      'source': proof.source_digest, 'd06': state,
++                                      'service': service}))
++        return replace(proof, config_digest=actual_config,
++                       controller_digest=live, live_state_digest=live_state)
+--- gate6f/repo/candidate_v3/runtime.py
++++ gate6g/repo/candidate_v3/runtime.py
+@@ -68,13 +68,14 @@
+ 
+     def control(self,raw,signature,peer,verb):
+         a=self.authority.check(raw,signature,peer,verb)
++        if verb not in ('OPEN_HOLD','AUTHORIZE_ONE','TERMINAL_STOP'):raise Refused('CONTROL_VERB')
+         # One-use authority is checked against durable state before ANY effect,
+         # including the in-memory stop; the PRIMARY KEY remains the commit-time guard.
+         if self.store.db.execute('SELECT 1 FROM control WHERE nonce=?',(a['nonce'],)).fetchone():raise Refused('CONTROL_REPLAY')
+         if verb=='TERMINAL_STOP':
+             self.stop_event.set()
+             try:
+-                self.store.stop('OPERATOR_STOP',approval=a)
++                self.store.stop('SIGNED_TERMINAL_STOP',approval=a)
+                 if self.acceptance_guard is not None:self.acceptance_guard.terminal(self.store)
+             finally:self.state=self.store.terminal() or 'CLOSED_RECOVERY_HOLD'
+             return
+@@ -106,10 +107,11 @@
+         self.stop_event.set();self.store.stop(reason);self.state=self.store.terminal()
+         if self.acceptance_guard is not None:self.acceptance_guard.terminal(self.store)
+ 
+-    async def drain(self,seconds=30):
++    async def drain(self,seconds=30,*,mechanism='LIFESPAN_SHUTDOWN'):
++        if type(seconds) not in (int,float) or not 0<=seconds<=30:raise Refused('DRAIN_BOUND')
++        if mechanism not in ('LIFESPAN_SHUTDOWN','SIGUSR1_CONTROL'):raise Refused('STOP_MECHANISM')
+         started=time.monotonic()
+-        self.stop('OPERATOR_STOP')
+-        if type(seconds) not in (int,float) or not 0<=seconds<=30:raise Refused('DRAIN_BOUND')
++        self.stop(mechanism)
+         for task in self.pending:task.cancel()
+         if self.pending:await asyncio.wait(tuple(self.pending),timeout=seconds)
+         pending=sum(not t.done() for t in self.pending)
+--- gate6f/repo/candidate_v3/storage.py
++++ gate6g/repo/candidate_v3/storage.py
+@@ -230,12 +230,14 @@
+             if self.db.execute('SELECT terminal FROM attempts WHERE id=?',(aid,)).fetchone()!=('SETTLED',):raise Refused('DELIVERY_UNPROVEN')
+             self.event('SETTLED',aid)
+     def stop(self,reason='STOP',approval=None):
++        if reason=='SIGNED_TERMINAL_STOP' and (approval is None or approval.get('verb')!='TERMINAL_STOP'):raise Refused('SIGNED_STOP_AUTHORITY')
++        if reason=='OPERATOR_STOP':reason='UNATTRIBUTED_STOP'
+         with self.tx():
+             if approval is not None:self.control(approval)
+             if reason=='FINAL_CHECKPOINT_FAILED' and self.terminal()=='CLOSED_COMPLETE':
+                 self.db.execute("UPDATE meta SET value='CLOSED_INCOMPLETE' WHERE key='terminal'");self.event(reason)
+             if not self.terminal():
+-                complete=reason in ('OPERATOR_STOP','CAP_COMPLETE') and self.clean() and self.ready()
++                complete=reason in ('UNATTRIBUTED_STOP','SIGNED_TERMINAL_STOP','LIFESPAN_SHUTDOWN','SIGUSR1_CONTROL','CAP_COMPLETE') and self.clean() and self.ready()
+                 self.db.execute("UPDATE meta SET value=? WHERE key='terminal'",('CLOSED_COMPLETE' if complete else 'CLOSED_INCOMPLETE',));self.event(reason)
+             self.fault('stop_before_commit')
+         self.fault('stop_after_commit')
+--- gate6f/repo/tests/execution/v3_candidate_test.py
++++ gate6g/repo/tests/execution/v3_candidate_test.py
+@@ -328,7 +328,8 @@
+   self.assertEqual(out[0]['type'],'websocket.accept');self.assertEqual(json.loads(out[1]['text'])['reply'],'LEGACY_FIXTURE_REPLY');self.assertEqual(len(out),2)
+  async def test_asgi_handshake_no_generation(self):
+   out=await self.asgi({'type':'websocket','path':'/ws','headers':[(b'authorization',b'Bearer DUMMY_API')]},[{'type':'websocket.connect'},{'type':'websocket.disconnect'}])
+-  self.assertEqual(out,[{'type':'websocket.accept'}]);self.assertEqual(self.f.store.count(),0);self.assertFalse(self.f.store.terminal())
++  self.assertEqual(out,[{'type':'websocket.accept'}]);self.assertEqual(self.f.store.count(),0);self.assertEqual(self.f.store.terminal(),'CLOSED_INCOMPLETE')
++  self.assertEqual(self.f.store.db.execute("SELECT code FROM events WHERE code='CLIENT_DISCONNECT'").fetchall(),[('CLIENT_DISCONNECT',)])
+  async def test_asgi_no_public_opening_endpoint(self):
+   out=await self.asgi({'type':'http','path':'/open','method':'POST','headers':[(b'authorization',b'Bearer DUMMY_API')]},[])
+   self.assertEqual(out[0]['status'],404);self.assertEqual(self.f.runtime.state,'CLOSED_INITIAL')
+--- gate6f/repo/tests/execution/v3_integration_test.py
++++ gate6g/repo/tests/execution/v3_integration_test.py
+@@ -12,6 +12,7 @@
+ from candidate_v3.domain_ledger import DomainLedger
+ from candidate_v3.topology import HostAttestation,qualify_topology
+ from candidate_v3.lineage import HighWater,PredecessorProof
++from tests.execution.v3_successor_support import fresh_fixture_proof,reserve_fixture
+ from candidate_v3.evidence import EvidenceBridge
+ from candidate_v3.checkpoints import CheckpointWriter,validate_coordinated,restore_for_review
+ from candidate_v3.application import build_isolated_app
+@@ -34,7 +35,7 @@
+ 
+ class Integrated(Fixture):
+     def __init__(self,base,predecessor_proof=None):
+-        proof=predecessor_proof or PredecessorProof('predecessor','a'*64,0,'b'*64)
++        proof=fresh_fixture_proof(predecessor_proof or PredecessorProof('predecessor','a'*64,0,'b'*64))
+         pred=dict(epoch=proof.epoch,status='CLOSED_COMPLETE',accepted=0,complete=True,unknown=False,retirement='EXPLICIT_ZERO_USE_RETIREMENT',archive=proof.archive_digest)
+         super().__init__(base,predecessor=pred)
+         self.calls=[];self.block=None;self.entered=asyncio.Event();self.router_result={'intent':'respond','confidence':0.9,'suggested_tool':'','reasoning':'Synthetic fixture classification.'}
+@@ -57,7 +58,7 @@
+             self.ownership.append(OwnershipBinding(c.resource,owner,('explicit-fixture-gpu-domain',)))
+         for n in ('domains','highwater','evidence','coordinated'):(base/n).mkdir(mode=0o700)
+         self.domains=DomainLedger(base/'domains',create=True);self.high=HighWater(base/'highwater',create=True)
+-        self.high.reserve_successor(proof,self.bind.as_dict(),authorize=lambda _:True) # explicitly synthetic authority
++        reserve_fixture(self.high,proof,self.bind.as_dict()) # explicitly synthetic signed authority
+         self.evidence=EvidenceBridge(base/'evidence',create=True)
+         self.writer=CheckpointWriter(base/'coordinated',evidence=self.evidence,domains=self.domains,highwater=self.high,ownership=self.ownership)
+         r=self.runtime;r.legacy_policy=RulesFirstL1(self.router,{'trivial':self.trivial,'normal':self.normal},'gemma3:4b','qwen3-nothink',0.75,'')
+@@ -206,7 +207,7 @@
+ 
+ def test_successor_duplicate_refused(integrated):
+     f=integrated
+-    with pytest.raises(Refused):f.high.reserve_successor(PredecessorProof('predecessor','a'*64,0,'b'*64),dict(f.bind.as_dict(),epoch='another'),authorize=lambda _:True)
++    with pytest.raises(Refused):reserve_fixture(f.high,fresh_fixture_proof(PredecessorProof('predecessor','a'*64,0,'b'*64)),dict(f.bind.as_dict(),epoch='another'))
+ 
+ def test_afunix_kernel_peer_dummy_signer_and_replay(integrated):
+     f=integrated;f.authority.peer_uid=os.getuid();control=LocalControl(f.runtime,operator_uid=os.getuid())
+@@ -482,7 +483,7 @@
+ def test_competing_successor_writers(integrated):
+     f=integrated;second=HighWater(f.high.root)
+     try:
+-        with pytest.raises(Refused):second.reserve_successor(PredecessorProof('different-root','c'*64,0,'d'*64),dict(f.bind.as_dict(),epoch='duplicate'),authorize=lambda _:True)
++        with pytest.raises(Refused):reserve_fixture(second,fresh_fixture_proof(PredecessorProof('different-root','c'*64,0,'d'*64)),dict(f.bind.as_dict(),epoch='duplicate'))
+         assert second.db.execute('SELECT successor FROM root').fetchall()==[('successor',)]
+     finally:second.close()
+ 
+--- gate6f/repo/tests/execution/v3_release_hardening_test.py
++++ gate6g/repo/tests/execution/v3_release_hardening_test.py
+@@ -0,0 +1,421 @@
++"""Gate 6G: isolated synthetic transitions, no production signer or successor."""
++import asyncio
++from dataclasses import replace
++import hmac
++from pathlib import Path
++import shutil
++import sqlite3
++from concurrent.futures import ThreadPoolExecutor
++
++import pytest
++
++from candidate_v3.authority import SUCCESSOR_VERB, VerifiedOperator
++from candidate_v3.contracts import Bindings, Refused, canonical, digest, strict_json
++from candidate_v3.lineage import HighWater, PredecessorProof, successor_payload
++from candidate_v3.predecessor import PredecessorReader, logical_controller_digest
++from candidate_v3.checkpoints import validate_coordinated, restore_for_review
++from tests.execution.v3_candidate_test import KEY, Fixture, Signer
++from tests.execution.v3_successor_support import fresh_fixture_proof, signed_fixture, reserve_fixture
++from tests.execution.v3_integration_test import integrated, asgi_call, scope
++
++
++@pytest.fixture
++def succession(tmp_path):
++    root = tmp_path / 'high'
++    root.mkdir(mode=0o700)
++    high = HighWater(root, create=True)
++    proof = fresh_fixture_proof(PredecessorProof('predecessor', 'a'*64, 0, 'b'*64))
++    bindings = Bindings(*('source','config','release','pid','invocation','child','boot','start','challenge')).as_dict()
++    yield high, proof, bindings
++    high.close()
++
++
++def attempt(values, *, mutate=None, verifier=None, revalidate=None):
++    high, proof, bindings = values
++    authority, raw, sig = signed_fixture(proof, bindings)
++    if mutate:
++        body = strict_json(raw)
++        mutate(body)
++        raw = canonical(body)
++        sig = hmac.digest(KEY, raw, 'sha256')
++    if verifier:
++        authority.verifier = verifier
++    high.reserve_successor(proof, bindings, authority=authority, raw=raw,
++                           signature=sig, peer=(0,99), revalidate=revalidate or (lambda:proof))
++    return raw
++
++
++def test_distinct_signed_successor_is_durable_and_one_use(succession):
++    high, proof, bindings = succession
++    raw = attempt(succession)
++    assert high.db.execute('SELECT successor FROM root').fetchall() == [('child',)]
++    assert high.db.execute('SELECT body_digest,operator FROM succession').fetchall() == [(digest(raw),'dummy-human')]
++    assert strict_json(raw)['verb'] == SUCCESSOR_VERB
++    with pytest.raises(Refused, match='SUCCESSOR_ALREADY_RESERVED'):
++        attempt(succession)
++    second = HighWater(high.root)
++    try:
++        with pytest.raises(Refused, match='SUCCESSOR_ALREADY_RESERVED'):
++            reserve_fixture(second, proof, dict(bindings,epoch='another'))
++    finally:
++        second.close()
++
++
++@pytest.mark.parametrize('field', ['predecessor','archive','source','config','controller','live_state','bindings','stop_attribution','retirement'])
++def test_every_successor_payload_binding_is_signed(succession, field):
++    def mutate(body):
++        body['payload'][field] = {'epoch':'other'} if field == 'bindings' else 'changed'
++    with pytest.raises(Refused, match='SUCCESSOR_SIGNED_BINDING'):
++        attempt(succession, mutate=mutate)
++    assert succession[0].db.execute('SELECT count(*) FROM succession').fetchone() == (0,)
++    assert succession[0].db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++
++
++@pytest.mark.parametrize('mutation', ['verb','nonce','expires','bindings','checkpoint','payload_extra','expires_bool'])
++def test_wrong_control_envelope_cannot_reserve(succession, mutation):
++    def mutate(body):
++        if mutation == 'verb':body['verb'] = 'TERMINAL_STOP'
++        elif mutation == 'nonce':body['nonce'] = 'not-a-nonce'
++        elif mutation == 'expires':body['expires'] = 99
++        elif mutation == 'expires_bool':body['expires'] = True
++        elif mutation == 'bindings':body['bindings']['pid'] = 'other'
++        elif mutation == 'checkpoint':body['checkpoint'] = '0'*64
++        else:body['payload']['extra'] = True
++    with pytest.raises(Refused):
++        attempt(succession, mutate=mutate)
++    assert succession[0].db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++
++
++@pytest.mark.parametrize('verified', [VerifiedOperator('other',True),VerifiedOperator('dummy-human',False),True])
++def test_human_identity_and_presence_cannot_be_inferred(succession, verified):
++    class BadVerifier:
++        def verify(self, body, sig):return verified
++    with pytest.raises(Refused, match='OPERATOR_PRESENCE'):
++        attempt(succession, verifier=BadVerifier())
++
++
++def test_callable_true_is_not_successor_authority(succession):
++    high, proof, bindings = succession
++    with pytest.raises(Refused, match='SUCCESSOR_AUTHORITY'):
++        reserve_fixture(high, proof, bindings, authority=lambda _:True)
++
++
++@pytest.mark.parametrize('boundary', [1,2])
++def test_drift_before_or_during_signature_refuses_without_consuming_nonce(succession, boundary):
++    high, proof, _ = succession
++    calls = []
++    def revalidate():
++        calls.append(1)
++        return replace(proof,live_state_digest='f'*64) if len(calls)==boundary else proof
++    with pytest.raises(Refused, match='PREDECESSOR_CHANGED'):
++        attempt(succession,revalidate=revalidate)
++    assert high.db.execute('SELECT count(*) FROM succession').fetchone() == (0,)
++    assert high.db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++
++
++def test_expiry_during_verification_refuses(succession):
++    high, proof, bindings = succession
++    authority, raw, sig = signed_fixture(proof,bindings)
++    now = [100.]
++    authority.clock = lambda:now[0]
++    class SlowVerifier(Signer):
++        def verify(self, body, signature):
++            value = super().verify(body,signature)
++            now[0] = 131.
++            return value
++    authority.verifier = SlowVerifier()
++    with pytest.raises(Refused,match='CONTROL_EXPIRED'):
++        high.reserve_successor(proof,bindings,authority=authority,raw=raw,signature=sig,peer=(0,99),revalidate=lambda:proof)
++    assert high.db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++
++
++def test_archive_only_proof_cannot_authorize(succession):
++    _, proof, bindings = succession
++    with pytest.raises(Refused,match='PREDECESSOR_FRESH_PROOF_REQUIRED'):
++        successor_payload(replace(proof,config_digest=''),bindings)
++
++
++def test_nonce_and_root_insert_are_atomic_on_sql_failure(succession):
++    high, _, _ = succession
++    high.db.set_authorizer(lambda action,table,*_:sqlite3.SQLITE_DENY
++                           if action==sqlite3.SQLITE_INSERT and table=='root' else sqlite3.SQLITE_OK)
++    try:
++        with pytest.raises(sqlite3.DatabaseError):attempt(succession)
++    finally:
++        high.db.set_authorizer(None)
++    assert high.db.execute('SELECT count(*) FROM succession').fetchone() == (0,)
++    assert high.db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++    attempt(succession)
++
++
++def test_competing_signed_reservations_allow_one_successor(succession):
++    high, proof, bindings = succession
++    second = HighWater(high.root)
++    def reserve(pair):
++        handle, epoch = pair
++        try:
++            reserve_fixture(handle,proof,dict(bindings,epoch=epoch))
++            return 'reserved'
++        except Refused as error:
++            return str(error)
++    try:
++        with ThreadPoolExecutor(max_workers=2) as pool:
++            results = list(pool.map(reserve,[(high,'first'),(second,'second')]))
++        assert sorted(results) == ['SUCCESSOR_ALREADY_RESERVED','reserved']
++        assert high.db.execute('SELECT count(*) FROM succession').fetchone() == (1,)
++    finally:
++        second.close()
++
++
++@pytest.fixture
++def predecessor(tmp_path):
++    from tests.execution.shadow_pilot_backup_test import isolated
++    from app.execution import shadow_backup as backup
++    prior = tmp_path/'prior'
++    prior.mkdir(mode=0o700)
++    controller, owner, data = isolated(prior)
++    try:
++        controller._db.execute("INSERT INTO pilot_events(attempt,code) VALUES(NULL,'OPERATOR_STOP')")
++        controller._db.execute("UPDATE epochs SET status='CLOSED_COMPLETE',input_complete=1")
++        bundle = backup.create_bundle(controller,owner,data,prior/'archive/one')
++        m = backup.validate_bundle(bundle)
++    finally:
++        controller.close()
++    source = tmp_path/'source'
++    (source/'app/execution').mkdir(parents=True,mode=0o700)
++    for name in m['source']['implementation_sha256']:
++        shutil.copyfile(Path('app/execution')/name,source/'app/execution'/name)
++    (source/'config.yaml').write_text('synthetic: true\n')
++    service = {'ActiveState':'inactive','SubState':'dead','MainPID':'0','UnitFileState':'disabled','Restart':'no'}
++    reader = PredecessorReader(bundle=bundle,controller=prior/'p7-b2-pilot-controller-v1/controller.sqlite3',
++                               ownership=prior/'ownership',source_root=source,
++                               epoch=m['associations']['epochs'][0][0],implementation_hashes=m['source']['implementation_sha256'],
++                               config_digest=digest((source/'config.yaml').read_bytes()),service_state=lambda:dict(service))
++    return reader, service
++
++
++def test_fresh_reader_matches_logical_state_without_writes(predecessor):
++    reader, _ = predecessor
++    files = [reader.controller,reader.bundle/'controller.sqlite3',reader.source_root/'config.yaml',reader.ownership/'state.json']
++    before = [(p.read_bytes(),p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.stat().st_ino) for p in files]
++    proof = reader()
++    assert proof == reader()
++    assert proof.controller_digest == logical_controller_digest(reader.controller)
++    assert proof.archive_digest == digest((reader.bundle/'manifest.json').read_bytes())
++    assert proof.config_digest == reader.config_digest
++    after = [(p.read_bytes(),p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.stat().st_ino) for p in files]
++    assert before == after
++
++
++@pytest.mark.parametrize('mutation', ['config','source','live_rows','user_version','schema','d06_current','d06_last','active_service','enabled_service','restart_service'])
++def test_live_drift_refuses_even_when_archive_is_valid(predecessor,mutation):
++    reader, service = predecessor
++    assert reader()
++    if mutation == 'config':(reader.source_root/'config.yaml').write_text('changed: true\n')
++    elif mutation == 'source':
++        p = reader.source_root/'app/execution'/next(iter(reader.hashes))
++        p.write_bytes(p.read_bytes()+b'\n# drift\n')
++    elif mutation in ('live_rows','user_version','schema'):
++        db = sqlite3.connect(reader.controller)
++        try:
++            if mutation == 'live_rows':db.execute("INSERT INTO pilot_events(attempt,code) VALUES(NULL,'EXTRA')")
++            elif mutation == 'user_version':db.execute('PRAGMA user_version=99')
++            else:db.execute('CREATE TABLE unexpected(x TEXT)')
++            db.commit()
++        finally:db.close()
++    elif mutation.startswith('d06_'):
++        p = reader.ownership/'state.json';state = strict_json(p.read_bytes())
++        state[mutation[4:]] = {'uncertain':True};p.write_bytes(canonical(state))
++    elif mutation == 'active_service':service['ActiveState'] = 'active'
++    elif mutation == 'enabled_service':service['UnitFileState'] = 'enabled'
++    else:service['Restart'] = 'always'
++    with pytest.raises(Refused):reader()
++
++
++@pytest.mark.parametrize('member', ['config','controller','ownership','source'])
++def test_reader_symlink_substitution_refused(predecessor,member,tmp_path):
++    reader, _ = predecessor
++    p = {'config':reader.source_root/'config.yaml','controller':reader.controller,
++         'ownership':reader.ownership/'state.json','source':reader.source_root/'app/execution'/next(iter(reader.hashes))}[member]
++    target = tmp_path/'substitute';target.write_bytes(p.read_bytes());p.unlink();p.symlink_to(target)
++    with pytest.raises(Refused,match='SYMLINK_ANCESTOR'):reader()
++
++
++def test_actual_reader_rechecks_after_signature(succession,predecessor):
++    high, _, bindings = succession
++    reader, service = predecessor
++    proof = reader()
++    authority, raw, sig = signed_fixture(proof,bindings)
++    class DriftVerifier(Signer):
++        def verify(self,body,signature):
++            result = super().verify(body,signature)
++            service['MainPID'] = '123'
++            return result
++    authority.verifier = DriftVerifier()
++    with pytest.raises(Refused,match='PREDECESSOR_SERVICE_STATE'):
++        high.reserve_successor(proof,bindings,authority=authority,raw=raw,signature=sig,peer=(0,99),revalidate=reader)
++    assert high.db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++
++
++def test_fresh_reader_successful_signature_binds_deployment(succession,predecessor):
++    high, _, bindings = succession
++    reader, _ = predecessor
++    proof = reader()
++    authority, raw, sig = signed_fixture(proof,bindings)
++    high.reserve_successor(proof,bindings,authority=authority,raw=raw,signature=sig,peer=(0,99),revalidate=reader)
++    payload = strict_json(high.db.execute('SELECT payload FROM succession').fetchone()[0])
++    assert payload['archive'] == proof.archive_digest
++    assert payload['source'] == proof.source_digest
++    assert payload['config'] == reader.config_digest
++    assert payload['controller'] == logical_controller_digest(reader.controller)
++
++
++@pytest.mark.parametrize('mutation',['config','source','archive','controller','d06'])
++def test_real_reader_detects_changes_during_signing(succession,predecessor,mutation):
++    high, _, bindings = succession
++    reader, _ = predecessor
++    proof = reader()
++    authority, raw, sig = signed_fixture(proof,bindings)
++    class DriftVerifier(Signer):
++        def verify(self,body,signature):
++            result = super().verify(body,signature)
++            if mutation=='config':(reader.source_root/'config.yaml').write_text('changed: true\n')
++            elif mutation=='source':
++                p = reader.source_root/'app/execution'/next(iter(reader.hashes))
++                p.write_bytes(p.read_bytes()+b'\n# changed\n')
++            elif mutation=='archive':
++                p = reader.bundle/'manifest.json';p.chmod(0o600);p.write_bytes(b'{}')
++            elif mutation=='controller':
++                db = sqlite3.connect(reader.controller)
++                db.execute("INSERT INTO pilot_events(attempt,code) VALUES(NULL,'EXTRA')");db.commit();db.close()
++            else:(reader.ownership/'state.json').write_bytes(canonical({'version':1,'current':None,'last':{'uncertain':True}}))
++            return result
++    authority.verifier = DriftVerifier()
++    with pytest.raises(Refused):
++        high.reserve_successor(proof,bindings,authority=authority,raw=raw,signature=sig,peer=(0,99),revalidate=reader)
++    assert high.db.execute('SELECT count(*) FROM succession').fetchone() == (0,)
++    assert high.db.execute('SELECT count(*) FROM root').fetchone() == (0,)
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize('mechanism', ['LIFESPAN_SHUTDOWN','SIGUSR1_CONTROL'])
++async def test_shutdown_records_mechanism_without_operator_claim(integrated,mechanism):
++    f = integrated
++    result = await f.runtime.drain(mechanism=mechanism)
++    assert result['terminal'] == 'CLOSED_COMPLETE'
++    assert f.store.db.execute('SELECT code FROM events WHERE code=?',(mechanism,)).fetchall() == [(mechanism,)]
++    assert not f.store.db.execute("SELECT 1 FROM events WHERE code='OPERATOR_STOP'").fetchone()
++    validate_coordinated(f.writer.last,minimum_accepted=0)
++
++
++@pytest.mark.asyncio
++async def test_actual_asgi_lifespan_drains_with_truthful_attribution(integrated):
++    f = integrated
++    frames = iter([{'type':'lifespan.startup'},{'type':'lifespan.shutdown'}])
++    out = []
++    async def receive():return next(frames)
++    async def send(frame):out.append(frame)
++    await f.app({'type':'lifespan','state':{}},receive,send)
++    assert out == [{'type':'lifespan.startup.complete'},{'type':'lifespan.shutdown.complete'}]
++    assert not f.calls and f.store.count() == 0
++    assert f.store.db.execute("SELECT code FROM events WHERE code='LIFESPAN_SHUTDOWN'").fetchall() == [('LIFESPAN_SHUTDOWN',)]
++    assert f.store.terminal() == 'CLOSED_COMPLETE'
++    validate_coordinated(f.writer.last,minimum_accepted=0)
++
++
++def test_successor_verb_cannot_dispatch_a_runtime_permit(integrated):
++    f = integrated
++    proof = fresh_fixture_proof(PredecessorProof('predecessor','a'*64,0,'b'*64))
++    authority,raw,sig = signed_fixture(proof,f.bind.as_dict())
++    with pytest.raises(Refused,match='CONTROL_VERB'):f.runtime.control(raw,sig,(0,99),SUCCESSOR_VERB)
++    assert f.store.db.execute('SELECT count(*) FROM control').fetchone() == (0,)
++    assert not f.runtime.stop_event.is_set() and not f.store.terminal()
++
++
++def test_signed_shutdown_is_distinct(integrated):
++    f = integrated
++    raw,sig = f.control('TERMINAL_STOP')
++    assert f.store.db.execute("SELECT code FROM events WHERE code='SIGNED_TERMINAL_STOP'").fetchall() == [('SIGNED_TERMINAL_STOP',)]
++    assert f.store.db.execute("SELECT body_digest FROM control WHERE verb='TERMINAL_STOP'").fetchone() == (digest(raw),)
++
++
++def test_unsigned_stop_cannot_claim_signed_authority(integrated):
++    f = integrated
++    with pytest.raises(Refused,match='SIGNED_STOP_AUTHORITY'):f.store.stop('SIGNED_TERMINAL_STOP')
++    assert not f.store.terminal()
++    f.runtime.stop('OPERATOR_STOP')
++    assert f.store.db.execute("SELECT code FROM events WHERE code='UNATTRIBUTED_STOP'").fetchall() == [('UNATTRIBUTED_STOP',)]
++
++
++@pytest.mark.parametrize('seconds', [-1,31,True,float('nan'),float('inf')])
++@pytest.mark.asyncio
++async def test_invalid_drain_has_no_stop_effect(integrated,seconds):
++    with pytest.raises(Refused,match='DRAIN_BOUND'):await integrated.runtime.drain(seconds)
++    assert not integrated.runtime.stop_event.is_set() and not integrated.store.terminal()
++
++
++@pytest.mark.asyncio
++async def test_ws_disconnect_closes_armed_admission_without_generation(integrated):
++    f = integrated;f.opened()
++    task,q,out = await asgi_call(f.app,scope('websocket'),[{'type':'websocket.connect'},{'type':'websocket.disconnect'}])
++    await task
++    assert out == [{'type':'websocket.accept'}]
++    assert f.store.terminal() == 'CLOSED_INCOMPLETE' and not f.calls and f.store.count() == 0
++
++
++@pytest.mark.parametrize('mutation', ['delete','commitment','transport','session','ordinal','permit','attempt'])
++@pytest.mark.asyncio
++async def test_global_ledger_identity_cannot_be_rewritten(integrated,mutation):
++    f = integrated;f.opened();await f.turn()
++    sql = 'DELETE FROM accepted' if mutation=='delete' else f"UPDATE accepted SET {mutation}=?"
++    with pytest.raises(sqlite3.IntegrityError,match='HIGHWATER_IMMUTABLE'):
++        f.high.db.execute(sql,() if mutation=='delete' else (2 if mutation=='ordinal' else 'tampered',))
++    f.high.check(f.store)
++    assert f.store.count() == 1
++
++
++@pytest.mark.asyncio
++async def test_commitment_join_detects_local_permit_tamper(integrated):
++    f = integrated;f.opened();await f.turn()
++    f.store.db.execute("UPDATE permits SET commitment=?",('0'*64,))
++    with pytest.raises(Refused,match='HIGHWATER_COMMITMENT'):f.high.check(f.store)
++
++
++def test_competing_global_ordinal_reservations_never_refund(integrated):
++    f = integrated;f.opened();token = f.arm();session = f.runtime.sessions[token]
++    second = HighWater(f.high.root)
++    def reserve(handle):
++        try:
++            handle.before_accept(f.store,'REST',session.id,f.runtime.commitment('Hello. Reply briefly.'))
++            return 'reserved'
++        except Refused as error:return str(error)
++    try:
++        with ThreadPoolExecutor(max_workers=2) as pool:
++            results = list(pool.map(reserve,[f.high,second]))
++        assert sorted(results) == ['HIGHWATER_ROLLBACK_OR_INCOMPLETE_COMMIT','reserved']
++        assert f.high.db.execute('SELECT ordinal,attempt FROM accepted').fetchall() == [(1,None)]
++        assert f.store.count() == 0 and not f.calls
++    finally:second.close()
++
++
++@pytest.mark.asyncio
++async def test_schema_drift_refused_before_next_permit(integrated):
++    f = integrated;f.opened();await f.turn()
++    f.high.db.execute('DROP TRIGGER highwater_no_delete')
++    with pytest.raises(Refused,match='HIGHWATER_INTEGRITY'):f.arm()
++    assert f.store.count() == 1 and len(f.calls) == 3
++
++
++@pytest.mark.asyncio
++async def test_coordinated_backup_rechecks_signed_root_and_commitments(integrated,tmp_path):
++    f = integrated;f.opened();await f.turn()
++    exported = tmp_path/'review'
++    restore_for_review(f.writer.last,exported,minimum_accepted=1)
++    manifest = strict_json((exported/'manifest.json').read_bytes())
++    manifest['id'] = exported.name
++    # Rechecks survive an attacker recomputing the ordinary component checksums.
++    db = sqlite3.connect(exported/'controller.sqlite3')
++    db.execute("UPDATE permits SET commitment=?",('0'*64,));db.commit();db.close()
++    manifest['files']['controller.sqlite3'] = digest((exported/'controller.sqlite3').read_bytes())
++    (exported/'manifest.json').write_bytes(canonical(manifest))
++    with pytest.raises(Refused,match='COORDINATED_COMMITMENT'):validate_coordinated(exported,minimum_accepted=1)
+--- gate6f/repo/tests/execution/v3_release_qualification_test.py
++++ gate6g/repo/tests/execution/v3_release_qualification_test.py
+@@ -25,6 +25,7 @@
+ from app.execution.shadow_provider_ollama import RESOURCE,PROFILE_ID
+ from tests.execution.v3_integration_test import Integrated,BytesStream
+ from tests.execution.v3_candidate_test import Fixture,Sink,KEY
++from tests.execution.v3_successor_support import fresh_fixture_proof,reserve_fixture
+ 
+ SKILLS_SHA256='3a61af6054795cad154b5de00e4185063d32e08e592aba315bc8ef1560e6d4a2'  # tracked skills.md == production copy
+ CAP=16384
+@@ -325,9 +326,11 @@
+     assert proof.stop_attribution=='UNATTRIBUTED_V2_SHUTDOWN_HOOK'
+     root=tmp_path/'hw';root.mkdir(mode=0o700);h=HighWater(root,create=True);seen=[]
+     try:
+-        with pytest.raises(Refused,match='SUCCESSOR_AUTHORITY'):h.reserve_successor(proof,{'epoch':'child'},authorize=lambda p:1)
+-        with pytest.raises(Refused,match='PREDECESSOR_PROOF'):h.reserve_successor(PredecessorProof(proof.epoch,proof.archive_digest,0,proof.source_digest,'OPERATOR_INTENT_PROVEN'),{'epoch':'child'},authorize=lambda p:True)
+-        h.reserve_successor(proof,{'epoch':'child'},authorize=lambda p:seen.append(p) or True)
++        bindings=Bindings(*('source','config','release','pid','invocation','child','boot','start','challenge')).as_dict()
++        proof=fresh_fixture_proof(proof)
++        with pytest.raises(Refused,match='SUCCESSOR_AUTHORITY'):reserve_fixture(h,proof,bindings,authority=1)
++        with pytest.raises(Refused,match='PREDECESSOR_PROOF'):reserve_fixture(h,PredecessorProof(proof.epoch,proof.archive_digest,0,proof.source_digest,'OPERATOR_INTENT_PROVEN'),bindings)
++        seen.append(reserve_fixture(h,proof,bindings))
+         assert seen[0]['stop_attribution']=='UNATTRIBUTED_V2_SHUTDOWN_HOOK' and seen[0]['retirement']=='EXPLICIT_OPERATOR_ZERO_USE_RETIREMENT'
+     finally:h.close()
+ 
+--- gate6f/repo/tests/execution/v3_successor_support.py
++++ gate6g/repo/tests/execution/v3_successor_support.py
+@@ -0,0 +1,28 @@
++"""Synthetic signing/reader fixtures only; never attest a real predecessor."""
++from dataclasses import replace
++import hmac
++import uuid
++from candidate_v3.authority import Authority, SUCCESSOR_VERB
++from candidate_v3.contracts import Bindings, canonical, digest
++from candidate_v3.lineage import successor_payload
++
++
++def fresh_fixture_proof(proof):
++    return replace(proof, config_digest='c'*64, controller_digest='d'*64,
++                   live_state_digest='e'*64)
++
++
++def signed_fixture(proof, bindings):
++    from tests.execution.v3_candidate_test import KEY, Signer
++    payload = successor_payload(proof, bindings)
++    raw = canonical(dict(verb=SUCCESSOR_VERB, nonce=uuid.uuid4().hex, expires=130.,
++                         bindings=bindings, checkpoint=digest(canonical(payload)), payload=payload))
++    return Authority(Bindings(**bindings), Signer(), clock=lambda:100., operator_id='dummy-human'), raw, hmac.digest(KEY, raw, 'sha256')
++
++
++def reserve_fixture(high, proof, bindings, *, authority=None):
++    """Explicit synthetic revalidation replaces the old unconditional True seam."""
++    verifier, raw, signature = signed_fixture(proof, bindings)
++    high.reserve_successor(proof, bindings, authority=verifier if authority is None else authority,
++                           raw=raw, signature=signature, peer=(0,99), revalidate=lambda:proof)
++    return successor_payload(proof, bindings)

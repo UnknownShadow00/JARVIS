@@ -1,0 +1,13 @@
+# Evidence manifest and seal procedure
+
+Version: Gate6H release-r1. Candidate source c874b50719a599e4e6a18f051b0395fb45e0b7cc3f0a8338aeca8206cddd9da2 (34 members), inventory 57ad124ec88e4e06b40f4d392c3cae27bc5648b010bbfe28d1c92e00754f7fe2 (601 members), tar bcc07d09938facd448168e2934815c2f13c3d5f0a81ed2a5a75edcac9a4b4325. Candidate at /home/nexus/.local/share/jarvis-gate6h-authority/release-r1/repo; archive at its release-r1 parent as gate6h-release-r1.tar. These are same-UID integrity archives, not immutable protected authorities or Git commits. Review patch embeds changed module/test source. Gate6G archive untouched.
+
+SHA256SUMS covers every regular file in this packet except itself. Its own SHA256 is stored separately in ../p7-b2-gate6h-release-authority-qualification.seal and final response, avoiding self-reference. Verify from packet directory: sha256sum -c SHA256SUMS, then sha256sum SHA256SUMS. Check source/full manifests against their documented candidate roots. No future write to a sealed packet; use new version.
+
+Evidence groups: Gate6G local/Core entry and exit preservation; original Gate6F102-member seal and doc equality; exact original X1–X11 rows plus full source-document paths/hashes; final candidate34-source/601-inventory manifests and patch; run source verification, all successful/failed logs, sandbox counters, ext4/tmpfs evidence, compile/pip-check; real read-only production entry/final and terminal archive comparison; non-executable unsigned V2 draft; namespace limits/mount-denial proof; private infrastructure human-only procedures; all18 required outputs and task loop-log entry copy.
+
+Collection corrections retained: initial D04 collector checked wrong absent path (collector-v1), then actual canonical namespace independently read; extra final historical inventory lookup initially used wrong Gate5 path then corrected to Gate4; Gate6F original docs top-level probe corrected to docs/ with exact equality. These are collector path errors, not altered historical evidence or production discrepancies.
+
+Production inspector audit hook denies writes, credentials and network, SQLite mode=ro/query_only, no app imports. task logs contain fixed metadata/counters/digests, not raw environment/credentials/private keys/conversations. Existing .env.example in preserved source is template, no real credential copied. No signed production command included. The complete candidate is separately stored outside auto-synced task docs; minimized patch/test evidence is reviewable here.
+
+Seal is integrity only, not operator authorization or trusted independent witness. Final verification record is stored outside the packet in .local/share/jarvis-gate6h-authority, and the sibling seal remains separate.

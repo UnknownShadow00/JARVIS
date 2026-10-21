@@ -1,0 +1,33 @@
+................................................F....................... [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 49%]
+........................................................................ [ 66%]
+........................................................................ [ 82%]
+........................................................................ [ 99%]
+....                                                                     [100%]
+=================================== FAILURES ===================================
+____________________ Candidate.test_no_unrestricted_imports ____________________
+
+self = <tests.execution.v3_candidate_test.Candidate testMethod=test_no_unrestricted_imports>
+
+    async def test_no_unrestricted_imports(self):
+     paths=list(Path('candidate_v3').glob('*.py'));imports=[]
+     for p in paths:
+      for n in ast.walk(ast.parse(p.read_text())):
+       if isinstance(n,ast.Import):imports.extend(a.name for a in n.names)
+       if isinstance(n,ast.ImportFrom):imports.append(n.module or '')
+     for bad in ('app.server','app.tools','app.voice','app.brain.llm_client','subprocess'):self.assertFalse(any(x.startswith(bad) for x in imports))
+     for p in paths:
+      tree=ast.parse(p.read_text())
+      names=[a.name for n in ast.walk(tree) if isinstance(n,ast.Import) for a in n.names]+[n.module or '' for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)]
+      if 'httpx' in names:self.assertEqual(p.name,'transport.py')
+>     if 'socket' in names:self.assertEqual(p.name,'local_control.py')
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     AssertionError: 'protected_authority.py' != 'local_control.py'
+E     - protected_authority.py
+E     + local_control.py
+
+tests/execution/v3_candidate_test.py:191: AssertionError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_candidate_test.py::Candidate::test_no_unrestricted_imports
+1 failed, 435 passed in 10.82s

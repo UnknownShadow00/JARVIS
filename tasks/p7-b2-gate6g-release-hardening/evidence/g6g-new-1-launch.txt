@@ -1,0 +1,25 @@
+STAGE=/tmp/jarvis-gate6g-g6g-new-1-XhEZNLs7 RC=1
+{"label": "g6g-new-1", "exit": 1, "seconds": 1.7371986120124348, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "INET/PACKET sockets, all connect, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/tmp/jarvis-gate6g-g6g-new-1-XhEZNLs7/repo"}
+.......................................................F.....            [100%]
+=================================== FAILURES ===================================
+___________ test_global_ledger_identity_cannot_be_rewritten[ordinal] ___________
+
+integrated = <tests.execution.v3_integration_test.Integrated object at 0x778720722ad0>
+mutation = 'ordinal'
+
+    @pytest.mark.parametrize('mutation', ['delete','commitment','transport','session','ordinal','permit','attempt'])
+    @pytest.mark.asyncio
+    async def test_global_ledger_identity_cannot_be_rewritten(integrated,mutation):
+        f = integrated;f.opened();await f.turn()
+        sql = 'DELETE FROM accepted' if mutation=='delete' else f"UPDATE accepted SET {mutation}=?"
+>       with pytest.raises(sqlite3.IntegrityError,match='HIGHWATER_IMMUTABLE'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'HIGHWATER_IMMUTABLE'
+E         Actual message: 'datatype mismatch'
+
+tests/execution/v3_release_hardening_test.py:274: AssertionError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_release_hardening_test.py::test_global_ledger_identity_cannot_be_rewritten[ordinal]
+1 failed, 60 passed in 1.65s
+

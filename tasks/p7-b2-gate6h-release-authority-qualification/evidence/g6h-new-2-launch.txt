@@ -1,0 +1,43 @@
+STAGE=/tmp/jarvis-gate6h-g6h-new-2-wy4UsL8e RC=1
+{"label": "g6h-new-2", "exit": 1, "seconds": 0.5842118989676237, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "INET/PACKET sockets, all connect, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/tmp/jarvis-gate6h-g6h-new-2-wy4UsL8e/repo"}
+........................F...................................             [100%]
+=================================== FAILURES ===================================
+_______________ test_crash_window_burns_before_local_acceptance ________________
+
+f = <tests.execution.v3_protected_authority_test.Fixture object at 0x7ba1f52c0d70>
+
+    def test_crash_window_burns_before_local_acceptance(f):
+        f.successor();f.checkpoint();f.send(f.permit())
+        other=f.open()
+        try:
+            assert len(other.read()['accepted'])==1
+>           with pytest.raises(Refused,match='CHECKPOINT'):f.send(f.permit(2),journal=other)
+                                                                  ^^^^^^^^^^^
+
+tests/execution/v3_protected_authority_test.py:178: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/execution/v3_protected_authority_test.py:80: in permit
+    return self.envelope('AUTHORIZE_ONE',payload=p)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tests.execution.v3_protected_authority_test.Fixture object at 0x7ba1f52c0d70>
+verb = 'AUTHORIZE_ONE'
+payload = {'transport': 'REST', 'session': 'rest', 'request_commitment': '2222222222222222222222222222222222222222222222222222222222222222'}
+checkpoint = None
+
+    def envelope(self, verb, *, payload=None, checkpoint=None):
+        self.nonce += 1
+        if verb == SUCCESSOR_VERB:
+            payload = successor_payload(self.proof,self.bindings.as_dict()) if payload is None else payload
+            checkpoint = digest(canonical(payload)) if checkpoint is None else checkpoint
+        elif checkpoint is None:
+>           checkpoint = self.journal.read()['checkpoint']['digest']
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: 'NoneType' object is not subscriptable
+
+tests/execution/v3_protected_authority_test.py:53: TypeError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_authority_test.py::test_crash_window_burns_before_local_acceptance
+1 failed, 59 passed in 0.53s
+

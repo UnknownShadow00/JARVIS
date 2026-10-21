@@ -1,0 +1,29 @@
+{
+  "unshare": {
+    "argv": [
+      "unshare",
+      "--user",
+      "--map-root-user",
+      "true"
+    ],
+    "exit": 1,
+    "stdout": "",
+    "stderr": "unshare: write failed /proc/self/uid_map: Operation not permitted\n"
+  },
+  "bwrap": {
+    "argv": [
+      "bwrap",
+      "--unshare-user",
+      "--ro-bind",
+      "/",
+      "/",
+      "--",
+      "/bin/sh",
+      "-c",
+      "id; cat /proc/self/uid_map; cat /proc/self/gid_map"
+    ],
+    "exit": 0,
+    "stdout": "uid=1000(nexus) gid=1000(nexus) groups=1000(nexus),65534(nogroup),65534(nogroup),65534(nogroup),65534(nogroup),65534(nogroup),65534(nogroup),65534(nogroup),65534(nogroup)\n      1000       1000          1\n      1000       1000          1\n",
+    "stderr": ""
+  }
+}

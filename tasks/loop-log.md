@@ -1309,3 +1309,21 @@
 - Proxmox: no access (one publickey BatchMode probe each, denied). VMIDs/UPIDs unverified; human-only commands provided.
 - V2: inactive, epoch CLOSED_COMPLETE, 0 attempts; terminal backup 62f417a2 verified and logically equal to live D09. No defect in V3 candidate; H-1..H-4 hardening recorded.
 - Packet tasks/p7-b2-gate6f-vm-event-addendum/ (+ Core mirror), seal d6ff3802a64c806abe0442e8ab95cc9caec428035ccf5fbf7ec08246e94e3299. Gate 6F seal df3090b9 unchanged.
+
+## [2026-10-20T13:34:24.739073+00:00] Task Completed
+- Task: Verify Task 6 tracing/audit starting repository state; stop on unexpected commits as instructed.
+- Files changed: tasks/loop-log.md only.
+- Result: FAIL entry criteria; initial working tree clean, but branch docs/p7-d06-d07-passive-review at c3d4f4c9e38149dac8a05f40cf48ff6cac4d4b7d; local main 0b596d7e127f8239596c7152180843e82a15eec7 is 60 commits ahead of origin/main 2d7a2ec816500610eafdba4c1a3c0d73f5594c18; expected main 4fb8db832fd803279438405c2c123f02d75f8354. Existing feature/tracing-audit is 4682793abe2d2bad2379d65b8210b0e31024028a. No application edits, tests, commit, push, PR, or merge performed.
+- Next: Reconcile requested historical starting point with current repository before resuming; preserve existing branches and commits.
+
+## [2026-10-20T14:00:24.996767+00:00] Task Completed
+- Task: Gate 6G isolated V3 release hardening and deployment-readiness review; historical tracing reconciled, no delegation or production deployment.
+- Files changed: tasks/p7-b2-gate6g-release-hardening/ (task reports, improvement register, source patch/manifests, test and readback evidence, tools); tasks/p7-b2-gate6g-release-hardening.seal; tasks/loop-log.md (append only); new isolated release-r1 source archive on Nexus and Core (8 candidate modules and 5 test/support files changed/added, none removed).
+- Result: PASS isolated H-1 through H-4 and regressions: 375 focused; 7,541 full passed, 11 deselected, 0 failed, 2 existing warnings; 72 new cases passed on ext4; 145 Python files compile; pip check clean. Candidate 7e797307b2ae2d372cc1a8bbe00894b66b468ee472ec3296d18bc8d08de9c370 (32 source-manifest members, 599 full files). PARTIAL deployment readiness: protected root/multi-UID/human signer, independent identity and experiment/operator approvals pending. Production 21-field entry/final comparison unchanged; Gate 6F source and all 102 evidence-seal members preserved. No real generations, production successor, deployment, admissions, measurement, commit or push.
+- Next: Review isolated release-r1 and sealed evidence; resolve V2 disposition, X1-X11, host/legacy attestation and protected authority qualification, then obtain separate retirement/successor, installation/new Gate 5 and pilot approvals. Keep V2 stopped and production unchanged.
+
+## [2026-10-20T16:02:45.823440+00:00] Task Completed
+- Task: Gate6H isolated protected-authority companion qualification, exact Gate6F X1-X11 decision convergence, human-only attestations and V2-to-V3 transition preparation; production kept stopped/unchanged.
+- Files changed: tasks/p7-b2-gate6h-release-authority-qualification/ (17 required reports, tools, minimized evidence and SHA256SUMS); tasks/p7-b2-gate6h-release-authority-qualification.seal; tasks/loop-log.md; isolated /home/nexus/.local/share/jarvis-gate6h-authority/release-r1/repo/candidate_v3/protected_authority.py, candidate_v3/local_control.py, tests/execution/v3_protected_authority_test.py plus versioned source archive/manifests.
+- Result: PASS isolated acceptance:458 focused,7624 full/11 deselected/zero failed,83 new ext4 cases; original seals preserved, all11 original decisions located, final production16-field comparison unchanged/zero use. PARTIAL deployment qualification: genuine distinct-UID, protected runtime integration/signer/external witness and independent model/resource attestations remain pending; no production mutation or real provider traffic.
+- Next: Operator review of X1-X11 recommendations and disposable genuine-UID/protected-reader/signer qualification plan; separately authorized human metadata attestation, then future explicitly approved provisioning/disposition/succession/install/newGate5/provider qualification/pilot/Gate7. V2 retirement and V3 deployment remain unauthorized.

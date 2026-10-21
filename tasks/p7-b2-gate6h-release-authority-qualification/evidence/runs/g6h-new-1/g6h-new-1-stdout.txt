@@ -1,0 +1,75 @@
+{"label": "g6h-new-1", "exit": 1, "seconds": 0.7226469499873929, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "INET/PACKET sockets, all connect, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/tmp/jarvis-gate6h-g6h-new-1-y2PaWIhc/repo"}
+turn value
+            except BaseException as e:
+                if self.db.in_transaction: self.db.execute('ROLLBACK')
+                if isinstance(e,Refused): raise
+>               raise Refused('AUTHORITY_UNAVAILABLE') from None
+E               candidate_v3.contracts.Refused: AUTHORITY_UNAVAILABLE
+
+candidate_v3/protected_authority.py:241: Refused
+____________________ test_terminal_is_monotonic_and_signed _____________________
+
+f = <tests.execution.v3_protected_authority_test.Fixture object at 0x72d290f5be30>
+
+    def test_terminal_is_monotonic_and_signed(f):
+>       f.successor();f.checkpoint();f.send(f.envelope('TERMINAL_STOP'))
+                      ^^^^^^^^^^^^^^
+
+tests/execution/v3_protected_authority_test.py:329: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/execution/v3_protected_authority_test.py:72: in checkpoint
+    return self.journal.checkpoint(peer=(os.getuid(),os.getpid()),expected={k:s[k] for k in ('seq','seal')},
+candidate_v3/protected_authority.py:229: in checkpoint
+    return self._transaction(op)
+           ^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/protected_authority.py:163: in _transaction
+    return operation(self._state())
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/protected_authority.py:219: in op
+    snap = snapshot_reader()
+           ^^^^^^^^^^^^^^^^^
+tests/execution/v3_protected_authority_test.py:73: in <lambda>
+    snapshot_reader=lambda:self.snapshot(**mutations))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/execution/v3_protected_authority_test.py:65: in snapshot
+    s = self.journal.read()
+        ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <candidate_v3.protected_authority.ProtectedJournal object at 0x72d2926a8890>
+
+    def read(self):
+        with self.lock:
+            try:
+                self.db.execute('BEGIN')
+                self._identity(); value = self._state()
+                self.db.execute('COMMIT')
+                return value
+            except BaseException as e:
+                if self.db.in_transaction: self.db.execute('ROLLBACK')
+                if isinstance(e,Refused): raise
+>               raise Refused('AUTHORITY_UNAVAILABLE') from None
+E               candidate_v3.contracts.Refused: AUTHORITY_UNAVAILABLE
+
+candidate_v3/protected_authority.py:241: Refused
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_authority_test.py::test_four_attempt_order_cap_and_separate_durable_permits
+FAILED tests/execution/v3_protected_authority_test.py::test_crash_window_burns_before_local_acceptance
+FAILED tests/execution/v3_protected_authority_test.py::test_incomplete_resource_unknown_and_older_backup_refuse[mutation0]
+FAILED tests/execution/v3_protected_authority_test.py::test_incomplete_resource_unknown_and_older_backup_refuse[mutation1]
+FAILED tests/execution/v3_protected_authority_test.py::test_incomplete_resource_unknown_and_older_backup_refuse[mutation2]
+FAILED tests/execution/v3_protected_authority_test.py::test_incomplete_resource_unknown_and_older_backup_refuse[mutation3]
+FAILED tests/execution/v3_protected_authority_test.py::test_incomplete_resource_unknown_and_older_backup_refuse[mutation4]
+FAILED tests/execution/v3_protected_authority_test.py::test_bad_permit_refused[mutation0]
+FAILED tests/execution/v3_protected_authority_test.py::test_bad_permit_refused[mutation1]
+FAILED tests/execution/v3_protected_authority_test.py::test_bad_permit_refused[mutation2]
+FAILED tests/execution/v3_protected_authority_test.py::test_bad_permit_refused[mutation3]
+FAILED tests/execution/v3_protected_authority_test.py::test_session_cannot_change_within_transport
+FAILED tests/execution/v3_protected_authority_test.py::test_rollback_of_all_application_files_detected_by_preserved_anchor
+FAILED tests/execution/v3_protected_authority_test.py::test_complete_authority_rollback_still_possible_to_owner
+FAILED tests/execution/v3_protected_authority_test.py::test_older_checkpoint_and_stale_command_after_accept_refuse
+FAILED tests/execution/v3_protected_authority_test.py::test_real_process_interruption_atomic_nonce_and_restart[before_commit-0-AUTHORIZE_ONE]
+FAILED tests/execution/v3_protected_authority_test.py::test_real_process_interruption_atomic_nonce_and_restart[after_commit-1-AUTHORIZE_ONE]
+FAILED tests/execution/v3_protected_authority_test.py::test_terminal_is_monotonic_and_signed
+18 failed, 42 passed in 0.67s
+

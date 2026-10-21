@@ -1,0 +1,57 @@
+[
+  {
+    "id": "X1",
+    "exact_item": "Strict classifier refusal instead of original `confirm_action` on low confidence / parse error / Ollama error",
+    "original_recommendation": "APPROVE as a safety restriction (original path would produce a client-visible confirmation turn, outside a conversation-only pilot)"
+  },
+  {
+    "id": "X2",
+    "exact_item": "Deep branch unavailable (refusal)",
+    "original_recommendation": "APPROVE; none of the four inputs selects it"
+  },
+  {
+    "id": "X3",
+    "exact_item": "Memory: pinned snapshot of `skills.md` (`3a61af60\u2026`, 1,877 B) vs original live read",
+    "original_recommendation": "APPROVE the pinned snapshot; REJECT the 6E empty snapshot (changes the experiment). Re-verify the production file hash immediately before any pilot"
+  },
+  {
+    "id": "X4",
+    "exact_item": "Normal responder `num_ctx`",
+    "original_recommendation": "REVISE to **8192** (source Modelfile value, G6F-LP-2), subject to attestation of the installed Modelfile; 32768 is not source-faithful"
+  },
+  {
+    "id": "X5",
+    "exact_item": "Trivial responder `num_ctx` 4096",
+    "original_recommendation": "APPROVE only after the server default context is attested; otherwise REVISE to the attested value"
+  },
+  {
+    "id": "X6",
+    "exact_item": "Explicit `keep_alive: 60` on legacy operations (original sends none)",
+    "original_recommendation": "Operator choice: 60 bounds residency next to Granite but differs from original server policy; decide together with topology (A vs B/C)"
+  },
+  {
+    "id": "X7",
+    "exact_item": "Zero responder retries, whole-operation deadlines 20 s / 180 s",
+    "original_recommendation": "APPROVE as a safety restriction"
+  },
+  {
+    "id": "X8",
+    "exact_item": "Non-streaming WS responder (TTS off)",
+    "original_recommendation": "APPROVE; client sees one reply frame as before"
+  },
+  {
+    "id": "X9",
+    "exact_item": "Empty-reply and action/tool-proposal refusal",
+    "original_recommendation": "APPROVE"
+  },
+  {
+    "id": "X10",
+    "exact_item": "Resource topology",
+    "original_recommendation": "Require HUMAN_ATTESTED topology; if B/C, explicitly approve `SHARED_HOST_SERIAL_RESIDENCY_APPROVED` or provide separate hosts"
+  },
+  {
+    "id": "X11",
+    "exact_item": "Workload",
+    "original_recommendation": "3 classifier + 4 responder + 4 Granite = 11 conditional operations, \u22641,500 s provider deadline time"
+  }
+]
