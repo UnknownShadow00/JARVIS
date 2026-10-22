@@ -1,0 +1,77 @@
+...EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 13%]
+EEEEEEEEEEEEFFFFF.FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF [ 26%]
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF..EEEEEEEEEEEEEEEEEEEEEEEEEEEFFF [ 39%]
+FFEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE.....EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 52%]
+EEEEEEEEEFEEEEEEEEEEEEEFFEEEFFFEFEEEEEEEE.FEEEEEE...EEFEEEEEEEEF........ [ 65%]
+...EEEEFFFFFFFFFFFFFFFFFFFFEEFFEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 78%]
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 91%]
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE                             [100%]
+==================================== ERRORS ====================================
+__ ERROR at setup of test_protected_authentication_before_request[websocket] ___
+
+tmp_path = PosixPath('/tmp/jarvis-gate6i-focused-r6-rs2JQRl3/fixtures-focused-r6/test_protected_authentication_1')
+
+    @pytest.fixture
+    def protected(tmp_path):
+>       f=ProtectedIntegrated(tmp_path)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/execution/v3_protected_runtime_test.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/execution/v3_protected_runtime_test.py:58: in __init__
+    self.runtime.checkpoint_writer=self.writer;self.runtime._checkpoint()
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/runtime.py:67: in _checkpoint
+    root=(self.checkpoint_writer(self.store,self.backups) if self.checkpoint_writer is not None else checkpoint(self.store,self.backups));self.last_checkpoint=root;return root
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/checkpoints.py:26: in __call__
+    local=checkpoint(store,backups,forensic=forensic)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+store = <candidate_v3.storage.Store object at 0x7e4ee4136190>
+parent = PosixPath('/tmp/jarvis-gate6i-focused-r6-rs2JQRl3/fixtures-focused-r6/test_protected_authentication_1/backups')
+forensic = False
+
+    def checkpoint(store: Store, parent: Path, *, forensic=False):
+        """Exclusive manifest-last snapshot; never replace/prune/restore an existing bundle."""
+        private(parent,True)
+        with store.lock:
+            if not forensic and (not store.clean() or store.db.execute('SELECT 1 FROM attempts WHERE terminal IS NULL').fetchone()):raise Refused('CHECKPOINT_NOT_QUIESCENT')
+            store.validate();bid=uuid.uuid4().hex;root=parent/bid;root.mkdir(mode=0o700);sync_dir(parent)
+            dbpath=root/'controller.sqlite3';copy=sqlite3.connect(dbpath)
+>           try:store.db.backup(copy)
+                ^^^^^^^^^^^^^^^^^^^^^
+E           sqlite3.OperationalError: disk I/O error
+
+candidate_v3/storage.py:255: OperationalError
+_______________ ERROR at setup of test_protected_closed_refuses ________________
+
+tmp_path = PosixPath('/tmp/jarvis-gate6i-focused-r6-rs2JQRl3/fixtures-focused-r6/test_protected_closed_refuses0')
+
+    @pytest.fixture
+    def protected(tmp_path):
+>       f=ProtectedIntegrated(tmp_path)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/execution/v3_protected_runtime_test.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/execution/v3_protected_runtime_test.py:24: in __init__
+    super().__init__(base)
+tests/execution/v3_integration_test.py:40: in __init__
+    super().__init__(base,predecessor=pred)
+tests/execution/v3_candidate_test.py:66: in __init__
+    self.store=Store(base/'state',predecessor=self.pred,child='successor',bindings=self.bind.as_dict())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/storage.py:98: in __init__
+    with self.tx():
+         ^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:148: in __exit__
+    next(self.gen)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <candidate_v3.storage.Store object at 0x7e4ee12e09d0>
+
+    @contextmanager
+    def tx(self):
+        wit

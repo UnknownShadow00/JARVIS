@@ -1,0 +1,19 @@
+{"label": "initial", "exit": 1, "seconds": 5.145706326002255, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/tmp/jarvis-gate6i-initial-HAIQKIAq/repo"}
+..........F...................                                           [100%]
+=================================== FAILURES ===================================
+______________________ test_signed_command_binding[verb] _______________________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x7ac995f11a90>
+bad = 'verb'
+
+    @pytest.mark.parametrize('bad',['signature','binding','expiry','verb'])
+    def test_signed_command_binding(protected,bad):
+        f=protected;changes={'binding':dict(bindings=dict(f.bind.as_dict(),source='stale')),'expiry':dict(expires=99),'verb':dict(verb='EXEC')} .get(bad,{})
+>       raw,sig=f.approval('OPEN_HOLD',**changes)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ProtectedIntegrated.approval() got multiple values for argument 'verb'
+
+tests/execution/v3_protected_runtime_test.py:134: TypeError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_runtime_test.py::test_signed_command_binding[verb]
+

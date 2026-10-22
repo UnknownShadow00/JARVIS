@@ -1,0 +1,597 @@
+--- gate6j/SOURCE-SHA256SUMS
++++ gate6k/SOURCE-SHA256SUMS
+@@ -1,10 +1,13 @@
+ a685af71b2b9d5ef4cc21d5460ba95b3345b2dc247ec6b22c5ee6fb24619f3fc  disposable/dependency-versions.json
++efcca509a3d0da8e8b96da74f59c2e695c46d63b8a739c866db84a6c12dfb825  disposable/offline_artifacts.py
++032ff3c8ea9005b59cc2a2405d093e8af49c028350ab1875b3cfde2034b9cc47  disposable/prequalification_tests.py
+ 7ca0406717c79b1288e598393949448e1b5aaa174c729a56dcdba172b09485e6  disposable/process_boundary.py
+-0faf22efb840289395a26369edbd5932f0e02b32080f29c999e7748f07e59a76  disposable/qualify_all.py
+-e9e4bf7799f1d14eba3f143ad32acc88c965a6fffdee12cfda45b53763ba9efa  disposable/qualify_multi_uid.py
++176680b1a963a1eaaa9b102834272e9d3f0abfeff33a45d97ba3e951c01c37c3  disposable/qualify_all.py
++602f0180ff963c0f1b8d144c492e5967cc84b97e8a0ef249a02354a777276c04  disposable/qualify_multi_uid.py
+ b07d5613eb50547b99229b2230bf90bd9d884dfcc869ecc025ffb003449d680a  disposable/requirements-versions.txt
+ b4450fdbf55fef9256a4dc36b2424e0af93f453327575fcd9860ce6032d06f99  disposable/runner_tests.py
+-0a9da6068b8954cf9506a910d0798a712f178d33f0095576c797f06c4c31eb28  disposable/safety_preflight.py
++1a0c09e8e5ee5c76870deb41986328a3cf7836ae2ea0548d29b1dfacc77f589b  disposable/safe_extract.py
++752a496ab63bf8b03869a1850e9856f14c47224a66e886316fd820f90df55c1c  disposable/safety_preflight.py
+ f3b5849d4a20a9eb8506356cc2676d25b1b3357719202707bfc7d2830eb8fca7  guard/sitecustomize.py
+ c907185643d4b8cfad6a4737f79c7e0dacdc5a9b0a22c86528e8bf5108a12e5b  kernel_guard.py
+ 77bec958f1d0b999d9193530113e840d3011e640d41fd0e3d4852fa2c37823a5  offline_fixtures.py
+--- gate6j/disposable/offline_artifacts.py
++++ gate6k/disposable/offline_artifacts.py
+@@ -0,0 +1,55 @@
++"""Verify independently reviewed offline artifact inventory; never install anything."""
++import argparse,hashlib,json,os,re,stat
++from pathlib import Path
++from safe_extract import bounded_file,valid_name,safe_parent
++
++
++def strict_object(pairs):
++    result={}
++    for key,value in pairs:
++        if key in result:raise ValueError('DUPLICATE_JSON_KEY')
++        result[key]=value
++    return result
++
++
++def required_artifacts(release):
++    pins=json.loads((Path(release)/'disposable/dependency-versions.json').read_text())
++    return {'distribution:'+n:v for n,v in pins['packages'].items()}|{
++        'interpreter:cpython':'3.14.4','library:sqlite':'3.46.1','library:libseccomp':'OPERATOR_REVIEWED_OS_BUILD','image:linux-x86_64':'OPERATOR_REVIEWED_OS_BUILD'}
++
++
++def verify_artifacts(release,root,expected):
++    root=Path(root)
++    fd=safe_parent(root);os.close(fd)
++    raw=bounded_file(root/'ARTIFACTS.json',512*1024)
++    if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('ARTIFACT_RECORD_IDENTITY')
++    value=json.loads(raw,object_pairs_hook=strict_object)
++    required=required_artifacts(release)
++    if type(value) is not dict or set(value)!=set(required):raise ValueError('ARTIFACT_INVENTORY')
++    filenames=set()
++    for identity,version in required.items():
++        row=value[identity]
++        if type(row) is not dict or set(row)!={'version','filename','sha256','provenance_record'} or row['version']!=version:raise ValueError('ARTIFACT_VERSION_OR_SCHEMA')
++        name=valid_name(row['filename'])
++        if '/' in name or name in filenames or name=='ARTIFACTS.json':raise ValueError('ARTIFACT_FILENAME')
++        filenames.add(name)
++        if not re.fullmatch('[0-9a-f]{64}',row['sha256']) or type(row['provenance_record']) is not str or not 1<=len(row['provenance_record'])<=512:raise ValueError('ARTIFACT_PROVENANCE_RECORD')
++        # A provenance reference is a human review record, not automatic authenticity.
++        fd=os.open(root/name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
++        try:
++            before=os.fstat(fd)
++            if not stat.S_ISREG(before.st_mode) or before.st_nlink!=1 or before.st_mode&0o022 or before.st_uid not in (0,os.geteuid()) or before.st_size>4*1024**3:raise ValueError('ARTIFACT_FILE')
++            digest=hashlib.sha256();count=0
++            while chunk:=os.read(fd,1024*1024):
++                count+=len(chunk)
++                if count>before.st_size:raise ValueError('ARTIFACT_CHANGED')
++                digest.update(chunk)
++            after=os.fstat(fd)
++            if count!=before.st_size or (before.st_mtime_ns,before.st_ctime_ns)!=(after.st_mtime_ns,after.st_ctime_ns) or digest.hexdigest()!=row['sha256']:raise ValueError('ARTIFACT_DIGEST')
++        finally:os.close(fd)
++    return {'result':'PASS','artifact_count':len(required),'independent_provenance':'human record required; not inferred from hashes'}
++
++if __name__=='__main__':
++    p=argparse.ArgumentParser();p.add_argument('release');p.add_argument('--root');p.add_argument('--expected');a=p.parse_args()
++    if a.root and a.expected:print(json.dumps(verify_artifacts(a.release,a.root,a.expected)))
++    else:print(json.dumps({'result':'BLOCKED','required_artifacts':required_artifacts(a.release)},indent=2))
+--- gate6j/disposable/prequalification_tests.py
++++ gate6k/disposable/prequalification_tests.py
+@@ -0,0 +1,195 @@
++"""Unprivileged Gate6K checks. No main(), setuid(), provisioning or real providers."""
++import hashlib,io,json,os,stat,tarfile,tempfile,unittest
++from pathlib import Path
++from unittest.mock import patch
++from types import SimpleNamespace
++import safe_extract as se
++from safety_preflight import validate_approval,read_approval,validate_capacity,validate_environment
++from offline_artifacts import verify_artifacts
++
++HERE=Path(__file__).parent
++H=lambda b:hashlib.sha256(b).hexdigest()
++
++class ExtractionTests(unittest.TestCase):
++    def setUp(self):
++        self.temp=tempfile.TemporaryDirectory(dir=HERE);self.root=Path(self.temp.name)
++    def tearDown(self):self.temp.cleanup()
++    def archive(self,extra=None,*,pax=None,manifest_change=None):
++        content=b'reviewed fixture';manifest=(H(content)+'  repo/source.py\n').encode()
++        if manifest_change:manifest=manifest_change(manifest)
++        p=self.root/'release.tar'
++        with tarfile.open(p,'w',format=tarfile.PAX_FORMAT) as t:
++            for name,data in [('repo/source.py',content),('SOURCE-SHA256SUMS',manifest)]:
++                m=tarfile.TarInfo(name);m.size=len(data);m.mode=0o664
++                if pax:m.pax_headers=pax
++                t.addfile(m,io.BytesIO(data))
++            if extra:
++                m,data=extra;t.addfile(m,io.BytesIO(data) if data is not None else None)
++        return p,H(p.read_bytes()),H(manifest)
++    def extract(self,args):return se.extract(args[0],self.root/'dest',args[1],args[2])
++    def test_valid_extraction_normalizes_metadata(self):
++        args=self.archive(pax={'mtime':'100.1'});self.assertEqual(self.extract(args)['members'],2)
++        self.assertEqual((self.root/'dest/repo/source.py').stat().st_mode&0o777,0o644)
++        self.assertEqual((self.root/'dest').stat().st_mode&0o777,0o755)
++    def test_restrictive_umask_keeps_package_traversable(self):
++        args=self.archive();previous=os.umask(0o077)
++        try:self.extract(args)
++        finally:os.umask(previous)
++        self.assertEqual((self.root/'dest/repo').stat().st_mode&0o777,0o755)
++    def test_existing_destination_refused(self):
++        args=self.archive();(self.root/'dest').mkdir()
++        with self.assertRaises(FileExistsError):self.extract(args)
++    def test_destination_symlink_refused(self):
++        args=self.archive();(self.root/'dest').symlink_to(self.root,target_is_directory=True)
++        with self.assertRaises(FileExistsError):self.extract(args)
++    def test_parent_symlink_refused(self):
++        args=self.archive();(self.root/'link').symlink_to(self.root,target_is_directory=True)
++        with self.assertRaises(OSError):se.extract(args[0],self.root/'link/dest',*args[1:])
++    def test_writable_parent_refused(self):
++        args=self.archive();(self.root/'parent').mkdir(mode=0o777);(self.root/'parent').chmod(0o777)
++        with self.assertRaises(ValueError):se.extract(args[0],self.root/'parent/dest',*args[1:])
++    def test_archive_digest_refused_before_destination(self):
++        args=self.archive()
++        with self.assertRaises(ValueError):self.extract((args[0],'0'*64,args[2]))
++        self.assertFalse((self.root/'dest').exists())
++    def test_manifest_digest_refused(self):
++        args=self.archive()
++        with self.assertRaises(ValueError):self.extract((args[0],args[1],'0'*64))
++    def test_member_digest_refused(self):
++        with self.assertRaises(ValueError):self.extract(self.archive(manifest_change=lambda b:b.replace(b[:64],b'0'*64)))
++    def test_manifest_duplicate_refused(self):
++        with self.assertRaises(ValueError):self.extract(self.archive(manifest_change=lambda b:b+b))
++    def test_pax_path_override_refused(self):
++        with self.assertRaises(ValueError):self.extract(self.archive(pax={'path':'override'}))
++    def test_sparse_pax_refused(self):
++        with self.assertRaises((ValueError,tarfile.TarError)):self.extract(self.archive(pax={'GNU.sparse.size':'1'}))
++    def test_archive_symlink_refused(self):
++        args=self.archive();link=self.root/'link';link.symlink_to(args[0])
++        with self.assertRaises(OSError):self.extract((link,*args[1:]))
++    def test_archive_hardlink_refused(self):
++        args=self.archive();os.link(args[0],self.root/'other')
++        with self.assertRaises(ValueError):self.extract(args)
++    def test_archive_fifo_refused_without_blocking(self):
++        p=self.root/'fifo';os.mkfifo(p)
++        with self.assertRaises(ValueError):self.extract((p,'0'*64,'0'*64))
++    def test_archive_size_budget(self):
++        args=self.archive()
++        with patch.object(se,'MAX_ARCHIVE',1),self.assertRaises(ValueError):self.extract(args)
++    def test_member_size_budget(self):
++        args=self.archive()
++        with patch.object(se,'MAX_FILE',1),self.assertRaises(ValueError):self.extract(args)
++    def test_member_count_budget(self):
++        args=self.archive()
++        with patch.object(se,'MAX_MEMBERS',1),self.assertRaises(ValueError):self.extract(args)
++    def test_total_size_budget(self):
++        args=self.archive()
++        with patch.object(se,'MAX_TOTAL',1),self.assertRaises(ValueError):self.extract(args)
++    def test_interrupted_extraction_preserved_and_retry_refused(self):
++        args=self.archive()
++        with patch.object(se.os,'fsync',side_effect=OSError('fixture interruption')),self.assertRaises(OSError):self.extract(args)
++        self.assertTrue((self.root/'dest').is_dir());self.assertEqual((self.root/'dest').stat().st_mode&0o777,0o700)
++        with self.assertRaises(FileExistsError):self.extract(args)
++
++
++def malicious_test(name,kind=tarfile.REGTYPE,mode=0o644,link=''):
++    def test(self):
++        m=tarfile.TarInfo(name);m.type=kind;m.mode=mode;m.linkname=link;m.size=0
++        with self.assertRaises((ValueError,tarfile.TarError)):self.extract(self.archive((m,b'' if kind==tarfile.REGTYPE else None)))
++        self.assertFalse((self.root/'dest').exists())
++    return test
++for label,options in {
++ 'absolute':('/tmp/escape',),'traversal':('../escape',),'nested_traversal':('repo/../../escape',),
++ 'dot':('./escape',),'empty_segment':('repo//escape',),'backslash':('repo\\escape',),'duplicate':('repo/source.py',),
++ 'file_parent_conflict':('repo/source.py/child',),'manifest_control_collision':('SOURCE-SHA256SUMS',),
++ 'symlink':('link',tarfile.SYMTYPE,0o644,'../escape'),'hardlink':('hard',tarfile.LNKTYPE,0o644,'repo/source.py'),
++ 'device':('dev',tarfile.CHRTYPE),'block':('block',tarfile.BLKTYPE),'fifo':('fifo',tarfile.FIFOTYPE),
++ 'directory':('dir',tarfile.DIRTYPE),'setuid':('suid',tarfile.REGTYPE,0o4755),'world_writable':('ww',tarfile.REGTYPE,0o666),
++ 'unknown_type':('unknown',b'Z')}.items():setattr(ExtractionTests,'test_reject_'+label,malicious_test(*options))
++
++
++def approval():
++    return dict(machine_id='1'*32,scope='GATE6K_DISPOSABLE_ONLY',network='NO_NIC',release='/opt/g6j-release',credentials='NONE',mounts='PRIVATE_ROOT_ONLY',test_scope='SYNTHETIC_MULTI_UID_NO_POWERCUT',source_manifest='a'*64,archive_sha256='b'*64,artifacts_sha256='c'*64,vmid=9876,vm_uuid='12345678-1234-1234-1234-123456789abc',hypervisor_node='reviewed-node',disk_identity='private-disk-serial',operator_console='console-review-record',snapshot_preservation_policy='retain failures; no reset')
++
++class PreflightTests(unittest.TestCase):
++    def test_exact_approval_shape(self):validate_approval(approval(),'1'*32)
++    def test_each_missing_authorization_field_refused(self):
++        for key in approval():
++            a=approval();del a[key]
++            with self.subTest(key=key),self.assertRaises(RuntimeError):validate_approval(a,'1'*32)
++    def test_bad_authorization_values_refused(self):
++        for key,value in [('vmid',200),('vmid',True),('vm_uuid','unknown'),('operator_console','PENDING'),('machine_id','other'),('archive_sha256','wrong'),('scope','GATE6J_DISPOSABLE_ONLY')]:
++            a=approval();a[key]=value
++            with self.subTest(key=key),self.assertRaises(RuntimeError):validate_approval(a,'1'*32)
++    def test_shared_propagation_refused(self):
++        for optional in ('shared:1','master:2','propagate_from:3'):
++            with self.subTest(optional=optional),self.assertRaises(RuntimeError):validate_environment(hostname='fixture',interfaces=['lo'],mountinfo='1 0 8:1 / / rw '+optional+' - ext4 /dev/vda1 rw',credential_paths=[])
++    def test_capacity_boundary(self):
++        with patch('safety_preflight.shutil.disk_usage',return_value=SimpleNamespace(free=20*1024**3)):validate_capacity('/')
++        with patch('safety_preflight.shutil.disk_usage',return_value=SimpleNamespace(free=20*1024**3-1)),self.assertRaises(RuntimeError):validate_capacity('/')
++    def test_bounded_regular_marker(self):
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            p=Path(d)/'approval';p.write_text(json.dumps(approval()));p.chmod(0o600)
++            self.assertEqual(read_approval(p,owner_uid=os.getuid()),approval())
++            p.write_text('{"scope":1,"scope":2}')
++            with self.assertRaises(ValueError):read_approval(p,owner_uid=os.getuid())
++            p.write_bytes(b' '*8193)
++            with self.assertRaises(ValueError):read_approval(p,owner_uid=os.getuid())
++    def test_marker_special_modes_links_refused(self):
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            p=Path(d)/'approval';os.mkfifo(p,0o600)
++            with self.assertRaises(RuntimeError):read_approval(p,owner_uid=os.getuid())
++            p.unlink();p.write_text('{}');p.chmod(0o644)
++            with self.assertRaises(RuntimeError):read_approval(p,owner_uid=os.getuid())
++            p.chmod(0o600);os.link(p,Path(d)/'hard')
++            with self.assertRaises(RuntimeError):read_approval(p,owner_uid=os.getuid())
++
++class ArtifactTests(unittest.TestCase):
++    def test_artifact_hashes_not_only_versions(self):
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            root=Path(d);f=root/'package.whl';f.write_bytes(b'synthetic artifact');f.chmod(0o644)
++            value={'distribution:fixture':dict(version='1',filename=f.name,sha256=H(f.read_bytes()),provenance_record='fixture independent record')}
++            p=root/'ARTIFACTS.json';p.write_text(json.dumps(value));h=H(p.read_bytes())
++            with patch('offline_artifacts.required_artifacts',return_value={'distribution:fixture':'1'}):
++                self.assertEqual(verify_artifacts(root,root,h)['artifact_count'],1)
++                f.write_bytes(b'tampered same declared version')
++                with self.assertRaises(ValueError):verify_artifacts(root,root,h)
++    def test_missing_artifact_or_record_refused(self):
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            root=Path(d);p=root/'ARTIFACTS.json';p.write_text('{}')
++            with patch('offline_artifacts.required_artifacts',return_value={'distribution:fixture':'1'}):
++                with self.assertRaises(ValueError):verify_artifacts(root,root,H(p.read_bytes()))
++                with self.assertRaises(ValueError):verify_artifacts(root,root,'0'*64)
++
++class FailureEvidenceTests(unittest.TestCase):
++    def test_preflight_refusal_is_blocked_and_writes_no_fixture(self):
++        import qualify_all as q
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            base=Path(d)/'not_created'
++            with patch.object(q,'BASE',base),patch.object(q,'execute',side_effect=RuntimeError('fixture')),patch('builtins.print') as output:
++                self.assertEqual(q.guarded_execute(),1)
++                self.assertEqual(json.loads(output.call_args.args[0])['result'],'BLOCKED');self.assertFalse(base.exists())
++    def test_interrupted_preparation_seals_failure(self):
++        import qualify_all as q
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            base=Path(d)/'new'
++            def interrupted():base.mkdir();raise RuntimeError('fixture interrupted')
++            with patch.object(q,'BASE',base),patch.object(q,'execute',side_effect=interrupted),patch('builtins.print'):
++                self.assertEqual(q.guarded_execute(),1)
++            self.assertEqual(json.loads((base/'qualification.json').read_text())['result'],'FAIL')
++            self.assertTrue((base/'EVIDENCE-SHA256SUMS').is_file())
++    def test_preexisting_failure_evidence_not_overwritten(self):
++        import qualify_all as q
++        with tempfile.TemporaryDirectory(dir=HERE) as d:
++            base=Path(d);(base/'report.json').write_bytes(b'preserved')
++            with patch.object(q,'BASE',base),patch.object(q,'execute',side_effect=FileExistsError()),patch('builtins.print'):
++                self.assertEqual(q.guarded_execute(),1)
++            self.assertEqual((base/'report.json').read_bytes(),b'preserved');self.assertEqual(len(list(base.iterdir())),1)
++    def test_socket_dac_denials_are_actual_permission_errors(self):
++        from contextlib import ExitStack
++        from qualify_multi_uid import socket_mutation_denials
++        with ExitStack() as stack:
++            for name in ('unlink','rename','chmod','symlink'):stack.enter_context(patch('qualify_multi_uid.os.'+name,side_effect=PermissionError()))
++            self.assertEqual(socket_mutation_denials(Path('/fixture/control.sock')),[True]*4)
++        with patch('qualify_multi_uid.os.unlink',side_effect=FileNotFoundError()),self.assertRaises(FileNotFoundError):socket_mutation_denials(Path('/fixture/control.sock'))
++
++if __name__=='__main__':unittest.main(verbosity=2)
+--- gate6j/disposable/qualify_all.py
++++ gate6k/disposable/qualify_all.py
+@@ -38,7 +38,7 @@
+         if hashlib.sha256((base/name).read_bytes()).hexdigest()!=sha:raise RuntimeError('REPORT_SEAL_VERIFY')
+     return hashlib.sha256(target.read_bytes()).hexdigest()
+ 
+-if __name__=='__main__':
++def execute():
+     main()  # Refuses before writes unless explicit disposable VM marker and no NIC.
+     account=pwd.getpwnam('g6j-service')
+     temp=BASE/'suite';temp.mkdir(mode=0o700);os.chown(temp,account.pw_uid,account.pw_gid)
+@@ -46,4 +46,21 @@
+          'PYTHONPATH':str(RELEASE/'repo'),'PYTEST_DISABLE_PLUGIN_AUTOLOAD':'1','P7_OFFLINE_STAGE':str(temp)}
+     report=run_suite(suite_command(sys.executable,temp),cwd=RELEASE/'repo',env=env,account=account,
+         output=BASE/'suite-stdout.txt',summary=BASE/'qualification.json',report=json.loads((BASE/'report.json').read_text()))
+-    print(json.dumps({'report':report,'evidence_seal':seal_reports(BASE)}));sys.exit(0 if report['result']=='PASS' else 1)
++    print(json.dumps({'report':report,'evidence_seal':seal_reports(BASE)}));return 0 if report['result']=='PASS' else 1
++
++
++def guarded_execute():
++    existed=BASE.exists() or BASE.is_symlink()
++    try:return execute()
++    except BaseException as error:
++        created=not existed and BASE.is_dir() and not BASE.is_symlink()
++        outcome={'result':'FAIL' if created else 'BLOCKED','failure':type(error).__name__,
++                 'genuine_multi_uid_qualification':'NOT_QUALIFIED','retry':'PRESERVE; HUMAN REVIEW; NEW APPROVAL REQUIRED'}
++        if created:
++            target=BASE/'qualification.json'
++            if not target.exists():
++                with target.open('x') as output:output.write(json.dumps(outcome,indent=2)+'\n')
++            if not (BASE/'EVIDENCE-SHA256SUMS').exists():outcome['evidence_seal']=seal_reports(BASE)
++        print(json.dumps(outcome));return 1
++
++if __name__=='__main__':sys.exit(guarded_execute())
+--- gate6j/disposable/qualify_multi_uid.py
++++ gate6k/disposable/qualify_multi_uid.py
+@@ -9,7 +9,8 @@
+ from pathlib import Path
+ sys.path.insert(0,str(Path(__file__).resolve().parent))
+ from process_boundary import role_context,SafePipe
+-from safety_preflight import validate_environment,validate_approval,verify_manifest,validate_dependencies,CREDENTIAL_PATHS
++from safety_preflight import validate_environment,validate_approval,verify_manifest,validate_dependencies,CREDENTIAL_PATHS,read_approval,validate_capacity
++from offline_artifacts import verify_artifacts
+ 
+ BASE=Path('/var/lib/g6j-disposable')
+ RELEASE=Path('/opt/g6j-release')
+@@ -60,6 +61,16 @@
+                 if isinstance(result,int):os.close(result)
+                 outcomes.append(False)
+             except PermissionError:outcomes.append(True)
++    return outcomes
++
++
++def socket_mutation_denials(path):
++    # Socket open(2) is not a permission proof. Exercise path mutation syscalls.
++    outcomes=[]
++    for attack in (lambda:os.unlink(path),lambda:os.rename(path,path.with_name('replacement.sock')),
++                   lambda:os.chmod(path,0o666),lambda:os.symlink('fixture',path.parent/'new.sock')):
++        try:attack();outcomes.append(False)
++        except PermissionError:outcomes.append(True)
+     return outcomes
+ 
+ 
+@@ -139,6 +150,7 @@
+             elif command=='denials':
+                 result=deny_access([BASE/'authority/authority.sqlite3',BASE/'operator/signing.key'])
+                 result+=mutation_denials([BASE/'authority/authority.sqlite3',BASE/'release/source',BASE/'release/config',BASE/'operator/signing.key',RELEASE/'repo/candidate_v3/runtime_authority.py'])
++                result+=socket_mutation_denials(BASE/'run/service/control.sock')
+                 for path in (BASE/'release/source',BASE/'release/config'):
+                     try:fd=os.open(path,os.O_WRONLY|os.O_NOFOLLOW);os.close(fd);result.append(False)
+                     except PermissionError:result.append(True)
+@@ -181,6 +193,13 @@
+                 connection.settimeout(2);connection.connect(str(BASE/'run/operator/control.sock'))
+                 connection.sendall(struct.pack('!I',len(packet))+packet)
+             pipe.send((raw,sig))  # Deliberately no authority acknowledgment read.
++        elif cmd=='invalid_signed':
++            outcomes=[]
++            for body,invalid_signature in ((arg,True),(dict(arg,expires=99.),False)):
++                raw=canonical(body);sig=bytes(64) if invalid_signature else key.sign(raw)
++                try:client.submit(raw,sig);outcomes.append(False)
++                except Refused:outcomes.append(True)
++            pipe.send(outcomes)
+         elif cmd=='denials':
+             pipe.send(mutation_denials([BASE/'authority/authority.sqlite3',BASE/'release/source',BASE/'release/config']))
+         elif cmd=='replay':
+@@ -241,22 +260,24 @@
+ def main():
+     # Refuse before any writes on the current known machines or unapproved VM.
+     if os.geteuid()!=0:raise RuntimeError('OPERATOR_PROVISIONED_ROOT_RUN_REQUIRED')
+-    marker=Path('/etc/g6j-disposable-approved.json')
+-    st=marker.lstat()
+-    if st.st_uid!=0 or stat.S_IMODE(st.st_mode)!=0o600 or marker.is_symlink():raise RuntimeError('APPROVAL_MARKER')
+-    approval=json.loads(marker.read_text())
++    marker=Path('/etc/g6k-disposable-approved.json')
++    approval=read_approval(marker)
+     machine=Path('/etc/machine-id').read_text().strip()
+     validate_approval(approval,machine)
+     validate_environment(hostname=os.uname().nodename,interfaces=[p.name for p in Path('/sys/class/net').iterdir()],
+         mountinfo=Path('/proc/self/mountinfo').read_text(),credential_paths=[p for p in CREDENTIAL_PATHS if Path(p).exists()])
+     verify_manifest(RELEASE,approval['source_manifest'])
+     validate_dependencies(RELEASE)
++    verify_artifacts(RELEASE,Path('/opt/g6k-offline'),approval['artifacts_sha256'])
++    validate_capacity(BASE.parent)
++    if BASE.exists() or BASE.is_symlink():raise RuntimeError('PREEXISTING_FIXTURE_REFUSED')
++    if os.uname().machine!='x86_64':raise RuntimeError('X86_64_REQUIRED')
+     entries={r:pwd.getpwnam(r) for r in ROLES}
+     validate_roles(entries,grp.getgrall())
+     for p in [RELEASE,*RELEASE.rglob('*')]:
+         st=p.lstat()
+         if p.is_symlink() or st.st_uid!=0 or st.st_mode&0o022:raise RuntimeError('IMMUTABLE_RELEASE_REQUIRED')
+-    network_guard();BASE.mkdir(mode=0o755)
++    network_guard();os.umask(0o022);BASE.mkdir(mode=0o755)
+     for name,role in [('app','g6j-service'),('backup','g6j-service'),('operator','g6j-operator')]:
+         p=BASE/name;p.mkdir(mode=0o700);os.chown(p,entries[role].pw_uid,entries[role].pw_gid)
+     (BASE/'authority').mkdir(mode=0o700);(BASE/'run').mkdir(mode=0o755);(BASE/'release').mkdir(mode=0o755)
+@@ -293,6 +314,8 @@
+         thread=threading.Thread(target=server.serve,daemon=True);thread.start();servers.append(server);threads.append(thread)
+         payload=successor_payload(proof,bind.as_dict())
+         bodies=[dict(verb=SUCCESSOR_VERB,nonce=uuid.uuid4().hex,expires=130.,bindings=bind.as_dict(),checkpoint=digest(canonical(payload)),payload=payload) for _ in range(2)]
++        before_invalid=journal.read()
++        op.send(('invalid_signed',bodies[0]));check('invalid-and-expired-signature-correct-peer',receive(op)==[True,True] and journal.read()==before_invalid)
+         op.send(('successor_race',bodies));check('concurrent-successor-reservation',sorted(receive(op))==[False,True])
+         svc.send(('attach',opinfo['public']));check('service-approved-operation',receive(svc) is True)
+         for verb in ('OPEN_HOLD','AUTHORIZE_ONE'):
+--- gate6j/disposable/safe_extract.py
++++ gate6k/disposable/safe_extract.py
+@@ -0,0 +1,131 @@
++"""Strict offline release extraction. No tar.extract*, metadata restoration or cleanup.
++
++Expected hashes must come from the independently retained human approval record.
++The archive, including its manifest, is fully validated before destination creation.
++"""
++import argparse, hashlib, io, json, os, re, stat, tarfile
++from pathlib import Path
++
++MAX_ARCHIVE=32*1024*1024
++MAX_FILE=8*1024*1024
++MAX_TOTAL=16*1024*1024
++MAX_MEMBERS=2000
++MANIFEST='SOURCE-SHA256SUMS'
++
++
++def bounded_file(path, limit):
++    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
++    try:
++        before=os.fstat(fd)
++        if not stat.S_ISREG(before.st_mode) or before.st_nlink!=1 or before.st_size>limit:
++            raise ValueError('INPUT_FILE_TYPE_OR_SIZE')
++        data=bytearray()
++        while len(data)<=limit:
++            chunk=os.read(fd,min(65536,limit+1-len(data)))
++            if not chunk:break
++            data.extend(chunk)
++        after=os.fstat(fd)
++        if len(data)>limit or len(data)!=before.st_size or (before.st_size,before.st_mtime_ns,before.st_ctime_ns)!=(after.st_size,after.st_mtime_ns,after.st_ctime_ns):
++            raise ValueError('INPUT_CHANGED_OR_OVERSIZED')
++        return bytes(data)
++    finally:os.close(fd)
++
++
++def valid_name(name):
++    if (type(name) is not str or len(name)>240 or not re.fullmatch(r'[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*',name)
++        or any(p in ('.','..') for p in name.split('/'))):raise ValueError('ARCHIVE_PATH')
++    return name
++
++
++def inspect_archive(path, archive_sha, manifest_sha):
++    raw=bounded_file(path,MAX_ARCHIVE)
++    if hashlib.sha256(raw).hexdigest()!=archive_sha:raise ValueError('ARCHIVE_DIGEST')
++    files={};total=0
++    # Only uncompressed tar, regular files, and harmless PAX mtime are accepted.
++    with tarfile.open(fileobj=io.BytesIO(raw),mode='r:') as archive:
++        for member in archive:
++            name=valid_name(member.name)
++            if name in files:raise ValueError('DUPLICATE_MEMBER')
++            if not member.isreg() or member.linkname or member.sparse is not None:raise ValueError('SPECIAL_OR_LINK_MEMBER')
++            if set(member.pax_headers)-{'mtime'}:raise ValueError('PAX_METADATA')
++            if member.mode&~0o777 or member.mode&0o002:raise ValueError('UNSAFE_MODE')
++            if member.uid<0 or member.gid<0:raise ValueError('UNSAFE_OWNER')
++            if not 0<=member.size<=MAX_FILE:raise ValueError('MEMBER_SIZE')
++            total+=member.size
++            if total>MAX_TOTAL or len(files)>=MAX_MEMBERS:raise ValueError('ARCHIVE_BUDGET')
++            files[name]=archive.extractfile(member).read(MAX_FILE+1)
++            if len(files[name])!=member.size:raise ValueError('MEMBER_TRUNCATED')
++    for name in files:
++        if any('/'.join(name.split('/')[:i]) in files for i in range(1,len(name.split('/')))):
++            raise ValueError('FILE_DIRECTORY_CONFLICT')
++    manifest=files.get(MANIFEST,b'')
++    if not manifest or len(manifest)>1024*1024 or hashlib.sha256(manifest).hexdigest()!=manifest_sha:raise ValueError('MANIFEST_DIGEST')
++    inventory={}
++    for row in manifest.decode('ascii').splitlines():
++        digest,name=row.split('  ',1);valid_name(name)
++        if name==MANIFEST or name in inventory or not re.fullmatch('[0-9a-f]{64}',digest):raise ValueError('MANIFEST_ENTRY')
++        inventory[name]=digest
++    if set(inventory)!=set(files)-{MANIFEST}:raise ValueError('MANIFEST_INVENTORY')
++    if any(hashlib.sha256(files[n]).hexdigest()!=h for n,h in inventory.items()):raise ValueError('MEMBER_DIGEST')
++    return files
++
++
++def safe_parent(path):
++    path=Path(path)
++    if not path.is_absolute() or '..' in path.parts:raise ValueError('DESTINATION_PATH')
++    fd=os.open('/',os.O_RDONLY|os.O_DIRECTORY)
++    try:
++        for part in path.parts[1:]:
++            child=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
++            os.close(fd);fd=child
++            st=os.fstat(fd)
++            if st.st_uid not in (0,os.geteuid()) or st.st_mode&0o022:raise ValueError('DESTINATION_PARENT_NOT_PROTECTED')
++        return fd
++    except BaseException:os.close(fd);raise
++
++
++def extract(path,destination,archive_sha,manifest_sha):
++    files=inspect_archive(path,archive_sha,manifest_sha)
++    dest=Path(destination);parent=safe_parent(dest.parent)
++    root=None
++    try:
++        # Exclusive mkdir; never reuse, repair or delete an existing destination.
++        os.mkdir(dest.name,0o700,dir_fd=parent)
++        root=os.open(dest.name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=parent)
++        for name,data in sorted(files.items()):
++            fd=os.dup(root)
++            try:
++                for part in name.split('/')[:-1]:
++                    created=False
++                    try:os.mkdir(part,0o755,dir_fd=fd);created=True
++                    except FileExistsError:pass
++                    child=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
++                    if created:os.fchmod(child,0o755)
++                    os.close(fd);fd=child
++                out=os.open(name.split('/')[-1],os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=fd)
++                try:
++                    with os.fdopen(os.dup(out),'wb') as writer:writer.write(data);writer.flush();os.fsync(writer.fileno())
++                    os.fchmod(out,0o644);os.fsync(out)
++                finally:os.close(out)
++                os.fsync(fd)
++            finally:os.close(fd)
++        # Publish traversal only after all bytes and metadata are durable.
++        os.fchmod(root,0o755);os.fsync(root);os.fsync(parent)
++    finally:
++        if root is not None:os.close(root)
++        os.close(parent)
++    return {'result':'PASS','members':len(files),'archive_sha256':archive_sha,'manifest_sha256':manifest_sha}
++
++
++def main():
++    p=argparse.ArgumentParser();p.add_argument('archive');p.add_argument('archive_sha');p.add_argument('manifest_sha');p.add_argument('--destination')
++    a=p.parse_args()
++    if a.destination:
++        if os.geteuid()==0:
++            # Additional guard only. Does not replace human VM-specific approval.
++            if os.uname().nodename.lower().split('.')[0] in {'jarvis','jarvis-core','nexus-services','nexus','pve','proxmox','ai','ai-server','ollama'} or {x.name for x in Path('/sys/class/net').iterdir()}!={'lo'} or a.destination!='/opt/g6j-release':
++                raise ValueError('ROOT_EXTRACTION_TARGET_REFUSED')
++        result=extract(a.archive,a.destination,a.archive_sha,a.manifest_sha)
++    else:result={'result':'PASS','members':len(inspect_archive(a.archive,a.archive_sha,a.manifest_sha)),'extracted':False}
++    print(json.dumps(result))
++if __name__=='__main__':main()
+--- gate6j/disposable/safety_preflight.py
++++ gate6k/disposable/safety_preflight.py
+@@ -1,5 +1,7 @@
+ """Fail-closed disposable VM checks. No provisioning and no environment-value reads."""
+-import hashlib,json,os,stat
++import hashlib,json,os,stat,re,shutil
++from safe_extract import bounded_file
++from offline_artifacts import strict_object
+ from pathlib import Path
+ 
+ VIRTUAL_FILESYSTEMS={'proc','sysfs','tmpfs','devtmpfs','devpts','cgroup2','mqueue','securityfs','debugfs','tracefs','configfs','hugetlbfs','ramfs','bpf','efivarfs','pstore','fusectl','binfmt_misc','autofs'}
+@@ -12,6 +14,7 @@
+     root=False
+     for line in mountinfo.splitlines():
+         left,right=line.split(' - ',1);fields=left.split();fs,source,*_=right.split()
++        if any(x.startswith(('shared:','master:','propagate_from:')) for x in fields[6:]):raise RuntimeError('SHARED_MOUNT_PROPAGATION')
+         if fields[4]=='/':
+             if root or fields[3]!='/' or fs!='ext4' or not source.startswith('/dev/'):raise RuntimeError('PRIVATE_EXT4_ROOT_REQUIRED')
+             root=True
+@@ -19,11 +22,30 @@
+     if not root:raise RuntimeError('PRIVATE_EXT4_ROOT_REQUIRED')
+ 
+ def validate_approval(value,machine):
+-    fixed={'machine_id':machine,'scope':'GATE6J_DISPOSABLE_ONLY','network':'NO_NIC','release':'/opt/g6j-release','credentials':'NONE','mounts':'PRIVATE_ROOT_ONLY'}
+-    if type(value) is not dict or set(value)!=set(fixed)|{'source_manifest','vm_identity'} or any(value[k]!=v for k,v in fixed.items()):raise RuntimeError('APPROVAL_SCOPE')
+-    sha=value['source_manifest'];vm=value['vm_identity']
+-    if type(sha) is not str or len(sha)!=64 or any(c not in '0123456789abcdef' for c in sha):raise RuntimeError('APPROVAL_MANIFEST')
+-    if type(vm) is not str or not 1<=len(vm)<=128 or not vm.isascii() or any(ord(c)<32 for c in vm):raise RuntimeError('APPROVAL_VM_IDENTITY')
++    fixed={'machine_id':machine,'scope':'GATE6K_DISPOSABLE_ONLY','network':'NO_NIC','release':'/opt/g6j-release','credentials':'NONE','mounts':'PRIVATE_ROOT_ONLY','test_scope':'SYNTHETIC_MULTI_UID_NO_POWERCUT'}
++    hashes={'source_manifest','archive_sha256','artifacts_sha256'}
++    identity={'vmid','vm_uuid','hypervisor_node','disk_identity','operator_console','snapshot_preservation_policy'}
++    if type(value) is not dict or set(value)!=set(fixed)|hashes|identity or any(value[k]!=v for k,v in fixed.items()):raise RuntimeError('APPROVAL_SCOPE')
++    if not re.fullmatch('[0-9a-f]{32}',machine):raise RuntimeError('APPROVAL_MACHINE_ID')
++    for name in hashes:
++        if type(value[name]) is not str or not re.fullmatch('[0-9a-f]{64}',value[name]):raise RuntimeError('APPROVAL_DIGEST')
++    if type(value['vmid']) is not int or value['vmid']<=0 or value['vmid'] in (101,162,200,50):raise RuntimeError('APPROVAL_VMID')
++    if type(value['vm_uuid']) is not str or not re.fullmatch('[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}',value['vm_uuid']):raise RuntimeError('APPROVAL_VM_UUID')
++    for name in identity-{'vmid','vm_uuid'}:
++        text=value[name]
++        if type(text) is not str or not 1<=len(text)<=256 or not text.isascii() or any(ord(c)<32 for c in text) or any(x in text.upper() for x in ('PLACEHOLDER','REPLACE_ME','ACTUAL_','PENDING')):raise RuntimeError('APPROVAL_IDENTITY')
++
++
++def read_approval(path,*,owner_uid=0):
++    st=Path(path).lstat()
++    if not stat.S_ISREG(st.st_mode) or st.st_uid!=owner_uid or stat.S_IMODE(st.st_mode)!=0o600 or st.st_nlink!=1:raise RuntimeError('APPROVAL_MARKER')
++    raw=bounded_file(path,8192)
++    return json.loads(raw,object_pairs_hook=strict_object)
++
++
++def validate_capacity(path,*,minimum=20*1024**3):
++    if shutil.disk_usage(path).free<minimum:raise RuntimeError('TWENTY_GIB_FREE_REQUIRED')
++
+ 
+ def verify_manifest(root,expected,*,owner_uid=0):
+     root=Path(root);manifest=root/'SOURCE-SHA256SUMS'
+@@ -33,7 +55,7 @@
+         if (path.is_symlink() or st.st_uid!=owner_uid and st.st_uid!=0 or st.st_mode&0o022
+             or not (stat.S_ISDIR(st.st_mode) or stat.S_ISREG(st.st_mode))
+             or stat.S_ISREG(st.st_mode) and st.st_nlink!=1):raise RuntimeError('IMMUTABLE_RELEASE_REQUIRED')
+-    raw=manifest.read_bytes()
++    raw=bounded_file(manifest,1024*1024)
+     if len(raw)>1024*1024 or hashlib.sha256(raw).hexdigest()!=expected:raise RuntimeError('RELEASE_MANIFEST_IDENTITY')
+     inventory={}
+     for row in raw.decode('ascii').splitlines():

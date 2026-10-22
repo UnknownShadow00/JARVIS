@@ -1,0 +1,15 @@
+test_restrictive_umask_keeps_package_traversable (prequalification_tests.ExtractionTests.test_restrictive_umask_keeps_package_traversable) ... FAIL
+
+======================================================================
+FAIL: test_restrictive_umask_keeps_package_traversable (prequalification_tests.ExtractionTests.test_restrictive_umask_keeps_package_traversable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/nexus/.local/share/jarvis-gate6k-prequalification/release-r1/disposable/prequalification_tests.py", line 38, in test_restrictive_umask_keeps_package_traversable
+    self.assertEqual((self.root/'dest/repo').stat().st_mode&0o777,0o755)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 448 != 493
+
+----------------------------------------------------------------------
+Ran 1 test in 0.033s
+
+FAILED (failures=1)

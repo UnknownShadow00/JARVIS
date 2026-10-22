@@ -1,0 +1,9 @@
+# Gate 6I provenance
+
+Verified before copying: candidate `/home/nexus/.local/share/jarvis-gate6i-runtime/release-r2/repo`; source manifest `c0aac0e6a33e0dbfcd00616651354ed42c70aa3be22774b83b3348d180a3f461`; evidence seal `09f6347a0bdd30e2153727b0a7ba5e6485ddd3d0705268b290ec7e989f5ebb22`. All235 evidence members and all606 source inventory members matched. Archive `1aacb61170c83630c5e162cc015d15e90ba1035350d5535c00e369b8f6f9d8a1` matched. Entry evidence is evidence/entry-provenance.json. Gate6H design and multi-UID reports were read as historical dependencies. Earlier seals are preserved.
+
+Current shared workspace started with modified tasks/loop-log.md and untracked Gate6I packet/seal. These changes were retained. No branch assumption, checkout, reset, merge, commit or push occurred.
+
+Final candidate: `/home/nexus/.local/share/jarvis-gate6j-redteam/release-r2/repo`. Full source manifest `9e824f0c3da92c0edb872ff5f3cbcbd9c32a98f228b49403a92d154584d746fe` covers612 source/test/harness/package files. Unlike Gate6I's39-member focused manifest, this is a complete source inventory. The archive additionally contains that manifest (613 total files); inventory digest `1b5a5e4251a787b32c159bb5a0871e181e5dcac095cda4e99d7881b6cf1adf4f`. Archive `/home/nexus/.local/share/jarvis-gate6j-redteam/gate6j-release-r2.tar` SHA256 `c8347d9e2c193fb96976cec7e36d2db8c92cb4851616ea84c58f497ad1161c00`. The SOURCE-SHA256SUMS file excludes itself. No repo/app module changed. Sixteen changed/new files include the manifest; the exact list and unified diff are in evidence/candidate-identity.json and evidence/gate6i-to-gate6j.patch.
+
+Intermediate release-r1 and run archives remain separately retained. Use release-r2 only for future qualification. A later supplemental wire-probe archive adds one explicitly named test harness file outside the candidate; it does not change the release source.

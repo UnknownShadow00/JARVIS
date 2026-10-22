@@ -1,0 +1,26 @@
+{"label": "delegated-before", "exit": 1, "seconds": 2.3184368869988248, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/home/jarvis/jarvis-gate6j-delegated-before-vm17TKhr/repo"}
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_connected_socket_cannot_be_delegated_to_other_process __________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x768680f4f0e0>
+
+    def test_connected_socket_cannot_be_delegated_to_other_process(protected):
+        import socket,struct,subprocess,sys
+        f=protected
+        packet=canonical(dict(version=1,operation='READ',arguments={}))
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
+            client.connect(str(f.socket_dir/'service'))
+            code="import os;os.write(%d,%r)"%(client.fileno(),struct.pack('!I',len(packet))+packet)
+            subprocess.run([sys.executable,'-c',code],pass_fds=(client.fileno(),),check=True,timeout=5)
+            client.settimeout(2)
+            from candidate_v3.local_control import _receive
+            response=_receive(client,time.monotonic()+2)
+>           assert response['accepted'] is False
+E           assert True is False
+
+tests/execution/v3_redteam_test.py:115: AssertionError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_redteam_test.py::test_connected_socket_cannot_be_delegated_to_other_process
+1 failed, 15 deselected in 2.25s
+

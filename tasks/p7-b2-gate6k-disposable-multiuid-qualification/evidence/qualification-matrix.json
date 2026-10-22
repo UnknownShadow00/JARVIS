@@ -1,0 +1,202 @@
+{
+  "phase_B_authorization": null,
+  "overall": "NOT RUN",
+  "cases": [
+    {
+      "requirement": "four-distinct-kernel-uids",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "qualify_multi_uid role launch and kernel_uids",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "service-authority-write-denial",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "service-storage-and-signing-and-kernel-peer-denials",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "service-signing-key-read-denial",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "service-storage-and-signing-and-kernel-peer-denials",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "service-release-config-import-denial",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "service-storage-and-signing-and-kernel-peer-denials",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "agent-authority-and-operator-impersonation-denial",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "agent-storage-import-and-forged-identity-denials",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "operator-direct-authority-write-denial",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "operator-direct-authority-write-denial",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "valid-signed-administration",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "signed-OPEN_HOLD/signed-AUTHORIZE_ONE",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "invalid-expired-signature-correct-peer",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "invalid-and-expired-signature-correct-peer",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "signed-replay-and-nonce-consumption",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "signed-replay-*",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "wrong-peer-and-forged-identity",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "service and agent denial cases",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "socket-directory-tampering",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "service socket_mutation_denials",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "concurrent-successor",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "concurrent-successor-reservation",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "closed-startup",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "service-approved-operation attach",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "open-lost-ack",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "lost-open-ack-remains-durable",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "concurrent-permit-and-nonrefundable-attempt",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "concurrent-permit-consumption/nonrefundable-protected-acceptance",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "possible-send-before-fake-provider",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "possible-send-and-D06-unknown",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "D06-unknown-stop",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "possible-send-and-D06-unknown",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "whole-app-controller-backup-rollback",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "all-app-controller-backup-rollback-refusal",
+      "coverage_layer": "prepared cross-UID"
+    },
+    {
+      "requirement": "journal-reopen-replay",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "authority-reopen-preservation/signed-replay-after-authority-reopen",
+      "coverage_layer": "prepared cross-UID; not process restart"
+    },
+    {
+      "requirement": "four-attempt-cap-complete-lineage",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "test_protected_actual_four_turn_graph/test_four_attempt_order_cap_and_separate_durable_permits",
+      "coverage_layer": "same-UID supplement; distinct-UID confirmation required"
+    },
+    {
+      "requirement": "receipt-association-positive-settlement",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "v3_protected_runtime durable boundary fixtures",
+      "coverage_layer": "same-UID supplement; independent witness not implemented"
+    },
+    {
+      "requirement": "partial-duplicate-oversize-slow-FD-wire",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "v3_protected_runtime socket tests",
+      "coverage_layer": "same-UID supplement; distinct-UID confirmation required"
+    },
+    {
+      "requirement": "delegated-socket-writer",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "test_connected_socket_cannot_be_delegated_to_other_process",
+      "coverage_layer": "same-UID different-PID supplement; distinct-UID confirmation required"
+    },
+    {
+      "requirement": "actual-helper-process-restart",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "runtime process-crash tests plus journal reopen",
+      "coverage_layer": "distinct-UID helper-process confirmation required"
+    },
+    {
+      "requirement": "stale-process-start",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "test_process_pin_is_kernel_derived_and_stale_refuses",
+      "coverage_layer": "same-UID supplement; distinct-UID confirmation required"
+    },
+    {
+      "requirement": "missing-corrupt-authority",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "test_missing_authority_never_reinitialized/test_protected_root_corruption_refuses",
+      "coverage_layer": "same-UID supplement; distinct-UID confirmation required"
+    },
+    {
+      "requirement": "source-config-substitution",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "test_fixed_release_identity_reader",
+      "coverage_layer": "same-UID supplement plus prepared cross-UID DAC denial"
+    },
+    {
+      "requirement": "owner-whole-root-rollback-negative-control",
+      "status": "NOT RUN",
+      "basis": "No approved disposable VM; no privileged operation attempted",
+      "prepared_evidence": "test_complete_authority_rollback_still_possible_to_owner",
+      "coverage_layer": "same-UID logical limitation; root compromise outside guarantee"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+....................................................................F... [ 97%]
+..                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_nonreading_client_and_shutdown_during_partial_request __________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x727188fa2fd0>
+
+    def test_nonreading_client_and_shutdown_during_partial_request(protected):
+        f=protected
+        peers=[]
+        try:
+            for _ in range(3):
+                c=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);c.connect(str(f.socket_dir/'service'));c.sendall(b'\x00');peers.append(c)
+>           started=time.monotonic();f.servers[1].close()
+                                     ^^^^^^^^^^^^^^^^^^^^
+
+tests/execution/v3_protected_runtime_test.py:392: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+candidate_v3/local_control.py:209: in close
+    for worker in workers:worker.join(max(0,end-time.monotonic()))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(Thread-1683 (_worker), stopped daemon 125831821104832)>
+timeout = 0.5999992799479514
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/lib/python3.14/threading.py:1124: RuntimeError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_runtime_test.py::test_nonreading_client_and_shutdown_during_partial_request

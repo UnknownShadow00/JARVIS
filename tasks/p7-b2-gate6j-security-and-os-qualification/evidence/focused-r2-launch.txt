@@ -1,0 +1,45 @@
+STAGE=/home/jarvis/jarvis-gate6j-focused-r2-Kk2vbXQr RC=1
+{"label": "focused-r2", "exit": 1, "seconds": 268.88095658505335, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/home/jarvis/jarvis-gate6j-focused-r2-Kk2vbXQr/repo"}
+........................................................................ [ 12%]
+...................................F.................................... [ 25%]
+........................................................................ [ 37%]
+........................................................................ [ 50%]
+........................................................................ [ 63%]
+........................................................................ [ 75%]
+........................................................................ [ 88%]
+..................................................................       [100%]
+=================================== FAILURES ===================================
+____________ test_disposable_runner_refuses_unapproved_current_uid _____________
+
+tmp_path = PosixPath('/home/jarvis/jarvis-gate6j-focused-r2-Kk2vbXQr/fixtures-focused-r2/test_disposable_runner_refuses0')
+
+    def test_disposable_runner_refuses_unapproved_current_uid(tmp_path):
+        import importlib.util
+        p=Path(__file__).parents[3]/'disposable/qualify_multi_uid.py'
+>       spec=importlib.util.spec_from_file_location('future_disposable',p);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+                                                                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/execution/v3_protected_runtime_test.py:498: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+<frozen importlib._bootstrap_external>:759: in exec_module
+    ???
+<frozen importlib._bootstrap>:491: in _call_with_frames_removed
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    #!/usr/bin/env python3
+    """NOT authorized to run on Nexus/Core. Future operator-provisioned VM only.
+    
+    Root is the narrow authority identity in this qualification. Three pre-existing
+    non-login identities are required. No account creation, install, network, sudo,
+    SSH, systemd, shell, production secret, or model lifecycle operations.
+    """
+    import asyncio,ctypes,dataclasses,errno,grp,json,os,pwd,shutil,socket,stat,sys,threading,time,uuid
+>   from process_boundary import role_context
+E   ModuleNotFoundError: No module named 'process_boundary'
+
+../disposable/qualify_multi_uid.py:9: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_runtime_test.py::test_disposable_runner_refuses_unapproved_current_uid
+1 failed, 569 passed in 268.81s (0:04:28)
+

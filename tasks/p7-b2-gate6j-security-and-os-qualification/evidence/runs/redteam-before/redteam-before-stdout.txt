@@ -1,0 +1,35 @@
+{"label": "redteam-before", "exit": 1, "seconds": 2.2886625340906903, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/home/jarvis/jarvis-gate6j-redteam-before-0DvRoUVH/repo"}
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____________ test_direct_provider_without_protected_send_refuses ______________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x780c898decf0>
+
+    @pytest.mark.asyncio
+    async def test_direct_provider_without_protected_send_refuses(protected):
+        f=protected;req=local_request(f)
+>       with pytest.raises(Refused):await f.native_original(req)
+             ^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE Refused
+
+tests/execution/v3_redteam_test.py:23: Failed
+______________ test_direct_native_without_protected_send_refuses _______________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x780c89cbaad0>
+
+    @pytest.mark.asyncio
+    async def test_direct_native_without_protected_send_refuses(protected):
+        from app.brain.model_ownership import ModelResourceKeyV1
+        f=protected;req=local_request(f);owner=f.ownership[0].coordinator
+        with owner.begin_generation(ModelResourceKeyV1('ollama',req.resource.endpoint,req.resource.model),req.substep) as lease:
+            lease.mark_may_dispatch()
+>           with pytest.raises(Refused):await f.native.request(req,ownership=lease)
+                 ^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE Refused
+
+tests/execution/v3_redteam_test.py:32: Failed
+=========================== short test summary info ============================
+FAILED tests/execution/v3_redteam_test.py::test_direct_provider_without_protected_send_refuses
+FAILED tests/execution/v3_redteam_test.py::test_direct_native_without_protected_send_refuses
+2 failed in 2.22s
+

@@ -1,0 +1,66 @@
+{"label": "focused-r5", "exit": 1, "seconds": 23.534621399012394, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/tmp/jarvis-gate6i-focused-r5-84VxmWyC/repo"}
+ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <candidate_v3.runtime.Runtime object at 0x7d3e79ebf130>
+transport = 'REST', token = 'YdfEE0l0vm8uECvRQ_QGnOaNMNfqjCbwSMK6lXJ5l6g'
+message = 'Hello. Reply briefly.', authenticated = True
+delivery = <tests.execution.v3_candidate_test.Sink object at 0x7d3e79e9f150>
+
+    async def request(self,*,transport,token,message,authenticated,delivery: Delivery):
+        if self.busy:
+            self.stop('CONCURRENT_INGRESS');raise Refused('BUSY_NO_QUEUE')
+        if authenticated is not True:
+            self.stop('AUTHENTICATION_MISMATCH');raise Refused('AUTHENTICATION_MISMATCH')
+        try:
+            s=self.session(token,transport);commitment=self.commitment(message)
+            if self.state!='ARMED_ONE':raise Refused('ADMISSION_CLOSED')
+            if self.acceptance_guard is not None:self.acceptance_guard.before_accept(self.store,transport,s.id,commitment)
+            aid=self.store.accept(transport,s.id,commitment,now=self.authority.clock())
+            if self.acceptance_guard is not None:self.acceptance_guard.after_accept(self.store)
+        except Exception:
+            self.stop('INGRESS_REFUSAL');raise Refused('INGRESS_REFUSAL') from None
+        self.busy=True;self.state='INFLIGHT';history=list(s.history);s.used=self.clock();self._append(s,{'role':'user','content':message})
+        try:
+            capture=self.observer.capture(s.id,message,history,transport)
+            if self.legacy_policy is None:raise Refused('LEGACY_POLICY_UNAVAILABLE')
+            result,responder=await self.legacy_policy.route(self,aid,message)
+            confidence=result.confidence
+            messages=self.legacy_policy.messages(responder,message)
+            legacy,_,_,_=await self._generate(aid,'LEGACY_RESPONDER',responder,messages)
+            if self.legacy_policy is not None:legacy=self.legacy_policy.clean(legacy)
+            if self.stop_event.is_set():raise Refused('STOPPED')
+            status=self.view_status()
+            if type(status) is not ViewStatus:raise Refused('VIEW_STATUS_BINDING')
+            envelope={'reply':legacy,'intent':'respond','confidence':confidence,'dry_run':status.dry_run,'active':status.active}
+            if transport=='WS':envelope={'type':'reply',**envelope}
+            try:
+                await self._deliver(delivery,envelope,aid,s,legacy)
+            except BaseException:
+                self.store.delivery(aid,'INTERRUPTED_UNKNOWN');raise
+            # Completion callback records delivery before observation; errors never imply delivery.
+            if self.store.db.execute('SELECT delivery FROM attempts WHERE id=?',(aid,)).fetchone()!=('LOCAL_SEND_COMPLETED',):raise Refused('DELIVERY_RECORD_FAILED')
+            # Granite sees pre-turn bounded history, never its own output in future history.
+            _,sid,native_digest,native=await self._generate(aid,'GRANITE',self.granite,[{'role':'system','content':self.granite.system_prompt},*history,{'role':'user','content':message}],capture=capture)
+            observation=self.observer.observe(capture,native)
+            if self.evidence_bridge is not None:
+                self.evidence_bridge.commit(aid,sid,observation)
+            self.store.receipt(aid,sid,native_digest,observation);self.store.settle(aid);self.state='SETTLING'
+            self._checkpoint()
+            if self.stop_event.is_set() or self.store.terminal():raise Refused('STOPPED_DURING_CHECKPOINT')
+            self.state='CHECKPOINT_HOLD'
+            if self.store.count()==4:
+                self.stop('CAP_COMPLETE')
+                if self.checkpoint_writer is not None and self._final_checkpoint() is None:raise Refused('FINAL_CHECKPOINT_FAILED')
+            return {'attempt':aid,'legacy_delivery':'LOCAL_SEND_COMPLETED','granite':'OBSERVED','checkpoint':self.last_checkpoint.name}
+        except asyncio.CancelledError:
+            self.stop('CLIENT_DISCONNECT');raise
+        except Exception:
+>           self.stop('ATTEMPT_FAILURE');raise Refused('ATTEMPT_FAILED') from None
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           candidate_v3.contracts.Refused: ATTEMPT_FAILED
+
+candidate_v3/runtime.py:267: Refused
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_runtime_test.py::test_protected_ws_handshake_and_delivery
+ERROR tests/execution/v3_protected_runtime_test.py::test_signed_command_binding[expiry]
+

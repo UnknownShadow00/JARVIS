@@ -1,0 +1,24 @@
+# Human-only external readiness checklist — all pending
+
+Use the already trusted Proxmox management console192.168.0.50 and the independently selected guest console. Expected AI address192.168.0.200 and historical VMID200 are hypotheses, not verified identity. No commands below were run by Gate6I against management/AI hosts. Export only allowlisted nonsecret results, identity/UTC/provenance and public fingerprints; never raw logs, full environments, credentials, private keys or model conversations.
+
+| Required attestation | Exact human-only method / acceptable record |
+|---|---|
+| AI VM identity | Privately inspect `pvesh get /cluster/resources --type vm --output-format json`, then `qm config VERIFIED_VMID` on its real node. Match independently maintained VM/storage/MAC inventory; export only node/VM/name/MAC/hostpci mapping. |
+| Guest/network relationship | Guest console `hostnamectl --static`, `ip -br address`, `ip -br link`; match guest NIC to VM inventory and trace proxy/NAT/network namespace to the serving endpoint. |
+| Public SSH host key | Guest console `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256`. Compare with an independently trusted expected fingerprint and record its source. No prior anchor means candidate expected fingerprint, not enrolled trust. No SSH bypass/accept-new/known_hosts edits. |
+| Physical GPU and ownership | Proxmox `lspci -D -nn -s VERIFIED_BDF`, inspect its sysfs driver/IOMMU mapping; guest `nvidia-smi --query-gpu=uuid,pci.bus_id,name,memory.total --format=csv,noheader` if installed. Match pass-through/vGPU/MIG and other consumers. No resource changes. |
+| Ollama service identity | `systemctl show ollama.service -p User -p Group -p MainPID -p ActiveState -p SubState -p NRestarts -p InvocationID -p FragmentPath -p DropInPaths`; privately correlate listener via `ss -ltnp`, executable/version/hash and protected model-store ownership. Do not print ExecStart/cmdline/environment. |
+| Effective router endpoint | Source/config hash plus human private precedence trace of exact `JARVIS_OLLAMA_BASE_URL` override and config.yaml models.ollama_base_url. Emit only validated scheme/host/port/model and override-present boolean. Never dump environment. V2 stopped => CONFIGURED_LAUNCH_RECONSTRUCTION only. |
+| Effective responder endpoint | Repeat loader/override/namespace mapping independently for responder. localhost in YAML alone is insufficient; no app import that initializes/logs unrelated settings. Future CLOSED accessor must precede provider access and emit only approved nonsecret fields. |
+| Gemma immutable identity | On independently verified actual serving host: metadata-only `ollama list`, `ollama show --modelfile gemma3:4b` after verifying installed-version tool behavior. Verify full manifest SHA256 and all referenced blob digests in actual protected store; abbreviated ID/alias is insufficient. Export digest/parameter allowlist only. |
+| Qwen immutable identity | Same for qwen3-nothink; compare installed Modelfile/no-think behavior and num_ctx8192 with reviewed source. No inference to discover identity. |
+| Granite immutable identity | Same for frozen Granite alias/profile; immutable manifest/blob identity and exact runtime/store relationship remain required despite frozen request profile. |
+| Effective contexts | Record classifier4096, proposed trivial4096, proposed normal8192 and frozen Granite64000 with explicit inherited/overridden defaults and installed policy version. Behavior requires later separately approved bounded provider qualification. |
+| Keep-alive/server policy | Human privately read only approved values OLLAMA_KEEP_ALIVE, OLLAMA_CONTEXT_LENGTH, OLLAMA_MAX_LOADED_MODELS, OLLAMA_NUM_PARALLEL, OLLAMA_FLASH_ATTENTION, OLLAMA_KV_CACHE_TYPE. Record unset/precedence; no whole Environment output. |
+| Shared resource domains | Map each endpoint/model to actual host/runtime/GPU/VRAM; different ports/aliases may share one GPU/Ollama service. Record explicit shared-residency choice and capacity qualification. |
+| External lifecycle actors | Inventory relevant services/timers/cron/containers/supervisors/admin clients, legacy idle unloaders/wake and alias/store writers. Record owners/rights/schedules and proposed exclusive window. No connection observed is not proof of no actors. |
+
+No chat/generate/run/pull/create/stop/load/unload requests. No trust enrollment or configuration/network/GPU change is authorized. Refresh attestations after migration, host key, model/store, service/runtime or GPU changes. These checks neither approve X1–X11 nor open a pilot.
+
+Detailed frozen procedures remain in Gate6H HUMAN-ONLY-AI-HOST-ATTESTATION.md, HUMAN-ONLY-LEGACY-PROVIDER-ATTESTATION.md and D06-RESOURCE-TOPOLOGY-REQUIREMENTS.md; their exact hashes are recorded in SOURCE-AND-MANIFEST.md.

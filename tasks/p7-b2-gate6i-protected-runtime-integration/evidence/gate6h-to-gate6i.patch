@@ -1,0 +1,1695 @@
+--- gate6h/disposable/qualify_all.py
++++ gate6i/disposable/qualify_all.py
+@@ -0,0 +1,22 @@
++#!/usr/bin/env python3
++"""One future human invocation; privilege-separated checks then crash/transport suite.
++Never run this on any production or development host.
++"""
++from qualify_multi_uid import main,BASE,RELEASE
++import os,pwd,subprocess,sys,json
++if __name__=='__main__':
++    main()  # Refuses before writes unless explicit disposable VM marker and no NIC.
++    account=pwd.getpwnam('g6i-service')
++    temp=BASE/'suite';temp.mkdir(mode=0o700);os.chown(temp,account.pw_uid,account.pw_gid)
++    # Inherited kernel AF_UNIX-only/no_new_privs policy; no inherited secrets/env.
++    command=[sys.executable,'-B','-m','pytest','-p','no:cacheprovider','--basetemp',str(temp/'pytest'),
++             'tests/execution/v3_protected_runtime_test.py','tests/execution/v3_protected_authority_test.py','-q']
++    env={'PATH':'/usr/bin:/bin','HOME':str(temp),'TMPDIR':str(temp),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':str(RELEASE/'repo'),'PYTEST_DISABLE_PLUGIN_AUTOLOAD':'1','P7_OFFLINE_STAGE':str(temp)}
++    # Explicit plugin matches the known suite; no project auto-loading or live evals.
++    command[4:4]=['-p','pytest_asyncio.plugin']
++    result=subprocess.run(command,cwd=RELEASE/'repo',env=env,user=account.pw_uid,group=account.pw_gid,extra_groups=[],capture_output=True,timeout=180)
++    (BASE/'suite-stdout.txt').write_bytes(result.stdout+result.stderr)
++    report=json.loads((BASE/'report.json').read_text());report['process_crash_transport_suite_exit']=result.returncode
++    report['result']='PASS' if result.returncode==0 else 'FAIL'
++    (BASE/'qualification.json').write_text(json.dumps(report,indent=2)+'\n')
++    print(json.dumps(report));sys.exit(result.returncode)
+--- gate6h/disposable/qualify_multi_uid.py
++++ gate6i/disposable/qualify_multi_uid.py
+@@ -0,0 +1,250 @@
++#!/usr/bin/env python3
++"""NOT authorized to run on Nexus/Core. Future operator-provisioned VM only.
++
++Root is the narrow authority identity in this qualification. Three pre-existing
++non-login identities are required. No account creation, install, network, sudo,
++SSH, systemd, shell, production secret, or model lifecycle operations.
++"""
++import asyncio,ctypes,dataclasses,errno,json,multiprocessing,os,pwd,shutil,stat,sys,threading,time,uuid
++from pathlib import Path
++
++BASE=Path('/var/lib/g6i-disposable')
++RELEASE=Path('/opt/g6i-release')
++ROLES=('g6i-operator','g6i-service','g6i-agent')
++sys.dont_write_bytecode=True
++sys.path.insert(0,str(RELEASE/'repo'))
++sys.path.append('/usr/lib/python3/dist-packages')
++
++
++def network_guard():
++    libc=ctypes.CDLL(None,use_errno=True)
++    if libc.prctl(38,1,0,0,0):raise RuntimeError('NO_NEW_PRIVS')
++    sec=ctypes.CDLL('libseccomp.so.2');sec.seccomp_init.argtypes=[ctypes.c_uint32];sec.seccomp_init.restype=ctypes.c_void_p
++    sec.seccomp_syscall_resolve_name.argtypes=[ctypes.c_char_p];sec.seccomp_syscall_resolve_name.restype=ctypes.c_int
++    sec.seccomp_rule_add.argtypes=[ctypes.c_void_p,ctypes.c_uint32,ctypes.c_int,ctypes.c_uint];sec.seccomp_load.argtypes=[ctypes.c_void_p];sec.seccomp_release.argtypes=[ctypes.c_void_p]
++    class Compare(ctypes.Structure):_fields_=[('arg',ctypes.c_uint),('op',ctypes.c_int),('a',ctypes.c_uint64),('b',ctypes.c_uint64)]
++    ctx=sec.seccomp_init(0x7fff0000)
++    try:
++        # Kernel blocks all network families except AF_UNIX, independent of mocks.
++        if sec.seccomp_rule_add(ctx,0x50000|errno.EPERM,sec.seccomp_syscall_resolve_name(b'socket'),1,Compare(0,1,1,0)):raise RuntimeError('SECCOMP_RULE')
++        if sec.seccomp_load(ctx):raise RuntimeError('SECCOMP_LOAD')
++    finally:sec.seccomp_release(ctx)
++
++
++def deny_access(paths):
++    outcomes=[]
++    for path in paths:
++        for flags in (os.O_RDONLY,os.O_WRONLY):
++            try:
++                fd=os.open(path,flags|os.O_NOFOLLOW);os.close(fd);outcomes.append(False)
++            except PermissionError:outcomes.append(True)
++    return outcomes
++
++
++def service_role(pipe,authority_pid,operator_pid,operator_uid):
++    from tests.execution.v3_integration_test import Integrated
++    from candidate_v3.contracts import canonical,digest,strict_json,Refused
++    from candidate_v3.authority import Authority
++    from candidate_v3.protected_authority import Ed25519Verifier
++    from candidate_v3.authority_client import ServiceAuthorityClient
++    from candidate_v3.local_control import UnixAuthorityConnection,ProcessPin
++    from candidate_v3.checkpoints import CheckpointWriter
++    from candidate_v3.application import build_protected_isolated_app
++    from candidate_v3.source_memory import procedural_snapshot
++    from candidate_v3.runtime import ORIGINAL_INPUTS
++    from tests.execution.v3_candidate_test import Sink
++    f=Integrated(BASE/'app');old_high=f.high
++    memory=procedural_snapshot((RELEASE/'repo/skills.md').read_bytes(),expected_sha256='3a61af6054795cad154b5de00e4185063d32e08e592aba315bc8ef1560e6d4a2')
++    f.runtime.legacy_policy=dataclasses.replace(f.runtime.legacy_policy,memory_snapshot=memory)
++    pin=ProcessPin.capture(os.getuid(),os.getpid())
++    inventory={'source':digest((BASE/'release/source').read_bytes())}
++    f.bind=dataclasses.replace(f.bind,source=digest(canonical(inventory)),config=digest((BASE/'release/config').read_bytes()),pid=str(pin.pid),start=pin.start,boot=pin.boot)
++    f.runtime.bindings=f.bind
++    reservation=BASE/'app/lineage-reservation.json';value=strict_json(reservation.read_bytes());value['bindings']=f.bind.as_dict();reservation.write_bytes(canonical(value))
++    f.store.db.execute("UPDATE meta SET value=? WHERE key='bindings'",(canonical(f.bind.as_dict()).decode(),))
++    f.store.db.execute("UPDATE meta SET value=? WHERE key='lineage_hash'",(digest(reservation.read_bytes()),))
++    contracts=dict(legacy_router=f.router,legacy_trivial=f.trivial,legacy_normal=f.normal,granite=f.granite)
++    pipe.send(dict(uid=os.getuid(),pid=os.getpid(),bindings=f.bind,contracts=contracts))
++    high=None
++    while True:
++        command,arg=pipe.recv()
++        try:
++            if command=='attach':
++                f.authority=Authority(f.bind,Ed25519Verifier(arg,operator_id='dummy-human'),clock=lambda:100.,operator_id='dummy-human',peer_uid=operator_uid);f.runtime.authority=f.authority
++                high=ServiceAuthorityClient(UnixAuthorityConnection(BASE/'run/service/control.sock',authority_pin=ProcessPin.capture(0,authority_pid)),contracts=contracts)
++                f.runtime.acceptance_guard=high
++                f.writer=CheckpointWriter(BASE/'app/coordinated',evidence=f.evidence,domains=f.domains,highwater=high,ownership=f.ownership);f.runtime.checkpoint_writer=f.writer
++                f.runtime._checkpoint()
++                f.app=build_protected_isolated_app(f.runtime,api_token=b'DUMMY',allowed_origins=set(),qualification='OFFLINE_EVALUATION_ONLY')
++                shutil.copytree(BASE/'app',BASE/'backup/snapshot')
++                result=True
++            elif command=='prepare':
++                payload={}
++                if arg=='AUTHORIZE_ONE':
++                    if 'REST' not in f.tokens:f.tokens['REST']=f.runtime.new_session('REST')
++                    payload=dict(transport='REST',session=f.tokens['REST'][1],request_commitment=f.runtime.commitment(ORIGINAL_INPUTS[0]))
++                result=dict(verb=arg,nonce=uuid.uuid4().hex,expires=130.,bindings=f.bind.as_dict(),checkpoint=digest((f.runtime.last_checkpoint/'manifest.json').read_bytes()),payload=payload)
++            elif command=='apply':
++                raw,sig=arg;f.runtime.apply_protected_command(strict_json(raw)['nonce']);result=True
++            elif command=='attempt_unknown':
++                async def attempt():
++                    f.block='gemma3:4b'
++                    work=asyncio.create_task(f.runtime.request(transport='REST',token=f.tokens['REST'][0],message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink()))
++                    await asyncio.wait_for(f.entered.wait(),5);f.runtime.stop('OPERATOR_STOP')
++                    try:await work
++                    except Refused:pass
++                    return dict(accepted=f.store.count(),clean=f.store.clean(),calls=len(f.calls),terminal=f.store.terminal())
++                result=asyncio.run(attempt())
++            elif command=='rollback':
++                # Disposable rollback, all app files. Protected authority stays intact.
++                f.store.close();f.domains.close();f.evidence.close();old_high.close()
++                shutil.copytree(BASE/'backup/snapshot',BASE/'app',dirs_exist_ok=True)
++                try:high.connection.call('CHECK',dict(expected={k:high.read()[k] for k in ('seq','seal')},allow_terminal=True));result=False
++                except Refused:result=True
++            elif command=='denials':
++                result=deny_access([BASE/'authority/authority.sqlite3',BASE/'operator/signing.key'])
++                for path in (BASE/'release/source',BASE/'release/config',BASE/'run/operator/control.sock'):
++                    try:fd=os.open(path,os.O_WRONLY|os.O_NOFOLLOW);os.close(fd);result.append(False)
++                    except (PermissionError,OSError):result.append(True)
++                try:high.connection.call('SIGNED',dict(body={},signature='00'*64));result.append(False)
++                except Refused:result.append(True)
++            elif command=='exit':pipe.send(True);return
++            else:raise RuntimeError('FIXED_RUNNER_COMMAND')
++            pipe.send(result)
++        except Exception as e:pipe.send({'failure':type(e).__name__})
++
++
++def operator_role(pipe,authority_pid):
++    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
++    from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat,PrivateFormat,NoEncryption
++    from candidate_v3.local_control import OperatorCommandClient,UnixAuthorityConnection,ProcessPin
++    from candidate_v3.contracts import canonical,Refused
++    key=Ed25519PrivateKey.generate()
++    fd=os.open(BASE/'operator/signing.key',os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
++    os.write(fd,key.private_bytes(Encoding.Raw,PrivateFormat.Raw,NoEncryption()));os.close(fd)
++    pipe.send(dict(uid=os.getuid(),pid=os.getpid(),public=key.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)))
++    client=OperatorCommandClient(UnixAuthorityConnection(BASE/'run/operator/control.sock',authority_pin=ProcessPin.capture(0,authority_pid)))
++    while True:
++        cmd,arg=pipe.recv()
++        if cmd=='exit':pipe.send(True);return
++        if cmd=='sign_submit':
++            raw=canonical(arg);sig=key.sign(raw)
++            try:client.submit(raw,sig);pipe.send((raw,sig))
++            except Refused:pipe.send(False)
++        elif cmd=='replay':
++            try:client.submit(*arg);pipe.send(False)
++            except Refused:pipe.send(True)
++        elif cmd=='successor_race':
++            from concurrent.futures import ThreadPoolExecutor
++            def submit(body):
++                raw=canonical(body);sig=key.sign(raw)
++                try:client.submit(raw,sig);return True
++                except Refused:return False
++            with ThreadPoolExecutor(2) as pool:pipe.send(list(pool.map(submit,arg)))
++        else:pipe.send(False)
++
++
++def agent_role(pipe):
++    pipe.send(dict(uid=os.getuid(),pid=os.getpid()))
++    while True:
++        cmd,arg=pipe.recv()
++        if cmd=='exit':pipe.send(True);return
++        if cmd!='denials':pipe.send(False);continue
++        result=deny_access([BASE/'authority/authority.sqlite3',BASE/'operator/signing.key',BASE/'app/state/controller.sqlite3'])
++        for p in (BASE/'release/source',BASE/'release/config'):
++            try:fd=os.open(p,os.O_WRONLY);os.close(fd);result.append(False)
++            except PermissionError:result.append(True)
++        pipe.send(result)
++
++
++def child(role,pipe,authority_pid,extra):
++    entry=pwd.getpwnam(role);os.setgroups([]);os.setgid(entry.pw_gid);os.setuid(entry.pw_uid)
++    network_guard()
++    if role=='g6i-operator':operator_role(pipe,authority_pid)
++    elif role=='g6i-service':service_role(pipe,authority_pid,*extra)
++    else:agent_role(pipe)
++
++
++def receive(pipe):
++    if not pipe.poll(20):raise RuntimeError('CHILD_TIMEOUT')
++    answer=pipe.recv()
++    if isinstance(answer,dict) and 'failure' in answer:raise RuntimeError(answer['failure'])
++    return answer
++
++
++def main():
++    # Refuse before any writes on the current known machines or unapproved VM.
++    if os.geteuid()!=0:raise RuntimeError('OPERATOR_PROVISIONED_ROOT_RUN_REQUIRED')
++    marker=Path('/etc/g6i-disposable-approved.json')
++    st=marker.lstat()
++    if st.st_uid!=0 or stat.S_IMODE(st.st_mode)!=0o600 or marker.is_symlink():raise RuntimeError('APPROVAL_MARKER')
++    approval=json.loads(marker.read_text())
++    machine=Path('/etc/machine-id').read_text().strip()
++    if approval!={'machine_id':machine,'scope':'GATE6I_DISPOSABLE_ONLY','network':'NO_NIC','release':'/opt/g6i-release'}:raise RuntimeError('APPROVAL_SCOPE')
++    if os.uname().nodename in ('jarvis','nexus-services','pve') or set(p.name for p in Path('/sys/class/net').iterdir())!={'lo'}:raise RuntimeError('NOT_ISOLATED_VM')
++    if Path('/home/jarvis').exists() or Path('/home/nexus').exists():raise RuntimeError('PRODUCTION_HOME_PRESENT')
++    entries={r:pwd.getpwnam(r) for r in ROLES}
++    if len({0,*(e.pw_uid for e in entries.values())})!=4:raise RuntimeError('DISTINCT_KERNEL_UIDS_REQUIRED')
++    for p in [RELEASE,*RELEASE.rglob('*')]:
++        st=p.lstat()
++        if p.is_symlink() or st.st_uid!=0 or st.st_mode&0o022:raise RuntimeError('IMMUTABLE_RELEASE_REQUIRED')
++    network_guard();BASE.mkdir(mode=0o755)
++    for name,role in [('app','g6i-service'),('backup','g6i-service'),('operator','g6i-operator')]:
++        p=BASE/name;p.mkdir(mode=0o700);os.chown(p,entries[role].pw_uid,entries[role].pw_gid)
++    (BASE/'authority').mkdir(mode=0o700);(BASE/'run').mkdir(mode=0o755);(BASE/'release').mkdir(mode=0o755)
++    for name in ('source','config'):(BASE/'release'/name).write_text('DISPOSABLE_FIXTURE\n');(BASE/'release'/name).chmod(0o444)
++    for channel,role in [('operator','g6i-operator'),('service','g6i-service')]:
++        p=BASE/'run'/channel;p.mkdir(mode=0o750);os.chown(p,0,entries[role].pw_gid)
++    ctx=multiprocessing.get_context('fork');children=[];servers=[];threads=[]
++    def launch(role,extra=()):
++        parent,other=ctx.Pipe();process=ctx.Process(target=child,args=(role,other,os.getpid(),extra));process.start();other.close();children.append((process,parent));return parent,receive(parent)
++    try:
++        op,opinfo=launch('g6i-operator');svc,info=launch('g6i-service',(opinfo['pid'],opinfo['uid']));agent,agentinfo=launch('g6i-agent')
++        from candidate_v3.contracts import canonical,digest
++        from candidate_v3.authority import Authority,SUCCESSOR_VERB
++        from candidate_v3.protected_authority import Ed25519Verifier
++        from candidate_v3.runtime_authority import RuntimeJournal,ControllerReader,AuthorityService,ReleaseIdentityReader
++        from candidate_v3.local_control import UnixAuthorityServer,ProcessPin
++        from candidate_v3.lineage import PredecessorProof,successor_payload
++        from tests.execution.v3_successor_support import fresh_fixture_proof
++        bind=info['bindings'];proof=fresh_fixture_proof(PredecessorProof('predecessor','a'*64,0,'b'*64))
++        authority=Authority(bind,Ed25519Verifier(opinfo['public'],operator_id='dummy-human'),clock=lambda:100.,operator_id='dummy-human',peer_uid=opinfo['uid'])
++        resources={r:digest(canonical(dataclasses.asdict(c))) for r,c in info['contracts'].items()}
++        identity=ReleaseIdentityReader(BASE/'release',{'source':digest((BASE/'release/source').read_bytes())},BASE/'release/config',bind.config,bind,ProcessPin.capture(info['uid'],info['pid']))
++        journal=RuntimeJournal(BASE/'authority',owner_uid=0,service_uid=info['uid'],authority=authority,predecessor_reader=lambda:proof,identity_reader=identity,provider_resources=resources,create=True)
++        # Intentionally no provider terminal witness: unknown can NEVER be cleared.
++        service=AuthorityService(journal,ControllerReader(BASE/'app/state',BASE/'app/coordinated',service_uid=info['uid']),terminal_reader=lambda pending:dict(terminal=False,association=pending),contracts=info['contracts'])
++        for channel,peer in [('operator',opinfo),('service',info)]:
++            server=UnixAuthorityServer(BASE/'run'/channel/'control.sock',service,channel=channel,peer_pin=ProcessPin.capture(peer['uid'],peer['pid']),group=entries['g6i-'+channel].pw_gid)
++            thread=threading.Thread(target=server.serve,daemon=True);thread.start();servers.append(server);threads.append(thread)
++        payload=successor_payload(proof,bind.as_dict())
++        bodies=[dict(verb=SUCCESSOR_VERB,nonce=uuid.uuid4().hex,expires=130.,bindings=bind.as_dict(),checkpoint=digest(canonical(payload)),payload=payload) for _ in range(2)]
++        op.send(('successor_race',bodies));assert sorted(receive(op))==[False,True]
++        svc.send(('attach',opinfo['public']));assert receive(svc) is True
++        for verb in ('OPEN_HOLD','AUTHORIZE_ONE'):
++            svc.send(('prepare',verb));body=receive(svc);op.send(('sign_submit',body));signed=receive(op);assert signed
++            svc.send(('apply',signed));assert receive(svc) is True
++            op.send(('replay',signed));assert receive(op) is True
++        svc.send(('denials',None));assert all(receive(svc));agent.send(('denials',None));assert all(receive(agent))
++        svc.send(('attempt_unknown',None));result=receive(svc);assert result==dict(accepted=1,clean=False,calls=1,terminal='CLOSED_INCOMPLETE')
++        before=journal.read();assert len(before['accepted'])==1 and before['pending'] and before['terminal']
++        svc.send(('rollback',None));assert receive(svc) is True
++        journal.close()
++        journal=RuntimeJournal(BASE/'authority',owner_uid=0,service_uid=info['uid'],authority=authority,predecessor_reader=lambda:proof,identity_reader=identity,provider_resources=resources)
++        service.journal=journal;assert journal.read()==before
++        report={'result':'PASS','kernel_uids':{'authority':0,'operator':opinfo['uid'],'service':info['uid'],'agent':agentinfo['uid']},'process_ids':[os.getpid(),opinfo['pid'],info['pid'],agentinfo['pid']],
++                'checks':['immutable release','key read denial','protected root read/write denial','real accept and peer credentials','signed successor race','signature and nonce replay','durable approval and permit consumption','possible send survives uncertainty','D06 remains unknown','whole app and controller/backup rollback refusal','authority database reopen preservation','no network families except AF_UNIX'],
++                'limits':['synthetic predecessor/model data','no independent provider terminal witness','on-host root rollback outside guarantee','process-kill boundary suite must also pass']}
++        (BASE/'report.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
++        journal.close()
++    finally:
++        for process,pipe in children:
++            if process.is_alive():
++                try:pipe.send(('exit',None));receive(pipe)
++                except Exception:pass
++            process.join(2)
++            if process.is_alive():process.terminate();process.join(2)
++        for server in servers:server.close()
++        for thread in threads:thread.join(2)
++
++if __name__=='__main__':main()
+--- gate6h/guard/sitecustomize.py
++++ gate6i/guard/sitecustomize.py
+@@ -19,6 +19,9 @@
+                 counts['blocked_external_write']+=1;raise AssertionError('EXTERNAL_WRITE_FORBIDDEN')
+     if event in ('socket.connect','socket.sendto') and getattr(args[0],'family',None) in (socket.AF_INET,socket.AF_INET6):
+         network.append({'event':event,'destination':args[1]});counts['blocked_inet']+=1;raise ConnectionRefusedError('OFFLINE_INET_BLOCKED_BEFORE_SEND')
++    if event=='socket.connect' and getattr(args[0],'family',None)==socket.AF_UNIX:
++        address=args[1]
++        if not isinstance(address,(str,bytes)) or not os.fsdecode(address).startswith(str(stage)+'/'):raise PermissionError('OFFLINE_UNIX_OUTSIDE_STAGE')
+     if event=='socket.getaddrinfo':
+         network.append({'event':event,'host':args[0],'port':args[1]});counts['blocked_inet']+=1;raise socket.gaierror('OFFLINE_DNS_BLOCKED')
+     if event=='subprocess.Popen':
+--- gate6h/kernel_guard.py
++++ gate6i/kernel_guard.py
+@@ -12,7 +12,7 @@
+  if fd<0:raise RuntimeError('LANDLOCK_CREATE')
+  try:
+   # READ_DIR alone allows no-follow directory walks, not file content access.
+-  for p,access in [(Path('/'),1<<3),(Path(stage),handled),(Path(venv),read),*( (Path(p),read) for p in ['/usr','/lib','/lib64','/bin','/etc','/dev/null','/dev/urandom','/dev/random'])]:
++  for p,access in [(Path('/'),1<<3),(Path(stage),handled),(Path(venv),read),*( (Path(p),read) for p in ['/usr','/lib','/lib64','/bin','/etc','/dev/null','/dev/urandom','/dev/random',f'/proc/{os.getpid()}/stat','/proc/sys/kernel/random/boot_id'])]:
+    if not p.exists():continue
+    f=os.open(p,os.O_PATH|os.O_CLOEXEC)
+    try:
+@@ -31,11 +31,11 @@
+  ctx=sec.seccomp_init(0x7fff0000)
+  class Compare(ctypes.Structure):_fields_=[('arg',ctypes.c_uint),('op',ctypes.c_int),('a',ctypes.c_uint64),('b',ctypes.c_uint64)]
+  try:
+-  for name in ('connect','ptrace','process_vm_readv','process_vm_writev','kill','tkill','tgkill','pidfd_send_signal','rt_sigqueueinfo','rt_tgsigqueueinfo','mount','umount2','reboot','bpf','io_uring_setup'):
++  for name in ('ptrace','process_vm_readv','process_vm_writev','kill','tkill','tgkill','pidfd_send_signal','rt_sigqueueinfo','rt_tgsigqueueinfo','mount','umount2','reboot','bpf','io_uring_setup'):
+    nr=sec.seccomp_syscall_resolve_name(name.encode())
+    if nr>=0 and sec.seccomp_rule_add(ctx,0x50000|errno.EPERM,nr,0):raise RuntimeError('SECCOMP_RULE')
+-  for family in (2,10,17):
+-   if sec.seccomp_rule_add(ctx,0x50000|errno.EPERM,sec.seccomp_syscall_resolve_name(b'socket'),1,Compare(0,4,family,0)):raise RuntimeError('SECCOMP_SOCKET')
++  for family in (1,):
++   if sec.seccomp_rule_add(ctx,0x50000|errno.EPERM,sec.seccomp_syscall_resolve_name(b'socket'),1,Compare(0,1,family,0)):raise RuntimeError('SECCOMP_SOCKET')
+   if sec.seccomp_load(ctx):raise RuntimeError('SECCOMP_LOAD')
+  finally:sec.seccomp_release(ctx)
+- return {'landlock_abi':abi,'filesystem':'candidate writable; system/venv read-only; home/production state denied','syscalls':'INET/PACKET sockets, all connect, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied'}
++ return {'landlock_abi':abi,'filesystem':'candidate writable; system/venv read-only; home/production state denied','syscalls':'all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied'}
+--- gate6h/repo/candidate_v3/application.py
++++ gate6i/repo/candidate_v3/application.py
+@@ -1,12 +1,13 @@
+ """Complete isolated consumer graph, never imported by production startup."""
+ from fastapi import FastAPI
+ from contextlib import asynccontextmanager
+-from .contracts import Refused
++from .contracts import Refused,digest
+ from .legacy import RulesFirstL1
+ from .ownership import OwnedProvider
+ from .transport import NativeTransport
+ from .evidence import EvidenceBridge
+ from .lineage import HighWater
++from .authority_client import ServiceAuthorityClient
+ from .checkpoints import CheckpointWriter
+ from .ingress import Ingress
+ from .topology import Topology
+@@ -14,7 +15,7 @@
+ def build_isolated_app(runtime,*,api_token,allowed_origins,qualification):
+     if (qualification!='OFFLINE_EVALUATION_ONLY' or type(runtime.legacy_policy) is not RulesFirstL1
+         or type(runtime.provider) is not OwnedProvider or type(runtime.provider.provider) is not NativeTransport
+-        or type(runtime.evidence_bridge) is not EvidenceBridge or type(runtime.acceptance_guard) is not HighWater
++        or type(runtime.evidence_bridge) is not EvidenceBridge or type(runtime.acceptance_guard) not in (HighWater,ServiceAuthorityClient)
+         or type(runtime.checkpoint_writer) is not CheckpointWriter
+         or type(runtime.provider.topology) is not Topology):raise Refused('INCOMPLETE_ISOLATED_GRAPH')
+     runtime.acceptance_guard.check(runtime.store)
+@@ -29,3 +30,15 @@
+     app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
+     app.mount('/',Ingress(runtime,api_token=api_token,allowed_origins=allowed_origins))
+     return app
++
++
++def build_protected_isolated_app(runtime,*,api_token,allowed_origins,qualification):
++    """Mandatory protected graph. Historical builder remains for baseline tests only."""
++    if (type(runtime.acceptance_guard) is not ServiceAuthorityClient
++        or runtime.checkpoint_writer.highwater is not runtime.acceptance_guard
++        or runtime.provider.store is not runtime.store):raise Refused('PROTECTED_GRAPH_REQUIRED')
++    if digest(runtime.legacy_policy.memory_snapshot.encode())!='e4fc564a6b52728736b50165a78467a383be82dadfeebcb7fade43cdd8489c29':raise Refused('PROTECTED_MEMORY_SNAPSHOT')
++    profiles=((runtime.legacy_policy.router,4096,64,20),(runtime.legacy_policy.responders['trivial'],4096,80,180),(runtime.legacy_policy.responders['normal'],8192,150,180))
++    for contract,context,output,deadline in profiles:
++        if (contract.limits.context,contract.limits.output,contract.limits.deadline,contract.limits.keep_alive)!=(context,output,deadline,60):raise Refused('PROTECTED_PROPOSED_PROFILE')
++    return build_isolated_app(runtime,api_token=api_token,allowed_origins=allowed_origins,qualification=qualification)
+--- gate6h/repo/candidate_v3/authority_client.py
++++ gate6i/repo/candidate_v3/authority_client.py
+@@ -0,0 +1,70 @@
++"""Service capability adapter for the existing Runtime and CheckpointWriter.
++Contains no signing method, protected path, protected DB handle or operator client.
++"""
++from dataclasses import asdict
++from .contracts import Refused,canonical,digest
++from .runtime_authority import token,projection,accepted_rows
++
++class ServiceAuthorityClient:
++    def __init__(self,connection,*,contracts):
++        self.connection=connection;self.contracts=dict(contracts)
++        self.cursor=None
++
++    def read(self):
++        s=self.connection.call('READ',{});self.cursor=token(s);return s
++
++    def _call(self,operation,**args):
++        if self.cursor is None:self.read()
++        result=self.connection.call(operation,dict(expected=self.cursor,**args))
++        self.cursor=result;return result
++
++    def check(self,store,*,allow_terminal=False):
++        s=self.read()
++        if accepted_rows(store.db)!=s['accepted']:raise Refused('PROTECTED_ACCEPTANCE_MISMATCH')
++        self._call('CHECK',allow_terminal=allow_terminal)
++        return s
++
++    def command(self,nonce):
++        if type(nonce) is not str or len(nonce)!=32 or any(c not in '0123456789abcdef' for c in nonce):raise Refused('PROTECTED_COMMAND_IDENTIFIER')
++        s=self.read();a=s['commands'].get(nonce)
++        if a is None:raise Refused('PROTECTED_OPERATOR_APPROVAL_REQUIRED')
++        return a
++
++    def approved(self,a):
++        s=self.read()
++        if s['commands'].get(a['nonce'])!=a:raise Refused('PROTECTED_OPERATOR_APPROVAL_REQUIRED')
++        self._call('CLAIM',nonce=a['nonce'])
++
++    def before_accept(self,store,transport,session,commitment):
++        self.check(store)
++        p=store.db.execute('SELECT nonce,transport,session,commitment FROM permits WHERE spent=0').fetchone()
++        if p is None or p[1:]!=(transport,session,commitment):raise Refused('PROTECTED_PERMIT_ASSOCIATION')
++        self._call('CONSUME',permit=p[0])
++
++    def after_accept(self,store):
++        self._call('BIND');self.check(store)
++
++    def possible_send(self,store,aid,kind,contract,request_digest):
++        self.check(store)
++        roles=[r for r,c in self.contracts.items() if c==contract]
++        if len(roles)!=1:raise Refused('PROTECTED_RESOURCE_BINDING')
++        role=roles[0]
++        expected='GRANITE' if role=='granite' else 'LEGACY_ROUTER' if role=='legacy_router' else 'LEGACY_RESPONDER'
++        if kind!=expected:raise Refused('PROTECTED_SUBSTEP_BINDING')
++        row=store.db.execute('SELECT ordinal FROM attempts WHERE id=?',(aid,)).fetchone()
++        if row is None:raise Refused('PROTECTED_ATTEMPT_BINDING')
++        self._call('SEND',ordinal=row[0],role=role,request_digest=request_digest)
++
++    def settle(self):self._call('SETTLE')
++
++    def export_db(self):
++        s=self.read()
++        return projection(s),token(s)
++
++    def checkpoint_committed(self,bundle):self._call('CHECKPOINT',bundle=bundle.name)
++
++    def terminal(self,store):
++        # Emergency local closure does not depend on helper availability.
++        try:self.cursor=self.connection.call('TERMINATE',{})
++        except Refused:
++            store.stop('FINAL_CHECKPOINT_FAILED')  # never present an unverified protected stop as complete
+--- gate6h/repo/candidate_v3/checkpoints.py
++++ gate6i/repo/candidate_v3/checkpoints.py
+@@ -25,7 +25,9 @@
+         with store.lock:
+             local=checkpoint(store,backups,forensic=forensic)
+             tag=uuid.uuid4().hex;staging=self.root/('.pending-'+tag);staging.mkdir(mode=0o700);sync_dir(self.root)
+-            dbs={'d04-d09.sqlite3':self.evidence.db,'domains.sqlite3':self.domains.db,'highwater.sqlite3':self.highwater.db,'controller.sqlite3':store.db}
++            protected=hasattr(self.highwater,'export_db')
++            exported,anchor=self.highwater.export_db() if protected else (self.highwater.db,None)
++            dbs={'d04-d09.sqlite3':self.evidence.db,'domains.sqlite3':self.domains.db,'highwater.sqlite3':exported,'controller.sqlite3':store.db}
+             for name,db in dbs.items():
+                 path=staging/name;fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_RDWR,0o600);os.close(fd)
+                 target=sqlite3.connect(path)
+@@ -35,7 +37,9 @@
+                 try:os.fsync(fd)
+                 finally:os.close(fd)
+                 self.fault('checkpoint_component_synced')
++            if protected:exported.close()
+             raw={}
++            if protected:raw['authority-token.json']=canonical(anchor)
+             for i,b in enumerate(self.ownership):
+                 if not forensic and b.coordinator.snapshot().state is not None:raise Refused('CHECKPOINT_OWNER_UNKNOWN')
+                 for n in ('scope.json','state.json','ownership.managed'):
+@@ -62,9 +66,15 @@
+             if destination.exists() or destination.is_symlink():raise Refused('CHECKPOINT_OCCUPIED')
+             os.rename(staging,destination);sync_dir(self.root);self.fault('checkpoint_after_publish')
+             validate_coordinated(destination,minimum_accepted=store.count());self.last=destination
++            if protected and not final:self.highwater.checkpoint_committed(destination)
+             return local
+ 
+-def validate_coordinated(root,*,minimum_accepted):
++def validate_coordinated(root,*,minimum_accepted,owner_uid=None):
++    if owner_uid is not None:
++        from .storage import private as check_private
++        def private(p,directory=False):return check_private(p,directory,owner_uid=owner_uid)
++    else:
++        from .storage import private
+     root=Path(root);private(root,True);private(root/'manifest.json');m=strict_json((root/'manifest.json').read_bytes())
+     if (type(m) is not dict or set(m)!={'version','id','purpose','terminal','controller_checkpoint','accepted','bindings','files'} or m['version']!=2
+         or m['purpose'] not in ('READY','FORENSIC_INCOMPLETE') or m['terminal'] not in ('','CLOSED_COMPLETE','CLOSED_INCOMPLETE')
+@@ -79,7 +89,8 @@
+     dbs={}
+     try:
+         for n in required-{'lineage.json'}:
+-            dbs[n]=sqlite3.connect((root/n).as_uri()+'?mode=ro',uri=True)
++            from .storage import read_snapshot_db
++            dbs[n]=read_snapshot_db(root/n,owner_uid=os.geteuid() if owner_uid is None else owner_uid,expected_digest=m['files'][n])
+             dbs[n].execute('PRAGMA query_only=ON')
+             if dbs[n].execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise Refused('COORDINATED_DATABASE')
+         c=dbs['controller.sqlite3'];h=dbs['highwater.sqlite3']
+--- gate6h/repo/candidate_v3/local_control.py
++++ gate6i/repo/candidate_v3/local_control.py
+@@ -78,3 +78,167 @@
+         # Also bound response writes; never block an authority on a nonreader.
+         connection.settimeout(self.seconds)
+         connection.sendall(struct.pack('!I',len(reply))+reply)
++
++# Gate6I accept-based transport. Socket import remains confined to this module.
++import array
++import os
++import stat
++import threading
++from pathlib import Path
++from dataclasses import dataclass
++from .storage import no_symlink_ancestors
++
++MAX_FRAME=65536
++
++@dataclass(frozen=True)
++class ProcessPin:
++    uid: int
++    pid: int
++    start: str
++    boot: str
++
++    @classmethod
++    def capture(cls,uid,pid):
++        raw=(Path('/proc')/str(pid)/'stat').read_text()
++        start=raw[raw.rfind(')')+2:].split()[19]
++        boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
++        return cls(uid,pid,start,boot)
++
++    def verify(self,uid,pid):
++        if (uid,pid)!=(self.uid,self.pid) or self.capture(uid,pid)!=self:raise Refused('AUTHORITY_PROCESS_FRESHNESS')
++
++
++def _socket_path(path,owner):
++    path=Path(path);no_symlink_ancestors(path)
++    for p in path.parents:
++        s=p.lstat(); sticky=s.st_uid==0 and bool(s.st_mode&stat.S_ISVTX)
++        if s.st_uid not in (0,owner) or s.st_mode&0o022 and not sticky:raise Refused('AUTHORITY_SOCKET_PARENT')
++    s=path.lstat()
++    if not stat.S_ISSOCK(s.st_mode) or s.st_uid!=owner or stat.S_IMODE(s.st_mode)!=0o660:raise Refused('AUTHORITY_SOCKET_PATH')
++    return (s.st_dev,s.st_ino)
++
++
++def _exact(sock,n,end):
++    chunks=[];size=0
++    while size<n:
++        remaining=end-time.monotonic()
++        if remaining<=0:raise Refused('AUTHORITY_DEADLINE')
++        sock.settimeout(remaining)
++        part,ancillary,flags,_=sock.recvmsg(n-size,socket.CMSG_SPACE(256),getattr(socket,'MSG_CMSG_CLOEXEC',0))
++        # Reject and close every received descriptor, even on a malformed frame.
++        for level,kind,data in ancillary:
++            if level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS:
++                fds=array.array('i');fds.frombytes(data[:len(data)//fds.itemsize*fds.itemsize])
++                for fd in fds:os.close(fd)
++        if ancillary or flags&(socket.MSG_CTRUNC|socket.MSG_TRUNC):raise Refused('AUTHORITY_DESCRIPTORS')
++        if not part:raise Refused('AUTHORITY_TRUNCATED')
++        chunks.append(part);size+=len(part)
++    return b''.join(chunks)
++
++
++def _receive(sock,end):
++    n=struct.unpack('!I',_exact(sock,4,end))[0]
++    if not 0<n<=MAX_FRAME:raise Refused('AUTHORITY_LENGTH')
++    return strict_json(_exact(sock,n,end))
++
++
++def _send(sock,value,end):
++    raw=canonical(value)
++    if len(raw)>MAX_FRAME:raise Refused('AUTHORITY_RESPONSE_LIMIT')
++    left=end-time.monotonic()
++    if left<=0:raise Refused('AUTHORITY_DEADLINE')
++    sock.settimeout(left);sock.sendall(struct.pack('!I',len(raw))+raw)
++
++
++class UnixAuthorityServer:
++    """Bounded accept loop on a preprovisioned protected directory; no daemon install.
++
++    Separate endpoints and pinned kernel peers enforce roles. No stale socket
++    deletion: installer must review cleanup after a crash. Eight workers maximum.
++    """
++    def __init__(self,path,service,*,channel,peer_pin,seconds=2,group=None):
++        if channel not in ('operator','service') or type(peer_pin) is not ProcessPin or type(seconds) not in (int,float) or not 0<seconds<=5:raise Refused('AUTHORITY_LISTENER_CONFIGURATION')
++        self.path=Path(path);self.service=service;self.channel=channel;self.pin=peer_pin;self.seconds=seconds
++        self.owner=os.geteuid();self.stop_event=threading.Event();self.slots=threading.BoundedSemaphore(8);self.workers=set();self.lock=threading.Lock()
++        no_symlink_ancestors(self.path)
++        s=self.path.parent.lstat()
++        if s.st_uid!=self.owner or stat.S_IMODE(s.st_mode) not in (0o700,0o750):raise Refused('AUTHORITY_LISTENER_DIRECTORY')
++        self.sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
++        try:
++            # Bind exclusively; never unlink an existing endpoint or follow a link.
++            self.sock.bind(str(self.path));os.chmod(self.path,0o660)
++            if group is not None:os.chown(self.path,-1,group)
++            self.inode=_socket_path(self.path,self.owner)
++            self.sock.listen(8);self.sock.settimeout(0.05)
++        except BaseException:self.sock.close();raise
++
++    def serve(self):
++        while not self.stop_event.is_set():
++            try:
++                if _socket_path(self.path,self.owner)!=self.inode:break
++                conn,_=self.sock.accept()
++            except socket.timeout:continue
++            except (OSError,Refused):break
++            if not self.slots.acquire(blocking=False):conn.close();continue
++            t=threading.Thread(target=self._worker,args=(conn,),daemon=True)
++            with self.lock:
++                if self.stop_event.is_set():conn.close();self.slots.release();break
++                self.workers.add(t)
++                t.start()
++
++    def _worker(self,conn):
++        try:
++            end=time.monotonic()+self.seconds
++            conn.setsockopt(socket.SOL_SOCKET,socket.SO_SNDBUF,8192)
++            try:
++                pid,uid,_=struct.unpack('3i',conn.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
++                self.pin.verify(uid,pid)
++                p=_receive(conn,end)
++                self.pin.verify(uid,pid)
++                if self.stop_event.is_set() or _socket_path(self.path,self.owner)!=self.inode:raise Refused('AUTHORITY_LISTENER_REPLACED')
++                result=self.service.dispatch(self.channel,p,(uid,pid))
++                reply={'accepted':True,'result':result}
++            except Exception:reply={'accepted':False,'code':'AUTHORITY_REFUSED'}
++            try:_send(conn,reply,end)
++            except (OSError,Refused):pass
++        finally:
++            conn.close();self.slots.release()
++            with self.lock:self.workers.discard(threading.current_thread())
++
++    def close(self):
++        self.stop_event.set();self.sock.close()
++        with self.lock:workers=tuple(self.workers)
++        end=time.monotonic()+self.seconds+0.1
++        for worker in workers:worker.join(max(0,end-time.monotonic()))
++        try:
++            if _socket_path(self.path,self.owner)==self.inode:self.path.unlink()
++        except (OSError,Refused):pass
++
++
++class UnixAuthorityConnection:
++    def __init__(self,path,*,authority_pin,seconds=2):
++        if type(authority_pin) is not ProcessPin or type(seconds) not in (int,float) or not 0<seconds<=5:raise Refused('AUTHORITY_CLIENT_CONFIGURATION')
++        self.path=Path(path);self.pin=authority_pin;self.seconds=seconds
++
++    def call(self,operation,arguments):
++        try:
++            inode=_socket_path(self.path,self.pin.uid);end=time.monotonic()+self.seconds
++            with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
++                conn.settimeout(self.seconds);conn.connect(str(self.path))
++                pid,uid,_=struct.unpack('3i',conn.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
++                self.pin.verify(uid,pid)
++                if _socket_path(self.path,self.pin.uid)!=inode:raise Refused('AUTHORITY_SOCKET_REPLACED')
++                _send(conn,dict(version=1,operation=operation,arguments=arguments),end)
++                r=_receive(conn,end)
++                if type(r) is not dict or set(r)!={'accepted','result'} or r['accepted'] is not True:raise Refused('AUTHORITY_REFUSED')
++                self.pin.verify(uid,pid)
++                return r['result']
++        except Exception:raise Refused('AUTHORITY_UNAVAILABLE_OR_REFUSED') from None
++
++
++class OperatorCommandClient:
++    """No signing API. Caller supplies a separately human-signed fixed-schema body."""
++    def __init__(self,connection):self.connection=connection
++    def submit(self,raw,signature):
++        if type(raw) is not bytes or len(raw)>8192 or type(signature) is not bytes or len(signature)!=64:raise Refused('OPERATOR_PACKET')
++        return self.connection.call('SIGNED',dict(body=strict_json(raw),signature=signature.hex()))
+--- gate6h/repo/candidate_v3/runtime.py
++++ gate6i/repo/candidate_v3/runtime.py
+@@ -68,11 +68,22 @@
+ 
+     def control(self,raw,signature,peer,verb):
+         a=self.authority.check(raw,signature,peer,verb)
++        return self._apply_control(a,verb)
++
++    def apply_protected_command(self,nonce):
++        # Explicit owner invocation only; never exposed by REST/WS Bearer routes.
++        from .authority_client import ServiceAuthorityClient
++        if type(self.acceptance_guard) is not ServiceAuthorityClient:raise Refused('PROTECTED_GRAPH_REQUIRED')
++        a=self.acceptance_guard.command(nonce)
++        return self._apply_control(a,a['verb'])
++
++    def _apply_control(self,a,verb):
+         if verb not in ('OPEN_HOLD','AUTHORIZE_ONE','TERMINAL_STOP'):raise Refused('CONTROL_VERB')
+         # One-use authority is checked against durable state before ANY effect,
+         # including the in-memory stop; the PRIMARY KEY remains the commit-time guard.
+         if self.store.db.execute('SELECT 1 FROM control WHERE nonce=?',(a['nonce'],)).fetchone():raise Refused('CONTROL_REPLAY')
+         if verb=='TERMINAL_STOP':
++            if hasattr(self.acceptance_guard,'approved'):self.acceptance_guard.approved(a)
+             self.stop_event.set()
+             try:
+                 self.store.stop('SIGNED_TERMINAL_STOP',approval=a)
+@@ -95,17 +106,20 @@
+         if self.acceptance_guard is not None:self.acceptance_guard.check(self.store)
+         if verb=='OPEN_HOLD':
+             if self.state!='CLOSED_INITIAL':raise Refused('OPEN_STATE')
++            if hasattr(self.acceptance_guard,'approved'):self.acceptance_guard.approved(a)
+             self.store.opening(a);self.state='OPEN_HOLD'
+         else:
+             if self.state not in ('OPEN_HOLD','CHECKPOINT_HOLD') or self.busy:raise Refused('ARM_STATE')
+             p=a['payload']
+             if not any(s.id==p['session'] and s.transport==p['transport'] for s in self.sessions.values()):raise Refused('PERMIT_SESSION')
+             if type(p['request_commitment']) is not str or len(p['request_commitment'])!=64:raise Refused('PERMIT_COMMITMENT')
++            if hasattr(self.acceptance_guard,'approved'):self.acceptance_guard.approved(a)
+             self.store.arm(a);self.state='ARMED_ONE'
+ 
+     def stop(self,reason):
+         self.stop_event.set();self.store.stop(reason);self.state=self.store.terminal()
+         if self.acceptance_guard is not None:self.acceptance_guard.terminal(self.store)
++        self.state=self.store.terminal()
+ 
+     async def drain(self,seconds=30,*,mechanism='LIFESPAN_SHUTDOWN'):
+         if type(seconds) not in (int,float) or not 0<=seconds<=30:raise Refused('DRAIN_BOUND')
+@@ -158,6 +172,8 @@
+         precheck=getattr(self.provider,'precheck',None)
+         if precheck is not None:precheck(contract.resource)
+         sid=self.store.begin(aid,kind,contract.resource,digest(body))
++        if hasattr(self.acceptance_guard,'possible_send'):
++            self.acceptance_guard.possible_send(self.store,aid,kind,contract,digest(body))
+         req=ProviderRequest(aid,sid,contract.resource,body,digest(body),self.clock()+contract.limits.deadline)
+         if self.stop_event.is_set():
+             # Possible-send was recorded conservatively; no fabricated release on interrupted ordering.
+@@ -170,6 +186,7 @@
+             result=task.result()
+             if (type(result) is not ProviderResult or result.known_terminal is not True or (result.attempt,result.substep,result.resource,result.request_digest)!=(aid,sid,contract.resource,digest(body))):raise Refused('PROVIDER_ASSOCIATION')
+             self.store.known_terminal(sid)
++            if hasattr(self.acceptance_guard,'settle'):self.acceptance_guard.settle()
+             value=decode(result.body,contract.limits.native_bytes)
+             return value['message']['content'],sid,digest(result.body),result.body
+         except BaseException:
+--- gate6h/repo/candidate_v3/runtime_authority.py
++++ gate6i/repo/candidate_v3/runtime_authority.py
+@@ -0,0 +1,323 @@
++"""Protected runtime transactions and fixed-path readers. No signer or transport.
++
++Only RuntimeJournal owns the protected database. Exports are disposable projections,
++never an independent counter or a restore/authorization source.
++"""
++import os
++import sqlite3
++from pathlib import Path
++from .contracts import Refused, canonical, digest, strict_json
++from .authority import SUCCESSOR_VERB
++from .protected_authority import ProtectedJournal
++from .lineage import successor_payload, HIGHWATER_SCHEMA
++
++
++def token(state):
++    return {'seq': state['seq'], 'seal': state['seal']}
++
++
++def accepted_rows(db):
++    return [dict(ordinal=n, transport=t, session=s, commitment=c, permit=p)
++            for n,t,s,c,p in db.execute('SELECT a.ordinal,a.transport,a.session,p.commitment,a.permit FROM attempts a JOIN permits p ON p.nonce=a.permit ORDER BY a.ordinal')]
++
++
++def projection(state):
++    """Read-only derived compatibility snapshot; never used for authorization."""
++    db = sqlite3.connect(':memory:')
++    for sql in HIGHWATER_SCHEMA: db.execute(sql)
++    db.execute('PRAGMA user_version=2')
++    p=state['root']; a=state['succession']
++    db.execute('INSERT INTO root VALUES(1,?,?,?,?,?)', (p['predecessor'],p['archive'],p['bindings']['epoch'],canonical(p['bindings']).decode(),state['terminal_status']))
++    db.execute('INSERT INTO succession VALUES(?,?,?,?)',(a['nonce'],a['_signed_digest'],a['_verified_operator'],canonical(p).decode()))
++    for r in state['accepted']:
++        db.execute('INSERT INTO accepted VALUES(?,?,?,?,?,?)',(r['ordinal'],r['transport'],r['session'],r['commitment'],r['permit'],state['links'].get(str(r['ordinal']))))
++    db.commit(); db.execute('PRAGMA query_only=ON')
++    return db
++
++
++class RuntimeJournal(ProtectedJournal):
++    """Gate6I protocol: signed approval and durable service consumption are separate."""
++    def _state(self):
++        events,seal=self._validate()
++        s=dict(seq=len(events),seal=seal,root=None,succession=None,accepted=[],checkpoint=None,
++               terminal=False,terminal_status='',sends=[],pending=None,commands={},claims=[],links={},opened=False,stop_requested=False)
++        for kind,d in events:
++            if kind=='RUNTIME_SUCCESSOR':
++                if s['root'] is not None: raise Refused('AUTHORITY_HISTORY')
++                s['root']=d['payload']; s['succession']=d
++            elif kind=='APPROVE':
++                if s['root'] is None or s['terminal'] or d['nonce'] in s['commands']: raise Refused('AUTHORITY_HISTORY')
++                s['commands'][d['nonce']]=d
++                if d['verb']=='OPEN_HOLD': s['opened']=True
++                if d['verb']=='TERMINAL_STOP': s['stop_requested']=True
++            elif kind=='CLAIM':
++                if d not in s['commands'] or d in s['claims']:raise Refused('AUTHORITY_HISTORY')
++                s['claims'].append(d)
++            elif kind=='ACCEPT':
++                n=len(s['accepted'])+1; a=s['commands'].get(d['permit'])
++                if (s['terminal'] or not a or a['verb']!='AUTHORIZE_ONE' or n>4 or d['ordinal']!=n
++                    or d['transport']!=('REST','REST','WS','WS')[n-1]
++                    or any(r['permit']==d['permit'] for r in s['accepted'])): raise Refused('AUTHORITY_HISTORY')
++                s['accepted'].append(d); s['checkpoint']=None
++            elif kind=='BIND':
++                if str(d['ordinal']) in s['links'] or d['ordinal']!=len(s['accepted']): raise Refused('AUTHORITY_HISTORY')
++                s['links'][str(d['ordinal'])]=d['attempt']
++            elif kind=='SEND':
++                if s['terminal'] or s['pending'] or d['ordinal']!=len(s['accepted']) or s['checkpoint']: raise Refused('AUTHORITY_HISTORY')
++                s['pending']=d; s['sends'].append(d)
++            elif kind=='SETTLE':
++                if d!=s['pending'] or d is None: raise Refused('AUTHORITY_HISTORY')
++                s['pending']=None
++            elif kind=='CHECKPOINT':
++                if s['terminal'] or s['pending'] or d['accepted']!=len(s['accepted']): raise Refused('AUTHORITY_HISTORY')
++                s['checkpoint']=d
++            elif kind=='RUNTIME_TERMINAL':
++                if d['status'] not in ('CLOSED_COMPLETE','CLOSED_INCOMPLETE'): raise Refused('AUTHORITY_HISTORY')
++                if s['terminal_status']=='CLOSED_INCOMPLETE' and d['status']!='CLOSED_INCOMPLETE': raise Refused('AUTHORITY_HISTORY')
++                s['terminal']=True; s['terminal_status']=d['status']; s['stop_requested']=True
++            else: raise Refused('AUTHORITY_HISTORY')
++        return s
++
++    def signed(self,raw,signature,peer,verb):
++        if verb not in (SUCCESSOR_VERB,'OPEN_HOLD','AUTHORIZE_ONE','TERMINAL_STOP'): raise Refused('AUTHORITY_VERB')
++        def op(s):
++            proof=self.predecessor_reader() if verb==SUCCESSOR_VERB else None
++            a=self.authority.check(raw,signature,peer,verb)
++            if self.db.execute('SELECT 1 FROM events WHERE nonce=?',(a['nonce'],)).fetchone(): raise Refused('AUTHORITY_REPLAY')
++            if verb==SUCCESSOR_VERB:
++                if s['root'] is not None: raise Refused('SUCCESSOR_ALREADY_RESERVED')
++                p=successor_payload(proof,self.authority.bindings.as_dict())
++                if a['payload']!=p or a['checkpoint']!=digest(canonical(p)) or self.authority.bindings.epoch==proof.epoch: raise Refused('SUCCESSOR_SIGNED_BINDING')
++                if self.predecessor_reader()!=proof: raise Refused('PREDECESSOR_CHANGED')
++                kind='RUNTIME_SUCCESSOR'
++            else:
++                if s['root'] is None or s['terminal'] or s['stop_requested']: raise Refused('AUTHORITY_CLOSED')
++                cp=s['checkpoint']
++                # Signed stop is allowed while uncertain; it never settles a SEND.
++                if verb!='TERMINAL_STOP' and (cp is None or a['checkpoint']!=cp['digest']): raise Refused('AUTHORITY_CHECKPOINT')
++                if verb=='OPEN_HOLD' and (s['opened'] or s['accepted']): raise Refused('OPEN_STATE')
++                if verb=='AUTHORIZE_ONE':
++                    n=len(s['accepted'])+1; p=a['payload']
++                    outstanding=[v for v in s['commands'].values() if v['verb']=='AUTHORIZE_ONE' and v['nonce'] not in {r['permit'] for r in s['accepted']}]
++                    if not s['opened'] or outstanding or n>4 or p['transport']!=('REST','REST','WS','WS')[n-1]: raise Refused('AUTHORITY_PERMIT')
++                    if (type(p['session']) is not str or not 1<=len(p['session'])<=128 or type(p['request_commitment']) is not str or len(p['request_commitment'])!=64
++                        or any(c not in '0123456789abcdef' for c in p['request_commitment'])): raise Refused('AUTHORITY_PERMIT')
++                    if any(r['transport']==p['transport'] and r['session']!=p['session'] for r in s['accepted']): raise Refused('AUTHORITY_SESSION')
++                kind='APPROVE'
++            self._identity()
++            if not self.authority.clock()<a['expires']: raise Refused('CONTROL_EXPIRED')
++            return self._append(s,a['nonce'],kind,a)
++        return self._transaction(op)
++
++    def claim(self,*,peer,expected,nonce):
++        self._service_peer(peer)
++        def op(s):
++            a=s['commands'].get(nonce)
++            if token(s)!=expected or not a or nonce in s['claims'] or s['terminal']:raise Refused('AUTHORITY_COMMAND_REPLAY')
++            if s['stop_requested'] and a['verb']!='TERMINAL_STOP':raise Refused('AUTHORITY_CLOSED')
++            if not self.authority.clock()<a['expires']:raise Refused('CONTROL_EXPIRED')
++            return self._append(s,'claim-'+nonce,'CLAIM',nonce)
++        return self._transaction(op)
++
++    def consume(self,*,peer,expected,permit,snapshot_reader):
++        self._service_peer(peer)
++        def op(s):
++            if token(s)!=expected or s['terminal'] or s['stop_requested'] or s['pending'] or s['checkpoint'] is None: raise Refused('AUTHORITY_CONSUME_STATE')
++            snapshot_reader(s)  # fixed authority-side controller reader, no wire callback
++            a=s['commands'].get(permit)
++            if permit not in s['claims']:raise Refused('AUTHORITY_UNCLAIMED_PERMIT')
++            if not a or a['verb']!='AUTHORIZE_ONE' or any(r['permit']==permit for r in s['accepted']) or len(s['accepted'])>=4: raise Refused('AUTHORITY_PERMIT')
++            if not self.authority.clock()<a['expires']: raise Refused('CONTROL_EXPIRED')
++            p=a['payload']; d=dict(ordinal=len(s['accepted'])+1,transport=p['transport'],session=p['session'],commitment=p['request_commitment'],permit=permit)
++            return self._append(s,'consume-'+permit,'ACCEPT',d)
++        return self._transaction(op)
++
++    def bind(self,*,peer,expected,snapshot_reader):
++        self._service_peer(peer)
++        def op(s):
++            if token(s)!=expected or s['terminal'] or s['stop_requested'] or not s['accepted']: raise Refused('AUTHORITY_BIND_STATE')
++            n=len(s['accepted'])
++            if str(n) in s['links']: raise Refused('AUTHORITY_ALREADY_BOUND')
++            aid=snapshot_reader(s,unbound=True)
++            return self._append(s,'bind-'+str(n),'BIND',dict(ordinal=n,attempt=aid))
++        return self._transaction(op)
++
++    def terminate(self,*,peer,snapshot_reader):
++        self._service_peer(peer)
++        def op(s):
++            status=snapshot_reader()
++            if status not in ('CLOSED_COMPLETE','CLOSED_INCOMPLETE') or s['root'] is None: raise Refused('AUTHORITY_TERMINAL')
++            if s['pending'] or len(s['links'])!=len(s['accepted']): status='CLOSED_INCOMPLETE'
++            if s['terminal_status']=='CLOSED_INCOMPLETE': status='CLOSED_INCOMPLETE'
++            if s['terminal_status']==status:
++                self.db.execute('COMMIT'); return token(s)
++            return self._append(s,'terminal-'+str(s['seq']+1),'RUNTIME_TERMINAL',{'status':status})
++        return self._transaction(op)
++
++
++class ControllerReader:
++    """Installer-pinned read-only controller and coordinated snapshot paths.
++
++    Files remain service-owned: their claims are compared with protected history.
++    This reader does NOT manufacture independent provider terminal attestation.
++    """
++    def __init__(self,root,coordinated,*,service_uid):
++        self.root=Path(root);self.coordinated=Path(coordinated);self.uid=service_uid
++
++    def database(self):
++        from .storage import no_symlink_ancestors,validate_accounting,SCHEMA
++        p=self.root/'controller.sqlite3'; no_symlink_ancestors(p)
++        st=p.lstat()
++        import stat
++        if not stat.S_ISREG(st.st_mode) or st.st_uid!=self.uid or st.st_nlink!=1 or stat.S_IMODE(st.st_mode)!=0o600: raise Refused('CONTROLLER_READER_PATH')
++        from .storage import read_snapshot_db
++        db=read_snapshot_db(p,owner_uid=self.uid)
++        try:
++            if db.execute('PRAGMA integrity_check').fetchall()!=[('ok',)] or {r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name!='sqlite_sequence'")}!=set(SCHEMA): raise Refused('CONTROLLER_READER_INTEGRITY')
++            validate_accounting(db)
++        except BaseException:db.close();raise
++        return db
++
++    def check(self,state,unbound=False):
++        db=self.database()
++        try:
++            p=state['root']
++            if p is None or strict_json(db.execute("SELECT value FROM meta WHERE key='bindings'").fetchone()[0])!=p['bindings']: raise Refused('AUTHORITY_CONTROLLER_BINDING')
++            if db.execute('SELECT parent,child,archive,ancestor_count FROM lineage').fetchall()!=[(p['predecessor'],p['bindings']['epoch'],p['archive'],0)]: raise Refused('AUTHORITY_CONTROLLER_LINEAGE')
++            if accepted_rows(db)!=state['accepted']: raise Refused('AUTHORITY_CONTROLLER_ROLLBACK')
++            rows=db.execute('SELECT ordinal,id FROM attempts ORDER BY ordinal').fetchall()
++            for n,aid in rows:
++                if unbound and n==len(rows):continue
++                if state['links'].get(str(n))!=aid: raise Refused('AUTHORITY_CONTROLLER_ASSOCIATION')
++            local_commands=db.execute('SELECT * FROM control').fetchall()
++            if {r[0] for r in local_commands}!=set(state['claims']):raise Refused('AUTHORITY_CONTROL_ROLLBACK')
++            for nonce,verb,sha,operator in local_commands:
++                a=state['commands'].get(nonce)
++                if not a or (verb,sha,operator)!=(a['verb'],a['_signed_digest'],a['_verified_operator']): raise Refused('AUTHORITY_CONTROL_ASSOCIATION')
++            for nonce,n,t,se,c,expires,spent in db.execute('SELECT * FROM permits'):
++                a=state['commands'].get(nonce)
++                if not a or a['verb']!='AUTHORIZE_ONE' or a['payload']!=dict(transport=t,session=se,request_commitment=c) or a['expires']!=expires:raise Refused('AUTHORITY_PERMIT_ASSOCIATION')
++            # Every protected send must still exist locally. Lost intent => hold.
++            for send in state['sends']:
++                kind='GRANITE' if send['role']=='granite' else 'LEGACY_ROUTER' if send['role']=='legacy_router' else 'LEGACY_RESPONDER'
++                aid=state['links'].get(str(send['ordinal']))
++                if db.execute('SELECT request_digest FROM steps WHERE attempt=? AND kind=?',(aid,kind)).fetchone()!=(send['request'],): raise Refused('AUTHORITY_SEND_ROLLBACK')
++            return rows[-1][1] if unbound and rows else None
++        finally:db.close()
++
++    def send(self,state,arguments,resource):
++        self.check(state)
++        n=arguments['ordinal'];role=arguments['role']
++        aid=state['links'].get(str(n))
++        kind='GRANITE' if role=='granite' else 'LEGACY_ROUTER' if role=='legacy_router' else 'LEGACY_RESPONDER'
++        db=self.database()
++        try:
++            expected=(resource.endpoint,resource.model,resource.profile,arguments['request_digest'],'POSSIBLE_SEND')
++            if db.execute('SELECT endpoint,model,profile,request_digest,state FROM steps WHERE attempt=? AND kind=?',(aid,kind)).fetchone()!=expected:raise Refused('AUTHORITY_SEND_ASSOCIATION')
++        finally:db.close()
++
++    def terminal(self):
++        db=self.database()
++        try:return db.execute("SELECT value FROM meta WHERE key='terminal'").fetchone()[0]
++        finally:db.close()
++
++    def checkpoint(self,state,bundle):
++        if type(bundle) is not str or len(bundle)!=32 or any(c not in '0123456789abcdef' for c in bundle): raise Refused('CHECKPOINT_IDENTIFIER')
++        from .checkpoints import validate_coordinated
++        root=self.coordinated/bundle
++        m=validate_coordinated(root,minimum_accepted=len(state['accepted']),owner_uid=self.uid)
++        if m['purpose']!='READY' or strict_json((root/'authority-token.json').read_bytes())!=token(state): raise Refused('AUTHORITY_CHECKPOINT_STALE')
++        self.check(state)
++        from .storage import read_snapshot_db
++        db=read_snapshot_db(root/'controller.sqlite3',owner_uid=self.uid,expected_digest=m['files']['controller.sqlite3'])
++        try:
++            if accepted_rows(db)!=state['accepted']:raise Refused('AUTHORITY_SNAPSHOT')
++            controls=db.execute('SELECT * FROM control').fetchall()
++            if {r[0] for r in controls}!=set(state['claims']):raise Refused('AUTHORITY_SNAPSHOT_CONTROL')
++            for nonce,verb,sha,operator in controls:
++                a=state['commands'][nonce]
++                if (verb,sha,operator)!=(a['verb'],a['_signed_digest'],a['_verified_operator']):raise Refused('AUTHORITY_SNAPSHOT_CONTROL')
++            actual=[(n,kind,sha) for n,kind,sha in db.execute('SELECT a.ordinal,s.kind,s.request_digest FROM steps s JOIN attempts a ON s.attempt=a.id ORDER BY a.ordinal,s.rowid')]
++            expected=[(s['ordinal'],'GRANITE' if s['role']=='granite' else 'LEGACY_ROUTER' if s['role']=='legacy_router' else 'LEGACY_RESPONDER',s['request']) for s in state['sends']]
++            if actual!=expected:raise Refused('AUTHORITY_UNPROTECTED_SEND')
++        finally:db.close()
++        return dict(accepted=state['accepted'],digest=m['controller_checkpoint'],clean=True)
++
++
++class AuthorityService:
++    """Fixed schemas only. Readers and resources are provisioned, never wire inputs."""
++    def __init__(self,journal,reader,*,terminal_reader,contracts):
++        from dataclasses import asdict
++        self.journal=journal; self.reader=reader; self.terminal_reader=terminal_reader;self.contracts=dict(contracts)
++        if {r:digest(canonical(asdict(c))) for r,c in self.contracts.items()}!=journal.provider_resources:raise Refused('AUTHORITY_CONFIGURATION_RESOURCE')
++
++    def dispatch(self,channel,p,peer):
++        if type(p) is not dict or set(p)!={'version','operation','arguments'} or type(p['version']) is not int or p['version']!=1 or type(p['arguments']) is not dict: raise Refused('AUTHORITY_PROTOCOL')
++        verb=p['operation']; a=p['arguments']; j=self.journal
++        if channel=='operator':
++            if verb!='SIGNED' or set(a)!={'body','signature'} or type(a['body']) is not dict or type(a['signature']) is not str or len(a['signature'])!=128:raise Refused('OPERATOR_SCHEMA')
++            return j.signed(canonical(a['body']),bytes.fromhex(a['signature']),peer,a['body'].get('verb'))
++        j._service_peer(peer)
++        schemas={'READ':set(),'CHECK':{'expected','allow_terminal'},'CLAIM':{'expected','nonce'},'CONSUME':{'expected','permit'},'BIND':{'expected'},'CHECKPOINT':{'expected','bundle'},'SEND':{'expected','ordinal','role','request_digest'},'SETTLE':{'expected'},'TERMINATE':set()}
++        if verb not in schemas or set(a)!=schemas[verb]:raise Refused('SERVICE_SCHEMA')
++        with j.lock:
++            if verb=='READ':return j.read()
++            s=j.read()
++            if verb=='TERMINATE':
++                def terminal():
++                    status=self.reader.terminal()
++                    try:self.reader.check(s)
++                    except Refused:return 'CLOSED_INCOMPLETE'
++                    if s['checkpoint'] is None or s['checkpoint']['accepted']!=len(s['accepted']):return 'CLOSED_INCOMPLETE'
++                    return status
++                return j.terminate(peer=peer,snapshot_reader=terminal)
++            if a['expected']!=token(s):raise Refused('AUTHORITY_STALE_STATE')
++            if verb=='CLAIM':return j.claim(peer=peer,**a)
++            if verb=='CHECK':
++                if type(a['allow_terminal']) is not bool or (s['terminal'] or s['stop_requested']) and not a['allow_terminal']:raise Refused('AUTHORITY_CLOSED')
++                self.reader.check(s)
++                if a['allow_terminal'] and s['terminal_status']!=self.reader.terminal():raise Refused('AUTHORITY_TERMINAL_MISMATCH')
++                return token(s)
++            if s['terminal'] or s['stop_requested']:raise Refused('AUTHORITY_CLOSED')
++            if verb=='CONSUME':return j.consume(peer=peer,expected=a['expected'],permit=a['permit'],snapshot_reader=self.reader.check)
++            if verb=='BIND':return j.bind(peer=peer,expected=a['expected'],snapshot_reader=self.reader.check)
++            if verb=='CHECKPOINT':return j.checkpoint(peer=peer,expected=a['expected'],snapshot_reader=lambda:self.reader.checkpoint(s,a['bundle']))
++            if verb=='SEND':
++                if a['role'] not in self.contracts:raise Refused('AUTHORITY_RESOURCE_UNQUALIFIED')
++                self.reader.send(s,a,self.contracts[a['role']].resource)
++                return j.possible_send(peer=peer,**a)
++            if verb=='SETTLE':return j.settle(peer=peer,expected=a['expected'],terminal_reader=lambda:self.terminal_reader(s['pending']))
++
++
++class ReleaseIdentityReader:
++    """Fixed root-owned file inventory, exact config and approved live process pin.
++
++    Installation supplies the inventory and Bindings, never the service socket.
++    No credentials or environment inspection. No rebind/recovery operation.
++    """
++    def __init__(self,release,inventory,config,config_digest,bindings,process_pin,*,owner_uid=0):
++        self.release=Path(release);self.inventory=dict(inventory);self.config=Path(config)
++        self.config_digest=config_digest;self.bindings=bindings;self.pin=process_pin;self.owner=owner_uid
++        if not self.inventory:raise Refused('RELEASE_INVENTORY_REQUIRED')
++
++    def _file(self,p,expected):
++        import stat
++        from .storage import no_symlink_ancestors
++        no_symlink_ancestors(p)
++        for parent in p.parents:
++            st=parent.lstat();sticky=st.st_uid==0 and bool(st.st_mode&stat.S_ISVTX)
++            if st.st_uid not in (0,self.owner) or st.st_mode&0o022 and not sticky:raise Refused('RELEASE_ANCESTOR')
++        st=p.lstat()
++        if st.st_uid!=self.owner or not stat.S_ISREG(st.st_mode) or st.st_nlink!=1 or st.st_mode&0o022:raise Refused('RELEASE_OWNERSHIP')
++        if digest(p.read_bytes())!=expected:raise Refused('RELEASE_IDENTITY')
++
++    def __call__(self):
++        for name,sha in self.inventory.items():
++            if type(name) is not str or Path(name).is_absolute() or '..' in Path(name).parts:raise Refused('RELEASE_MANIFEST_PATH')
++            self._file(self.release/name,sha)
++        self._file(self.config,self.config_digest)
++        self.pin.verify(self.pin.uid,self.pin.pid)
++        b=self.bindings.as_dict()
++        if (b['source']!=digest(canonical(self.inventory)) or b['config']!=self.config_digest
++            or b['pid']!=str(self.pin.pid) or b['start']!=self.pin.start or b['boot']!=self.pin.boot):raise Refused('RELEASE_PROCESS_BINDING')
++        return b
+--- gate6h/repo/candidate_v3/storage.py
++++ gate6i/repo/candidate_v3/storage.py
+@@ -9,7 +9,7 @@
+  'CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+  'CREATE TABLE control(nonce TEXT PRIMARY KEY, verb TEXT NOT NULL, body_digest TEXT NOT NULL, operator TEXT NOT NULL)',
+  'CREATE TABLE permits(nonce TEXT PRIMARY KEY REFERENCES control(nonce), ordinal INTEGER UNIQUE NOT NULL, transport TEXT NOT NULL, session TEXT NOT NULL, commitment TEXT NOT NULL, expires REAL NOT NULL, spent INTEGER NOT NULL CHECK(spent IN(0,1)))',
+- "CREATE TABLE attempts(id TEXT PRIMARY KEY, ordinal INTEGER UNIQUE NOT NULL CHECK(ordinal BETWEEN 1 AND 4), transport TEXT NOT NULL CHECK(transport IN ('REST','WS')), session TEXT NOT NULL, permit TEXT UNIQUE NOT NULL REFERENCES permits(nonce), origin TEXT NOT NULL CHECK(origin='LIVE'), eligible INTEGER NOT NULL CHECK(eligible=0), delivery TEXT NOT NULL, terminal TEXT)",
++ "CREATE TABLE attempts(id TEXT PRIMARY KEY, ordinal INTEGER UNIQUE NOT NULL CHECK(ordinal BETWEEN 1 AND 4), transport TEXT NOT NULL CHECK(transport IN ('REST','WS')), session TEXT NOT NULL, permit TEXT UNIQUE NOT NULL REFERENCES permits(nonce), origin TEXT NOT NULL CHECK(origin='OFFLINE_FIXTURE'), eligible INTEGER NOT NULL CHECK(eligible=0), delivery TEXT NOT NULL, terminal TEXT)",
+  'CREATE TABLE steps(id TEXT PRIMARY KEY, attempt TEXT NOT NULL REFERENCES attempts(id), kind TEXT NOT NULL, endpoint TEXT NOT NULL, model TEXT NOT NULL, profile TEXT NOT NULL, request_digest TEXT NOT NULL, state TEXT NOT NULL, UNIQUE(attempt,kind))',
+  'CREATE TABLE leases(step TEXT PRIMARY KEY REFERENCES steps(id), endpoint TEXT NOT NULL, state TEXT NOT NULL)',
+  'CREATE UNIQUE INDEX endpoint_exclusion ON leases(endpoint) WHERE state IN (\'ACTIVE\',\'REMOTE_UNKNOWN\')',
+@@ -26,10 +26,10 @@
+     for parent in reversed((path, *path.parents)):
+         if parent.is_symlink(): raise Refused('SYMLINK_ANCESTOR')
+ 
+-def private(path: Path, directory=False):
++def private(path: Path, directory=False, *, owner_uid=None):
+     no_symlink_ancestors(path)
+     s=path.lstat()
+-    if (s.st_uid != os.geteuid() or stat.S_IMODE(s.st_mode) != (0o700 if directory else 0o600)
++    if (s.st_uid != (os.geteuid() if owner_uid is None else owner_uid) or stat.S_IMODE(s.st_mode) != (0o700 if directory else 0o600)
+             or not (stat.S_ISDIR(s.st_mode) if directory else stat.S_ISREG(s.st_mode)) or not directory and s.st_nlink != 1):
+         raise Refused('UNSAFE_STORAGE')
+ 
+@@ -165,7 +165,7 @@
+             if self.terminal() or not self.clean() or self.count()>=4 or p is None or p[1:5]!=(self.count()+1,transport,session,commitment) or not now<p[5]:raise Refused('ADMISSION_REFUSED')
+             aid=uuid.uuid4().hex
+             self.db.execute('UPDATE permits SET spent=1 WHERE nonce=?',(p[0],));self.fault('permit_spent_before_insert')
+-            self.db.execute("INSERT INTO attempts VALUES(?,?,?,?,?,'LIVE',0,'NOT_ATTEMPTED',NULL)",(aid,p[1],transport,session,p[0]))
++            self.db.execute("INSERT INTO attempts VALUES(?,?,?,?,?,'OFFLINE_FIXTURE',0,'NOT_ATTEMPTED',NULL)",(aid,p[1],transport,session,p[0]))
+             self.event('ACCEPTED',aid);self.fault('accept_before_commit')
+         self.fault('accept_after_commit');return aid
+     def begin(self,attempt,kind,resource,request_digest):
+@@ -209,7 +209,7 @@
+         from .observation import Observation
+         if type(observation) is not Observation or observation.projection.get('proposal_count')!=0:raise Refused('OBSERVATION_REQUIRED')
+         from dataclasses import asdict
+-        record=canonical({'attempt':aid,'step':sid,'sequence':seq,'native_digest':native_digest,'proposal_count':0,'origin':'LIVE','eligible':False,'observation':asdict(observation)})+b'\n'
++        record=canonical({'attempt':aid,'step':sid,'sequence':seq,'native_digest':native_digest,'proposal_count':0,'origin':'OFFLINE_FIXTURE','eligible':False,'observation':asdict(observation)})+b'\n'
+         flags=os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW
+         if not path.exists():flags|=os.O_CREAT|os.O_EXCL
+         fd=os.open(path,flags,0o600)
+@@ -316,7 +316,35 @@
+         if len(lines)<len(joins) or len(lines)!=len(joins) and m['purpose']=='READY':raise Refused('BACKUP_RECEIPT_COUNT')
+         for i,(line,join) in enumerate(zip(lines,joins),1):
+             v=strict_json(line)
+-            if join!=(v['attempt'],v['step'],i,digest(line)) or v['sequence']!=i or v['proposal_count']!=0 or v['eligible'] is not False or v['origin']!='LIVE':raise Refused('BACKUP_RECEIPT_JOIN')
++            if join!=(v['attempt'],v['step'],i,digest(line)) or v['sequence']!=i or v['proposal_count']!=0 or v['eligible'] is not False or v['origin']!='OFFLINE_FIXTURE':raise Refused('BACKUP_RECEIPT_JOIN')
+             if db.execute('SELECT attempt,kind,state FROM steps WHERE id=?',(v['step'],)).fetchone()!=(v['attempt'],'GRANITE','KNOWN_TERMINAL'):raise Refused('BACKUP_STEP_JOIN')
+     finally:db.close()
+     return m
++
++
++def read_snapshot_db(path,*,owner_uid,expected_digest=None):
++    """Bounded O_NOFOLLOW read into query-only memory; helper never follows SQLite
++    paths or journal names in a service-writable directory. Torn snapshots refuse.
++    """
++    path=Path(path);no_symlink_ancestors(path)
++    fd=os.open(path,os.O_RDONLY|os.O_NONBLOCK|os.O_NOFOLLOW|os.O_CLOEXEC)
++    try:
++        st=os.fstat(fd)
++        if not stat.S_ISREG(st.st_mode) or st.st_uid!=owner_uid or stat.S_IMODE(st.st_mode)!=0o600 or st.st_nlink!=1 or not 0<st.st_size<=8*1024*1024:raise Refused('SNAPSHOT_FILE_BOUNDARY')
++        raw=b''
++        while len(raw)<st.st_size:
++            block=os.read(fd,min(65536,st.st_size-len(raw)))
++            if not block:raise Refused('SNAPSHOT_TRUNCATED')
++            raw+=block
++        end=os.fstat(fd)
++        fields=('st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns','st_mode','st_uid','st_nlink')
++        if os.read(fd,1) or any(getattr(end,k)!=getattr(st,k) for k in fields):raise Refused('SNAPSHOT_CHANGED')
++    finally:os.close(fd)
++    if expected_digest is not None and digest(raw)!=expected_digest:raise Refused('SNAPSHOT_DIGEST')
++    db=sqlite3.connect(':memory:')
++    try:
++        db.deserialize(raw);db.execute('PRAGMA query_only=ON')
++        db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH,2*1024*1024)
++        if db.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise Refused('SNAPSHOT_INTEGRITY')
++        return db
++    except BaseException:db.close();raise
+--- gate6h/repo/tests/execution/v3_integration_test.py
++++ gate6i/repo/tests/execution/v3_integration_test.py
+@@ -42,7 +42,7 @@
+         endpoint='http://192.0.2.10:11434'
+         self.router=StepContract(Resource(endpoint,'gemma3:4b','fixture-router-v1'),Limits(4096,64,16384,16384,20,60),ROUTER_PROMPT,'OFFLINE_ROUTER',(('temperature',0.1),))
+         self.trivial=StepContract(Resource(endpoint,'gemma3:4b','fixture-trivial-v1'),Limits(4096,80,16384,16384,180,60),RESPONDER_PROMPT,'OFFLINE_RESPONDER')
+-        self.normal=StepContract(Resource(endpoint,'qwen3-nothink','fixture-normal-v1'),Limits(32768,150,16384,16384,180,60),RESPONDER_PROMPT,'OFFLINE_RESPONDER')
++        self.normal=StepContract(Resource(endpoint,'qwen3-nothink','fixture-normal-v1'),Limits(8192,150,16384,16384,180,60),RESPONDER_PROMPT,'OFFLINE_RESPONDER')
+         self.granite=StepContract(Resource(RESOURCE.endpoint,RESOURCE.model,PROFILE_ID),Limits(64000,128,16384,16384,180,60),P7_SHADOW_PROMPT_V1,'CANONICAL_OFFLINE')
+         contracts=(self.router,self.trivial,self.normal,self.granite)
+         async def handler(req):
+--- gate6h/repo/tests/execution/v3_protected_runtime_test.py
++++ gate6i/repo/tests/execution/v3_protected_runtime_test.py
+@@ -0,0 +1,550 @@
++"""Real accept/connect sockets, SAME kernel UID. Dummy keys and fake providers only."""
++import asyncio,dataclasses,json,os,socket,struct,sys,tempfile,threading,time,uuid
++from pathlib import Path
++import pytest
++sys.path.append('/usr/lib/python3/dist-packages')
++from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
++from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat
++from candidate_v3.contracts import Refused,canonical,digest,strict_json
++from candidate_v3.authority import Authority,SUCCESSOR_VERB
++from candidate_v3.protected_authority import Ed25519Verifier
++from candidate_v3.runtime_authority import RuntimeJournal,ControllerReader,AuthorityService,token
++from candidate_v3.authority_client import ServiceAuthorityClient
++from candidate_v3.local_control import UnixAuthorityServer,UnixAuthorityConnection,OperatorCommandClient,ProcessPin,MAX_FRAME
++from candidate_v3.lineage import successor_payload,PredecessorProof
++from candidate_v3.application import build_protected_isolated_app
++from candidate_v3.checkpoints import CheckpointWriter
++from candidate_v3.runtime import ORIGINAL_INPUTS
++from tests.execution.v3_successor_support import fresh_fixture_proof
++from tests.execution.v3_integration_test import Integrated,asgi_call,scope
++from tests.execution.v3_candidate_test import Sink
++
++class ProtectedIntegrated(Integrated):
++    def __init__(self,base):
++        super().__init__(base)
++        self.old_high=self.high
++        from candidate_v3.source_memory import procedural_snapshot
++        memory=procedural_snapshot((Path(__file__).parents[2]/'skills.md').read_bytes(),expected_sha256='3a61af6054795cad154b5de00e4185063d32e08e592aba315bc8ef1560e6d4a2')
++        self.runtime.legacy_policy=dataclasses.replace(self.runtime.legacy_policy,memory_snapshot=memory)
++        self.key=Ed25519PrivateKey.generate();public=self.key.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)
++        self.authority=Authority(self.bind,Ed25519Verifier(public,operator_id='dummy-human'),clock=lambda:100.,operator_id='dummy-human',peer_uid=os.getuid())
++        self.runtime.authority=self.authority
++        root=base/'protected';root.mkdir(mode=0o700)
++        self.proof=fresh_fixture_proof(PredecessorProof('predecessor','a'*64,0,'b'*64))
++        self.contracts=dict(legacy_router=self.router,legacy_trivial=self.trivial,legacy_normal=self.normal,granite=self.granite)
++        self.journal=RuntimeJournal(root,owner_uid=os.getuid(),service_uid=os.getuid(),authority=self.authority,predecessor_reader=lambda:self.proof,identity_reader=self.bind.as_dict,provider_resources={r:digest(canonical(dataclasses.asdict(c))) for r,c in self.contracts.items()},create=True)
++        self.witness=set()
++        async def witnessed(request):
++            result=await self.native_original(request)
++            # Independent synthetic provider witness, not the runtime's clean flag.
++            if result.known_terminal and (result.attempt,result.substep,result.resource,result.request_digest)==(request.attempt,request.substep,request.resource,request.request_digest):self.witness.add(request.request_digest)
++            return result
++        self.native_original=self.runtime.provider.request;self.runtime.provider.request=witnessed
++        self.reader=ControllerReader(self.store.root,base/'coordinated',service_uid=os.getuid())
++        def terminal(pending):return dict(terminal=pending['request'] in self.witness,association=pending)
++        self.service=AuthorityService(self.journal,self.reader,terminal_reader=terminal,contracts=self.contracts)
++        self.socket_dir=Path(tempfile.mkdtemp(prefix='u',dir=os.environ.get('P7_OFFLINE_STAGE',str(base))))
++        self.pin=ProcessPin.capture(os.getuid(),os.getpid());self.servers=[];self.threads=[]
++        for channel in ('operator','service'):
++            server=UnixAuthorityServer(self.socket_dir/channel,self.service,channel=channel,peer_pin=self.pin,seconds=0.5)
++            thread=threading.Thread(target=server.serve,daemon=True);thread.start();self.servers.append(server);self.threads.append(thread)
++        self.operator=OperatorCommandClient(UnixAuthorityConnection(self.socket_dir/'operator',authority_pin=self.pin))
++        self.high=ServiceAuthorityClient(UnixAuthorityConnection(self.socket_dir/'service',authority_pin=self.pin),contracts=self.contracts)
++        p=successor_payload(self.proof,self.bind.as_dict())
++        raw,sig=self.approval(SUCCESSOR_VERB,p,checkpoint=digest(canonical(p)))
++        self.operator.submit(raw,sig)
++        self.runtime.acceptance_guard=self.high
++        self.writer=CheckpointWriter(base/'coordinated',evidence=self.evidence,domains=self.domains,highwater=self.high,ownership=self.ownership)
++        self.runtime.checkpoint_writer=self.writer;self.runtime._checkpoint()
++        self.app=build_protected_isolated_app(self.runtime,api_token=b'DUMMY_API',allowed_origins={b'http://localhost:8000'},qualification='OFFLINE_EVALUATION_ONLY')
++
++    def approval(self,verb,payload=None,**changes):
++        a=dict(verb=verb,nonce=uuid.uuid4().hex,expires=130.,bindings=self.bind.as_dict(),checkpoint=digest((self.runtime.last_checkpoint/'manifest.json').read_bytes()),payload=payload or {});a.update(changes)
++        raw=canonical(a);return raw,self.key.sign(raw)
++
++    def control(self,verb,payload=None,**changes):
++        raw,sig=self.approval(verb,payload,**changes)
++        self.operator.submit(raw,sig)
++        self.runtime.apply_protected_command(strict_json(raw)['nonce'])
++        return raw,sig
++
++    def close(self):
++        for s in self.servers:s.close()
++        for t in self.threads:t.join(2)
++        self.journal.close();self.old_high.close();self.store.close();self.domains.close();self.evidence.close()
++        self.socket_dir.rmdir()
++
++@pytest.fixture
++def protected(tmp_path):
++    f=ProtectedIntegrated(tmp_path)
++    yield f
++    f.close()
++
++@pytest.mark.asyncio
++async def test_protected_actual_four_turn_graph(protected):
++    f=protected;assert f.runtime.state=='CLOSED_INITIAL' and not f.calls
++    assert not hasattr(f.high,'db') and not hasattr(f.high,'journal') and not hasattr(f.high,'key')
++    f.opened()
++    for t,m in zip(('REST','REST','WS','WS'),ORIGINAL_INPUTS):
++        _,sink=await f.turn(t,m)
++        assert sink.messages[0]['reply']=='Legacy fixture response, sir.' and 'GRANITE' not in str(sink.messages)
++    s=f.journal.read()
++    assert len(s['accepted'])==4 and len(s['sends'])==11 and s['pending'] is None and s['terminal_status']=='CLOSED_COMPLETE'
++    assert f.store.count()==4 and f.evidence.validate()==4
++    assert f.store.db.execute('SELECT DISTINCT origin FROM attempts').fetchall()==[('OFFLINE_FIXTURE',)]
++    assert all(v['options']['num_ctx']==8192 for _,v in f.calls if v['model']=='qwen3-nothink')
++    assert 'GRANITE' not in str([s.history for s in f.runtime.sessions.values()])
++    with pytest.raises(Refused):f.arm('WS',ORIGINAL_INPUTS[-1])
++
++@pytest.mark.asyncio
++async def test_protected_rest_ingress(protected):
++    f=protected;f.opened();token_=f.arm()
++    work,_,out=await asgi_call(f.app,scope('http',token_),[{'type':'http.request','body':canonical({'message':ORIGINAL_INPUTS[0]})}])
++    await asyncio.wait_for(work,5)
++    assert out[0]['status']==200 and len(f.journal.read()['accepted'])==1
++    assert 'GRANITE' not in str(out)
++
++@pytest.mark.parametrize('kind',['http','websocket'])
++@pytest.mark.asyncio
++async def test_protected_authentication_before_request(protected,kind):
++    f=protected;s=scope(kind);s['headers']=[(b'authorization',b'Bearer WRONG')]
++    work,_,out=await asgi_call(f.app,s,[]);await work
++    assert not f.calls and not f.journal.read()['accepted']
++    assert out[0].get('status',out[0].get('code')) in (401,1008)
++
++@pytest.mark.asyncio
++async def test_protected_closed_refuses(protected):
++    f=protected;token_,_=f.runtime.new_session('REST')
++    with pytest.raises(Refused):await f.runtime.request(transport='REST',token=token_,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++    assert not f.calls and not f.journal.read()['accepted']
++
++
++def test_signing_via_service_interface_refuses(protected):
++    f=protected;raw,sig=f.approval('OPEN_HOLD')
++    with pytest.raises(Refused):f.high.connection.call('SIGNED',dict(body=strict_json(raw),signature=sig.hex()))
++    with pytest.raises(Refused):f.runtime.control(raw,sig,(os.getuid(),os.getpid()),'OPEN_HOLD')
++    assert not f.journal.read()['opened']
++
++
++def test_approval_is_not_acceptance_and_replay_refuses(protected):
++    f=protected;raw,sig=f.control('OPEN_HOLD');f.arm()
++    assert f.journal.read()['accepted']==[] and f.store.count()==0
++    with pytest.raises(Refused):f.operator.submit(raw,sig)
++
++@pytest.mark.parametrize('bad',['signature','binding','expiry','verb'])
++def test_signed_command_binding(protected,bad):
++    f=protected;changes={'binding':dict(bindings=dict(f.bind.as_dict(),source='stale')),'expiry':dict(expires=99),'verb':{}} .get(bad,{})
++    raw,sig=f.approval('EXEC' if bad=='verb' else 'OPEN_HOLD',**changes)
++    if bad=='signature':sig=b'x'*64
++    with pytest.raises(Refused):f.operator.submit(raw,sig)
++    assert not f.journal.read()['opened']
++
++@pytest.mark.asyncio
++async def test_consumed_permit_burns_before_d09_failure(protected):
++    f=protected;f.opened();tok=f.arm();session=f.runtime.sessions[tok]
++    f.high.before_accept(f.store,'REST',session.id,f.runtime.commitment(ORIGINAL_INPUTS[0]))
++    assert len(f.journal.read()['accepted'])==1 and f.store.count()==0
++    with pytest.raises(Refused):f.high.check(f.store)
++    with pytest.raises(Refused):await f.runtime.request(transport='REST',token=tok,message=ORIGINAL_INPUTS[0],authenticated=True,delivery=Sink())
++    assert not f.calls
++
++@pytest.mark.asyncio
++async def test_uncertain_provider_preserves_protected_send(protected):
++    f=protected;f.opened();f.block='gemma3:4b'
++    task=asyncio.create_task(f.turn());await asyncio.wait_for(f.entered.wait(),3)
++    f.runtime.stop('OPERATOR_STOP')
++    with pytest.raises(Refused):await task
++    s=f.journal.read();assert len(s['accepted'])==1 and s['pending'] is not None
++    assert not f.store.clean() and f.domains.db.execute('SELECT DISTINCT state FROM holds').fetchall()==[('REMOTE_UNKNOWN',)]
++    assert s['terminal_status']=='CLOSED_INCOMPLETE'
++
++@pytest.mark.asyncio
++async def test_terminal_requires_independent_fixture_witness(protected):
++    f=protected;f.service.terminal_reader=lambda p:dict(terminal=False,association=p);f.opened()
++    with pytest.raises(Refused):await f.turn()
++    assert len(f.calls)==1 and f.journal.read()['pending'] is not None
++
++@pytest.mark.parametrize('phase',['before_commit','after_commit'])
++def test_successor_or_permit_commit_ack_crash(protected,phase):
++    f=protected;f.opened();f.arm();s=f.high.read()
++    p=f.store.db.execute('SELECT nonce FROM permits').fetchone()[0]
++    def crash(point):
++        if point==phase:raise RuntimeError('dummy crash')
++    f.journal.fault=crash
++    with pytest.raises(Refused):f.high._call('CONSUME',permit=p)
++    f.journal.fault=lambda _:None
++    assert len(f.journal.read()['accepted'])==(phase=='after_commit')
++    if phase=='after_commit':
++        f.high.read()
++        with pytest.raises(Refused):f.high._call('CONSUME',permit=p)
++
++@pytest.mark.asyncio
++async def test_controller_and_whole_service_rollback_detected(protected):
++    f=protected
++    import sqlite3
++    backup=sqlite3.connect(':memory:');f.store.db.backup(backup)
++    f.opened();await f.turn()
++    backup.backup(f.store.db);backup.close()
++    with pytest.raises(Refused):f.high.check(f.store)
++    assert len(f.journal.read()['accepted'])==1
++
++
++def test_process_pin_is_kernel_derived_and_stale_refuses(protected):
++    f=protected;client=UnixAuthorityConnection(f.socket_dir/'service',authority_pin=dataclasses.replace(f.pin,start='stale'))
++    with pytest.raises(Refused):client.call('READ',{})
++    f.servers[1].pin=dataclasses.replace(f.pin,uid=f.pin.uid+1)
++    with pytest.raises(Refused):f.high.read()
++
++
++def packet(f,raw,parts=None):
++    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
++        conn.settimeout(2);conn.connect(str(f.socket_dir/'service'))
++        if parts:
++            for part in parts:conn.sendall(part)
++        else:conn.sendall(struct.pack('!I',len(raw))+raw)
++        n=struct.unpack('!I',conn.recv(4))[0];body=b''
++        while len(body)<n:body+=conn.recv(n-len(body))
++        return strict_json(body)
++
++@pytest.mark.parametrize('raw',[b'{',b'{"version":1,"version":1}',canonical(dict(version=2,operation='READ',arguments={})),canonical(dict(version=1,operation='EXEC',arguments={})),canonical(dict(version=1,operation='READ',arguments={'uid':0})),canonical(dict(version=True,operation='READ',arguments={})),b'x'*(MAX_FRAME+1)])
++def test_wire_schema_refusals(protected,raw):
++    assert packet(protected,raw)['accepted'] is False
++
++
++def test_partial_frame_and_concurrent_clients(protected):
++    f=protected;raw=canonical(dict(version=1,operation='READ',arguments={}));wire=struct.pack('!I',len(raw))+raw
++    assert packet(f,raw,parts=[bytes([c]) for c in wire])['accepted'] is True
++    from concurrent.futures import ThreadPoolExecutor
++    with ThreadPoolExecutor(max_workers=4) as pool:results=list(pool.map(lambda _:f.high.connection.call('READ',{}),range(12)))
++    assert all(r['accepted']==[] for r in results)
++
++
++def test_trickle_and_broken_pipe_do_not_hold_listener(protected):
++    f=protected
++    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
++        conn.connect(str(f.socket_dir/'service'));conn.sendall(b'\x00');time.sleep(0.6)
++    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
++        conn.connect(str(f.socket_dir/'service'));raw=canonical(dict(version=1,operation='READ',arguments={}));conn.sendall(struct.pack('!I',len(raw))+raw)
++    assert f.high.read()['accepted']==[]
++
++
++def test_descriptor_injection_refused(protected):
++    import array
++    f=protected;fd=os.open('/dev/null',os.O_RDONLY)
++    try:
++        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
++            conn.connect(str(f.socket_dir/'service'));raw=canonical(dict(version=1,operation='READ',arguments={}))
++            conn.sendmsg([struct.pack('!I',len(raw))+raw],[(socket.SOL_SOCKET,socket.SCM_RIGHTS,array.array('i',[fd]))])
++            n=struct.unpack('!I',conn.recv(4))[0];assert strict_json(conn.recv(n))['accepted'] is False
++    finally:os.close(fd)
++
++
++def test_missing_authority_never_reinitialized(protected):
++    f=protected;f.journal.path.rename(f.journal.path.with_suffix('.saved'))
++    with pytest.raises(Refused):f.high.read()
++    assert not f.journal.path.exists()
++
++
++def test_socket_path_replacement_refuses(protected):
++    f=protected;p=f.socket_dir/'service';p.unlink();p.write_text('dummy replacement');p.chmod(0o660)
++    with pytest.raises(Refused):f.high.read()
++    p.unlink()
++
++@pytest.mark.asyncio
++async def test_protected_ws_handshake_and_delivery(protected):
++    from tests.execution.v3_integration_test import test_fastapi_ws_actual_handshake_reply
++    await test_fastapi_ws_actual_handshake_reply(protected)
++
++@pytest.mark.parametrize('message',['run bash','delete everything','remember yesterday','design a system','take a screenshot','weather today'])
++@pytest.mark.asyncio
++async def test_protected_rules_never_dispatch(protected,message):
++    f=protected;f.opened()
++    with pytest.raises(Refused):await f.turn(message=message)
++    assert not f.calls and len(f.journal.read()['accepted'])==1
++
++@pytest.mark.parametrize('change',[{'confidence':0.2},{'intent':'use_tool'},{'suggested_tool':'shell'},{'extra':'unexpected'}])
++@pytest.mark.asyncio
++async def test_protected_classifier_no_fallback(protected,change):
++    f=protected;f.router_result.update(change);f.opened()
++    with pytest.raises(Refused):await f.turn()
++    assert len(f.calls)==1 and len(f.journal.read()['sends'])==1
++
++
++def test_protected_open_replay_after_controller_rollback(protected):
++    import sqlite3
++    f=protected;copy=sqlite3.connect(':memory:');f.store.db.backup(copy)
++    raw,sig=f.control('OPEN_HOLD');copy.backup(f.store.db);copy.close();f.runtime.state='CLOSED_INITIAL'
++    with pytest.raises(Refused):f.runtime.control(raw,sig,(os.getuid(),os.getpid()),'OPEN_HOLD')
++    with pytest.raises(Refused):f.high.check(f.store)
++
++
++def test_mandatory_protected_factory_and_memory(protected):
++    f=protected;f.runtime.acceptance_guard=f.old_high
++    with pytest.raises(Refused,match='PROTECTED_GRAPH'):build_protected_isolated_app(f.runtime,api_token=b'DUMMY',allowed_origins=set(),qualification='OFFLINE_EVALUATION_ONLY')
++    f.runtime.acceptance_guard=f.high
++    f.runtime.legacy_policy=dataclasses.replace(f.runtime.legacy_policy,memory_snapshot='')
++    with pytest.raises(Refused,match='MEMORY'):build_protected_isolated_app(f.runtime,api_token=b'DUMMY',allowed_origins=set(),qualification='OFFLINE_EVALUATION_ONLY')
++
++@pytest.mark.parametrize('kind',['CLAIM','ACCEPT','BIND','SEND','SETTLE','CHECKPOINT'])
++@pytest.mark.parametrize('boundary',['before_commit','after_commit'])
++@pytest.mark.asyncio
++async def test_runtime_durable_boundary_failure(protected,kind,boundary):
++    f=protected;f.opened();triggered=[]
++    def fault(point):
++        if point==boundary and f.journal.db.execute('SELECT kind FROM events ORDER BY seq DESC LIMIT 1').fetchone()==(kind,):
++            triggered.append(kind);raise RuntimeError('DISPOSABLE_FAULT')
++    f.journal.fault=fault
++    with pytest.raises(Refused):await f.turn()
++    f.journal.fault=lambda _:None
++    assert triggered
++    s=f.journal.read()
++    assert len(s['accepted'])==(0 if kind=='CLAIM' or kind=='ACCEPT' and boundary=='before_commit' else 1)
++    assert f.runtime.state!='ARMED_ONE' or kind=='CLAIM'
++    calls=len(f.calls)
++    with pytest.raises(Refused):await f.turn()
++    assert len(f.calls)==calls
++    if kind=='SEND' and boundary=='after_commit':assert s['pending'] is not None and not f.calls
++
++@pytest.mark.parametrize('point',['possible_send_committed','provider_terminal_committed','receipt_append_before_join','receipt_joined'])
++@pytest.mark.asyncio
++async def test_controller_boundary_failure_cannot_refund(protected,point):
++    f=protected;f.opened();triggered=[]
++    def fault(p):
++        if p==point:triggered.append(p);raise OSError('DISPOSABLE_FAULT')
++    f.store.fault=fault
++    with pytest.raises(Refused):await f.turn()
++    f.store.fault=lambda _:None
++    assert triggered and len(f.journal.read()['accepted'])==1 and f.store.count()==1
++    with pytest.raises(Refused):f.arm()
++
++@pytest.mark.parametrize('point',['checkpoint_before_publish','checkpoint_after_publish'])
++@pytest.mark.asyncio
++async def test_coordinated_publish_failure_holds(protected,point):
++    f=protected;f.opened()
++    def fault(p):
++        if p==point:raise OSError('DISPOSABLE_FAULT')
++    f.writer.fault=fault
++    with pytest.raises(Refused):await f.turn()
++    assert len(f.journal.read()['accepted'])==1 and f.journal.read()['checkpoint'] is None
++
++
++def test_concurrent_operator_permits_exactly_one(protected):
++    from concurrent.futures import ThreadPoolExecutor
++    f=protected;f.opened();_,sid=f.runtime.new_session('REST')
++    packets=[f.approval('AUTHORIZE_ONE',dict(transport='REST',session=sid,request_commitment=f.runtime.commitment(ORIGINAL_INPUTS[0]))) for _ in range(2)]
++    def submit(packet):
++        try:f.operator.submit(*packet);return True
++        except Refused:return False
++    with ThreadPoolExecutor(2) as pool:out=list(pool.map(submit,packets))
++    assert sorted(out)==[False,True] and f.journal.read()['accepted']==[]
++
++
++def test_concurrent_consumption_exactly_one(protected):
++    from concurrent.futures import ThreadPoolExecutor
++    f=protected;f.opened();f.arm();s=f.high.read();p=f.store.db.execute('SELECT nonce FROM permits').fetchone()[0]
++    def consume(_):
++        try:f.high.connection.call('CONSUME',dict(expected=token(s),permit=p));return True
++        except Refused:return False
++    with ThreadPoolExecutor(2) as pool:out=list(pool.map(consume,range(2)))
++    assert sorted(out)==[False,True] and len(f.journal.read()['accepted'])==1
++
++
++def test_restart_authority_preserves_commands(protected):
++    f=protected;raw,sig=f.control('OPEN_HOLD');previous=f.journal.read();old=f.journal
++    old.close()
++    f.journal=RuntimeJournal(old.root,owner_uid=os.getuid(),service_uid=os.getuid(),authority=f.authority,predecessor_reader=lambda:f.proof,identity_reader=f.bind.as_dict,provider_resources=old.provider_resources)
++    f.service.journal=f.journal
++    assert f.high.read()==previous
++    with pytest.raises(Refused):f.operator.submit(raw,sig)
++
++
++def test_invocation_drift_refuses_restart(protected):
++    f=protected;f.journal.identity_reader=lambda:dict(f.bind.as_dict(),invocation='new-unapproved')
++    with pytest.raises(Refused):f.high.read()
++    assert not f.calls
++
++
++def test_protected_root_corruption_refuses(protected):
++    f=protected;f.journal.db.execute('PRAGMA user_version=99')
++    with pytest.raises(Refused):f.high.read()
++
++
++def test_no_unprotected_send_association(protected):
++    f=protected;f.opened();tok=f.arm();session=f.runtime.sessions[tok]
++    f.high.before_accept(f.store,'REST',session.id,f.runtime.commitment(ORIGINAL_INPUTS[0]));f.store.accept('REST',session.id,f.runtime.commitment(ORIGINAL_INPUTS[0]),now=100);f.high.after_accept(f.store)
++    with pytest.raises(Refused):f.high._call('SEND',ordinal=1,role='legacy_router',request_digest='b'*64)
++    assert f.journal.read()['pending'] is None
++
++@pytest.mark.asyncio
++async def test_signed_stop_while_unknown_never_settles(protected):
++    f=protected;f.opened();f.block='gemma3:4b';task=asyncio.create_task(f.turn())
++    await asyncio.wait_for(f.entered.wait(),3);f.control('TERMINAL_STOP')
++    with pytest.raises(Refused):await task
++    assert f.journal.read()['pending'] is not None and f.journal.read()['terminal_status']=='CLOSED_INCOMPLETE'
++
++
++def test_nonreading_client_and_shutdown_during_partial_request(protected):
++    f=protected
++    peers=[]
++    try:
++        for _ in range(3):
++            c=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);c.connect(str(f.socket_dir/'service'));c.sendall(b'\x00');peers.append(c)
++        started=time.monotonic();f.servers[1].close()
++        assert time.monotonic()-started<1.5
++        with pytest.raises(Refused):f.high.read()
++    finally:
++        for c in peers:c.close()
++
++@pytest.mark.parametrize('kind',['source','config','process','symlink','hardlink'])
++def test_fixed_release_identity_reader(protected,tmp_path,kind):
++    from candidate_v3.runtime_authority import ReleaseIdentityReader
++    from candidate_v3.contracts import Bindings
++    f=protected;root=tmp_path/'release';root.mkdir(mode=0o700);source=root/'module.py';source.write_text('# disposable\n');source.chmod(0o600)
++    config=root/'config.json';config.write_text('{}');config.chmod(0o600)
++    inv={'module.py':digest(source.read_bytes())};cfg=digest(config.read_bytes())
++    b=dataclasses.replace(f.bind,source=digest(canonical(inv)),config=cfg,pid=str(f.pin.pid),start=f.pin.start,boot=f.pin.boot)
++    read=ReleaseIdentityReader(root,inv,config,cfg,b,f.pin,owner_uid=os.getuid());assert read()==b.as_dict()
++    if kind=='source':source.write_text('# changed')
++    elif kind=='config':config.write_text('{"changed":true}')
++    elif kind=='process':read.pin=dataclasses.replace(f.pin,start='old')
++    elif kind=='symlink':source.unlink();source.symlink_to(config)
++    else:os.link(source,root/'another.py')
++    with pytest.raises(Refused):read()
++
++@pytest.mark.parametrize('verb',['CONSUME','BIND','SEND','SETTLE'])
++@pytest.mark.parametrize('boundary',['before_commit','after_commit'])
++def test_runtime_journal_real_process_crash(protected,verb,boundary):
++    import subprocess
++    f=protected;f.opened();tok=f.arm();session=f.runtime.sessions[tok];commitment=f.runtime.commitment(ORIGINAL_INPUTS[0])
++    permit=f.store.db.execute('SELECT nonce FROM permits').fetchone()[0]
++    if verb!='CONSUME':
++        f.high.before_accept(f.store,'REST',session.id,commitment);aid=f.store.accept('REST',session.id,commitment,now=100)
++    if verb in ('SEND','SETTLE'):
++        f.high.after_accept(f.store);f.store.begin(aid,'LEGACY_ROUTER',f.router.resource,'b'*64)
++    if verb=='SETTLE':f.high.possible_send(f.store,aid,'LEGACY_ROUTER',f.router,'b'*64)
++    state=f.journal.read();expected=token(state)
++    pub=f.key.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)
++    actions={
++        'CONSUME':f"j.consume(peer=peer,expected=expected,permit={permit!r},snapshot_reader=reader.check)",
++        'BIND':"j.bind(peer=peer,expected=expected,snapshot_reader=reader.check)",
++        'SEND':"j.possible_send(peer=peer,expected=expected,ordinal=1,role='legacy_router',request_digest='b'*64)",
++        'SETTLE':f"j.settle(peer=peer,expected=expected,terminal_reader=lambda:dict(terminal=True,association={state['pending']!r}))"}
++    script=f'''import os,sys
++sys.path.append('/usr/lib/python3/dist-packages')
++from candidate_v3.runtime_authority import *
++from candidate_v3.contracts import Bindings
++from candidate_v3.authority import Authority
++from candidate_v3.protected_authority import Ed25519Verifier
++b=Bindings(**{f.bind.as_dict()!r})
++a=Authority(b,Ed25519Verifier({pub!r},operator_id='dummy-human'),clock=lambda:100.,operator_id='dummy-human',peer_uid=os.getuid())
++def fault(point):
++ if point=={boundary!r}:os._exit(77)
++j=RuntimeJournal({str(f.journal.root)!r},owner_uid=os.getuid(),service_uid=os.getuid(),authority=a,predecessor_reader=lambda:None,identity_reader=b.as_dict,provider_resources={f.journal.provider_resources!r},fault=fault)
++reader=ControllerReader({str(f.store.root)!r},{str(f.writer.root)!r},service_uid=os.getuid())
++peer=(os.getuid(),os.getpid());expected={expected!r}
++{actions[verb]}
++'''
++    result=subprocess.run([sys.executable,'-c',script],capture_output=True)
++    assert result.returncode==77,result.stderr.decode()
++    new=f.journal.read();assert new['seq']==state['seq']+(boundary=='after_commit')
++    if verb=='CONSUME':assert len(new['accepted'])==(boundary=='after_commit')
++    if verb=='SEND':assert (new['pending'] is not None)==(boundary=='after_commit')
++    if verb=='SETTLE':assert (new['pending'] is None)==(boundary=='after_commit')
++
++
++def test_missing_authority_stop_is_incomplete(protected):
++    f=protected;f.servers[1].close();f.runtime.stop('OPERATOR_STOP')
++    assert f.runtime.state==f.store.terminal()=='CLOSED_INCOMPLETE'
++
++
++def test_nonreading_complete_request_bounded_write(protected):
++    f=protected;original=f.service.dispatch
++    f.service.dispatch=lambda *args:{'large':'x'*60000}
++    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as c:
++        c.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF,1024);c.connect(str(f.socket_dir/'service'))
++        raw=canonical(dict(version=1,operation='READ',arguments={}));c.sendall(struct.pack('!I',len(raw))+raw)
++        time.sleep(0.65)
++        with f.servers[1].lock:assert not f.servers[1].workers
++    f.service.dispatch=original
++    assert f.high.read()['accepted']==[]
++
++@pytest.mark.parametrize('attack',['symlink','hardlink','oversize','digest','atime','fifo'])
++def test_authority_snapshot_reader_file_boundary(tmp_path,attack,monkeypatch):
++    import sqlite3
++    from candidate_v3.storage import read_snapshot_db
++    p=tmp_path/'db';db=sqlite3.connect(p);db.execute('CREATE TABLE fixture(value)');db.commit();db.close();p.chmod(0o600)
++    sha=digest(p.read_bytes())
++    if attack=='symlink':p.rename(tmp_path/'target');p.symlink_to(tmp_path/'target')
++    elif attack=='hardlink':os.link(p,tmp_path/'other')
++    elif attack=='oversize':
++        with p.open('r+b') as out:out.truncate(8*1024*1024+1)
++    elif attack=='digest':sha='b'*64
++    elif attack=='fifo':p.unlink();os.mkfifo(p,0o600)
++    else:
++        from types import SimpleNamespace
++        real=os.fstat;calls=[]
++        def fstat(fd):
++            original=real(fd);calls.append(True)
++            values={key:getattr(original,key) for key in dir(original) if key.startswith('st_')};values['st_atime']=len(calls)
++            return SimpleNamespace(**values)
++        monkeypatch.setattr(os,'fstat',fstat)
++        db=read_snapshot_db(p,owner_uid=os.getuid(),expected_digest=sha);db.close();assert len(calls)==2;return
++    with pytest.raises((Refused,OSError)):read_snapshot_db(p,owner_uid=os.getuid(),expected_digest=sha)
++
++
++def test_disposable_runner_refuses_unapproved_current_uid(tmp_path):
++    import importlib.util
++    p=Path(__file__).parents[3]/'disposable/qualify_multi_uid.py'
++    spec=importlib.util.spec_from_file_location('future_disposable',p);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
++    # This test never grants root or creates users; it verifies the current boundary.
++    assert os.geteuid()!=0
++    with pytest.raises(RuntimeError,match='OPERATOR_PROVISIONED_ROOT_RUN_REQUIRED'):module.main()
++
++@pytest.mark.asyncio
++async def test_replace_all_service_writable_files_keeps_protected_burn(protected,tmp_path):
++    import shutil
++    from candidate_v3.storage import Store
++    from candidate_v3.domain_ledger import DomainLedger
++    from candidate_v3.evidence import EvidenceBridge
++    f=protected;old=tmp_path/'old-service';old.mkdir(mode=0o700)
++    names=['state','backups','domains','evidence','coordinated','highwater',*[f'd06-{i}' for i in range(4)],'lineage-reservation.json']
++    for name in names:
++        src=tmp_path/name;dest=old/name
++        if src.is_dir():shutil.copytree(src,dest)
++        else:shutil.copy2(src,dest)
++    f.opened();await f.turn();before=f.journal.read()
++    f.store.close();f.domains.close();f.evidence.close();f.old_high.close()
++    for name in names:
++        src=old/name;dest=tmp_path/name
++        if src.is_dir():shutil.rmtree(dest);shutil.copytree(src,dest)
++        else:shutil.copy2(src,dest)
++    f.store=Store(tmp_path/'state');f.domains=DomainLedger(tmp_path/'domains');f.evidence=EvidenceBridge(tmp_path/'evidence')
++    f.runtime.store=f.store;f.runtime.provider.store=f.store
++    assert f.store.count()==0
++    with pytest.raises(Refused):f.high.check(f.store)
++    with pytest.raises(Refused):build_protected_isolated_app(f.runtime,api_token=b'DUMMY',allowed_origins=set(),qualification='OFFLINE_EVALUATION_ONLY')
++    assert f.journal.read()==before and len(before['accepted'])==1
++
++@pytest.mark.asyncio
++async def test_old_coordinated_backup_cannot_authorize_progress(protected):
++    f=protected;old=f.writer.last;f.opened();await f.turn();current=f.high.read()
++    with pytest.raises(Refused):f.high.connection.call('CHECKPOINT',dict(expected=token(current),bundle=old.name))
++    assert f.journal.read()==current
++
++
++def test_socket_directory_write_permission_rejected(protected):
++    f=protected;f.socket_dir.chmod(0o770)
++    try:
++        with pytest.raises(Refused):f.high.read()
++    finally:f.socket_dir.chmod(0o700)
++
++
++def test_explicit_owner_applies_only_remote_approved_commands(protected):
++    f=protected
++    with pytest.raises(Refused):f.runtime.apply_protected_command(uuid.uuid4().hex)
++    raw,sig=f.approval('OPEN_HOLD');f.operator.submit(raw,sig)
++    assert f.runtime.state=='CLOSED_INITIAL'  # no automatic opening on approval
++    f.runtime.apply_protected_command(strict_json(raw)['nonce'])
++    assert f.runtime.state=='OPEN_HOLD'
++    with pytest.raises(Refused):f.runtime.apply_protected_command(strict_json(raw)['nonce'])
++    assert not f.calls
+--- gate6h/repo/tests/execution/v3_release_qualification_test.py
++++ gate6i/repo/tests/execution/v3_release_qualification_test.py
+@@ -71,7 +71,7 @@
+     snap=source_snapshot()
+     assert snap==ProceduralMemory(Path('skills.md')).prompt_context() and snap
+     f_router=StepContract(Resource('http://192.0.2.10:11434','gemma3:4b','fixture-router-v1'),Limits(4096,64,CAP,CAP,20,60),ROUTER_PROMPT,'OFFLINE_ROUTER',(('temperature',0.1),))
+-    normal=StepContract(Resource('http://192.0.2.10:11434','qwen3-nothink','fixture-normal-v1'),Limits(32768,150,CAP,CAP,180,60),RESPONDER_PROMPT,'OFFLINE_RESPONDER')
++    normal=StepContract(Resource('http://192.0.2.10:11434','qwen3-nothink','fixture-normal-v1'),Limits(8192,150,CAP,CAP,180,60),RESPONDER_PROMPT,'OFFLINE_RESPONDER')
+     trivial=StepContract(Resource('http://192.0.2.10:11434','gemma3:4b','fixture-trivial-v1'),Limits(4096,80,CAP,CAP,180,60),RESPONDER_PROMPT,'OFFLINE_RESPONDER')
+     l1=RulesFirstL1(f_router,{'trivial':trivial,'normal':normal},'gemma3:4b','qwen3-nothink',0.75,snap)
+     for m in ORIGINAL_INPUTS:

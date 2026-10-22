@@ -1,0 +1,25 @@
+{"label": "terminal-before", "exit": 1, "seconds": 2.4424803090514615, "kernel_restrictions": {"landlock_abi": 8, "filesystem": "candidate writable; system/venv read-only; home/production state denied", "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"}, "candidate": "/home/jarvis/jarvis-gate6j-terminal-before-Ni8ZNRr3/repo"}
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_authority_incomplete_downgrades_local_terminal ______________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x7dd688e3f0e0>
+
+    def test_authority_incomplete_downgrades_local_terminal(protected):
+        f=protected;f.opened();tok=f.arm();session=f.runtime.sessions[tok]
+        f.high.before_accept(f.store,'REST',session.id,f.runtime.commitment(ORIGINAL_INPUTS[0]))
+        # Durable acceptance exists, but a crash prevented its local D09 join.
+        f.runtime.stop('OPERATOR_STOP')
+        assert f.journal.read()['terminal_status']=='CLOSED_INCOMPLETE'
+>       assert f.store.terminal()==f.runtime.state=='CLOSED_INCOMPLETE'
+E       AssertionError: assert 'CLOSED_COMPLETE' == 'CLOSED_INCOMPLETE'
+E         
+E         - CLOSED_INCOMPLETE
+E         ?        --
+E         + CLOSED_COMPLETE
+
+tests/execution/v3_redteam_test.py:135: AssertionError
+=========================== short test summary info ============================
+FAILED tests/execution/v3_redteam_test.py::test_authority_incomplete_downgrades_local_terminal
+1 failed, 17 deselected in 2.38s
+

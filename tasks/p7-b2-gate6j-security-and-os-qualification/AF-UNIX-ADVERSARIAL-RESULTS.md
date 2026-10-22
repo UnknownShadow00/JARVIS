@@ -1,0 +1,9 @@
+# Actual accept-based transport
+
+Tests use real pathname bind/listen/accept/connect and kernel credentials. Same kernel UID throughout current execution; separate processes are used for the delegated-writer attack. Neither simulated wrong allowlist UIDs nor these sockets prove cross-UID DAC security.
+
+Existing focused tests cover wrong peer allowlist, stale start/PID identity, expiry/signature/replay, duplicate JSON keys, unknown versions/verbs, forged UID fields, bounded/partial/trickling/oversized input, SCM_RIGHTS rejection/closure, socket replacement, unsafe directory modes, concurrency, shutdown during partial input and nonreaders. Supplemental final-bundle probes exercise malformed UTF-8, symlink substitution and client disconnect after signed command submission. Counts and exact run sources are in TEST-RESULTS.md.
+
+Confirmed delegated-writer flaw: SO_PEERCRED identifies connection-time credentials. SO_PASSCRED/SCM_CREDENTIALS supplies credentials of the actual sender; the listener now requires one matching credential record per received segment and still rejects passed descriptors. This uses documented Linux behavior: [unix(7)](https://man7.org/linux/man-pages/man7/unix.7.html). It is not a new cryptographic protocol.
+
+ProcessPin checks UID/PID plus /proc start ticks and boot ID before/after framing. These are freshness checks under a trusted kernel/proc filesystem, not executable-image measurement, hardware attestation or root resistance. PID/start checks cannot detect injected code in a still-running process. Privileged credential forgery/root compromise is outside this guarantee. Fixed operator/service listener paths are root-owned0750 directories and0660 sockets in distinct private groups. Clients may connect but cannot replace directory entries. Existing endpoints are not blindly unlinked at startup.

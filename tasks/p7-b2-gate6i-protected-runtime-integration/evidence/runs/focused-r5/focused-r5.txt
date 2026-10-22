@@ -1,0 +1,141 @@
+.........E....................F......................................... [ 13%]
+........................................................................ [ 26%]
+........................................................................ [ 40%]
+........................................................................ [ 53%]
+........................................................................ [ 66%]
+........................................................................ [ 80%]
+........................................................................ [ 93%]
+....................................                                     [100%]
+==================================== ERRORS ====================================
+____________ ERROR at setup of test_signed_command_binding[expiry] _____________
+
+tmp_path = PosixPath('/tmp/jarvis-gate6i-focused-r5-84VxmWyC/fixtures-focused-r5/test_signed_command_binding_ex0')
+
+    @pytest.fixture
+    def protected(tmp_path):
+>       f=ProtectedIntegrated(tmp_path)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/execution/v3_protected_runtime_test.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/execution/v3_protected_runtime_test.py:58: in __init__
+    self.runtime.checkpoint_writer=self.writer;self.runtime._checkpoint()
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/runtime.py:67: in _checkpoint
+    root=(self.checkpoint_writer(self.store,self.backups) if self.checkpoint_writer is not None else checkpoint(self.store,self.backups));self.last_checkpoint=root;return root
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/checkpoints.py:69: in __call__
+    if protected and not final:self.highwater.checkpoint_committed(destination)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/authority_client.py:58: in checkpoint_committed
+    def checkpoint_committed(self,bundle):self._call('CHECKPOINT',bundle=bundle.name)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+candidate_v3/authority_client.py:18: in _call
+    result=self.connection.call(operation,dict(expected=self.cursor,**args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <candidate_v3.local_control.UnixAuthorityConnection object at 0x7d3e79e8ed50>
+operation = 'CHECKPOINT'
+arguments = {'expected': {'seq': 1, 'seal': '5dd2d820e27aacfe7962de64f1abb37ffdb7a038be49de9357ea3bc996c381c3'}, 'bundle': '7926475a733a42a783a786d8a16c7f70'}
+
+    def call(self,operation,arguments):
+        try:
+            inode=_socket_path(self.path,self.pin.uid);end=time.monotonic()+self.seconds
+            with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
+                conn.settimeout(self.seconds);conn.connect(str(self.path))
+                pid,uid,_=struct.unpack('3i',conn.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
+                self.pin.verify(uid,pid)
+                if _socket_path(self.path,self.pin.uid)!=inode:raise Refused('AUTHORITY_SOCKET_REPLACED')
+                _send(conn,dict(version=1,operation=operation,arguments=arguments),end)
+                r=_receive(conn,end)
+                if type(r) is not dict or set(r)!={'accepted','result'} or r['accepted'] is not True:raise Refused('AUTHORITY_REFUSED')
+                self.pin.verify(uid,pid)
+                return r['result']
+>       except Exception:raise Refused('AUTHORITY_UNAVAILABLE_OR_REFUSED') from None
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       candidate_v3.contracts.Refused: AUTHORITY_UNAVAILABLE_OR_REFUSED
+
+candidate_v3/local_control.py:235: Refused
+=================================== FAILURES ===================================
+___________________ test_protected_ws_handshake_and_delivery ___________________
+
+protected = <tests.execution.v3_protected_runtime_test.ProtectedIntegrated object at 0x7d3e79e6b890>
+
+    @pytest.mark.asyncio
+    async def test_protected_ws_handshake_and_delivery(protected):
+        from tests.execution.v3_integration_test import test_fastapi_ws_actual_handshake_reply
+>       await test_fastapi_ws_actual_handshake_reply(protected)
+
+tests/execution/v3_protected_runtime_test.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/execution/v3_integration_test.py:246: in test_fastapi_ws_actual_handshake_reply
+    await f.turn('REST',ORIGINAL_INPUTS[0]);await f.turn('REST',ORIGINAL_INPUTS[1]);token=f.arm('WS',ORIGINAL_INPUTS[2])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/execution/v3_candidate_test.py:89: in turn
+    result=await self.runtime.request(transport=t,token=token,message=message,authenticated=True,delivery=sink)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <candidate_v3.runtime.Runtime object at 0x7d3e79ebf130>
+transport = 'REST', token = 'YdfEE0l0vm8uECvRQ_QGnOaNMNfqjCbwSMK6lXJ5l6g'
+message = 'Hello. Reply briefly.', authenticated = True
+delivery = <tests.execution.v3_candidate_test.Sink object at 0x7d3e79e9f150>
+
+    async def request(self,*,transport,token,message,authenticated,delivery: Delivery):
+        if self.busy:
+            self.stop('CONCURRENT_INGRESS');raise Refused('BUSY_NO_QUEUE')
+        if authenticated is not True:
+            self.stop('AUTHENTICATION_MISMATCH');raise Refused('AUTHENTICATION_MISMATCH')
+        try:
+            s=self.session(token,transport);commitment=self.commitment(message)
+            if self.state!='ARMED_ONE':raise Refused('ADMISSION_CLOSED')
+            if self.acceptance_guard is not None:self.acceptance_guard.before_accept(self.store,transport,s.id,commitment)
+            aid=self.store.accept(transport,s.id,commitment,now=self.authority.clock())
+            if self.acceptance_guard is not None:self.acceptance_guard.after_accept(self.store)
+        except Exception:
+            self.stop('INGRESS_REFUSAL');raise Refused('INGRESS_REFUSAL') from None
+        self.busy=True;self.state='INFLIGHT';history=list(s.history);s.used=self.clock();self._append(s,{'role':'user','content':message})
+        try:
+            capture=self.observer.capture(s.id,message,history,transport)
+            if self.legacy_policy is None:raise Refused('LEGACY_POLICY_UNAVAILABLE')
+            result,responder=await self.legacy_policy.route(self,aid,message)
+            confidence=result.confidence
+            messages=self.legacy_policy.messages(responder,message)
+            legacy,_,_,_=await self._generate(aid,'LEGACY_RESPONDER',responder,messages)
+            if self.legacy_policy is not None:legacy=self.legacy_policy.clean(legacy)
+            if self.stop_event.is_set():raise Refused('STOPPED')
+            status=self.view_status()
+            if type(status) is not ViewStatus:raise Refused('VIEW_STATUS_BINDING')
+            envelope={'reply':legacy,'intent':'respond','confidence':confidence,'dry_run':status.dry_run,'active':status.active}
+            if transport=='WS':envelope={'type':'reply',**envelope}
+            try:
+                await self._deliver(delivery,envelope,aid,s,legacy)
+            except BaseException:
+                self.store.delivery(aid,'INTERRUPTED_UNKNOWN');raise
+            # Completion callback records delivery before observation; errors never imply delivery.
+            if self.store.db.execute('SELECT delivery FROM attempts WHERE id=?',(aid,)).fetchone()!=('LOCAL_SEND_COMPLETED',):raise Refused('DELIVERY_RECORD_FAILED')
+            # Granite sees pre-turn bounded history, never its own output in future history.
+            _,sid,native_digest,native=await self._generate(aid,'GRANITE',self.granite,[{'role':'system','content':self.granite.system_prompt},*history,{'role':'user','content':message}],capture=capture)
+            observation=self.observer.observe(capture,native)
+            if self.evidence_bridge is not None:
+                self.evidence_bridge.commit(aid,sid,observation)
+            self.store.receipt(aid,sid,native_digest,observation);self.store.settle(aid);self.state='SETTLING'
+            self._checkpoint()
+            if self.stop_event.is_set() or self.store.terminal():raise Refused('STOPPED_DURING_CHECKPOINT')
+            self.state='CHECKPOINT_HOLD'
+            if self.store.count()==4:
+                self.stop('CAP_COMPLETE')
+                if self.checkpoint_writer is not None and self._final_checkpoint() is None:raise Refused('FINAL_CHECKPOINT_FAILED')
+            return {'attempt':aid,'legacy_delivery':'LOCAL_SEND_COMPLETED','granite':'OBSERVED','checkpoint':self.last_checkpoint.name}
+        except asyncio.CancelledError:
+            self.stop('CLIENT_DISCONNECT');raise
+        except Exception:
+>           self.stop('ATTEMPT_FAILURE');raise Refused('ATTEMPT_FAILED') from None
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           candidate_v3.contracts.Refused: ATTEMPT_FAILED
+
+candidate_v3/runtime.py:267: Refused
+=========================== short test summary info ============================
+FAILED tests/execution/v3_protected_runtime_test.py::test_protected_ws_handshake_and_delivery
+ERROR tests/execution/v3_protected_runtime_test.py::test_signed_command_binding[expiry]

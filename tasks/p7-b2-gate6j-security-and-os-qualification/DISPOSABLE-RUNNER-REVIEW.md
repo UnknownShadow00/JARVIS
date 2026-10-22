@@ -1,0 +1,13 @@
+# Existing package review and scope
+
+Reviewed the actual Gate6I disposable/qualify_all.py and qualify_multi_uid.py before extending them. The future root entrypoint remains qualify_all.py; it runs cross-UID orchestration followed by an unprivileged candidate regression subset. Gate6J paths/accounts intentionally use g6j to prevent reuse of an earlier occupied destination.
+
+Four principals: root AUTHORITY, non-login g6j-operator, g6j-service and g6j-agent, with distinct nonzero UID/private GID values for the three children and no supplementary groups. Root is the authority identity in this fixture, not a claim that a separate nonroot helper deployment has been qualified. Root can inspect any same-host key; the boundary under test excludes service/agent access.
+
+New spawn avoids inherited sibling channels. Parent/role messages use SafePipe bounded JSON and only fixed Bindings/Resource/Limits/StepContract structures, not pickle from untrusted roles. The signing key is generated only inside the operator child and stored0600 beneath its0700 directory. Parent receives only public key and signatures. Root helper has no signing verb, generic command, path/SQL/import or provider-proxy API.
+
+Preflight requires an exact root0600 approval marker, machine ID, external VM identity declaration, no NIC beyond loopback, a private ext4 root, no additional/shared filesystem mounts, no known credential/host paths, exact source manifest and effective dependency pins. These checks supplement an independent human console/mount/network/credential review; no program can prove that arbitrary undisclosed credentials do not exist on a host.
+
+The cross-UID phase tests permitted actual client operations and denials, operator direct-write denial, a DAC-accessible socket with intentionally wrong peer pin, signature/replay, successor race, concurrent permit consumption at actual runtime acceptance, deliberately dropped OPEN acknowledgment, fake-provider uncertainty, whole app/controller/backup rollback, and authority reopen/replay. The following service-UID pytest phase covers detailed crashes/corruption/source/backup cases and emits per-test JUnit. Reports label these latter logical tests as same-UID; they do not inflate cross-UID coverage.
+
+Root-parent report cases record PASS/FAIL for exercised assertions. Preflight refusal is BLOCKED setup; unexecuted later cases remain NOT RUN, never counted as successful OS tests. Failure preserves report/logs; existing state is not reset. Cleanup terminates only its own role children and listeners; deleting the VM or fixture root needs separate human authorization.
