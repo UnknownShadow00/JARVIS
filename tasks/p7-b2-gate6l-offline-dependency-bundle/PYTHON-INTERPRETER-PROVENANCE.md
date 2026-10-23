@@ -1,0 +1,9 @@
+# Python interpreter provenance
+
+Gate 6L — Nexus-only development evidence. No VM, privileged provisioning, production access, provider generation or pilot activity occurred. Historical Gate 6K source remains unchanged.
+
+Python source `Python-3.14.4.tar.xz` is23,855,332 bytes; SHA256 `d923c51303e38e249136fc1bdf3568d56ecb03214efdef48516176d3d7faaef8` matches the [official release](https://www.python.org/downloads/release/python-3144/). The Sigstore bundle and SPDX SBOM were downloaded separately. Sigstore4.5.1 verified the signature for `hugo@python.org`, issuer `https://github.com/login/oauth`, as specified by [Python's signing guidance](https://www.python.org/downloads/metadata/sigstore/). Verification also passed with `--offline` and kernel network denial. The verifier's31 wheel artifacts are separately retained; they are tooling, not substitutions into the 127 target pins.
+
+The executable path tested was derived from signed Ubuntu `python3.14-minimal` / `libpython3.14-minimal` / `libpython3.14-stdlib` packages, version3.14.4-1ubuntu0.2. No developer interpreter or virtualenv was copied into the bundle. No CPython source build was necessary. The installed CPython executable and standard library came from downloaded deb payloads; `/proc/self/maps` and runtime prefix checks establish the selected paths for tested components. The host's kernel/glibc remain part of the Nexus test environment; a clean guest boot has not been tested.
+
+Ubuntu archive fingerprint: `F6ECB3762474EDA9D21B7022871920D1991BC93C`. Its public key was downloaded through Ubuntu HTTPS and checked against the installed keyring and [Ubuntu's published key description](https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/). Signed InRelease → SHA256 Packages indices → deb SHA256 verification is retained. No private key was accessed.
