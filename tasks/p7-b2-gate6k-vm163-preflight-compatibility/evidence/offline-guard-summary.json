@@ -1,0 +1,18 @@
+{
+  "audit_records": 23,
+  "aggregate_counts": {
+    "approved_offline_children": 82,
+    "blocked_credential_access": 0,
+    "blocked_execution": 0,
+    "blocked_external_write": 0,
+    "blocked_inet": 30,
+    "blocked_production_access": 0
+  },
+  "scope": "all local full/canary runs; not per-run inference counts",
+  "kernel_guard": {
+    "landlock_abi": 8,
+    "filesystem": "candidate writable; system/venv read-only; home/production state denied",
+    "syscalls": "all non-AF_UNIX sockets, signals, ptrace, process-vm, mount, reboot, bpf/io_uring denied"
+  },
+  "real_provider_requests": "NONE: non-AF_UNIX socket creation denied by seccomp"
+}

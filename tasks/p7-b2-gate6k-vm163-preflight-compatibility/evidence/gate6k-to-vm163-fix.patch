@@ -1,0 +1,560 @@
+--- gate6k/disposable/compatibility_tests.py
++++ vm163-fix/disposable/compatibility_tests.py
+@@ -0,0 +1,177 @@
++"""Same-UID unprivileged fixtures. Never execute qualification or inspect host secrets."""
++import json,os,stat,subprocess,sys,tempfile,unittest
++from pathlib import Path
++from unittest.mock import patch
++import environment_probe as ep
++from safety_preflight import validate_environment,validate_approval
++from prequalification_tests import approval
++
++HERE=Path(__file__).parent
++ROOT='1 0 8:1 / / rw - ext4 /dev/sda1 rw'
++BOOT='2 1 8:2 / /boot rw - ext4 /dev/sda2 rw'
++CRED='3 1 0:3 / /run/credentials/fixture.service ro,nosuid,nodev,noexec - tmpfs tmpfs ro'
++def environment(extra='',**kw):
++    values=dict(hostname='jarvis-security',interfaces=['lo'],mountinfo=ROOT+('\n'+extra if extra else ''),credential_paths=[])
++    values.update(kw);return validate_environment(**values)
++
++class MetadataTests(unittest.TestCase):
++    def setUp(self):
++        self.previous_umask=os.umask(0o022)
++        self.tmp=tempfile.TemporaryDirectory(dir=HERE);self.root=Path(self.tmp.name)
++        for name in ('home/jarvis','run/credentials','var/lib/cloud/instances/fixture'):
++            self.path(name).mkdir(parents=True,mode=0o755)
++        self.path('var/lib/cloud/instance').symlink_to('instances/fixture')
++    def tearDown(self):self.tmp.cleanup();os.umask(self.previous_umask)
++    def path(self,p):return self.root/p
++    def write(self,p,data=b'synthetic',mode=0o600):
++        f=self.path(p);f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(data);f.chmod(mode);return f
++    def inspect(self):return ep.inspect_environment_paths(root=self.root,root_uid=os.getuid(),preparation_uid=os.getuid())
++    def blocked(self):self.assertTrue(self.inspect()['findings'])
++    def cache(self):return self.write('var/lib/cloud/instances/fixture/user-data.txt')
++    def review(self,r):return {'cloud_cache_review':{'provenance':'FRESH_DISPOSABLE_IMAGE_NO_IMPORTED_CREDENTIALS','metadata_sha256':r['cloud_cache_metadata_sha256']}}
++    def test_empty_os_containers_allowed(self):
++        r=self.inspect();self.assertEqual(r['findings'],[]);ep.require_paths(r,{})
++    def test_preparation_artifact_home_allowed(self):
++        self.write('home/jarvis/gate6k-artifacts/offline.tar');self.write('home/jarvis/gate6l-bundle/manifest')
++        self.assertEqual(self.inspect()['findings'],[])
++    def test_unknown_preparation_uid_refused(self):
++        self.assertIn('UNVERIFIED_PREPARATION_HOME',ep.inspect_environment_paths(root=self.root,root_uid=os.getuid())['findings'])
++    def test_preparation_home_symlink_refused(self):
++        self.path('home/jarvis').rmdir();self.path('home/jarvis').symlink_to('../elsewhere');self.blocked()
++    def test_home_writable_refused(self):self.path('home/jarvis').chmod(0o777);self.blocked()
++    def test_home_known_credential_markers_refused(self):
++        for marker in ep.HOME_MARKERS:
++            f=self.write('home/jarvis/'+marker)
++            with self.subTest(marker=marker):self.blocked()
++            f.unlink()
++    def test_root_known_credential_paths_refused(self):
++        self.write('root/.netrc');self.blocked()
++    def test_production_state_refused(self):
++        self.path('home/jarvis/.hermes-poc').mkdir();self.blocked()
++    def test_credential_payload_even_empty_refused(self):
++        self.write('run/credentials/fixture.service/value',b'');self.blocked()
++    def test_credential_store_all_locations_refused(self):
++        for store in ep.CREDENTIAL_STORES:
++            f=self.write(store.lstrip('/')+'/value')
++            with self.subTest(store=store):self.blocked()
++            f.unlink()
++    def test_credential_store_symlink_refused(self):
++        self.path('run/credentials').rmdir();self.path('run/credentials').symlink_to('/absent');self.blocked()
++    def test_private_cloud_cache_requires_explicit_review(self):
++        self.cache();r=self.inspect();self.assertEqual(r['findings'],[]);self.assertEqual(r['cloud_cache_files'],1)
++        with self.assertRaisesRegex(RuntimeError,'CLOUD_CACHE_REVIEW_REQUIRED'):ep.require_paths(r,{})
++        ep.require_paths(r,self.review(r))
++    def test_review_cannot_override_systemd_payload(self):
++        self.cache();self.write('run/credentials/unit/value');r=self.inspect()
++        self.assertEqual(r['cloud_cache_files'],1)
++        with self.assertRaises(RuntimeError):ep.require_paths(r,self.review(r))
++    def test_cache_metadata_change_invalidates_review(self):
++        f=self.cache();r=self.inspect();f.write_bytes(b'new synthetic bytes')
++        with self.assertRaises(RuntimeError):ep.require_paths(self.inspect(),self.review(r))
++    def test_world_readable_opaque_cache_refused(self):
++        for name in ('obj.pkl','user-data.txt','vendor-data.txt','unknown-data','scripts/run'):
++            f=self.write('var/lib/cloud/instances/fixture/'+name,mode=0o644)
++            with self.subTest(name=name):self.blocked()
++            f.unlink()
++    def test_previous_instance_and_seed_inventoried(self):
++        self.write('var/lib/cloud/seed/nocloud/user-data');self.write('var/lib/cloud/instances/previous/obj.pkl')
++        self.assertEqual(self.inspect()['cloud_cache_files'],2)
++    def test_canonical_absolute_alias_allowed(self):
++        p=self.path('var/lib/cloud/instance');p.unlink();p.symlink_to('/var/lib/cloud/instances/fixture')
++        self.assertEqual(self.inspect()['findings'],[])
++    def test_escaping_and_noncanonical_alias_refused(self):
++        p=self.path('var/lib/cloud/instance')
++        for target in ('../../root','/root','instances/../fixture','instances/missing','/var/lib/cloud/instances/fixture/extra'):
++            p.unlink();p.symlink_to(target)
++            with self.subTest(target=target):self.blocked()
++    def test_cloud_nested_symlink_refused(self):
++        self.path('var/lib/cloud/instances/fixture/link').symlink_to('/root');self.blocked()
++    def test_cloud_fifo_refused(self):os.mkfifo(self.path('var/lib/cloud/instances/fixture/fifo'));self.blocked()
++    def test_cloud_hardlink_refused(self):
++        f=self.cache();os.link(f,self.path('var/lib/cloud/instances/fixture/other'));self.blocked()
++    def test_cloud_key_indicator_refused(self):
++        self.write('var/lib/cloud/instances/fixture/private.key');self.blocked()
++    def test_cloud_unprotected_directory_refused(self):self.path('var/lib/cloud/instances').chmod(0o777);self.blocked()
++    def test_wrong_owner_refused(self):
++        r=ep.inspect_environment_paths(root=self.root,root_uid=os.getuid()+10000,preparation_uid=os.getuid())
++        self.assertTrue(r['findings'])
++    def test_unreadable_metadata_refuses(self):
++        with patch.object(ep.os,'listdir',side_effect=PermissionError()):self.blocked()
++    def test_only_directories_opened_never_secret_contents(self):
++        self.cache();real=os.open;opened=[]
++        def directory_only(path,flags,*args,**kwargs):
++            self.assertTrue(flags&os.O_DIRECTORY);self.assertTrue(flags&os.O_NOFOLLOW)
++            opened.append(True);return real(path,flags,*args,**kwargs)
++        with patch.object(ep.os,'open',side_effect=directory_only),patch('builtins.open',side_effect=AssertionError('content open')):
++            r=self.inspect()
++        self.assertEqual(r['findings'],[]);self.assertTrue(opened)
++    def test_output_contains_no_private_bytes_or_filenames(self):
++        self.write('var/lib/cloud/instances/fixture/opaque-private-name',b'PRIVATE-FIXTURE-CONTENT')
++        out=json.dumps(self.inspect());self.assertNotIn('PRIVATE-FIXTURE',out);self.assertNotIn('opaque-private-name',out)
++    def test_missing_cloud_entry_during_scan_refuses(self):
++        self.cache();real=ep.Metadata.info
++        def changed(obj,path):
++            if path=='/var/lib/cloud/instances':return None
++            return real(obj,path)
++        with patch.object(ep.Metadata,'info',changed):self.blocked()
++    def test_inspection_root_writable_refused(self):self.root.chmod(0o777);self.blocked()
++    def test_ancestor_symlink_refused(self):
++        self.path('home/jarvis/.config').symlink_to('/elsewhere');self.blocked()
++    def test_tree_depth_budget_refuses(self):
++        self.path('var/lib/cloud/'+'/'.join(['deep']*19)).mkdir(parents=True);self.blocked()
++
++class MountTests(unittest.TestCase):
++    def test_documented_boot_and_empty_systemd_mounts_supported(self):environment(BOOT+'\n'+CRED,boot_source='/dev/sda2')
++    def test_boot_requires_explicit_binding(self):
++        with self.assertRaises(RuntimeError):environment(BOOT)
++    def test_wrong_boot_source_refused(self):
++        with self.assertRaises(RuntimeError):environment(BOOT,boot_source='/dev/sdb2')
++    def test_missing_approved_boot_refused(self):
++        with self.assertRaises(RuntimeError):environment(boot_source='/dev/sda2')
++    def test_boot_bind_or_same_root_device_refused(self):
++        for row in (BOOT.replace('8:2','8:1'),BOOT.replace('8:2 /','8:2 /subtree'),BOOT.replace('ext4','nfs')):
++            with self.subTest(row=row),self.assertRaises(RuntimeError):environment(row,boot_source='/dev/sda2')
++    def test_offline_iso_still_refused(self):
++        with self.assertRaises(RuntimeError):environment('2 1 11:0 / /mnt/g6l-cd ro - iso9660 /dev/sr0 ro')
++    def test_credential_mount_requires_all_protections(self):
++        for flag in ('ro','nosuid','nodev','noexec'):
++            with self.subTest(flag=flag),self.assertRaises(RuntimeError):environment(CRED.replace('ro,nosuid,nodev,noexec',','.join(x for x in ('ro','nosuid','nodev','noexec') if x!=flag)))
++    def test_credential_bind_refused(self):
++        with self.assertRaises(RuntimeError):environment(CRED.replace('0:3 /','0:3 /other'))
++    def test_shared_filesystems_refused(self):
++        for fs in ('9p','virtiofs','nfs','cifs','overlay','fuse.sshfs','autofs'):
++            with self.subTest(fs=fs),self.assertRaises(RuntimeError):environment(f'2 1 0:4 / /mnt/shared rw - {fs} fixture rw')
++    def test_hidden_protected_paths_refused(self):
++        for path in ('/home','/home/jarvis','/root','/var/lib/cloud','/opt/g6k-preflight-r1','/etc/credstore'):
++            with self.subTest(path=path),self.assertRaises(RuntimeError):environment(f'2 1 0:4 / {path} rw - tmpfs tmpfs rw')
++    def test_network_and_prohibited_host_refused(self):
++        for kwargs in ({'interfaces':['lo','ens18']},{'hostname':'nexus-services'},{'hostname':'jarvis-core'},{'hostname':'pve'},{'hostname':'ai-server'}):
++            with self.subTest(kwargs=kwargs),self.assertRaises(RuntimeError):environment(**kwargs)
++    def test_duplicate_mount_refused(self):
++        with self.assertRaises(RuntimeError):environment(CRED+'\n'+CRED)
++    def test_malformed_mount_refused(self):
++        for row in ('invalid','2 1 x / /run rw - tmpfs tmpfs rw','2 1 0:1 / /run/../etc rw - tmpfs tmpfs rw'):
++            with self.subTest(row=row),self.assertRaises(RuntimeError):environment(row)
++    def test_shared_propagation_remains_refused(self):
++        with self.assertRaises(RuntimeError):environment(CRED.replace(' - ',' shared:3 - '))
++
++class LaunchAndApprovalTests(unittest.TestCase):
++    def test_isolated_import_without_executing_qualification(self):
++        program='import runpy; d=runpy.run_path('+repr(str(HERE/'qualify_all.py'))+',run_name="import_only"); assert callable(d["execute"])'
++        r=subprocess.run([sys.executable,'-I','-B','-c',program],capture_output=True,text=True,timeout=15)
++        self.assertEqual(r.returncode,0,r.stderr)
++    def test_exact_new_release_and_optional_reviews(self):
++        a=approval();a.update(release='/opt/g6k-preflight-r1',boot_source='/dev/sda2',cloud_cache_review={'provenance':'FRESH_DISPOSABLE_IMAGE_NO_IMPORTED_CREDENTIALS','metadata_sha256':'e'*64})
++        validate_approval(a,'1'*32,release='/opt/g6k-preflight-r1')
++        with self.assertRaises(RuntimeError):validate_approval(a,'1'*32)
++    def test_invalid_optional_fields_refused(self):
++        for field,value in [('boot_source','/dev/../etc'),('boot_source',True),('cloud_cache_review',{}),('cloud_cache_review',{'provenance':'OPERATOR_SILENCE','metadata_sha256':'e'*64}),('allow_credentials',True)]:
++            a=approval();a[field]=value
++            with self.subTest(field=field),self.assertRaises(RuntimeError):validate_approval(a,'1'*32)
++    def test_preflight_report_has_no_qualification_import(self):
++        import ast
++        tree=ast.parse((HERE/'preflight_report.py').read_text())
++        imports=[n.module for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)]
++        self.assertNotIn('qualify_multi_uid',imports);self.assertNotIn('qualify_all',imports)
++
++if __name__=='__main__':unittest.main(verbosity=2)
+--- gate6k/disposable/environment_probe.py
++++ vm163-fix/disposable/environment_probe.py
+@@ -0,0 +1,171 @@
++"""Metadata-only disposable environment inspection. Never open credential files.
++
++Empty OS containers are not credentials. Opaque cloud-init data is NOT certified
++secret-free: acceptance additionally requires a specific, snapshot-bound human
++fresh-image provenance review in the VM approval. Active systemd payloads refuse.
++"""
++import hashlib,json,os,re,stat
++from pathlib import Path
++
++STRICT_PATHS=('/root/.ssh','/root/.aws','/root/.azure','/root/.config/gcloud','/root/.kube',
++ '/root/.netrc','/root/.git-credentials','/home/nexus','/run/host','/mnt/host',
++ '/home/jarvis/JARVIS','/home/jarvis/.hermes-poc')
++HOME_MARKERS=('.ssh','.aws','.azure','.kube','.gnupg','.netrc','.git-credentials',
++ '.pypirc','.npmrc','.boto','.env','.docker/config.json','.config/gcloud',
++ '.config/gh/hosts.yml','.config/jarvis','.local/share/keyrings')
++CREDENTIAL_STORES=('/run/credentials','/etc/credstore','/etc/credstore.encrypted',
++ '/run/credstore','/run/credstore.encrypted','/usr/lib/credstore','/usr/lib/credstore.encrypted')
++KEY_NAMES={'id_rsa','id_ed25519','id_ecdsa','id_dsa','credentials','credentials.json',
++ 'signing.key','private.key','application_default_credentials.json','.netrc','.git-credentials'}
++PUBLIC_CACHE_NAMES={'boot-finished','datasource','instance-id','previous-instance-id',
++ 'result.json','status.json','set-hostname','previous-datasource'}
++
++class Metadata:
++    def __init__(self,root=Path('/'),*,root_uid=0,preparation_uid=None):
++        self.root=Path(root);self.root_uid=root_uid;self.allowed_uids={root_uid,preparation_uid}
++    def _parent(self,path):
++        parts=Path(path).parts
++        if not str(path).startswith('/') or '..' in parts:raise RuntimeError('METADATA_PATH')
++        fd=os.open(self.root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
++        try:
++            base=os.fstat(fd)
++            if base.st_uid!=self.root_uid or base.st_mode&0o022:raise RuntimeError('UNPROTECTED_INSPECTION_ROOT')
++            for index,part in enumerate(parts[1:-1],1):
++                child=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
++                os.close(fd);fd=child
++                st=os.fstat(fd)
++                allowed=self.allowed_uids if parts[1:3]==('home','jarvis') and index>=2 else {self.root_uid}
++                if st.st_uid not in allowed or st.st_mode&0o022:raise RuntimeError('UNPROTECTED_PATH_ANCESTOR')
++            return fd,parts[-1]
++        except BaseException:os.close(fd);raise
++    def info(self,path):
++        try:fd,name=self._parent(path)
++        except FileNotFoundError:return None
++        except OSError:raise RuntimeError('METADATA_UNSAFE_ANCESTOR') from None
++        try:
++            try:return os.stat(name,dir_fd=fd,follow_symlinks=False)
++            except FileNotFoundError:return None
++        finally:os.close(fd)
++    def link(self,path):
++        fd,name=self._parent(path)
++        try:return os.readlink(name,dir_fd=fd)
++        finally:os.close(fd)
++    def tree(self,path,*,directories_only=False):
++        parent,name=self._parent(path)
++        try:fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=parent)
++        finally:os.close(parent)
++        rows=[];budget=[0]
++        def walk(current,relative,depth):
++            if depth>16:raise RuntimeError('METADATA_TREE_BUDGET')
++            before=os.fstat(current)
++            if before.st_uid!=self.root_uid or before.st_mode&0o022:raise RuntimeError('UNPROTECTED_OS_CONTAINER')
++            for name in sorted(os.listdir(current)):
++                budget[0]+=1
++                if budget[0]>4096:raise RuntimeError('METADATA_TREE_BUDGET')
++                st=os.stat(name,dir_fd=current,follow_symlinks=False)
++                rel=relative+'/'+name if relative else name
++                if st.st_uid!=self.root_uid or st.st_mode&0o022:raise RuntimeError('UNPROTECTED_OS_CONTAINER')
++                if stat.S_ISLNK(st.st_mode) or not (stat.S_ISDIR(st.st_mode) or stat.S_ISREG(st.st_mode)):
++                    raise RuntimeError('OS_CONTAINER_LINK_OR_SPECIAL')
++                if name in KEY_NAMES or name.startswith('.ssh') or name.endswith(('.key','.pem')):
++                    raise RuntimeError('CREDENTIAL_INDICATOR_PRESENT')
++                rows.append((rel,stat.S_IFMT(st.st_mode),stat.S_IMODE(st.st_mode),st.st_uid,st.st_gid,st.st_size,st.st_mtime_ns,st.st_ctime_ns,st.st_ino,st.st_dev))
++                if stat.S_ISDIR(st.st_mode):
++                    child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=current)
++                    try:
++                        opened=os.fstat(child)
++                        if (opened.st_dev,opened.st_ino)!=(st.st_dev,st.st_ino):raise RuntimeError('METADATA_CHANGED')
++                        walk(child,rel,depth+1)
++                    finally:os.close(child)
++                else:
++                    if st.st_nlink!=1:raise RuntimeError('OS_CONTAINER_HARDLINK')
++                    if directories_only:raise RuntimeError('SYSTEMD_CREDENTIAL_PAYLOAD_PRESENT')
++                    if st.st_size and (name not in PUBLIC_CACHE_NAMES or 'scripts' in Path(rel).parts) and st.st_mode&0o077:
++                        raise RuntimeError('EXPOSED_CLOUD_INIT_PAYLOAD')
++            after=os.fstat(current)
++            if (before.st_mtime_ns,before.st_ctime_ns)!=(after.st_mtime_ns,after.st_ctime_ns):raise RuntimeError('METADATA_CHANGED')
++        try:walk(fd,'',0)
++        finally:os.close(fd)
++        return rows
++
++def inspect_environment_paths(*,root=Path('/'),preparation_uid=None,root_uid=0):
++    """Return minimized nonsecret findings; contents/secret hashes never collected.
++
++    Known credential indicators are not a proof that arbitrary files are secret-
++    free. The independently reviewed VM provenance/credentials approval remains
++    mandatory. This function cannot grant qualification authorization.
++    """
++    m=Metadata(root,root_uid=root_uid,preparation_uid=preparation_uid);findings=[];cache_digest=None;cache_files=0
++    try:
++        for path in STRICT_PATHS:
++            if m.info(path) is not None:findings.append('CREDENTIAL_OR_HOST_PATH_PRESENT')
++        home=m.info('/home/jarvis')
++        if home is not None:
++            if (not stat.S_ISDIR(home.st_mode) or preparation_uid is None or preparation_uid==0
++                or home.st_uid!=preparation_uid or home.st_mode&0o022):
++                findings.append('UNVERIFIED_PREPARATION_HOME')
++            else:
++                for marker in HOME_MARKERS:
++                    if m.info('/home/jarvis/'+marker) is not None:findings.append('PREPARATION_HOME_CREDENTIAL_INDICATOR')
++        for path in CREDENTIAL_STORES:
++            try:
++                st=m.info(path)
++                if st is not None:
++                    if not stat.S_ISDIR(st.st_mode):raise RuntimeError('CREDENTIAL_STORE_TYPE')
++                    m.tree(path,directories_only=True)
++            except (OSError,RuntimeError) as e:
++                findings.append(str(e) if isinstance(e,RuntimeError) else 'METADATA_INSPECTION_UNAVAILABLE')
++        # Scan the complete cloud cache, including seeds/previous instances. Only
++        # the canonical "instance" alias is allowed; never deserialize obj.pkl.
++        cloud=m.info('/var/lib/cloud')
++        if cloud is not None:
++            if not stat.S_ISDIR(cloud.st_mode):raise RuntimeError('CLOUD_CACHE_TYPE')
++            instance=m.info('/var/lib/cloud/instance');target=None
++            if instance is not None and stat.S_ISLNK(instance.st_mode):
++                if instance.st_uid!=root_uid:raise RuntimeError('CLOUD_INSTANCE_LINK_OWNER')
++                link=m.link('/var/lib/cloud/instance')
++                relative=link.removeprefix('/var/lib/cloud/')
++                if not re.fullmatch(r'instances/[A-Za-z0-9_-][A-Za-z0-9_.-]*',relative):raise RuntimeError('CLOUD_INSTANCE_LINK_TARGET')
++                target='/var/lib/cloud/'+relative
++                if m.info(target) is None or not stat.S_ISDIR(m.info(target).st_mode):raise RuntimeError('CLOUD_INSTANCE_LINK_TARGET')
++            # Temporarily removing/hiding aliases is forbidden. Inventory each
++            # direct child separately, recording the sole canonical link itself.
++            parent,name=m._parent('/var/lib/cloud')
++            try:fd=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=parent)
++            finally:os.close(parent)
++            rows=[]
++            try:
++                before=os.fstat(fd)
++                if before.st_uid!=root_uid or before.st_mode&0o022:raise RuntimeError('UNPROTECTED_OS_CONTAINER')
++                names=sorted(os.listdir(fd))
++                if len(names)>128:raise RuntimeError('METADATA_TREE_BUDGET')
++                for name in names:
++                    path='/var/lib/cloud/'+name;st=m.info(path)
++                    if st is None:raise RuntimeError('METADATA_CHANGED')
++                    if name=='instance' and target:
++                        rows.append(('instance-link',target,st.st_uid,st.st_mtime_ns));continue
++                    if stat.S_ISDIR(st.st_mode):
++                        child=m.tree(path);rows.extend((name+'/'+r[0],*r[1:]) for r in child)
++                        rows.append((name,'directory',st.st_uid,stat.S_IMODE(st.st_mode),st.st_mtime_ns))
++                    elif stat.S_ISREG(st.st_mode) and st.st_uid==root_uid and not st.st_mode&0o022 and st.st_nlink==1:
++                        if name in KEY_NAMES or name.endswith(('.key','.pem')):raise RuntimeError('CREDENTIAL_INDICATOR_PRESENT')
++                        if st.st_size and name not in PUBLIC_CACHE_NAMES and st.st_mode&0o077:raise RuntimeError('EXPOSED_CLOUD_INIT_PAYLOAD')
++                        rows.append((name,stat.S_IFREG,stat.S_IMODE(st.st_mode),st.st_uid,st.st_gid,st.st_size,st.st_mtime_ns,st.st_ctime_ns,st.st_ino,st.st_dev))
++                    else:raise RuntimeError('OS_CONTAINER_LINK_OR_SPECIAL')
++                    if len(rows)>8192:raise RuntimeError('METADATA_TREE_BUDGET')
++                after=os.fstat(fd)
++                if (before.st_mtime_ns,before.st_ctime_ns)!=(after.st_mtime_ns,after.st_ctime_ns):raise RuntimeError('METADATA_CHANGED')
++            finally:os.close(fd)
++            if len(rows)>8192:raise RuntimeError('METADATA_TREE_BUDGET')
++            cache_files=sum(len(r)>1 and r[1]==stat.S_IFREG for r in rows)
++            if cache_files:cache_digest=hashlib.sha256(json.dumps(rows,separators=(',',':')).encode()).hexdigest()
++    except (OSError,RuntimeError) as e:
++        findings.append(str(e) if isinstance(e,RuntimeError) else 'METADATA_INSPECTION_UNAVAILABLE')
++    return {'findings':sorted(set(findings)),'cloud_cache_files':cache_files,'cloud_cache_metadata_sha256':cache_digest}
++
++def require_paths(report,approval):
++    if report['findings']:raise RuntimeError(report['findings'][0])
++    if report['cloud_cache_metadata_sha256'] is not None:
++        expected={'provenance':'FRESH_DISPOSABLE_IMAGE_NO_IMPORTED_CREDENTIALS',
++                  'metadata_sha256':report['cloud_cache_metadata_sha256']}
++        if approval.get('cloud_cache_review')!=expected:raise RuntimeError('CLOUD_CACHE_REVIEW_REQUIRED')
+--- gate6k/disposable/preflight_report.py
++++ vm163-fix/disposable/preflight_report.py
+@@ -0,0 +1,35 @@
++#!/usr/bin/env python3
++"""Human-only read-only metadata report; does not run/provision qualification.
++
++Run only on the independently identified disposable VM, after reviewed source
++installation. No regular credential/cache file is opened, hashed or exported.
++A BLOCKED result is never a passed security test. This report grants no authority.
++"""
++import sys
++from pathlib import Path
++sys.path.insert(0,str(Path(__file__).resolve().parent))
++import json,os,pwd
++from environment_probe import inspect_environment_paths
++from safety_preflight import validate_environment
++
++def report():
++    try:
++        account=pwd.getpwnam('jarvis')
++        uid=account.pw_uid if account.pw_dir=='/home/jarvis' else None
++    except KeyError:uid=None
++    result=inspect_environment_paths(preparation_uid=uid)
++    try:
++        validate_environment(hostname=os.uname().nodename,
++            interfaces=[p.name for p in Path('/sys/class/net').iterdir()],
++            mountinfo=Path('/proc/self/mountinfo').read_text(),credential_paths=[],boot_source='/dev/sda2')
++        result['vm163_mount_policy']='MATCHES_PROPOSED_BOOT_SOURCE; OPERATOR_APPROVAL_REQUIRED'
++    except (RuntimeError,OSError) as e:
++        result['vm163_mount_policy']=str(e) if isinstance(e,RuntimeError) else 'MOUNT_INSPECTION_UNAVAILABLE'
++    result['required_artifact_root_present']=Path('/opt/g6k-offline').is_dir()
++    result['approval_marker_present']=Path('/etc/g6k-disposable-approved.json').is_file()
++    result['fixture_path_absent']=not (Path('/var/lib/g6j-disposable').exists() or Path('/var/lib/g6j-disposable').is_symlink())
++    result['status']='INFORMATION_ONLY; QUALIFICATION_NOT_RUN'
++    return result
++
++if __name__=='__main__':
++    print(json.dumps(report(),sort_keys=True,indent=2))
+--- gate6k/disposable/qualify_all.py
++++ vm163-fix/disposable/qualify_all.py
+@@ -1,5 +1,10 @@
+ #!/usr/bin/env python3
+ """Future operator-controlled throwaway VM only; never invoked by current tests."""
++import sys
++from pathlib import Path
++# -I intentionally omits the script directory. Use only this protected sibling
++# directory, never cwd/PYTHONPATH, before importing the fixed runner module.
++sys.path.insert(0,str(Path(__file__).resolve().parent))
+ from qualify_multi_uid import main,BASE,RELEASE
+ import os,pwd,subprocess,sys,json,hashlib
+ 
+--- gate6k/disposable/qualify_multi_uid.py
++++ vm163-fix/disposable/qualify_multi_uid.py
+@@ -9,11 +9,12 @@
+ from pathlib import Path
+ sys.path.insert(0,str(Path(__file__).resolve().parent))
+ from process_boundary import role_context,SafePipe
+-from safety_preflight import validate_environment,validate_approval,verify_manifest,validate_dependencies,CREDENTIAL_PATHS,read_approval,validate_capacity
++from safety_preflight import validate_environment,validate_approval,verify_manifest,validate_dependencies,read_approval,validate_capacity
++from environment_probe import inspect_environment_paths,require_paths
+ from offline_artifacts import verify_artifacts
+ 
+ BASE=Path('/var/lib/g6j-disposable')
+-RELEASE=Path('/opt/g6j-release')
++RELEASE=Path(__file__).resolve().parents[1]
+ ROLES=('g6j-operator','g6j-service','g6j-agent')
+ sys.dont_write_bytecode=True
+ sys.path.insert(0,str(RELEASE/'repo'))
+@@ -260,12 +261,18 @@
+ def main():
+     # Refuse before any writes on the current known machines or unapproved VM.
+     if os.geteuid()!=0:raise RuntimeError('OPERATOR_PROVISIONED_ROOT_RUN_REQUIRED')
++    if RELEASE!=Path('/opt/g6k-preflight-r1'):raise RuntimeError('VERSIONED_RELEASE_LOCATION_REQUIRED')
+     marker=Path('/etc/g6k-disposable-approved.json')
+     approval=read_approval(marker)
+     machine=Path('/etc/machine-id').read_text().strip()
+-    validate_approval(approval,machine)
++    validate_approval(approval,machine,release=RELEASE)
+     validate_environment(hostname=os.uname().nodename,interfaces=[p.name for p in Path('/sys/class/net').iterdir()],
+-        mountinfo=Path('/proc/self/mountinfo').read_text(),credential_paths=[p for p in CREDENTIAL_PATHS if Path(p).exists()])
++        mountinfo=Path('/proc/self/mountinfo').read_text(),credential_paths=[],boot_source=approval.get('boot_source'))
++    try:
++        preparation=pwd.getpwnam('jarvis')
++        preparation_uid=preparation.pw_uid if preparation.pw_dir=='/home/jarvis' else None
++    except KeyError:preparation_uid=None
++    require_paths(inspect_environment_paths(preparation_uid=preparation_uid),approval)
+     verify_manifest(RELEASE,approval['source_manifest'])
+     validate_dependencies(RELEASE)
+     verify_artifacts(RELEASE,Path('/opt/g6k-offline'),approval['artifacts_sha256'])
+--- gate6k/disposable/safe_extract.py
++++ vm163-fix/disposable/safe_extract.py
+@@ -123,7 +123,7 @@
+     if a.destination:
+         if os.geteuid()==0:
+             # Additional guard only. Does not replace human VM-specific approval.
+-            if os.uname().nodename.lower().split('.')[0] in {'jarvis','jarvis-core','nexus-services','nexus','pve','proxmox','ai','ai-server','ollama'} or {x.name for x in Path('/sys/class/net').iterdir()}!={'lo'} or a.destination!='/opt/g6j-release':
++            if os.uname().nodename.lower().split('.')[0] in {'jarvis','jarvis-core','nexus-services','nexus','pve','proxmox','ai','ai-server','ollama'} or {x.name for x in Path('/sys/class/net').iterdir()}!={'lo'} or a.destination!='/opt/g6k-preflight-r1':
+                 raise ValueError('ROOT_EXTRACTION_TARGET_REFUSED')
+         result=extract(a.archive,a.destination,a.archive_sha,a.manifest_sha)
+     else:result={'result':'PASS','members':len(inspect_archive(a.archive,a.archive_sha,a.manifest_sha)),'extracted':False}
+--- gate6k/disposable/safety_preflight.py
++++ vm163-fix/disposable/safety_preflight.py
+@@ -6,30 +6,53 @@
+ 
+ VIRTUAL_FILESYSTEMS={'proc','sysfs','tmpfs','devtmpfs','devpts','cgroup2','mqueue','securityfs','debugfs','tracefs','configfs','hugetlbfs','ramfs','bpf','efivarfs','pstore','fusectl','binfmt_misc','autofs'}
+ FORBIDDEN_NAMES={'jarvis','jarvis-core','nexus-services','nexus','pve','proxmox','ai','ai-server','ollama'}
++# Historical API compatibility only. Live runner uses environment_probe's metadata policy.
+ CREDENTIAL_PATHS=('/root/.ssh','/root/.aws','/root/.azure','/root/.config/gcloud','/root/.kube','/home/jarvis','/home/nexus','/run/credentials','/run/host','/mnt/host','/var/lib/cloud/instance')
+ 
+-def validate_environment(*,hostname,interfaces,mountinfo,credential_paths):
++def validate_environment(*,hostname,interfaces,mountinfo,credential_paths,boot_source=None):
+     if hostname.lower().split('.')[0] in FORBIDDEN_NAMES or set(interfaces)!={'lo'}:raise RuntimeError('NOT_ISOLATED_VM')
++    # Legacy callers remain strict: this argument contains detected indicators,
++    # not an exception list of directories to silently ignore.
+     if credential_paths:raise RuntimeError('CREDENTIAL_OR_HOST_PATH_PRESENT')
+-    root=False
+-    for line in mountinfo.splitlines():
+-        left,right=line.split(' - ',1);fields=left.split();fs,source,*_=right.split()
+-        if any(x.startswith(('shared:','master:','propagate_from:')) for x in fields[6:]):raise RuntimeError('SHARED_MOUNT_PROPAGATION')
+-        if fields[4]=='/':
+-            if root or fields[3]!='/' or fs!='ext4' or not source.startswith('/dev/'):raise RuntimeError('PRIVATE_EXT4_ROOT_REQUIRED')
+-            root=True
+-        else:
+-            mount=Path(fields[4].replace('\\040',' ').replace('\\011','\t').replace('\\012','\n').replace('\\134','\\'))
+-            protected=('/opt','/var/lib','/etc','/usr','/lib','/lib64','/bin','/sbin')
+-            if any(mount==Path(path) or mount in Path(path).parents or Path(path) in mount.parents for path in protected):raise RuntimeError('PROTECTED_PATH_MOUNT_OVERRIDE')
+-            if fs=='autofs' or fs not in VIRTUAL_FILESYSTEMS:raise RuntimeError('ADDITIONAL_OR_SHARED_MOUNT')
+-    if not root:raise RuntimeError('PRIVATE_EXT4_ROOT_REQUIRED')
++    mounts=[];seen=set()
++    try:
++        for line in mountinfo.splitlines():
++            left,right=line.split(' - ',1);fields=left.split();tail=right.split()
++            if len(fields)<6 or len(tail)<3 or not re.fullmatch(r'[0-9]+:[0-9]+',fields[2]):raise ValueError()
++            if any(x.startswith(('shared:','master:','propagate_from:')) for x in fields[6:]):raise RuntimeError('SHARED_MOUNT_PROPAGATION')
++            def decode(text):
++                for old,new in ((r'\040',' '),(r'\011','\t'),(r'\012','\n'),(r'\134','\\')):text=text.replace(old,new)
++                if not text.startswith('/') or '..' in text.split('/') or '.' in text.split('/') or '//' in text:raise ValueError()
++                return text
++            mount=decode(fields[4]);subroot=decode(fields[3])
++            if mount in seen:raise RuntimeError('STACKED_MOUNT_REFUSED')
++            seen.add(mount);mounts.append((mount,subroot,fields[2],set(fields[5].split(',')),tail[0],tail[1]))
++    except (ValueError,IndexError):raise RuntimeError('MOUNTINFO_MALFORMED') from None
++    roots=[r for r in mounts if r[0]=='/']
++    if len(roots)!=1 or roots[0][1]!='/' or roots[0][4]!='ext4' or not roots[0][5].startswith('/dev/'):raise RuntimeError('PRIVATE_EXT4_ROOT_REQUIRED')
++    for mount,subroot,device,options,fs,source in mounts:
++        if mount=='/':continue
++        if mount=='/boot':
++            if boot_source is None or source!=boot_source or fs!='ext4' or subroot!='/' or device==roots[0][2]:raise RuntimeError('UNAPPROVED_BOOT_MOUNT')
++            continue
++        path=Path(mount)
++        protected=('/opt','/var/lib','/etc','/usr','/lib','/lib64','/bin','/sbin','/home','/root')
++        if any(path==Path(p) or path in Path(p).parents or Path(p) in path.parents for p in protected):raise RuntimeError('PROTECTED_PATH_MOUNT_OVERRIDE')
++        if mount.startswith('/run/credentials/') or mount=='/run/credentials':
++            if fs not in ('tmpfs','ramfs') or subroot!='/' or not {'ro','nosuid','nodev','noexec'}<=options:raise RuntimeError('UNSAFE_CREDENTIAL_MOUNT')
++        if subroot!='/' or fs=='autofs' or fs not in VIRTUAL_FILESYSTEMS:raise RuntimeError('ADDITIONAL_OR_SHARED_MOUNT')
++    if boot_source is not None and '/boot' not in seen:raise RuntimeError('APPROVED_BOOT_MOUNT_MISSING')
+ 
+-def validate_approval(value,machine):
+-    fixed={'machine_id':machine,'scope':'GATE6K_DISPOSABLE_ONLY','network':'NO_NIC','release':'/opt/g6j-release','credentials':'NONE','mounts':'PRIVATE_ROOT_ONLY','test_scope':'SYNTHETIC_MULTI_UID_NO_POWERCUT'}
++
++def validate_approval(value,machine,*,release="/opt/g6j-release"):
++    fixed={'machine_id':machine,'scope':'GATE6K_DISPOSABLE_ONLY','network':'NO_NIC','release':str(release),'credentials':'NONE','mounts':'PRIVATE_ROOT_ONLY','test_scope':'SYNTHETIC_MULTI_UID_NO_POWERCUT'}
+     hashes={'source_manifest','archive_sha256','artifacts_sha256'}
+     identity={'vmid','vm_uuid','hypervisor_node','disk_identity','operator_console','snapshot_preservation_policy'}
+-    if type(value) is not dict or set(value)!=set(fixed)|hashes|identity or any(value[k]!=v for k,v in fixed.items()):raise RuntimeError('APPROVAL_SCOPE')
++    if type(value) is not dict or set(value)-{'boot_source','cloud_cache_review'}!=set(fixed)|hashes|identity or any(value[k]!=v for k,v in fixed.items()):raise RuntimeError('APPROVAL_SCOPE')
++    if 'boot_source' in value and (type(value['boot_source']) is not str or not re.fullmatch(r'/dev/[A-Za-z0-9_./-]+',value['boot_source']) or '..' in Path(value['boot_source']).parts):raise RuntimeError('APPROVAL_BOOT_SOURCE')
++    if 'cloud_cache_review' in value:
++        review=value['cloud_cache_review']
++        if type(review) is not dict or set(review)!={'provenance','metadata_sha256'} or review['provenance']!='FRESH_DISPOSABLE_IMAGE_NO_IMPORTED_CREDENTIALS' or type(review['metadata_sha256']) is not str or not re.fullmatch('[a-f0-9]{64}',review['metadata_sha256']):raise RuntimeError('APPROVAL_CLOUD_REVIEW')
+     if not re.fullmatch('[0-9a-f]{32}',machine):raise RuntimeError('APPROVAL_MACHINE_ID')
+     for name in hashes:
+         if type(value[name]) is not str or not re.fullmatch('[0-9a-f]{64}',value[name]):raise RuntimeError('APPROVAL_DIGEST')
+--- gate6k/guard/sitecustomize.py
++++ vm163-fix/guard/sitecustomize.py
+@@ -27,7 +27,7 @@
+     if event=='subprocess.Popen':
+         executable,argv,cwd,env=args
+         allowed=(isinstance(argv,(list,tuple)) and len(argv)>1 and
+-            (str(argv[0]).startswith('/home/jarvis/JARVIS/.venv/bin/python') and
++            (str(argv[0])==sys.executable and
+              (argv[1]=='-c' or str(argv[1])==str(stage/'repo/scripts/switch_models.py'))
+              or argv[0]=='bash' and str(argv[1])==str(stage/'repo/scripts/backup_restic.sh')))
+         if not allowed:
+--- gate6k/run_tests.py
++++ vm163-fix/run_tests.py
+@@ -4,7 +4,7 @@
+ stage=Path(__file__).parent;repo=stage/'repo';label=sys.argv[1]
+ os.chdir(repo);sys.path.insert(0,str(repo));sys.dont_write_bytecode=True
+ from kernel_guard import restrict
+-policy=restrict(stage,Path('/home/jarvis/JARVIS/.venv'))
++policy=restrict(stage,Path(sys.prefix))
+ # The trusted supervisor is not a general signal proxy: it independently checks
+ # parent PID, UID, executable and private candidate cwd, then signals a pidfd.
+ if 'P7_TEST_REQUEST_FD' in os.environ:
+--- gate6k/supervise_tests.py
++++ vm163-fix/supervise_tests.py
+@@ -32,7 +32,7 @@
+             cwd=Path(os.readlink(Path('/proc')/str(pid)/'cwd')).resolve()
+             if stage not in cwd.parents:raise ValueError()
+             args=(Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
+-            if args[0]!=b'/home/jarvis/JARVIS/.venv/bin/python' or args[1]!=b'-c':raise ValueError()
++            if args[0]!=os.fsencode(sys.executable) or args[1]!=b'-c':raise ValueError()
+             # Never preserve the inline fixture program or request content in broker evidence.
+             signal.pidfd_send_signal(fd,sig);result='DISPOSABLE_CHILD_SIGNALED'
+         except (ValueError,OSError,KeyError,IndexError):pass

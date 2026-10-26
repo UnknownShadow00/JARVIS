@@ -1,0 +1,28 @@
+=================================== FAILURES ===================================
+____________________ Candidate.test_kernel_sandbox_canaries ____________________
+
+self = <tests.execution.v3_candidate_test.Candidate testMethod=test_kernel_sandbox_canaries>
+
+    async def test_kernel_sandbox_canaries(self):
+     import ctypes,errno
+     libc=ctypes.CDLL(None,use_errno=True)
+     # Explicit harmless canary, never the real credential or production storage.
+     fd=libc.open(b'/tmp/jarvis-gate6c-denied-dummy.txt',os.O_RDONLY)
+>    self.assertEqual(fd,-1);self.assertIn(ctypes.get_errno(),(errno.EACCES,errno.EPERM))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E    AssertionError: 2 not found in (13, 1)
+
+tests/execution/v3_candidate_test.py:306: AssertionError
+=============================== warnings summary ===============================
+../../../jarvis-gate6l-offline/bundle-r1/work/mixed-env-r2/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/nexus/.local/share/jarvis-gate6l-offline/bundle-r1/work/mixed-env-r2/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../../jarvis-gate6l-offline/bundle-r1/work/mixed-env-r2/lib/python3.14/site-packages/starlette/testclient.py:53
+  /home/nexus/.local/share/jarvis-gate6l-offline/bundle-r1/work/mixed-env-r2/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/execution/v3_candidate_test.py::Candidate::test_kernel_sandbox_canaries
+1 failed, 7740 passed, 11 deselected, 2 warnings in 456.07s (0:07:36)
