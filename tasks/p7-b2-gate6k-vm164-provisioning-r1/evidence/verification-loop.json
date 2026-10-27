@@ -1,0 +1,56 @@
+{
+  "utc": "2026-10-27T03:12:44.484137+00:00",
+  "skill": "verification-loop",
+  "build": "PASS_SOURCE_AND_TWO_ISO_ARTIFACTS_NOT_GUEST_BOOT",
+  "python_syntax": [
+    "tools/acquire_iso_tool.py",
+    "tools/attach_installer.py",
+    "tools/build_clean_source.py",
+    "tools/build_public_payload_iso.py",
+    "tools/create_stopped_vm164.py",
+    "tools/installer_target_guard.py",
+    "tools/memory_probe.py",
+    "tools/remaster_iso.py",
+    "tools/test_preparation.py",
+    "tools/verify_derivative.py"
+  ],
+  "shell_syntax": [
+    "ATTACH-INSTALLER-CONSOLE.sh",
+    "CREATE-STOPPED-CONSOLE.sh",
+    "INSPECT-CREATION-CONSOLE.sh",
+    "NEXT-CONSOLE.sh"
+  ],
+  "documentation_shell_block_syntax": "PASS",
+  "console_blocks_match_reviewed_python": "PASS",
+  "tests": {
+    "passed": 10,
+    "failed": 0,
+    "scope": "Unprivileged synthetic guards and command construction; no PVE/guest execution",
+    "coverage": "NOT_MEASURED"
+  },
+  "types": "NOT_RUN_pyright_unavailable",
+  "lint": "NOT_RUN_ruff_unavailable; manual review and AST/shell syntax checks performed",
+  "security": {
+    "embedded_private_key_or_token_scan": "NO_MATCHES",
+    "gate6k_source": "618_PINNED_FILES_UNCHANGED",
+    "destructive_existing_vm_operations": "NONE",
+    "privileged_qualification": "NOT_RUN",
+    "final_approval_marker": "NOT_CREATED"
+  },
+  "actual_pve_execution": "NONE",
+  "actual_guest_execution": "NONE",
+  "media": [
+    {
+      "file": "ubuntu-26.04.1-g6k-vm164-r3.iso",
+      "bytes": 3042836480,
+      "sha256": "4161509164bcaff08506ad2ffcd52a6782eb34eb4b08d47f1bb8754016a07346"
+    },
+    {
+      "file": "g6k-public-inputs-r1.iso",
+      "bytes": 6230048768,
+      "sha256": "8464ac2f1bb77ce9e29042b2fe6ae797992b420b7601fd0cfba8b13d42f10190"
+    }
+  ],
+  "previous_sealed_packet": "ALL_RETAINED_HASHES_MATCH",
+  "overall": "READY_GUARDED_STOPPED_PREPARATION; NO_GO_START_FROM_REPORTED_MEMORY; GUEST_READINESS_NOT_ESTABLISHED"
+}

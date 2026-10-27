@@ -1,0 +1,52 @@
+{
+  "scope": "NEXUS_EXISTING_BUILD_ENVIRONMENT_AND_PUBLIC_CORRECTED_SOURCE_ONLY",
+  "tool_versions": [
+    {
+      "argv": [
+        "unsquashfs",
+        "-version"
+      ],
+      "returncode": 1,
+      "stdout": "unsquashfs version 4.7.5 (2026/03/01)\ncopyright (C) 2026 Phillip Lougher <phillip@squashfs.org.uk>\n\nThis program is free software; you can redistribute it and/or\nmodify it under the terms of the GNU General Public License\nas published by the Free Software Foundation; either version 2,\nor (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "mksquashfs",
+        "-version"
+      ],
+      "returncode": 0,
+      "stdout": "mksquashfs version 4.7.5 (2026/03/01)\ncopyright (C) 2026 Phillip Lougher <phillip@squashfs.org.uk>\n\nThis program is free software; you can redistribute it and/or\nmodify it under the terms of the GNU General Public License\nas published by the Free Software Foundation; either version 2,\nor (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "dpkg-query",
+        "-W",
+        "-f=${Package} ${Version}\n",
+        "squashfs-tools",
+        "python3",
+        "python3-yaml",
+        "python3-jsonschema"
+      ],
+      "returncode": 0,
+      "stdout": "python3 3.14.3-0ubuntu2\npython3-jsonschema 4.19.2-6ubuntu2\npython3-yaml 6.0.3-1build1\nsquashfs-tools 1:4.7.5-1\n",
+      "stderr": ""
+    }
+  ],
+  "existing_tool_sha256": {
+    "/usr/bin/unsquashfs": "003a7e9d70fbdcd05dfe132101c4b7bbb19a217976777f5393573eff21ddc202",
+    "/usr/bin/mksquashfs": "41c82ab9270c08f5716b7143f264151d2895d153ce3c224d2d3d9269a75bc3ff",
+    "/usr/bin/python3.14": "52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+  },
+  "corrected_source_entries_reverified": 618,
+  "source_manifest_sha256": "b69f43a9b77c066342834a78dbabc40fefe71aeef18588def03d8a2878e559fc",
+  "gate6k_changes": "NONE",
+  "existing_tool_authenticity": "Trusted Nexus environment dependency, not newly independently attested",
+  "signed_source_kernel_config": "7.0.0-30-generic CONFIG_SQUASHFS_ZLIB=y; actual installer kernel boot not tested",
+  "version_probe_note": "squashfs tools print version with exit 1; captured explicitly, build/validation commands required exit 0",
+  "pve_ssh_retries": 0,
+  "pve_commands_executed": 0,
+  "vm163_connections_or_lifecycle_changes": 0,
+  "qualification": "NOT_RUN"
+}

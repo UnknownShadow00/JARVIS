@@ -1,0 +1,41 @@
+{
+  "recorded_utc": "2026-10-27T02:19:30.318112+00:00",
+  "execution_host": "nexus-services",
+  "execution_euid": 1000,
+  "known_local_address": "192.168.0.101",
+  "task_profile": "network",
+  "administrative_probes": [
+    {
+      "target": "192.168.0.50",
+      "account": "root",
+      "method": "SSH BatchMode publickey only",
+      "strict_existing_host_key_check": true,
+      "forwarding": false,
+      "exit_code": 255,
+      "result": "Permission denied (publickey,password)."
+    },
+    {
+      "target": "192.168.0.50",
+      "account": "nexus",
+      "method": "SSH BatchMode publickey only",
+      "strict_existing_host_key_check": true,
+      "forwarding": false,
+      "exit_code": 255,
+      "result": "Permission denied (publickey,password)."
+    }
+  ],
+  "local_sudo": {
+    "command": "sudo -n true",
+    "exit_code": 1,
+    "result": "interactive authentication is required"
+  },
+  "authenticated_proxmox_commands": 0,
+  "api_tokens_or_passwords_sought": false,
+  "pve_capacity_observed": false,
+  "vmid_selected": null,
+  "mutated_vmids": [],
+  "core_or_ai_connections": false,
+  "vm163_guest_access": false,
+  "privileged_qualification": "NOT_RUN",
+  "notes": "This is a minimized transcript record of probes already executed, not an authenticated hypervisor attestation."
+}
