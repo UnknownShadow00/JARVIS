@@ -1,0 +1,53 @@
+{
+  "utc": "2026-10-27T20:07:40.533169+00:00",
+  "profile": "workspace-write",
+  "verification_skill": "retained repository verification-loop",
+  "build": "PASS_OFFLINE_R4_ISO_ONLY",
+  "python_syntax": [
+    "tools/build_iso_r4.py",
+    "tools/capture_sources.py",
+    "tools/common.py",
+    "tools/disk_guard_r4.py",
+    "tools/test_disk_matching.py",
+    "tools/trusted_console_r4.py",
+    "tools/verify_iso_r4.py"
+  ],
+  "shell_syntax": [
+    "PVE-INSPECT-ONLY.sh",
+    "PVE-PRESTART-CHECK-ONLY.sh",
+    "PVE-REPLACE-MEDIA-ONLY.sh"
+  ],
+  "doc_shell_syntax": "PASS",
+  "tests": {
+    "passed": 18,
+    "failed": 0,
+    "coverage": "NOT_MEASURED",
+    "scope": "Synthetic guards and exact pinned Subiquity matching method bodies; no guest/PVE execution"
+  },
+  "negative_cases": [
+    "wrong UUID",
+    "wrong hardware serial",
+    "wrong size/model",
+    "additional disk",
+    "initialized disk",
+    "uninspectable signatures",
+    "ambiguous udev serial/short/path",
+    "missing/malformed udev",
+    "NIC",
+    "mounted/partitioned/readonly/removable target",
+    "extra writable device",
+    "foreign future console volume"
+  ],
+  "iso_sha256": "050875e2f3ffd5a7711bb2f520bce98404416d2117faedf2ba608831e2a416f3",
+  "iso_bytes": 3042836480,
+  "previous_packets": "ALL_RETAINED_CHECKSUMS_MATCH",
+  "security_scan": "NO_EMBEDDED_PRIVATE_KEY_OR_TOKEN_PATTERN",
+  "pve_guest_ai_production_access": "NONE",
+  "virtual_disk_operations": "NONE",
+  "qualification": "NOT_RUN",
+  "approval_marker": "NOT_CREATED",
+  "installation_success": "NOT_TESTED_NOT_CLAIMED",
+  "lint_types": "ruff/pyright unavailable; syntax and manual review performed",
+  "full_installer_or_kernel_validation": "NOT_RUN",
+  "commit_push": "NOT_PERFORMED"
+}

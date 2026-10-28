@@ -1,0 +1,53 @@
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  refresh-installer:
+    update: false
+  source:
+    id: ubuntu-server-minimal
+    search_drivers: false
+  network:
+    version: 2
+    ethernets: {}
+  apt:
+    geoip: false
+    fallback: offline-install
+  storage:
+    layout:
+      name: direct
+      match:
+        serial: g6k164-12821f6b54a2
+  identity:
+    hostname: jarvis-g6k-164
+    username: jarvis
+    password: '!'
+    groups: []
+  ssh:
+    install-server: false
+    authorized-keys: []
+    allow-pw: false
+  oem:
+    install: false
+  drivers:
+    install: false
+  kernel-crash-dumps:
+    enabled: false
+  early-commands:
+  - - /usr/bin/python3
+    - -I
+    - -B
+    - -c
+    - import json,os,subprocess;from pathlib import Path;assert os.geteuid()==0 and
+      Path('/sys/class/dmi/id/product_uuid').read_text().strip().lower()=='faeb1db8-0df9-482d-b3e4-f6ccc1602193';assert
+      {p.name for p in Path('/sys/class/net').iterdir()}=={'lo'};r=json.loads(subprocess.check_output(['lsblk','-J','-b','-d','-o','NAME,TYPE,SIZE,SERIAL']));d=[v
+      for v in r['blockdevices'] if v['type']=='disk'];assert len(d)==1 and d[0]['name']=='sda'
+      and d[0]['serial']=='g6k164-12821f6b54a2' and int(d[0]['size'])==68719476736;s=json.loads(subprocess.check_output(['wipefs','--json','--no-act','/dev/sda']));assert
+      isinstance(s,dict) and s.get('signatures')==[]
+  late-commands:
+  - - /usr/bin/python3
+    - -I
+    - -B
+    - /cdrom/g6k-firstboot-guard.py
+  shutdown: poweroff
