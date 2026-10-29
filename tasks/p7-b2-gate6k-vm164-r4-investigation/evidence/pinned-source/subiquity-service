@@ -1,0 +1,42 @@
+#!/bin/sh
+
+. "$SNAP"/management-script
+
+port=tty1
+export PYTHONPATH=$SNAP/lib/python3.12/site-packages
+
+if [ -n "$1" ]; then
+   port=$1
+fi
+
+# Stops some dmesg from overwriting the TUI.
+/bin/dmesg -n 1
+
+# Stop the systemd service completion messages from doing the same.
+# The systemd(1) manpage documents SIGRTMIN+21 as a method to set
+# show_status=0.  Without this, ongoing services such as the casper-md5check
+# can result in service status message being written on top of the TUI.
+/bin/kill "-SIGRTMIN+21" 1
+
+block_probing_timeout="$(block_probing_timeout)"
+case "${block_probing_timeout}" in
+    # Remember /bin/sh does not support arrays :(
+    no | none | null)
+        timeout_opts="--no-block-probing-timeout"
+        ;;
+    default)
+        timeout_opts=""
+        ;;
+    *)
+        timeout_opts="--block-probing-timeout ${block_probing_timeout}"
+        ;;
+esac
+
+
+if [ "$port" = "tty1" ]; then
+	$SNAP/bin/subiquity-loadkeys
+	setfont $SNAP/subiquity.psf
+	exec /sbin/agetty -n --noclear -l $PYTHON -o "$SNAP/usr/bin/subiquity ${timeout_opts}" $port $TERM
+else
+	exec /sbin/agetty -n --keep-baud -l $PYTHON -o "$SNAP/usr/bin/subiquity --serial ${timeout_opts}" $port 115200,38400,9600 $TERM
+fi

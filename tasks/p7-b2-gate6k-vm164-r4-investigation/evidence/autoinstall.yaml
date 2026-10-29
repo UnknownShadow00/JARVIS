@@ -1,0 +1,49 @@
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  refresh-installer:
+    update: false
+  source:
+    id: ubuntu-server-minimal
+    search_drivers: false
+  network:
+    version: 2
+    ethernets: {}
+  apt:
+    geoip: false
+    fallback: offline-install
+  storage:
+    layout:
+      name: direct
+      match:
+        path: /dev/sda
+        serial: 0QEMU_QEMU_HARDDISK_drive-scsi0
+        id_path: pci-0000:09:01.0-scsi-0:0:0:0
+  identity:
+    hostname: jarvis-g6k-164
+    username: jarvis
+    password: '!'
+    groups: []
+  ssh:
+    install-server: false
+    authorized-keys: []
+    allow-pw: false
+  oem:
+    install: false
+  drivers:
+    install: false
+  kernel-crash-dumps:
+    enabled: false
+  early-commands:
+  - - /usr/bin/python3
+    - -I
+    - -B
+    - /cdrom/g6k-disk-guard-r4.py
+  late-commands:
+  - - /usr/bin/python3
+    - -I
+    - -B
+    - /cdrom/g6k-firstboot-guard.py
+  shutdown: poweroff

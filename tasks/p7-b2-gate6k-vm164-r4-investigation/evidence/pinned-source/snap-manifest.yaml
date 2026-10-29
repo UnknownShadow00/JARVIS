@@ -1,0 +1,368 @@
+snapcraft-version: 9.0.1
+snapcraft-started-at: '2026-08-24T08:09:29.562069Z'
+snapcraft-os-release-id: ubuntu
+snapcraft-os-release-version-id: '24.04'
+name: subiquity
+version: 26.04.1
+summary: Ubuntu installer
+description: The Ubuntu server installer
+base: core24
+grade: stable
+confinement: classic
+apps:
+  subiquity:
+    command: usr/bin/subiquity-cmd $SNAP/usr/bin/python3.12 -m subiquity
+    environment:
+      PYTHONPATH_ORIG: $PYTHONPATH
+      PATH_ORIG: $PATH
+      PYTHONIOENCODING_ORIG: $PYTHONIOENCODING
+      PYTHONIOENCODING: utf-8
+      SUBIQUITY_ROOT_ORIG: $SUBIQUITY_ROOT
+      SUBIQUITY_ROOT: $SNAP
+      PYTHON_ORIG: $PYTHON
+      PYTHON: $SNAP/usr/bin/python3.12
+      APPORT_DATA_DIR_ORIG: $APPORT_DATA_DIR
+      APPORT_DATA_DIR: $SNAP/share/apport
+  probert:
+    command: usr/bin/subiquity-cmd $SNAP/usr/bin/python3.12 $SNAP/bin/probert
+    environment:
+      PYTHON: $SNAP/usr/bin/python3.12
+  curtin:
+    command: usr/bin/subiquity-cmd $SNAP/bin/curtin
+    environment:
+      PYTHONIOENCODING: utf-8
+      PYTHON: $SNAP/usr/bin/python3.12
+      PY3OR2_PYTHON: $SNAP/usr/bin/python3.12
+      PATH: $PATH:$SNAP/bin
+  python:
+    command: usr/bin/subiquity-cmd $SNAP/usr/bin/python3.12
+  subiquity-server:
+    command: usr/bin/subiquity-server
+    daemon: simple
+    restart-condition: always
+    environment:
+      PYTHONIOENCODING: utf-8
+      SUBIQUITY_ROOT: $SNAP
+      PYTHONPATH_ORIG: $PYTHONPATH
+      PYTHON_ORIG: $PYTHON
+      PYTHON: $SNAP/usr/bin/python3.12
+      PY3OR2_PYTHON: $SNAP/usr/bin/python3.12
+      PATH_ORIG: $PATH
+      PATH: $PATH:$SNAP/bin:$SNAP/sbin
+      APPORT_DATA_DIR_ORIG: $APPORT_DATA_DIR
+      APPORT_DATA_DIR: $SNAP/share/apport
+  subiquity-service:
+    command: usr/bin/subiquity-service
+    daemon: simple
+    restart-condition: always
+    environment:
+      PYTHONPATH_ORIG: $PYTHONPATH
+      PATH_ORIG: $PATH
+      PYTHONIOENCODING_ORIG: $PYTHONIOENCODING
+      PYTHONIOENCODING: utf-8
+      SUBIQUITY_ROOT_ORIG: $SUBIQUITY_ROOT
+      SUBIQUITY_ROOT: $SNAP
+      PYTHON_ORIG: $PYTHON
+      PYTHON: $SNAP/usr/bin/python3.12
+      APPORT_DATA_DIR_ORIG: $APPORT_DATA_DIR
+      APPORT_DATA_DIR: $SNAP/share/apport
+parts:
+  curtin:
+    plugin: nil
+    source: https://github.com/canonical/curtin
+    source-type: git
+    source-commit: ab0c9258d481182ba024445261fdc4dd501cd321
+    override-pull: |
+      craftctl default
+      # Since snapcraft 8.14, the tags are not automatically fetched
+      git fetch --tags
+      PACKAGED_VERSION="$(git describe --long --abbrev=9 --match=[0-9][0-9]*)"
+      sed -e "s,@@PACKAGED_VERSION@@,$PACKAGED_VERSION,g" -i curtin/version.py
+    override-build: |
+      # We install without dependencies because all dependencies come from
+      # archive packages.
+      # XXX: On core22, running `pip3 install --prefix xxx` does not do the
+      # right thing. The package ends up installed in xxx/local and the modules
+      # get installed to dist-packages instead of site-packages.
+      # See https://discuss.python.org/t/18240
+      # As a workaround, we use a fake user install to get the package
+      # installed in the expected place.
+      PYTHONUSERBASE="$CRAFT_PART_INSTALL" pip3 install --user --no-dependencies --break-system-packages .
+    build-packages:
+    - python3-pip
+    organize:
+      lib/python*/site-packages/usr/lib/curtin: usr/lib/
+    stage-packages: []
+    stage: []
+    prime: []
+  subiquity:
+    plugin: nil
+    source: .
+    source-type: git
+    override-build: |
+      # We install without dependencies because all dependencies come from
+      # archive packages.
+      # XXX: On core22, running `pip3 install --prefix xxx` does not do the
+      # right thing. The package ends up installed in xxx/local and the modules
+      # get installed to dist-packages instead of site-packages.
+      # See https://discuss.python.org/t/18240
+      # As a workaround, we use a fake user install to get the package
+      # installed in the expected place.
+      PYTHONUSERBASE="$CRAFT_PART_INSTALL" pip3 install --user --no-dependencies --break-system-packages .
+    build-packages:
+    - gettext
+    - lsb-release
+    - python3-pip
+    stage-packages:
+    - adduser=3.137ubuntu1
+    - debconf=1.5.86ubuntu1
+    - distro-info=1.7build1
+    - fuse3=3.14.0-5build1
+    - iso-codes=4.16.0-1
+    - libfuse3-3=3.14.0-5build1
+    - libntfs-3g89t64=1:2022.10.3-1.2ubuntu3.2
+    - libpsl5t64=0.21.2-1.1build1
+    - libpython3-stdlib=3.12.3-0ubuntu2.1
+    - libpython3.12-minimal=3.12.3-1ubuntu0.15
+    - libpython3.12-stdlib=3.12.3-1ubuntu0.15
+    - libsystemd0=255.4-1ubuntu8.17
+    - lsb-release=12.0-2
+    - ntfs-3g=1:2022.10.3-1.2ubuntu3.2
+    - python-apt-common=2.7.7ubuntu5.2
+    - python3-aiohttp=3.9.1-1ubuntu0.1
+    - python3-aiosignal=1.3.1-1
+    - python3-apport=2.28.3-0ubuntu0.1
+    - python3-apt=2.7.7ubuntu5.2
+    - python3-async-timeout=4.0.3-1
+    - python3-attr=23.2.0-2
+    - python3-blinker=1.7.0-1
+    - python3-bson=3.11.0-1ubuntu0.24.04.1
+    - python3-certifi=2023.11.17-1
+    - python3-cffi-backend=1.16.0-2build1
+    - python3-chardet=5.2.0+dfsg-1
+    - python3-cryptography=41.0.7-4ubuntu0.4
+    - python3-debian=0.1.49ubuntu2
+    - python3-distro-info=1.7build1
+    - python3-distro=1.9.0-1
+    - python3-frozenlist=1.4.0-1build2
+    - python3-httplib2=0.20.4-3ubuntu0.1
+    - python3-idna=3.6-2ubuntu0.2
+    - python3-jsonschema=4.10.3-2ubuntu1
+    - python3-jwt=2.7.0-1ubuntu0.1
+    - python3-launchpadlib=1.11.0-6
+    - python3-lazr.restfulclient=0.14.6-1
+    - python3-lazr.uri=1.0.6-3
+    - python3-minimal=3.12.3-0ubuntu2.1
+    - python3-more-itertools=10.2.0-1
+    - python3-multidict=6.0.4-1.1build1
+    - python3-oauthlib=3.2.2-1
+    - python3-packaging=24.0-1
+    - python3-passlib=1.7.4-4
+    - python3-pkg-resources=68.1.2-2ubuntu1.2
+    - python3-problem-report=2.28.3-0ubuntu0.1
+    - python3-psutil=5.9.8-2build2
+    - python3-pyparsing=3.1.1-1
+    - python3-pyroute2=0.7.11-0ubuntu2
+    - python3-pyrsistent=0.20.0-1build2
+    - python3-pyudev=0.24.0-1
+    - python3-requests-unixsocket=0.3.0-3ubuntu3
+    - python3-requests=2.31.0+dfsg-1ubuntu1.1
+    - python3-six=1.16.0-4
+    - python3-systemd=235-1build4
+    - python3-typing-extensions=4.10.0-1
+    - python3-urllib3=2.0.7-1ubuntu0.7
+    - python3-urwid=2.6.10-1
+    - python3-wadllib=1.3.6-5
+    - python3-wcwidth=0.2.5+dfsg1-1.1ubuntu1
+    - python3-yaml=6.0.1-2build2
+    - python3-yarl=1.8.2-3build2
+    - python3.12-minimal=3.12.3-1ubuntu0.15
+    - ssh-import-id=5.11-0ubuntu2.24.04.1
+    - ubuntu-advantage-tools=37.2ubuntu~24.04.1
+    - ubuntu-pro-client=37.2ubuntu~24.04.1
+    - wget=1.21.4-1ubuntu4.5
+    - zstd=1.5.5+dfsg2-2build1.1
+    organize:
+      bin/subiquity-tui: usr/bin/subiquity
+      bin/subiquity-service: usr/bin/subiquity-service
+      bin/subiquity-server: usr/bin/subiquity-server
+      bin/subiquity-cmd: usr/bin/subiquity-cmd
+      bin/subiquity-umockdev-wrapper: system_scripts/subiquity-umockdev-wrapper
+      bin/subiquity-legacy-cloud-init-extract: system_scripts/subiquity-legacy-cloud-init-extract
+      bin/subiquity-legacy-cloud-init-validate: system_scripts/subiquity-legacy-cloud-init-validate
+    build-attributes:
+    - enable-patchelf
+    stage: []
+    prime: []
+  users-and-groups:
+    plugin: nil
+    build-packages:
+    - user-setup
+    override-build: |
+      echo "get passwd/user-default-groups" | \
+        debconf-communicate user-setup | \
+        cut -d ' ' -f 2- > $CRAFT_PART_INSTALL/users-and-groups
+        # add lxd to the groups for the default user,
+        # but we don't want lxd added to the default groups in user-setup
+        if ! grep -q lxd $CRAFT_PART_INSTALL/users-and-groups; then \
+          sed -i $CRAFT_PART_INSTALL/users-and-groups -e '1s/$/ lxd/'; \
+        fi
+    stage:
+    - users-and-groups
+    stage-packages: []
+    prime: []
+  user-setup:
+    plugin: nil
+    source: https://git.launchpad.net/ubuntu/+source/user-setup
+    source-type: git
+    override-build: cp -a reserved-usernames $CRAFT_PART_INSTALL/
+    stage:
+    - reserved-usernames
+    stage-packages: []
+    prime: []
+    build-packages: []
+  keyboard-data:
+    plugin: nil
+    build-packages:
+    - console-setup
+    - locales
+    - python3-attr
+    - python3-yaml
+    override-build: |
+      PYTHONPATH=/build/subiquity/ /build/subiquity/scripts/make-kbd-info.py
+      cp /build/subiquity/kbds/keyboard-configuration.yaml \
+        $CRAFT_PART_INSTALL/kbds/keyboard-configuration.yaml
+    stage:
+    - kbds/
+    stage-packages: []
+    prime: []
+  font:
+    plugin: dump
+    source: .
+    source-type: git
+    organize:
+      font/subiquity.psf: subiquity.psf
+    stage:
+    - subiquity.psf
+    stage-packages: []
+    prime: []
+    build-packages: []
+  languagelists:
+    plugin: nil
+    build-packages:
+    - localechooser-data
+    override-build: |
+      grep '^path-exclude=.*LC_MESSAGES.*' /etc/dpkg/dpkg.cfg.d/excludes && {
+        sed -i 's/^path-exclude.*LC_MESSAGES.*/#\0/g' /etc/dpkg/dpkg.cfg.d/excludes
+        apt-get -y install --reinstall iso-codes
+      } || true
+      /build/subiquity/scripts/make-language-lists /build/subiquity/po > $CRAFT_PART_INSTALL/languagelist
+    stage:
+    - languagelist
+    stage-packages: []
+    prime: []
+  probert:
+    plugin: nil
+    source: https://github.com/canonical/probert.git
+    source-type: git
+    source-commit: 4d33326e480fa61576667ac6d0819592877811bd
+    override-build: |
+      # We install without dependencies because all dependencies come from
+      # archive packages.
+      # XXX: On core22, running `pip3 install --prefix xxx` does not do the
+      # right thing. The package ends up installed in xxx/local and the modules
+      # get installed to dist-packages instead of site-packages.
+      # See https://discuss.python.org/t/18240
+      # As a workaround, we use a fake user install to get the package
+      # installed in the expected place.
+      PYTHONUSERBASE="$CRAFT_PART_INSTALL" pip3 install --user --no-dependencies --break-system-packages .
+    build-packages:
+    - python3-pip
+    stage-packages: []
+    stage: []
+    prime: []
+  management-script:
+    plugin: nil
+    override-build: cp /build/subiquity/scripts/management-script $CRAFT_PART_INSTALL/management-script
+    stage:
+    - management-script
+    stage-packages: []
+    prime: []
+    build-packages: []
+architectures:
+- amd64
+image-info:
+  build-request-id: lp-118219604
+  build-request-timestamp: '2026-08-24T08:05:32Z'
+  build_url: https://launchpad.net/~subiquity/subiquity/+snap/subiquity-resolute-gh/+build/3256643
+build-packages: []
+build-snaps: []
+primed-stage-packages:
+- adduser=3.137ubuntu1
+- debconf=1.5.86ubuntu1
+- distro-info=1.7build1
+- fuse3=3.14.0-5build1
+- iso-codes=4.16.0-1
+- libfuse3-3=3.14.0-5build1
+- libntfs-3g89t64=1:2022.10.3-1.2ubuntu3.2
+- libpsl5t64=0.21.2-1.1build1
+- libpython3-stdlib=3.12.3-0ubuntu2.1
+- libpython3.12-minimal=3.12.3-1ubuntu0.15
+- libpython3.12-stdlib=3.12.3-1ubuntu0.15
+- libsystemd0=255.4-1ubuntu8.17
+- lsb-release=12.0-2
+- ntfs-3g=1:2022.10.3-1.2ubuntu3.2
+- python-apt-common=2.7.7ubuntu5.2
+- python3-aiohttp=3.9.1-1ubuntu0.1
+- python3-aiosignal=1.3.1-1
+- python3-apport=2.28.3-0ubuntu0.1
+- python3-apt=2.7.7ubuntu5.2
+- python3-async-timeout=4.0.3-1
+- python3-attr=23.2.0-2
+- python3-blinker=1.7.0-1
+- python3-bson=3.11.0-1ubuntu0.24.04.1
+- python3-certifi=2023.11.17-1
+- python3-cffi-backend=1.16.0-2build1
+- python3-chardet=5.2.0+dfsg-1
+- python3-cryptography=41.0.7-4ubuntu0.4
+- python3-debian=0.1.49ubuntu2
+- python3-distro-info=1.7build1
+- python3-distro=1.9.0-1
+- python3-frozenlist=1.4.0-1build2
+- python3-httplib2=0.20.4-3ubuntu0.1
+- python3-idna=3.6-2ubuntu0.2
+- python3-jsonschema=4.10.3-2ubuntu1
+- python3-jwt=2.7.0-1ubuntu0.1
+- python3-launchpadlib=1.11.0-6
+- python3-lazr.restfulclient=0.14.6-1
+- python3-lazr.uri=1.0.6-3
+- python3-minimal=3.12.3-0ubuntu2.1
+- python3-more-itertools=10.2.0-1
+- python3-multidict=6.0.4-1.1build1
+- python3-oauthlib=3.2.2-1
+- python3-packaging=24.0-1
+- python3-passlib=1.7.4-4
+- python3-pkg-resources=68.1.2-2ubuntu1.2
+- python3-problem-report=2.28.3-0ubuntu0.1
+- python3-psutil=5.9.8-2build2
+- python3-pyparsing=3.1.1-1
+- python3-pyroute2=0.7.11-0ubuntu2
+- python3-pyrsistent=0.20.0-1build2
+- python3-pyudev=0.24.0-1
+- python3-requests-unixsocket=0.3.0-3ubuntu3
+- python3-requests=2.31.0+dfsg-1ubuntu1.1
+- python3-six=1.16.0-4
+- python3-systemd=235-1build4
+- python3-typing-extensions=4.10.0-1
+- python3-urllib3=2.0.7-1ubuntu0.7
+- python3-urwid=2.6.10-1
+- python3-wadllib=1.3.6-5
+- python3-wcwidth=0.2.5+dfsg1-1.1ubuntu1
+- python3-yaml=6.0.1-2build2
+- python3-yarl=1.8.2-3build2
+- python3.12-minimal=3.12.3-1ubuntu0.15
+- ssh-import-id=5.11-0ubuntu2.24.04.1
+- ubuntu-advantage-tools=37.2ubuntu~24.04.1
+- ubuntu-pro-client=37.2ubuntu~24.04.1
+- wget=1.21.4-1ubuntu4.5
+- zstd=1.5.5+dfsg2-2build1.1

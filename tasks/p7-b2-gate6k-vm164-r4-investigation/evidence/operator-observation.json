@@ -1,0 +1,32 @@
+{
+  "provenance": "User-supplied diagnostics and clarification in this conversation; no raw VM/PVE logs acquired or independently verified",
+  "evidence_timestamp_utc": "2026-10-28 14:47:11 UTC",
+  "vm_uuid": "faeb1db8-0df9-482d-b3e4-f6ccc1602193",
+  "boot_id": "c93413f7-41cb-4e50-a412-e882ad09fed0",
+  "error": "RuntimeError: UDEV_IDENTITY_NOT_UNIQUE_ID_SERIAL",
+  "error_origin": "Automatic early-command failure (operator clarification)",
+  "first_automatic_invocation_in_boot": "NOT_ESTABLISHED",
+  "retries_or_service_restarts_in_boot": "NOT_SUPPLIED",
+  "before_r4": "Trusted Proxmox checks reportedly showed zero disk signatures; raw output, exact time, resolved volume and scan coverage not supplied",
+  "disk": {
+    "path": "/dev/sda",
+    "bytes": 68719476736,
+    "hardware_serial": "g6k164-12821f6b54a2",
+    "gpt_identifier": "64156F61-B663-4305-8189-1638E979D456",
+    "partitions": [
+      {"path": "/dev/sda1", "size": "1 MiB", "role": "BIOS boot"},
+      {"path": "/dev/sda2", "bytes": 68716331008, "filesystem": "ext4"}
+    ],
+    "wipefs_reported": ["GPT", "protective MBR"],
+    "current_target_mount": "No target filesystem mount reported by the inspected command; command and namespace not supplied"
+  },
+  "udev": {
+    "/dev/sda": {"ID_SERIAL": "0QEMU_QEMU_HARDDISK_drive-scsi0"},
+    "/dev/sda1": {"ID_SERIAL": "0QEMU_QEMU_HARDDISK_drive-scsi0"},
+    "/dev/sda2": {"ID_SERIAL": "0QEMU_QEMU_HARDDISK_drive-scsi0"},
+    "/dev/sr0": "Distinct optical identity; exact value not supplied"
+  },
+  "other_udev_fields": "Partition inheritance of ID_SERIAL_SHORT and ID_PATH discussed in finding; raw property sets not supplied",
+  "reported_current_state": "VM164 running at failed installer root shell; VM163 stopped",
+  "live_access_by_this_task": "NONE"
+}
