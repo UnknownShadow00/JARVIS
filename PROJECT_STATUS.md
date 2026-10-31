@@ -1,5 +1,37 @@
 # JARVIS Project Status
 
+Consolidated review (2026-10-30):
+[`tasks/jarvis-consolidated-review-r1/REVIEW.md`](tasks/jarvis-consolidated-review-r1/REVIEW.md)
+binds the current dirty source, per-milestone evidence, overlapping test scopes,
+remaining technical gaps and pending setup/activation gates. Code was unchanged
+during consolidation; the proposed isolated integration environment was not created.
+
+Current offline continuation (2026-10-30): see
+[`tasks/proxmox-automation-phase3-review-r1/PROGRESS.md`](tasks/proxmox-automation-phase3-review-r1/PROGRESS.md)
+for the independently reviewed serial-broker revision, source/test identities,
+conditional setup request and TaskQueue persistence reliability work. This is
+source/offline validation only; no guest/production activation or privileged
+Gate6K qualification is authorized or claimed. Earlier results below are historical.
+
+Successor core reliability: see
+[`tasks/jarvis-v2-taskqueue-reliability-r2/README.md`](tasks/jarvis-v2-taskqueue-reliability-r2/README.md)
+for bounded identifier collision handling, damaged-store write protection and
+29 focused methods/65 subtests. Independent stale writers remain unsupported.
+Public historical source/dependency identity verification is recorded separately in
+[`tasks/jarvis-offline-provenance-r1/`](tasks/jarvis-offline-provenance-r1/);
+the historical 7741-pass/11-deselected baseline is not a current-checkout result.
+
+TaskQueue caller successor: see
+[`tasks/jarvis-v2-taskqueue-callers-r3/README.md`](tasks/jarvis-v2-taskqueue-callers-r3/README.md)
+for explicit API publication/audit outcomes, scheduler enqueue timestamp ordering,
+42 methods/82 subtests and the source-only ownership/multiwriter design map.
+
+Scheduler successor: see
+[`tasks/jarvis-v2-scheduler-reliability-r4/README.md`](tasks/jarvis-v2-scheduler-reliability-r4/README.md)
+for atomic scheduled-job publication, explicit applied/uncertain outcomes,
+disabled/stale lifecycle admission checks and39 methods/54 subtests. Already-admitted
+enqueues are not canceled; no real framework/service integration ran.
+
 Last verified: 2026-05-30
 
 ## Current Real Project State

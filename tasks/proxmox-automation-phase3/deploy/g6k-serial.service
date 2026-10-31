@@ -1,0 +1,44 @@
+[Unit]
+Description=Protected VM164 serial inspection broker
+Requires=g6k-serial.socket
+After=g6k-serial.socket
+ConditionPathExists=/etc/g6k-serial/HOST-ACTIVATE
+
+[Service]
+Type=simple
+User=g6k-pve-broker
+Group=g6k-pve-broker
+ExecStart=/usr/bin/python3 -I -B /opt/g6k-serial/entry.py host
+Restart=no
+TimeoutStopSec=8
+KillMode=control-group
+UMask=0077
+LimitCORE=0
+StandardInput=null
+StandardOutput=null
+StandardError=journal
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+IPAddressAllow=192.168.0.50/32
+SystemCallFilter=~@mount @reboot @swap @module @raw-io
+ReadWritePaths=/var/lib/g6k-serial-host
+TasksMax=8
+MemoryMax=128M
+CPUQuota=25%

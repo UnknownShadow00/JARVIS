@@ -1,0 +1,134 @@
+"""Synthetic target observations. No Proxmox client or production credential use."""
+import copy
+import json
+import os
+from pathlib import Path
+import tempfile
+import time
+
+from g6k_serial.broker import Broker
+from g6k_serial.journal import Ledger, initialize
+from g6k_serial.policy import WORKER_KEYS
+from g6k_serial.protocol import DISK, DISK_SERIAL, TARGET, encode
+from g6k_serial.worker import Worker
+
+
+def grant():
+    return {'v': 1, 'enabled': True, **TARGET, 'grant_id': 'a' * 32,
+            'operator_reference': 'OFFLINE-FIXTURE-NOT-APPROVAL', 'expires_at': int(time.time()) + 3600,
+            'machine_id': 'b' * 32, 'release': 'c' * 64, 'worker_uid': 998, 'worker_gid': 998,
+            'caller_uid': os.getuid(), 'caller_gid': os.getgid(), 'broker_uid': 997, 'broker_gid': 997,
+            'actions': ['identity', 'kernel', 'isolation-summary'], 'ca_sha256': 'd' * 64}
+
+
+def snapshot():
+    return {'config': {'smbios1': 'uuid=' + TARGET['vm_uuid'], 'serial0': 'socket',
+                       'boot': 'order=scsi0', 'agent': '0', 'ide2': 'none,media=cdrom',
+                       'scsi0': DISK + ',cache=none,serial=' + DISK_SERIAL + ',size=64G',
+                       'digest': 'e' * 40},
+            'status': {'status': 'running', 'qmpstatus': 'running', 'uptime': 100},
+            'pending': [], 'permissions': {'/vms/164': {'VM.Audit': 0, 'VM.Console': 0}}}
+
+
+class SyntheticInspector:
+    def __init__(self, settings):
+        self.settings = settings
+        self.calls = []
+        self.failure = None
+
+    def metadata(self):
+        return {**TARGET, 'machine_id': self.settings['machine_id'], 'release': self.settings['release'],
+                'worker_uid': self.settings['worker_uid'], 'boot_id': '11111111-2222-3333-4444-555555555555'}
+
+    def inspect(self, action, metadata):
+        self.calls.append(action)
+        if self.failure:
+            raise self.failure
+        if action == 'identity':
+            return dict(metadata)
+        if action == 'kernel':
+            return {'kernel_release': '6.8.0-offline-fixture'}
+        return {'loopback_only': True, 'interface_count': 1, 'mount_count': 10,
+                'shared_mount_count': 0, 'external_fs_count': 0, 'scope': 'worker-mount-namespace'}
+
+
+class DirectChannel:
+    def __init__(self, worker):
+        self.worker = worker
+        self.advertisement = worker.advertisement()
+        self.reply = None
+        self.closed = False
+        self.outgoing = []
+        self.corrupt = lambda x: x
+        self.before_send = lambda: None
+
+    def receive(self, deadline):
+        deadline.remaining()
+        return self.corrupt(copy.deepcopy(self.advertisement if self.reply is None else self.reply))
+
+    def send(self, value, deadline):
+        deadline.remaining()
+        self.before_send()
+        self.outgoing.append(copy.deepcopy(value))
+        self.reply = self.worker.process(value)
+
+    def close(self):
+        self.closed = True
+
+
+class SyntheticPVE:
+    def __init__(self, worker):
+        self.worker = worker
+        self.state = snapshot()
+        self.channel = None
+        self.snapshots = 0
+        self.openings = 0
+        self.modify_channel = lambda x: None
+        self.after_snapshot = lambda x: None
+
+    def snapshot(self, deadline):
+        deadline.remaining()
+        self.snapshots += 1
+        self.after_snapshot(self.snapshots)
+        return copy.deepcopy(self.state)
+
+    def open_serial(self, deadline):
+        deadline.remaining()
+        self.openings += 1
+        self.channel = DirectChannel(self.worker)
+        self.modify_channel(self.channel)
+        return self.channel
+
+
+class Lab:
+    def __init__(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='g6k-phase3-offline-')
+        self.root = Path(self.temp.name)
+        self.grant = grant()
+        self.worker_settings = {key: self.grant[key] for key in WORKER_KEYS}
+        self.host_ledger = self.ledger('host')
+        self.worker_ledger = self.ledger('worker')
+        self.inspector = SyntheticInspector(self.worker_settings)
+        self.worker = Worker(self.worker_settings, self.worker_ledger, self.inspector)
+        self.pve = SyntheticPVE(self.worker)
+        self.broker = Broker(self.grant, self.host_ledger, self.pve)
+
+    def ledger(self, purpose):
+        directory = self.root / purpose
+        directory.mkdir(mode=0o700)
+        initialize(directory, purpose, self.grant['grant_id'])
+        return Ledger(directory, purpose, self.grant['grant_id'], anchor=self.root)
+
+    def request(self, action='kernel', request_id='1' * 32, **extra):
+        return encode({'v': 1, **TARGET, 'action': action, 'request_id': request_id, **extra})[:-1]
+
+    def call(self, action='kernel', request_id='1' * 32):
+        return self.broker.handle(self.request(action, request_id), self.grant['caller_uid'])
+
+    def receipt(self, request_id='1' * 32):
+        self.host_ledger.acknowledge(request_id, self.grant['caller_uid'])
+
+    def close(self):
+        self.host_ledger.close()
+        self.worker_ledger.close()
+        self.temp.cleanup()

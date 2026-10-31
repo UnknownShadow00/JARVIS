@@ -1,0 +1,905 @@
+diff --git a/app/agent/scheduler.py b/app/agent/scheduler.py
+index 994df25..e09e6b0 100644
+--- a/app/agent/scheduler.py
++++ b/app/agent/scheduler.py
+@@ -2,6 +2,10 @@ from __future__ import annotations
+ 
+ import json
+ import importlib.util
++import errno
++import os
++import stat
++import tempfile
+ import uuid
+ from dataclasses import asdict, dataclass
+ from datetime import UTC, datetime
+@@ -12,13 +16,27 @@ AsyncIOScheduler = None
+ CronTrigger = None
+ APSCHEDULER_AVAILABLE = importlib.util.find_spec("apscheduler") is not None
+ 
+-from app.agent.task_queue import task_queue
++from app.agent.task_queue import TaskQueueAuditError, TaskQueueIdentifierError, TaskQueuePersistenceError, task_queue
+ from app.logs.audit import audit
+ 
+ PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ DEFAULT_JOB_STORE = PROJECT_ROOT / "data" / "scheduled_jobs.json"
+ 
+ 
++class SchedulerOperationError(RuntimeError):
++    """An attempted scheduler operation failed; applied state must be reconciled."""
++
++    def __init__(
++        self, message: str, *, operation: str | None = None, job_id: str | None = None,
++        applied: bool = False, published: bool = False, uncertain: bool = False,
++        phase: str = "persistence",
++    ) -> None:
++        super().__init__(message)
++        self.operation, self.job_id = operation, job_id
++        self.applied, self.published = applied, published
++        self.uncertain, self.phase = uncertain, phase
++
++
+ @dataclass
+ class ScheduledJob:
+     job_id: str
+@@ -35,105 +53,336 @@ class Scheduler:
+         self._running = False
+         self._scheduler: AsyncIOScheduler | None = None
+         self._storage_path = Path(storage_path) if storage_path is not None else None
++        self._load_error: str | None = None
++        self._persistence_uncertain = False
++        self._runtime_uncertain = False
++        self._generation = 0
+         self._load()
+ 
+     def add_job(self, name: str, cron_expr: str, goal: str) -> ScheduledJob:
+-        job_id = str(uuid.uuid4())[:8]
++        self._check_health("create")
++        for _ in range(32):
++            job_id = str(uuid.uuid4())[:8]
++            if job_id not in self._jobs:
++                break
++        else:
++            raise SchedulerOperationError("Identifier attempts exhausted.", operation="create", phase="identifier")
+         job = ScheduledJob(job_id=job_id, name=name, cron_expr=cron_expr, goal=goal)
++        if not self._record_valid(asdict(job)):
++            raise SchedulerOperationError("Invalid job fields.", operation="create", job_id=job_id, phase="validation")
++        trigger = self._prepare_trigger(job, "create")
++        previous = self._jobs.copy()
+         self._jobs[job_id] = job
+-        self._save()
+-        if self._scheduler is not None:
+-            self._register_job(job)
+-        audit.log(
++        try:
++            self._save()
++        except SchedulerOperationError as exc:
++            exc.operation, exc.job_id = "create", job_id
++            if not exc.applied:
++                self._jobs = previous
++            raise
++        try:
++            if self._scheduler is not None:
++                self._register_job(job, trigger=trigger)
++        except Exception as exc:
++            raise self._runtime_failure("create", job_id, "backend") from exc
++        self._audit_applied("create", job_id,
+             "job_added",
+             {"job_id": job_id, "name": name, "cron_expr": cron_expr, "goal": goal},
+         )
+         return job
+ 
+     def remove_job(self, job_id: str) -> bool:
++        self._check_health("delete", job_id)
+         if job_id not in self._jobs:
+             return False
++        previous = self._jobs.copy()
+         del self._jobs[job_id]
+-        self._save()
++        try:
++            self._save()
++        except SchedulerOperationError as exc:
++            exc.operation, exc.job_id = "delete", job_id
++            if not exc.applied:
++                self._jobs = previous
++            raise
+         if self._scheduler is not None:
+             try:
+                 self._scheduler.remove_job(job_id, jobstore=None)
+-            except Exception:
+-                pass
+-        audit.log("job_removed", {"job_id": job_id})
++            except Exception as exc:
++                raise self._runtime_failure("delete", job_id, "backend") from exc
++        self._audit_applied("delete", job_id, "job_removed", {"job_id": job_id})
+         return True
+ 
+     def list_jobs(self) -> list[ScheduledJob]:
+         return list(self._jobs.values())
+ 
+     async def start(self) -> None:
++        self._check_health("start")
++        if self._running:
++            return
+         if _load_apscheduler():
+-            if self._scheduler is None:
++            triggers = {
++                job.job_id: self._prepare_trigger(job, "start")
++                for job in self._jobs.values() if job.enabled
++            }
++            self._generation += 1
++            try:
+                 self._scheduler = AsyncIOScheduler()
++                for job in self._jobs.values():
++                    self._register_job(job, trigger=triggers.get(job.job_id))
+                 self._scheduler.start()
+-            for job in self._jobs.values():
+-                self._register_job(job)
++            except Exception as exc:
++                self._failed_start_cleanup()
++                raise SchedulerOperationError(
++                    "Scheduler backend start failed; review before restart.",
++                    operation="start", uncertain=True, phase="backend",
++                ) from exc
+             self._running = True
+-            audit.log("scheduler_start", {"job_count": len(self._jobs), "backend": "apscheduler"})
++            try:
++                audit.log("scheduler_start", {"job_count": len(self._jobs), "backend": "apscheduler"})
++            except Exception as exc:
++                self._failed_start_cleanup()
++                raise SchedulerOperationError(
++                    "Scheduler started but audit reporting failed; admission blocked.",
++                    operation="start", applied=True, uncertain=True, phase="audit",
++                ) from exc
+             return
+ 
++        self._generation += 1
+         self._running = True
+-        audit.log("scheduler_start", {"job_count": len(self._jobs), "backend": "stub"})
++        try:
++            audit.log("scheduler_start", {"job_count": len(self._jobs), "backend": "stub"})
++        except Exception as exc:
++            self._running = False
++            self._generation += 1
++            self._runtime_uncertain = True
++            raise SchedulerOperationError(
++                "Stub start audit reporting failed.", operation="start", applied=True,
++                uncertain=True, phase="audit",
++            ) from exc
+ 
+     async def stop(self) -> None:
++        # Invalidate every retained callback before attempting backend shutdown.
++        self._running = False
++        self._generation += 1
+         if self._scheduler is not None:
+-            self._scheduler.shutdown(wait=False)
++            try:
++                self._scheduler.shutdown(wait=False)
++            except Exception as exc:
++                self._runtime_uncertain = True
++                raise SchedulerOperationError(
++                    "Backend shutdown failed; admission is blocked.", operation="stop",
++                    applied=True, uncertain=True, phase="backend",
++                ) from exc
+             self._scheduler = None
+-        self._running = False
+-        audit.log("scheduler_stop", {})
++        try:
++            audit.log("scheduler_stop", {})
++        except Exception as exc:
++            self._runtime_uncertain = True
++            raise SchedulerOperationError(
++                "Scheduler admission stopped but audit reporting failed.", operation="stop",
++                applied=True, uncertain=True, phase="audit",
++            ) from exc
+ 
+-    def _register_job(self, job: ScheduledJob) -> None:
++    def _register_job(self, job: ScheduledJob, *, trigger: Any = None) -> None:
++        if self._jobs.get(job.job_id) is not job or not job.enabled:
++            return
+         if self._scheduler is None or not _load_apscheduler() or CronTrigger is None:
+             return
+-        trigger = CronTrigger.from_crontab(job.cron_expr)
++        if trigger is None:
++            trigger = self._prepare_trigger(job, "register")
+         self._scheduler.add_job(
+-            _run_job,
++            self._dispatch_job,
+             trigger=trigger,
+-            args=[job],
++            args=[job, self._generation],
+             id=job.job_id,
+             replace_existing=True,
+         )
+ 
++    async def _dispatch_job(self, job: ScheduledJob, generation: int) -> None:
++        if (
++            not self._running or self._scheduler is None or generation != self._generation
++            or self._jobs.get(job.job_id) is not job or not job.enabled
++            or self._load_error is not None or self._persistence_uncertain or self._runtime_uncertain
++        ):
++            return
++        # This is admission, not cancellation: an already admitted enqueue can
++        # finish after remove/stop while waiting on the task queue's instance lock.
++        await _run_job(job)
++
++    def _prepare_trigger(self, job: ScheduledJob, operation: str) -> Any:
++        if not _load_apscheduler() or CronTrigger is None:
++            return None  # Stub mode stores jobs without claiming cron validation.
++        try:
++            return CronTrigger.from_crontab(job.cron_expr)
++        except Exception as exc:
++            raise SchedulerOperationError(
++                "Invalid cron expression.", operation=operation, job_id=job.job_id, phase="validation",
++            ) from exc
++
++    def _check_health(self, operation: str, job_id: str | None = None) -> None:
++        if self._load_error is not None or self._persistence_uncertain or self._runtime_uncertain:
++            raise SchedulerOperationError(
++                "Scheduler requires review; new mutations and admission are blocked.",
++                operation=operation, job_id=job_id, phase="admission", uncertain=True,
++            )
++
++    def _runtime_failure(self, operation: str, job_id: str, phase: str) -> SchedulerOperationError:
++        self._runtime_uncertain = True
++        return SchedulerOperationError(
++            "Job state applied but backend/audit acknowledgement failed; reconcile before retry.",
++            operation=operation, job_id=job_id, applied=True,
++            published=self._storage_path is not None, uncertain=True, phase=phase,
++        )
++
++    def _audit_applied(self, operation: str, job_id: str, event: str, details: dict[str, Any]) -> None:
++        try:
++            audit.log(event, details)
++        except Exception as exc:
++            raise self._runtime_failure(operation, job_id, "audit") from exc
++
++    def _failed_start_cleanup(self) -> None:
++        self._running = False
++        self._generation += 1
++        self._runtime_uncertain = True
++        if self._scheduler is not None:
++            try:
++                self._scheduler.shutdown(wait=False)
++            except Exception:
++                return  # Keep the backend reference for an explicit stop attempt.
++            self._scheduler = None
++
+     def _load(self) -> None:
+-        if self._storage_path is None or not self._storage_path.is_file():
++        if self._storage_path is None:
+             return
+         try:
+-            raw = json.loads(self._storage_path.read_text(encoding="utf-8"))
+-        except (OSError, json.JSONDecodeError) as exc:
+-            audit.log("scheduler_load_error", {"path": str(self._storage_path), "error": str(exc)})
++            raw = json.loads(self._read_store(), object_pairs_hook=self._unique_object, parse_constant=self._reject_constant)
++        except FileNotFoundError:
++            if self._storage_path.is_symlink():
++                self._block_load()
++            return
++        except (OSError, ValueError):
++            self._block_load()
+             return
+         if not isinstance(raw, list):
++            self._block_load()
+             return
+         jobs: dict[str, ScheduledJob] = {}
+         for item in raw:
+-            if not isinstance(item, dict):
++            if not isinstance(item, dict) or not self._record_valid(item):
++                self._block_load()
+                 continue
+             job = self._job_from_dict(item)
+             if job is not None:
++                if job.job_id in jobs:
++                    self._block_load()
+                 jobs[job.job_id] = job
+         self._jobs = jobs
+ 
++    def _block_load(self) -> None:
++        if self._load_error is not None:
++            return
++        self._load_error = "Invalid or unreadable scheduled-job store."
++        try:
++            audit.log("scheduler_load_error", {"path": str(self._storage_path), "error": self._load_error})
++        except Exception:
++            pass
++
++    def _read_store(self) -> str:
++        if not stat.S_ISREG(self._storage_path.stat().st_mode):
++            raise ValueError("Store is not a regular file.")
++        descriptor = os.open(self._storage_path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
++        try:
++            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
++                raise ValueError("Store changed to a nonregular file.")
++            with os.fdopen(descriptor, "r", encoding="utf-8", closefd=False) as opened:
++                return opened.read()
++        finally:
++            os.close(descriptor)
++
++    @staticmethod
++    def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
++        result: dict[str, Any] = {}
++        for key, value in pairs:
++            if key in result:
++                raise ValueError("Duplicate JSON key.")
++            result[key] = value
++        return result
++
++    @staticmethod
++    def _reject_constant(value: str) -> None:
++        raise ValueError("Nonfinite JSON constant.")
++
++    @staticmethod
++    def _record_valid(item: dict[str, Any]) -> bool:
++        if item.keys() - {"job_id", "name", "cron_expr", "goal", "enabled", "last_run"}:
++            return False
++        if any(not isinstance(item.get(name), str) or not item[name].strip() for name in ("job_id", "name", "cron_expr", "goal")):
++            return False
++        return (
++            isinstance(item.get("enabled", True), bool)
++            and (item.get("last_run") is None or isinstance(item["last_run"], str))
++        )
++
+     def _save(self) -> None:
+         if self._storage_path is None:
+             return
++        self._check_health("save")
++        temporary_path: Path | None = None
++        published = False
+         try:
+-            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
+             payload = [asdict(job) for job in self._jobs.values()]
+-            self._storage_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
++            if any(not self._record_valid(item) for item in payload):
++                raise ValueError("Job record cannot be reloaded without loss.")
++            serialized = json.dumps(payload, indent=2, allow_nan=False)
++            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
++            with tempfile.NamedTemporaryFile(
++                mode="w", encoding="utf-8", dir=self._storage_path.parent,
++                prefix=f".{self._storage_path.name}.", suffix=".tmp", delete=False,
++            ) as opened:
++                temporary_path = Path(opened.name)
++                opened.write(serialized)
++                opened.flush()
++                os.fsync(opened.fileno())
++            os.replace(temporary_path, self._storage_path)
++            published, temporary_path = True, None
++            self._sync_directory()
++        except Exception as exc:
++            self._persistence_uncertain = published
++            try:
++                audit.log("scheduler_save_error", {"path": str(self._storage_path), "published": published})
++            except Exception:
++                pass
++            raise SchedulerOperationError(
++                "Scheduled-job publication failed.", applied=published,
++                published=published, uncertain=published,
++            ) from exc
++        finally:
++            if temporary_path is not None:
++                try:
++                    temporary_path.unlink(missing_ok=True)
++                except OSError:
++                    pass
++
++    def _sync_directory(self) -> None:
++        if os.name != "posix":
++            return
++        unsupported = {errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP, errno.ENOSYS}
++        try:
++            descriptor = os.open(self._storage_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
++            try:
++                os.fsync(descriptor)
++            finally:
++                os.close(descriptor)
+         except OSError as exc:
+-            audit.log("scheduler_save_error", {"path": str(self._storage_path), "error": str(exc)})
++            if exc.errno not in unsupported:
++                raise
+ 
+     def _job_from_dict(self, item: dict[str, Any]) -> ScheduledJob | None:
+-        job_id = str(item.get("job_id") or "").strip()
+-        name = str(item.get("name") or "").strip()
+-        cron_expr = str(item.get("cron_expr") or "").strip()
+-        goal = str(item.get("goal") or "").strip()
+-        if not job_id or not name or not cron_expr or not goal:
++        job_id = str(item.get("job_id") or "")
++        name = str(item.get("name") or "")
++        cron_expr = str(item.get("cron_expr") or "")
++        goal = str(item.get("goal") or "")
++        if not all(value.strip() for value in (job_id, name, cron_expr, goal)):
+             return None
+         return ScheduledJob(
+             job_id=job_id,
+@@ -146,9 +395,32 @@ class Scheduler:
+ 
+ 
+ async def _run_job(job: ScheduledJob) -> None:
++    if not job.enabled:
++        return
++    try:
++        task = await task_queue.add_task(job.goal)
++    except (TaskQueuePersistenceError, TaskQueueIdentifierError, TaskQueueAuditError) as exc:
++        try:
++            audit.log("job_enqueue_failed", {
++                "job_id": job.job_id, "task_id": getattr(exc, "task_id", None),
++                "published": isinstance(exc, (TaskQueuePersistenceError, TaskQueueAuditError)) and exc.published,
++                "audit_failed_after_apply": isinstance(exc, TaskQueueAuditError),
++                "automatic_retry": False,
++            })
++        except Exception:
++            pass  # Retain the original queue failure if reporting is unavailable.
++        raise
+     job.last_run = datetime.now(UTC).isoformat()
+-    await task_queue.add_task(job.goal)
+-    audit.log("job_executed", {"job_id": job.job_id, "name": job.name, "goal": job.goal})
++    try:
++        audit.log("job_executed", {
++            "job_id": job.job_id, "name": job.name, "goal": job.goal,
++            "task_id": task.task_id, "outcome": "enqueued_only",
++        })
++    except Exception as exc:
++        raise TaskQueueAuditError(
++            operation="create", task_id=task.task_id,
++            published=task_queue._storage_path is not None,
++        ) from exc
+ 
+ 
+ def _load_apscheduler() -> bool:
+diff --git a/app/agent/task_queue.py b/app/agent/task_queue.py
+index 0a4940c..7ca197f 100644
+--- a/app/agent/task_queue.py
++++ b/app/agent/task_queue.py
+@@ -1,7 +1,11 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import errno
+ import json
++import os
++import stat
++import tempfile
+ import uuid
+ from dataclasses import asdict, dataclass, field
+ from datetime import UTC, datetime
+@@ -12,6 +16,31 @@ from app.logs.audit import audit
+ 
+ PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ DEFAULT_TASK_STORE = PROJECT_ROOT / "data" / "agent_tasks.json"
++TASK_ID_ATTEMPTS = 32
++
++
++class TaskQueueIdentifierError(RuntimeError):
++    """No unused task identifier was generated within the bounded retry budget."""
++
++
++class TaskQueueAuditError(RuntimeError):
++    """The mutation completed, but its success audit could not be submitted."""
++
++    def __init__(self, *, operation: str, task_id: str, published: bool) -> None:
++        super().__init__(f"Task {task_id} {operation} applied but success audit reporting failed; reconcile before retry.")
++        self.operation = operation
++        self.task_id = task_id
++        self.published = published
++
++
++class TaskQueuePersistenceError(RuntimeError):
++    """A write failed; ``published`` means the replacement may already be visible."""
++
++    def __init__(self, message: str, *, published: bool = False) -> None:
++        super().__init__(message)
++        self.published = published
++        self.operation: str | None = None
++        self.task_id: str | None = None
+ 
+ 
+ @dataclass
+@@ -29,6 +58,8 @@ class TaskQueue:
+         self._tasks: dict[str, AgentTask] = {}
+         self._lock: asyncio.Lock | None = None
+         self._storage_path = Path(storage_path) if storage_path is not None else None
++        self._persistence_uncertain = False
++        self._load_error: str | None = None
+         self._load()
+ 
+     async def _get_lock(self) -> asyncio.Lock:
+@@ -37,13 +68,27 @@ class TaskQueue:
+         return self._lock
+ 
+     async def add_task(self, goal: str) -> AgentTask:
+-        task_id = str(uuid.uuid4())[:8]
+-        task = AgentTask(task_id=task_id, goal=goal)
+         lock = await self._get_lock()
+         async with lock:
++            for _ in range(TASK_ID_ATTEMPTS):
++                task_id = str(uuid.uuid4())[:8]
++                if task_id not in self._tasks:
++                    break
++            else:
++                raise TaskQueueIdentifierError(
++                    f"No unused task identifier after {TASK_ID_ATTEMPTS} attempts."
++                )
++            task = AgentTask(task_id=task_id, goal=goal)
++            previous = self._tasks.copy()
+             self._tasks[task_id] = task
+-            self._save()
+-        audit.log("task_queued", {"task_id": task_id, "goal": goal})
++            try:
++                self._save()
++            except TaskQueuePersistenceError as exc:
++                exc.operation, exc.task_id = "create", task_id
++                if not exc.published:
++                    self._tasks = previous
++                raise
++        self._audit_mutation("create", "task_queued", {"task_id": task_id, "goal": goal})
+         return task
+ 
+     async def get_task(self, task_id: str) -> AgentTask | None:
+@@ -71,11 +116,18 @@ class TaskQueue:
+             task = self._tasks.get(task_id)
+             if task is None:
+                 return False
++            previous = (task.status, task.result, task.error)
+             task.status = status
+             task.result = result
+             task.error = error
+-            self._save()
+-        audit.log("task_status_update", {"task_id": task_id, "status": status})
++            try:
++                self._save()
++            except TaskQueuePersistenceError as exc:
++                exc.operation, exc.task_id = "update", task_id
++                if not exc.published:
++                    task.status, task.result, task.error = previous
++                raise
++        self._audit_mutation("update", "task_status_update", {"task_id": task_id, "status": status})
+         return True
+ 
+     async def delete_task(self, task_id: str) -> bool:
+@@ -83,51 +135,199 @@ class TaskQueue:
+         async with lock:
+             if task_id not in self._tasks:
+                 return False
++            previous = self._tasks.copy()
+             del self._tasks[task_id]
+-            self._save()
+-        audit.log("task_deleted", {"task_id": task_id})
++            try:
++                self._save()
++            except TaskQueuePersistenceError as exc:
++                exc.operation, exc.task_id = "delete", task_id
++                if not exc.published:
++                    self._tasks = previous
++                raise
++        self._audit_mutation("delete", "task_deleted", {"task_id": task_id})
+         return True
+ 
++    def _audit_mutation(self, operation: str, event: str, details: dict[str, Any]) -> None:
++        try:
++            audit.log(event, details)
++        except Exception as exc:
++            # Publication already completed. Never roll back or issue it again.
++            raise TaskQueueAuditError(
++                operation=operation, task_id=details["task_id"],
++                published=self._storage_path is not None,
++            ) from exc
++
+     def _load(self) -> None:
+-        if self._storage_path is None or not self._storage_path.is_file():
++        if self._storage_path is None:
+             return
+         try:
+-            raw = json.loads(self._storage_path.read_text(encoding="utf-8"))
+-        except (OSError, json.JSONDecodeError) as exc:
+-            audit.log("task_queue_load_error", {"path": str(self._storage_path), "error": str(exc)})
++            raw = json.loads(
++                self._read_store(),
++                object_pairs_hook=self._unique_object,
++                parse_constant=self._reject_constant,
++            )
++        except FileNotFoundError:
++            # A dangling link is an existing invalid store, not a new queue.
++            if self._storage_path.is_symlink():
++                self._block_loaded_store("Store is a dangling symbolic link.")
++            return
++        except (OSError, ValueError) as exc:
++            self._block_loaded_store(f"Store could not be loaded ({type(exc).__name__}).")
+             return
+         if not isinstance(raw, list):
++            self._block_loaded_store("Store is not a task list.")
+             return
+         tasks: dict[str, AgentTask] = {}
+         for item in raw:
+             if not isinstance(item, dict):
++                self._block_loaded_store("Store contains a non-object record.")
+                 continue
+             task = self._task_from_dict(item)
+-            if task is not None:
+-                tasks[task.task_id] = task
++            if task is None:
++                self._block_loaded_store("Store contains an incomplete record.")
++                continue
++            if task.task_id in tasks or not self._record_is_lossless(item):
++                self._block_loaded_store("Store contains a duplicate or lossy record.")
++            tasks[task.task_id] = task
+         self._tasks = tasks
+ 
++    def _read_store(self) -> str:
++        # Check before opening devices, and recheck the opened descriptor against
++        # a concurrent path replacement. O_NONBLOCK prevents a FIFO swap hanging.
++        if not stat.S_ISREG(self._storage_path.stat().st_mode):
++            raise ValueError("Store is not a regular file.")
++        descriptor = os.open(self._storage_path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
++        try:
++            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
++                raise ValueError("Store changed to a non-regular file.")
++            with os.fdopen(descriptor, "r", encoding="utf-8", closefd=False) as opened:
++                return opened.read()
++        finally:
++            os.close(descriptor)
++
++    def _block_loaded_store(self, reason: str) -> None:
++        """Retain diagnostic reads but never automatically repair/overwrite evidence."""
++        if self._load_error is not None:
++            return
++        self._load_error = reason
++        try:
++            audit.log("task_queue_load_error", {"path": str(self._storage_path), "error": reason})
++        except Exception:
++            pass  # A reporting failure must not remove the write block.
++
++    @staticmethod
++    def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
++        record: dict[str, Any] = {}
++        for key, value in pairs:
++            if key in record:
++                raise ValueError("Duplicate JSON object key.")
++            record[key] = value
++        return record
++
++    @staticmethod
++    def _reject_constant(value: str) -> None:
++        raise ValueError("Non-finite JSON constant.")
++
++    @staticmethod
++    def _record_is_lossless(item: dict[str, Any]) -> bool:
++        if item.keys() - {"task_id", "goal", "status", "created_at", "result", "error"}:
++            return False
++        for name in ("task_id", "goal"):
++            value = item.get(name)
++            if not isinstance(value, str) or not value.strip():
++                return False
++        for name in ("status", "created_at"):
++            if name in item and not isinstance(item[name], str):
++                return False
++        return (
++            (item.get("result") is None or isinstance(item["result"], dict))
++            and (item.get("error") is None or isinstance(item["error"], str))
++        )
++
+     def _save(self) -> None:
+         if self._storage_path is None:
+             return
++        if self._load_error is not None:
++            raise TaskQueuePersistenceError(
++                "Task queue writes are blocked after a load error; preserve and "
++                "review the original store before explicitly loading a repaired copy."
++            )
++        if self._persistence_uncertain:
++            raise TaskQueuePersistenceError(
++                "Task queue writes are blocked after an uncertain publication; "
++                "review the store and create a new TaskQueue instance."
++            )
++        temporary_path: Path | None = None
++        published = False
+         try:
+-            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
+             payload = [asdict(task) for task in self._tasks.values()]
+-            self._storage_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
++            if any(not self._record_is_lossless(record) for record in payload):
++                raise ValueError("Task record cannot be reloaded without data loss.")
++            serialized = json.dumps(payload, indent=2, allow_nan=False)
++            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
++            with tempfile.NamedTemporaryFile(
++                mode="w", encoding="utf-8", dir=self._storage_path.parent,
++                prefix=f".{self._storage_path.name}.", suffix=".tmp", delete=False,
++            ) as temporary_file:
++                temporary_path = Path(temporary_file.name)
++                temporary_file.write(serialized)
++                temporary_file.flush()
++                os.fsync(temporary_file.fileno())
++            os.replace(temporary_path, self._storage_path)
++            published = True
++            temporary_path = None
++            self._sync_directory()
++        except Exception as exc:
++            # After replace, keep the published in-memory state and require review.
++            # Rolling it back or retrying could overwrite a change already visible.
++            self._persistence_uncertain = published
++            try:
++                audit.log("task_queue_save_error", {
++                    "path": str(self._storage_path), "error": str(exc),
++                    "published": published, "durability_uncertain": published,
++                })
++            except Exception:
++                pass  # Reporting must not hide the persistence failure or prevent rollback.
++            raise TaskQueuePersistenceError(
++                f"Task queue persistence failed for {self._storage_path}: {exc}",
++                published=published,
++            ) from exc
++        finally:
++            if temporary_path is not None:
++                try:
++                    temporary_path.unlink(missing_ok=True)
++                except OSError:
++                    # Do not hide the persistence failure if cleanup also fails.
++                    pass
++
++    def _sync_directory(self) -> None:
++        """Sync the replacement directory on POSIX where the filesystem supports it."""
++        if os.name != "posix":
++            return
++        unsupported = {errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP, errno.ENOSYS}
++        try:
++            descriptor = os.open(
++                self._storage_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
++            )
++            try:
++                os.fsync(descriptor)
++            finally:
++                os.close(descriptor)
+         except OSError as exc:
+-            audit.log("task_queue_save_error", {"path": str(self._storage_path), "error": str(exc)})
++            if exc.errno not in unsupported:
++                raise
+ 
+     def _task_from_dict(self, item: dict[str, Any]) -> AgentTask | None:
+-        task_id = str(item.get("task_id") or "").strip()
+-        goal = str(item.get("goal") or "").strip()
+-        if not task_id or not goal:
++        task_id = str(item.get("task_id") or "")
++        goal = str(item.get("goal") or "")
++        if not task_id.strip() or not goal.strip():
+             return None
+         result = item.get("result")
+         return AgentTask(
+             task_id=task_id,
+             goal=goal,
+-            status=str(item.get("status") or "pending"),
+-            created_at=str(item.get("created_at") or datetime.now(UTC).isoformat()),
++            status=str(item["status"]) if isinstance(item.get("status"), str) else str(item.get("status") or "pending"),
++            created_at=str(item["created_at"]) if isinstance(item.get("created_at"), str) else str(item.get("created_at") or datetime.now(UTC).isoformat()),
+             result=result if isinstance(result, dict) else None,
+             error=str(item["error"]) if item.get("error") is not None else None,
+         )
+diff --git a/app/server.py b/app/server.py
+index 0f07707..fb17653 100644
+--- a/app/server.py
++++ b/app/server.py
+@@ -30,9 +30,9 @@ from app.brain.complexity_router import complexity_router
+ from app.brain.router import router as intent_router
+ from app.brain.tool_params import build_tool_params as _tool_params
+ from app.brain.tool_params import is_cancel_command as _is_cancel_command
+-from app.agent.scheduler import scheduler
++from app.agent.scheduler import SchedulerOperationError, scheduler
+ from app.agent.sensor_store import add_reading, get_readings, list_nodes
+-from app.agent.task_queue import task_queue
++from app.agent.task_queue import TaskQueueAuditError, TaskQueueIdentifierError, TaskQueuePersistenceError, task_queue
+ from app.config import settings
+ from app.config_check import check_startup
+ from app.logs.audit import audit
+@@ -388,10 +388,35 @@ async def stop_response() -> dict[str, str]:
+ 
+ @app.post("/tasks")
+ async def create_task(request: TaskCreateRequest) -> dict[str, Any]:
+-    task = await task_queue.add_task(request.goal)
++    try:
++        task = await task_queue.add_task(request.goal)
++    except (TaskQueuePersistenceError, TaskQueueIdentifierError, TaskQueueAuditError) as exc:
++        return _task_write_error(exc, operation="create")
+     return asdict(task)
+ 
+ 
++def _task_write_error(
++    exc: TaskQueuePersistenceError | TaskQueueIdentifierError | TaskQueueAuditError,
++    *, operation: str, task_id: str | None = None,
++) -> JSONResponse:
++    """Report this attempt's publication state without paths, secrets or a retry."""
++    published = isinstance(exc, TaskQueuePersistenceError) and exc.published
++    error = "task_queue_write_uncertain" if published else "task_queue_write_failed"
++    if isinstance(exc, TaskQueueIdentifierError):
++        error = "task_queue_identifier_exhausted"
++    publication = "published_durability_unknown" if published else "not_published"
++    reconcile = published
++    if isinstance(exc, TaskQueueAuditError):
++        error, reconcile = "task_queue_audit_failed", True
++        publication = "published_audit_failed" if exc.published else "memory_applied_audit_failed"
++    return JSONResponse(status_code=409 if reconcile else 503, content={
++        "error": error, "operation": operation,
++        "task_id": getattr(exc, "task_id", None) or task_id,
++        "publication": publication,
++        "automatic_retry": False, "reconcile_required": reconcile,
++    })
++
++
+ @app.get("/tasks")
+ async def list_tasks(status: str | None = None) -> dict[str, Any]:
+     tasks = await task_queue.list_tasks(status=status)
+@@ -408,12 +433,15 @@ async def get_task(task_id: str) -> Any:
+ 
+ @app.patch("/tasks/{task_id}")
+ async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
+-    updated = await task_queue.update_status(
+-        task_id,
+-        request.status,
+-        result=request.result,
+-        error=request.error,
+-    )
++    try:
++        updated = await task_queue.update_status(
++            task_id,
++            request.status,
++            result=request.result,
++            error=request.error,
++        )
++    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
++        return _task_write_error(exc, operation="update", task_id=task_id)
+     if not updated:
+         return JSONResponse(status_code=404, content={"error": "Unknown task"})
+     task = await task_queue.get_task(task_id)
+@@ -422,16 +450,39 @@ async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
+ 
+ @app.delete("/tasks/{task_id}")
+ async def delete_task(task_id: str) -> dict[str, bool]:
+-    deleted = await task_queue.delete_task(task_id)
++    try:
++        deleted = await task_queue.delete_task(task_id)
++    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
++        return _task_write_error(exc, operation="delete", task_id=task_id)
+     return {"deleted": deleted}
+ 
+ 
+ @app.post("/schedule/jobs")
+ async def create_scheduled_job(request: ScheduledJobRequest) -> dict[str, Any]:
+-    job = scheduler.add_job(request.name, request.cron_expr, request.goal)
++    try:
++        job = scheduler.add_job(request.name, request.cron_expr, request.goal)
++    except SchedulerOperationError as exc:
++        return _schedule_write_error(exc)
+     return asdict(job)
+ 
+ 
++def _schedule_write_error(exc: SchedulerOperationError) -> JSONResponse:
++    publication = "not_published"
++    if exc.published:
++        publication = "published_durability_unknown" if exc.phase == "persistence" else "published"
++    elif exc.applied and exc.operation in {"create", "delete"}:
++        publication = "memory_applied"
++    return JSONResponse(
++        status_code=400 if exc.phase == "validation" else (409 if exc.applied else 503),
++        content={
++            "error": "scheduler_operation_failed", "operation": exc.operation,
++            "job_id": exc.job_id, "phase": exc.phase, "state_applied": exc.applied,
++            "publication": publication, "uncertain": exc.uncertain,
++            "automatic_retry": False, "reconcile_required": exc.applied or exc.uncertain,
++        },
++    )
++
++
+ @app.get("/schedule/jobs")
+ async def list_scheduled_jobs() -> dict[str, Any]:
+     jobs = scheduler.list_jobs()
+@@ -440,7 +491,10 @@ async def list_scheduled_jobs() -> dict[str, Any]:
+ 
+ @app.delete("/schedule/jobs/{job_id}")
+ async def delete_scheduled_job(job_id: str) -> dict[str, bool]:
+-    removed = scheduler.remove_job(job_id)
++    try:
++        removed = scheduler.remove_job(job_id)
++    except SchedulerOperationError as exc:
++        return _schedule_write_error(exc)
+     return {"deleted": removed}
+ 
+ 

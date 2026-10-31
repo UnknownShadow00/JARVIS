@@ -1,0 +1,791 @@
+{
+  "timestamp_utc": "2026-10-30T22:33:12.709972+00:00",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "head": "7f4ae164261b792262eb9b818421c444c2d4ccff",
+  "scope": "real isolated definitions + fresh files + audit/HTTP response recorders; not FastAPI/ASGI integration",
+  "baseline": true,
+  "expected_baseline_failures": true,
+  "tests_run": 13,
+  "subtests": 17,
+  "failures": 5,
+  "errors": 19,
+  "skipped": 0,
+  "success": false,
+  "forbidden_modules_imported": [],
+  "blocked_parent_network_attempts": [],
+  "sha256": {
+    "app/agent/task_queue.py": "50d1a4ebd6132f2593095874b170fa895d09c5bcd9ead9c598312cbf3314fc4c",
+    "app/agent/scheduler.py": "696a32f6adb02fbfe0bd48688903cccdf49a125543a12e7d8ea4a4341f52b855",
+    "app/server.py": "6e9f1a5a8d6055617acc25976d45dcdad67f4eb67521f2f2aa6a75fb6ba9f89a",
+    "tests/test_agent_stubs.py": "78dc5312911a423ff58f6ecbffc8daf6358b2592ea7e29bc3c6de30df7f898aa",
+    "tests/test_task_queue_persistence.py": "bcf83dbce735f2692c8236c5e5b373a6196806c3ad016997f997dcdc3981adb4",
+    "tests/test_task_queue_store_safety.py": "b5ae3964a75a8b20f60a64e20f654a888c9353cc0fabff6c80be30414c60e52d",
+    "tests/test_task_queue_callers.py": "78b60338abc3efb7182cd2a93300fdff4ec29c689e18ac7cb6f0c3eca5e6dcb4",
+    "tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py": "489d026dc4405d01a32331b477bda657043bae020bf5af51e1b5a6379e4ea8ab",
+    "tasks/jarvis-v2-taskqueue-callers-r3/scheduler.before.py": "2c2f65d843aa07ab2ff313d5c1d417180d0c68ef2e0d6788a060a24aca9a5dfc",
+    "tasks/jarvis-v2-taskqueue-callers-r3/server.before.py": "b1448ed13d5e1d8d9a6afdd00630e394f7c330ec25bd1a63a0ce35ecf3797a70",
+    "tasks/jarvis-v2-taskqueue-callers-r3/run_checks.py": "f02e0f2434c556abffb388685513d2fbf57b0f484ed3866350f60131d32f022a"
+  }
+}
+
+test_api_identifier_exhaustion_is_explicit_and_keeps_original (offline_callers.TaskQueueCallerTests.test_api_identifier_exhaustion_is_explicit_and_keeps_original) ... ERROR
+test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) ... 
+  test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=False, operation='create') ... ERROR
+  test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=False, operation='update') ... ERROR
+  test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=False, operation='delete') ... ERROR
+  test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=True, operation='create') ... ERROR
+  test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=True, operation='update') ... ERROR
+  test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=True, operation='delete') ... ERROR
+test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) ... 
+  test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) (operation='create') ... ERROR
+  test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) (operation='update') ... ERROR
+  test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) (operation='delete') ... ERROR
+test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) ... 
+  test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) (operation='create') ... ERROR
+  test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) (operation='update') ... ERROR
+  test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) (operation='delete') ... ERROR
+test_api_quarantined_load_is_not_reported_as_success (offline_callers.TaskQueueCallerTests.test_api_quarantined_load_is_not_reported_as_success) ... ERROR
+test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) ... 
+  test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) (operation='create') ... ERROR
+  test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) (operation='update') ... ERROR
+  test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) (operation='delete') ... ERROR
+test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success (offline_callers.TaskQueueCallerTests.test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success) ... 
+  test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success (offline_callers.TaskQueueCallerTests.test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success) (published=False) ... FAIL
+  test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success (offline_callers.TaskQueueCallerTests.test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success) (published=True) ... FAIL
+test_scheduler_failure_audit_cannot_mask_original_queue_error (offline_callers.TaskQueueCallerTests.test_scheduler_failure_audit_cannot_mask_original_queue_error) ... FAIL
+test_scheduler_identifier_exhaustion_does_not_update_success_or_retry (offline_callers.TaskQueueCallerTests.test_scheduler_identifier_exhaustion_does_not_update_success_or_retry) ... FAIL
+test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp (offline_callers.TaskQueueCallerTests.test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp) ... ERROR
+test_scheduler_success_event_audit_failure_carries_reconciliation_id (offline_callers.TaskQueueCallerTests.test_scheduler_success_event_audit_failure_carries_reconciliation_id) ... ERROR
+test_scheduler_success_marks_enqueue_only_after_return (offline_callers.TaskQueueCallerTests.test_scheduler_success_marks_enqueue_only_after_return) ... FAIL
+test_successful_api_and_missing_task_responses_remain_compatible (offline_callers.TaskQueueCallerTests.test_successful_api_and_missing_task_responses_remain_compatible) ... ok
+
+======================================================================
+ERROR: test_api_identifier_exhaustion_is_explicit_and_keeps_original (offline_callers.TaskQueueCallerTests.test_api_identifier_exhaustion_is_explicit_and_keeps_original)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 164, in test_api_identifier_exhaustion_is_explicit_and_keeps_original
+    response = self.api_mutation("create")
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 83, in api_mutation
+    return self.run_async(self.api.create_task(types.SimpleNamespace(goal="new task")))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 391, in create_task
+    task = await task_queue.add_task(request.goal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 66, in add_task
+    raise TaskQueueIdentifierError(
+        f"No unused task identifier after {TASK_ID_ATTEMPTS} attempts."
+    )
+_jarvis_offline_3990a1e94a504169bf507a754666772c.TaskQueueIdentifierError: No unused task identifier after 32 attempts.
+
+======================================================================
+ERROR: test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=False, operation='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 257, in test_api_postcommit_audit_failures_report_applied_state_without_repeating
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 83, in api_mutation
+    return self.run_async(self.api.create_task(types.SimpleNamespace(goal="new task")))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 391, in create_task
+    task = await task_queue.add_task(request.goal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 78, in add_task
+    audit.log("task_queued", {"task_id": task_id, "goal": goal})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private audit detail
+
+======================================================================
+ERROR: test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=False, operation='update')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 257, in test_api_postcommit_audit_failures_report_applied_state_without_repeating
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 85, in api_mutation
+    return self.run_async(self.api.update_task(task.task_id, types.SimpleNamespace(
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        status="done", result={"ok": True}, error=None,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )))
+    ^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 411, in update_task
+    updated = await task_queue.update_status(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 116, in update_status
+    audit.log("task_status_update", {"task_id": task_id, "status": status})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private audit detail
+
+======================================================================
+ERROR: test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=False, operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 257, in test_api_postcommit_audit_failures_report_applied_state_without_repeating
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 88, in api_mutation
+    return self.run_async(self.api.delete_task(task.task_id))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 425, in delete_task
+    deleted = await task_queue.delete_task(task_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 132, in delete_task
+    audit.log("task_deleted", {"task_id": task_id})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private audit detail
+
+======================================================================
+ERROR: test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=True, operation='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 257, in test_api_postcommit_audit_failures_report_applied_state_without_repeating
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 83, in api_mutation
+    return self.run_async(self.api.create_task(types.SimpleNamespace(goal="new task")))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 391, in create_task
+    task = await task_queue.add_task(request.goal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 78, in add_task
+    audit.log("task_queued", {"task_id": task_id, "goal": goal})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private audit detail
+
+======================================================================
+ERROR: test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=True, operation='update')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 257, in test_api_postcommit_audit_failures_report_applied_state_without_repeating
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 85, in api_mutation
+    return self.run_async(self.api.update_task(task.task_id, types.SimpleNamespace(
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        status="done", result={"ok": True}, error=None,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )))
+    ^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 411, in update_task
+    updated = await task_queue.update_status(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 116, in update_status
+    audit.log("task_status_update", {"task_id": task_id, "status": status})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private audit detail
+
+======================================================================
+ERROR: test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) (persistent=True, operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 257, in test_api_postcommit_audit_failures_report_applied_state_without_repeating
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 88, in api_mutation
+    return self.run_async(self.api.delete_task(task.task_id))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 425, in delete_task
+    deleted = await task_queue.delete_task(task_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 132, in delete_task
+    audit.log("task_deleted", {"task_id": task_id})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private audit detail
+
+======================================================================
+ERROR: test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) (operation='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 254, in _save
+    self._sync_directory()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: uncertain
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 126, in test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 83, in api_mutation
+    return self.run_async(self.api.create_task(types.SimpleNamespace(goal="new task")))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 391, in create_task
+    task = await task_queue.add_task(request.goal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 73, in add_task
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 266, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    ) from exc
+_jarvis_offline_cb89a95176a7456a8764f0fce2a057fd.TaskQueuePersistenceError: Task queue persistence failed for /tmp/jarvis-queue-callers-j_9hkdrq/tasks.json: uncertain
+
+======================================================================
+ERROR: test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) (operation='update')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 254, in _save
+    self._sync_directory()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: uncertain
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 126, in test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 85, in api_mutation
+    return self.run_async(self.api.update_task(task.task_id, types.SimpleNamespace(
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        status="done", result={"ok": True}, error=None,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )))
+    ^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 411, in update_task
+    updated = await task_queue.update_status(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 111, in update_status
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 266, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    ) from exc
+_jarvis_offline_cb89a95176a7456a8764f0fce2a057fd.TaskQueuePersistenceError: Task queue persistence failed for /tmp/jarvis-queue-callers-j_9hkdrq/tasks.json: uncertain
+
+======================================================================
+ERROR: test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) (operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 254, in _save
+    self._sync_directory()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: uncertain
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 126, in test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 88, in api_mutation
+    return self.run_async(self.api.delete_task(task.task_id))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 425, in delete_task
+    deleted = await task_queue.delete_task(task_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 127, in delete_task
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 266, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    ) from exc
+_jarvis_offline_cb89a95176a7456a8764f0fce2a057fd.TaskQueuePersistenceError: Task queue persistence failed for /tmp/jarvis-queue-callers-j_9hkdrq/tasks.json: uncertain
+
+======================================================================
+ERROR: test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) (operation='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 251, in _save
+    os.replace(temporary_path, self._storage_path)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: private path detail
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 109, in test_api_prepublication_failures_return_explicit_outcomes_without_retry
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 83, in api_mutation
+    return self.run_async(self.api.create_task(types.SimpleNamespace(goal="new task")))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 391, in create_task
+    task = await task_queue.add_task(request.goal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 73, in add_task
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 266, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    ) from exc
+_jarvis_offline_c4f4448ad6ff46a48feecb42f25f5b58.TaskQueuePersistenceError: Task queue persistence failed for /tmp/jarvis-queue-callers-vu58r8fy/tasks.json: private path detail
+
+======================================================================
+ERROR: test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) (operation='update')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 251, in _save
+    os.replace(temporary_path, self._storage_path)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: private path detail
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 109, in test_api_prepublication_failures_return_explicit_outcomes_without_retry
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 85, in api_mutation
+    return self.run_async(self.api.update_task(task.task_id, types.SimpleNamespace(
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        status="done", result={"ok": True}, error=None,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )))
+    ^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 411, in update_task
+    updated = await task_queue.update_status(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 111, in update_status
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 266, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    ) from exc
+_jarvis_offline_c4f4448ad6ff46a48feecb42f25f5b58.TaskQueuePersistenceError: Task queue persistence failed for /tmp/jarvis-queue-callers-vu58r8fy/tasks.json: private path detail
+
+======================================================================
+ERROR: test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) (operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 251, in _save
+    os.replace(temporary_path, self._storage_path)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: private path detail
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 109, in test_api_prepublication_failures_return_explicit_outcomes_without_retry
+    response = self.api_mutation(operation, task)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 88, in api_mutation
+    return self.run_async(self.api.delete_task(task.task_id))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 425, in delete_task
+    deleted = await task_queue.delete_task(task_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 127, in delete_task
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 266, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    ) from exc
+_jarvis_offline_c4f4448ad6ff46a48feecb42f25f5b58.TaskQueuePersistenceError: Task queue persistence failed for /tmp/jarvis-queue-callers-vu58r8fy/tasks.json: private path detail
+
+======================================================================
+ERROR: test_api_quarantined_load_is_not_reported_as_success (offline_callers.TaskQueueCallerTests.test_api_quarantined_load_is_not_reported_as_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 175, in test_api_quarantined_load_is_not_reported_as_success
+    response = self.api_mutation("create")
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 83, in api_mutation
+    return self.run_async(self.api.create_task(types.SimpleNamespace(goal="new task")))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/server.before.py", line 391, in create_task
+    task = await task_queue.add_task(request.goal)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 73, in add_task
+    self._save()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/task_queue.before.py", line 226, in _save
+    raise TaskQueuePersistenceError(
+    ...<2 lines>...
+    )
+_jarvis_offline_b85339510d20456baebd30121f88ec36.TaskQueuePersistenceError: Task queue writes are blocked after a load error; preserve and review the original store before explicitly loading a repaired copy.
+
+======================================================================
+ERROR: test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) (operation='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 155, in test_queue_errors_bind_operation_and_identifier
+    self.assertEqual(caught.exception.operation, operation)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'TaskQueuePersistenceError' object has no attribute 'operation'
+
+======================================================================
+ERROR: test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) (operation='update')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 155, in test_queue_errors_bind_operation_and_identifier
+    self.assertEqual(caught.exception.operation, operation)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'TaskQueuePersistenceError' object has no attribute 'operation'
+
+======================================================================
+ERROR: test_queue_errors_bind_operation_and_identifier (offline_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) (operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 155, in test_queue_errors_bind_operation_and_identifier
+    self.assertEqual(caught.exception.operation, operation)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'TaskQueuePersistenceError' object has no attribute 'operation'
+
+======================================================================
+ERROR: test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp (offline_callers.TaskQueueCallerTests.test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 280, in test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp
+    with self.assertRaises(self.queue_module.TaskQueueAuditError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_808c73cf8f0f4a7eb345b0822bd83ca6' has no attribute 'TaskQueueAuditError'
+
+======================================================================
+ERROR: test_scheduler_success_event_audit_failure_carries_reconciliation_id (offline_callers.TaskQueueCallerTests.test_scheduler_success_event_audit_failure_carries_reconciliation_id)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 299, in test_scheduler_success_event_audit_failure_carries_reconciliation_id
+    with self.assertRaises(self.queue_module.TaskQueueAuditError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_eaa320e50073496093adbebed649ca08' has no attribute 'TaskQueueAuditError'
+
+======================================================================
+FAIL: test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success (offline_callers.TaskQueueCallerTests.test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success) (published=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 200, in test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success
+    self.assertEqual(job.last_run, "previous success")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '2026-10-30T22:33:12.661382+00:00' != 'previous success'
+- 2026-10-30T22:33:12.661382+00:00
++ previous success
+
+
+======================================================================
+FAIL: test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success (offline_callers.TaskQueueCallerTests.test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success) (published=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 200, in test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success
+    self.assertEqual(job.last_run, "previous success")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '2026-10-30T22:33:12.661878+00:00' != 'previous success'
+- 2026-10-30T22:33:12.661878+00:00
++ previous success
+
+
+======================================================================
+FAIL: test_scheduler_failure_audit_cannot_mask_original_queue_error (offline_callers.TaskQueueCallerTests.test_scheduler_failure_audit_cannot_mask_original_queue_error)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 247, in test_scheduler_failure_audit_cannot_mask_original_queue_error
+    self.assertIsNone(job.last_run)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+AssertionError: '2026-10-30T22:33:12.669469+00:00' is not None
+
+======================================================================
+FAIL: test_scheduler_identifier_exhaustion_does_not_update_success_or_retry (offline_callers.TaskQueueCallerTests.test_scheduler_identifier_exhaustion_does_not_update_success_or_retry)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 233, in test_scheduler_identifier_exhaustion_does_not_update_success_or_retry
+    self.assertEqual(job.last_run, "previous")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '2026-10-30T22:33:12.677152+00:00' != 'previous'
+- 2026-10-30T22:33:12.677152+00:00
++ previous
+
+
+======================================================================
+FAIL: test_scheduler_success_marks_enqueue_only_after_return (offline_callers.TaskQueueCallerTests.test_scheduler_success_marks_enqueue_only_after_return)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 218, in test_scheduler_success_marks_enqueue_only_after_return
+    self.run_async(self.scheduler._run_job(job))
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 74, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-taskqueue-callers-r3/scheduler.before.py", line 150, in _run_job
+    await task_queue.add_task(job.goal)
+  File "/usr/lib/python3.14/unittest/mock.py", line 2344, in _execute_mock_call
+    result = await effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_callers.py", line 214, in checked
+    self.assertIsNone(job.last_run)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+AssertionError: '2026-10-30T22:33:12.700371+00:00' is not None
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.116s
+
+FAILED (failures=5, errors=19)

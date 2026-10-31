@@ -1,0 +1,201 @@
+--- r2/app/agent/task_queue.py
++++ r3/app/agent/task_queue.py
+@@ -23,12 +23,24 @@
+     """No unused task identifier was generated within the bounded retry budget."""
+ 
+ 
++class TaskQueueAuditError(RuntimeError):
++    """The mutation completed, but its success audit could not be submitted."""
++
++    def __init__(self, *, operation: str, task_id: str, published: bool) -> None:
++        super().__init__(f"Task {task_id} {operation} applied but success audit reporting failed; reconcile before retry.")
++        self.operation = operation
++        self.task_id = task_id
++        self.published = published
++
++
+ class TaskQueuePersistenceError(RuntimeError):
+     """A write failed; ``published`` means the replacement may already be visible."""
+ 
+     def __init__(self, message: str, *, published: bool = False) -> None:
+         super().__init__(message)
+         self.published = published
++        self.operation: str | None = None
++        self.task_id: str | None = None
+ 
+ 
+ @dataclass
+@@ -72,10 +84,11 @@
+             try:
+                 self._save()
+             except TaskQueuePersistenceError as exc:
++                exc.operation, exc.task_id = "create", task_id
+                 if not exc.published:
+                     self._tasks = previous
+                 raise
+-        audit.log("task_queued", {"task_id": task_id, "goal": goal})
++        self._audit_mutation("create", "task_queued", {"task_id": task_id, "goal": goal})
+         return task
+ 
+     async def get_task(self, task_id: str) -> AgentTask | None:
+@@ -110,10 +123,11 @@
+             try:
+                 self._save()
+             except TaskQueuePersistenceError as exc:
++                exc.operation, exc.task_id = "update", task_id
+                 if not exc.published:
+                     task.status, task.result, task.error = previous
+                 raise
+-        audit.log("task_status_update", {"task_id": task_id, "status": status})
++        self._audit_mutation("update", "task_status_update", {"task_id": task_id, "status": status})
+         return True
+ 
+     async def delete_task(self, task_id: str) -> bool:
+@@ -126,11 +140,22 @@
+             try:
+                 self._save()
+             except TaskQueuePersistenceError as exc:
++                exc.operation, exc.task_id = "delete", task_id
+                 if not exc.published:
+                     self._tasks = previous
+                 raise
+-        audit.log("task_deleted", {"task_id": task_id})
++        self._audit_mutation("delete", "task_deleted", {"task_id": task_id})
+         return True
++
++    def _audit_mutation(self, operation: str, event: str, details: dict[str, Any]) -> None:
++        try:
++            audit.log(event, details)
++        except Exception as exc:
++            # Publication already completed. Never roll back or issue it again.
++            raise TaskQueueAuditError(
++                operation=operation, task_id=details["task_id"],
++                published=self._storage_path is not None,
++            ) from exc
+ 
+     def _load(self) -> None:
+         if self._storage_path is None:
+--- r2/app/agent/scheduler.py
++++ r3/app/agent/scheduler.py
+@@ -12,7 +12,7 @@
+ CronTrigger = None
+ APSCHEDULER_AVAILABLE = importlib.util.find_spec("apscheduler") is not None
+ 
+-from app.agent.task_queue import task_queue
++from app.agent.task_queue import TaskQueueAuditError, TaskQueueIdentifierError, TaskQueuePersistenceError, task_queue
+ from app.logs.audit import audit
+ 
+ PROJECT_ROOT = Path(__file__).resolve().parents[2]
+@@ -146,9 +146,30 @@
+ 
+ 
+ async def _run_job(job: ScheduledJob) -> None:
++    try:
++        task = await task_queue.add_task(job.goal)
++    except (TaskQueuePersistenceError, TaskQueueIdentifierError, TaskQueueAuditError) as exc:
++        try:
++            audit.log("job_enqueue_failed", {
++                "job_id": job.job_id, "task_id": getattr(exc, "task_id", None),
++                "published": isinstance(exc, (TaskQueuePersistenceError, TaskQueueAuditError)) and exc.published,
++                "audit_failed_after_apply": isinstance(exc, TaskQueueAuditError),
++                "automatic_retry": False,
++            })
++        except Exception:
++            pass  # Retain the original queue failure if reporting is unavailable.
++        raise
+     job.last_run = datetime.now(UTC).isoformat()
+-    await task_queue.add_task(job.goal)
+-    audit.log("job_executed", {"job_id": job.job_id, "name": job.name, "goal": job.goal})
++    try:
++        audit.log("job_executed", {
++            "job_id": job.job_id, "name": job.name, "goal": job.goal,
++            "task_id": task.task_id, "outcome": "enqueued_only",
++        })
++    except Exception as exc:
++        raise TaskQueueAuditError(
++            operation="create", task_id=task.task_id,
++            published=task_queue._storage_path is not None,
++        ) from exc
+ 
+ 
+ def _load_apscheduler() -> bool:
+--- r2/app/server.py
++++ r3/app/server.py
+@@ -32,7 +32,7 @@
+ from app.brain.tool_params import is_cancel_command as _is_cancel_command
+ from app.agent.scheduler import scheduler
+ from app.agent.sensor_store import add_reading, get_readings, list_nodes
+-from app.agent.task_queue import task_queue
++from app.agent.task_queue import TaskQueueAuditError, TaskQueueIdentifierError, TaskQueuePersistenceError, task_queue
+ from app.config import settings
+ from app.config_check import check_startup
+ from app.logs.audit import audit
+@@ -388,8 +388,33 @@
+ 
+ @app.post("/tasks")
+ async def create_task(request: TaskCreateRequest) -> dict[str, Any]:
+-    task = await task_queue.add_task(request.goal)
++    try:
++        task = await task_queue.add_task(request.goal)
++    except (TaskQueuePersistenceError, TaskQueueIdentifierError, TaskQueueAuditError) as exc:
++        return _task_write_error(exc, operation="create")
+     return asdict(task)
++
++
++def _task_write_error(
++    exc: TaskQueuePersistenceError | TaskQueueIdentifierError | TaskQueueAuditError,
++    *, operation: str, task_id: str | None = None,
++) -> JSONResponse:
++    """Report this attempt's publication state without paths, secrets or a retry."""
++    published = isinstance(exc, TaskQueuePersistenceError) and exc.published
++    error = "task_queue_write_uncertain" if published else "task_queue_write_failed"
++    if isinstance(exc, TaskQueueIdentifierError):
++        error = "task_queue_identifier_exhausted"
++    publication = "published_durability_unknown" if published else "not_published"
++    reconcile = published
++    if isinstance(exc, TaskQueueAuditError):
++        error, reconcile = "task_queue_audit_failed", True
++        publication = "published_audit_failed" if exc.published else "memory_applied_audit_failed"
++    return JSONResponse(status_code=409 if reconcile else 503, content={
++        "error": error, "operation": operation,
++        "task_id": getattr(exc, "task_id", None) or task_id,
++        "publication": publication,
++        "automatic_retry": False, "reconcile_required": reconcile,
++    })
+ 
+ 
+ @app.get("/tasks")
+@@ -408,12 +433,15 @@
+ 
+ @app.patch("/tasks/{task_id}")
+ async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
+-    updated = await task_queue.update_status(
+-        task_id,
+-        request.status,
+-        result=request.result,
+-        error=request.error,
+-    )
++    try:
++        updated = await task_queue.update_status(
++            task_id,
++            request.status,
++            result=request.result,
++            error=request.error,
++        )
++    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
++        return _task_write_error(exc, operation="update", task_id=task_id)
+     if not updated:
+         return JSONResponse(status_code=404, content={"error": "Unknown task"})
+     task = await task_queue.get_task(task_id)
+@@ -422,7 +450,10 @@
+ 
+ @app.delete("/tasks/{task_id}")
+ async def delete_task(task_id: str) -> dict[str, bool]:
+-    deleted = await task_queue.delete_task(task_id)
++    try:
++        deleted = await task_queue.delete_task(task_id)
++    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
++        return _task_write_error(exc, operation="delete", task_id=task_id)
+     return {"deleted": deleted}
+ 
+ 

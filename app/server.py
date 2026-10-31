@@ -30,9 +30,9 @@ from app.brain.complexity_router import complexity_router
 from app.brain.router import router as intent_router
 from app.brain.tool_params import build_tool_params as _tool_params
 from app.brain.tool_params import is_cancel_command as _is_cancel_command
-from app.agent.scheduler import scheduler
+from app.agent.scheduler import SchedulerOperationError, scheduler
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
-from app.agent.task_queue import task_queue
+from app.agent.task_queue import TaskQueueAuditError, TaskQueueIdentifierError, TaskQueuePersistenceError, task_queue
 from app.config import settings
 from app.config_check import check_startup
 from app.logs.audit import audit
@@ -388,8 +388,33 @@ async def stop_response() -> dict[str, str]:
 
 @app.post("/tasks")
 async def create_task(request: TaskCreateRequest) -> dict[str, Any]:
-    task = await task_queue.add_task(request.goal)
+    try:
+        task = await task_queue.add_task(request.goal)
+    except (TaskQueuePersistenceError, TaskQueueIdentifierError, TaskQueueAuditError) as exc:
+        return _task_write_error(exc, operation="create")
     return asdict(task)
+
+
+def _task_write_error(
+    exc: TaskQueuePersistenceError | TaskQueueIdentifierError | TaskQueueAuditError,
+    *, operation: str, task_id: str | None = None,
+) -> JSONResponse:
+    """Report this attempt's publication state without paths, secrets or a retry."""
+    published = isinstance(exc, TaskQueuePersistenceError) and exc.published
+    error = "task_queue_write_uncertain" if published else "task_queue_write_failed"
+    if isinstance(exc, TaskQueueIdentifierError):
+        error = "task_queue_identifier_exhausted"
+    publication = "published_durability_unknown" if published else "not_published"
+    reconcile = published
+    if isinstance(exc, TaskQueueAuditError):
+        error, reconcile = "task_queue_audit_failed", True
+        publication = "published_audit_failed" if exc.published else "memory_applied_audit_failed"
+    return JSONResponse(status_code=409 if reconcile else 503, content={
+        "error": error, "operation": operation,
+        "task_id": getattr(exc, "task_id", None) or task_id,
+        "publication": publication,
+        "automatic_retry": False, "reconcile_required": reconcile,
+    })
 
 
 @app.get("/tasks")
@@ -408,12 +433,15 @@ async def get_task(task_id: str) -> Any:
 
 @app.patch("/tasks/{task_id}")
 async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
-    updated = await task_queue.update_status(
-        task_id,
-        request.status,
-        result=request.result,
-        error=request.error,
-    )
+    try:
+        updated = await task_queue.update_status(
+            task_id,
+            request.status,
+            result=request.result,
+            error=request.error,
+        )
+    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
+        return _task_write_error(exc, operation="update", task_id=task_id)
     if not updated:
         return JSONResponse(status_code=404, content={"error": "Unknown task"})
     task = await task_queue.get_task(task_id)
@@ -422,14 +450,37 @@ async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
 
 @app.delete("/tasks/{task_id}")
 async def delete_task(task_id: str) -> dict[str, bool]:
-    deleted = await task_queue.delete_task(task_id)
+    try:
+        deleted = await task_queue.delete_task(task_id)
+    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
+        return _task_write_error(exc, operation="delete", task_id=task_id)
     return {"deleted": deleted}
 
 
 @app.post("/schedule/jobs")
 async def create_scheduled_job(request: ScheduledJobRequest) -> dict[str, Any]:
-    job = scheduler.add_job(request.name, request.cron_expr, request.goal)
+    try:
+        job = scheduler.add_job(request.name, request.cron_expr, request.goal)
+    except SchedulerOperationError as exc:
+        return _schedule_write_error(exc)
     return asdict(job)
+
+
+def _schedule_write_error(exc: SchedulerOperationError) -> JSONResponse:
+    publication = "not_published"
+    if exc.published:
+        publication = "published_durability_unknown" if exc.phase == "persistence" else "published"
+    elif exc.applied and exc.operation in {"create", "delete"}:
+        publication = "memory_applied"
+    return JSONResponse(
+        status_code=400 if exc.phase == "validation" else (409 if exc.applied else 503),
+        content={
+            "error": "scheduler_operation_failed", "operation": exc.operation,
+            "job_id": exc.job_id, "phase": exc.phase, "state_applied": exc.applied,
+            "publication": publication, "uncertain": exc.uncertain,
+            "automatic_retry": False, "reconcile_required": exc.applied or exc.uncertain,
+        },
+    )
 
 
 @app.get("/schedule/jobs")
@@ -440,7 +491,10 @@ async def list_scheduled_jobs() -> dict[str, Any]:
 
 @app.delete("/schedule/jobs/{job_id}")
 async def delete_scheduled_job(job_id: str) -> dict[str, bool]:
-    removed = scheduler.remove_job(job_id)
+    try:
+        removed = scheduler.remove_job(job_id)
+    except SchedulerOperationError as exc:
+        return _schedule_write_error(exc)
     return {"deleted": removed}
 
 

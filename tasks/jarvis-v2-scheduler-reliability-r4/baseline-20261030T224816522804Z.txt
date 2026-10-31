@@ -1,0 +1,675 @@
+{
+  "timestamp_utc": "2026-10-30T22:48:16.521512+00:00",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "head": "7f4ae164261b792262eb9b818421c444c2d4ccff",
+  "scope": "isolated actual definitions + fresh files + inert backend/audit/HTTP recorders; not framework or service startup",
+  "baseline": true,
+  "expected_baseline_failures": true,
+  "tests_run": 25,
+  "subtests": 24,
+  "failures": 6,
+  "errors": 39,
+  "skipped": 0,
+  "success": false,
+  "forbidden_modules_imported": [],
+  "blocked_parent_network_attempts": [],
+  "sha256": {
+    "app/agent/scheduler.py": "71183f5bf54bc36f96a62abf04a1ca73566805f0eda67cdefba5f4410a726181",
+    "app/server.py": "613a3b08ae074484f0187b0234105c05b85239c45c577eee69a2b0bd8e17052c",
+    "app/agent/task_queue.py": "50d1a4ebd6132f2593095874b170fa895d09c5bcd9ead9c598312cbf3314fc4c",
+    "tests/test_scheduler_reliability.py": "ee610906ea1a8cf39b2c3119a4e680f8664933646e4eabaa5a8ca2bf7a8bb641",
+    "tests/test_task_queue_callers.py": "78b60338abc3efb7182cd2a93300fdff4ec29c689e18ac7cb6f0c3eca5e6dcb4",
+    "tests/test_task_queue_persistence.py": "bcf83dbce735f2692c8236c5e5b373a6196806c3ad016997f997dcdc3981adb4",
+    "tests/test_agent_stubs.py": "78dc5312911a423ff58f6ecbffc8daf6358b2592ea7e29bc3c6de30df7f898aa",
+    "tasks/jarvis-v2-scheduler-reliability-r4/scheduler.before.py": "696a32f6adb02fbfe0bd48688903cccdf49a125543a12e7d8ea4a4341f52b855",
+    "tasks/jarvis-v2-scheduler-reliability-r4/server.before.py": "6e9f1a5a8d6055617acc25976d45dcdad67f4eb67521f2f2aa6a75fb6ba9f89a",
+    "tasks/jarvis-v2-scheduler-reliability-r4/run_checks.py": "4eed594cff928d4c5fa6797e6aafa56265247886f40798a6eab530a59d96677a"
+  }
+}
+
+test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) ... 
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='mkdir') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='create') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='write') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='flush') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='file_sync') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='replace') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='mkdir') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='create') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='write') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='flush') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='file_sync') ... ERROR
+  test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='replace') ... ERROR
+test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried (offline_scheduler_r4.SchedulerReliabilityTests.test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried) ... FAIL
+test_applied_audit_failure_is_explicit_and_blocks_later_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_applied_audit_failure_is_explicit_and_blocks_later_admission) ... ERROR
+test_atomic_publication_sync_order_and_invalid_new_records (offline_scheduler_r4.SchedulerReliabilityTests.test_atomic_publication_sync_order_and_invalid_new_records) ... ERROR
+test_create_audit_failure_after_registration_does_not_admit_new_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_create_audit_failure_after_registration_does_not_admit_new_callback) ... ERROR
+test_disabled_job_is_not_registered_and_retained_callback_is_rejected (offline_scheduler_r4.SchedulerReliabilityTests.test_disabled_job_is_not_registered_and_retained_callback_is_rejected) ... FAIL
+test_failed_start_cleanup_preserves_backend_reference_and_rejects_callbacks (offline_scheduler_r4.SchedulerReliabilityTests.test_failed_start_cleanup_preserves_backend_reference_and_rejects_callbacks) ... ERROR
+test_fifo_store_rejected_with_child_deadline (offline_scheduler_r4.SchedulerReliabilityTests.test_fifo_store_rejected_with_child_deadline) ... ERROR
+test_identifier_collisions_bounded_without_overwrite (offline_scheduler_r4.SchedulerReliabilityTests.test_identifier_collisions_bounded_without_overwrite) ... ERROR
+test_invalid_cron_is_rejected_before_snapshot_or_backend_start (offline_scheduler_r4.SchedulerReliabilityTests.test_invalid_cron_is_rejected_before_snapshot_or_backend_start) ... ERROR
+test_load_io_and_nonregular_files_block_missing_delete_and_start (offline_scheduler_r4.SchedulerReliabilityTests.test_load_io_and_nonregular_files_block_missing_delete_and_start) ... ERROR
+test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) ... 
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'{invalid') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'\xff') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'{}') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[null]') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ') ... ERROR
+  test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ') ... ERROR
+test_old_object_same_identifier_and_disabled_bare_helper_rejected (offline_scheduler_r4.SchedulerReliabilityTests.test_old_object_same_identifier_and_disabled_bare_helper_rejected) ... FAIL
+test_postpublication_failure_retains_state_and_blocks_all_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_postpublication_failure_retains_state_and_blocks_all_admission) ... 
+  test_postpublication_failure_retains_state_and_blocks_all_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_postpublication_failure_retains_state_and_blocks_all_admission) (operation='create') ... ERROR
+  test_postpublication_failure_retains_state_and_blocks_all_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_postpublication_failure_retains_state_and_blocks_all_admission) (operation='delete') ... ERROR
+test_registration_failure_after_save_is_explicit_and_fail_closed (offline_scheduler_r4.SchedulerReliabilityTests.test_registration_failure_after_save_is_explicit_and_fail_closed) ... ERROR
+test_removed_callback_cannot_enqueue_even_when_backend_removal_fails (offline_scheduler_r4.SchedulerReliabilityTests.test_removed_callback_cannot_enqueue_even_when_backend_removal_fails) ... ERROR
+test_removed_callback_rejected_after_successful_remove (offline_scheduler_r4.SchedulerReliabilityTests.test_removed_callback_rejected_after_successful_remove) ... FAIL
+test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility (offline_scheduler_r4.SchedulerReliabilityTests.test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility) ... ERROR
+test_shutdown_failure_invalidates_callbacks_before_backend_call (offline_scheduler_r4.SchedulerReliabilityTests.test_shutdown_failure_invalidates_callbacks_before_backend_call) ... ERROR
+test_start_audit_failure_cleans_backend_and_blocks_captured_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_start_audit_failure_cleans_backend_and_blocks_captured_callback) ... ERROR
+test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure (offline_scheduler_r4.SchedulerReliabilityTests.test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure) ... 
+  test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure (offline_scheduler_r4.SchedulerReliabilityTests.test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure) (method='add_job') ... ERROR
+  test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure (offline_scheduler_r4.SchedulerReliabilityTests.test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure) (method='start') ... ERROR
+test_stop_restart_rejects_prior_generation_and_accepts_current_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_stop_restart_rejects_prior_generation_and_accepts_current_callback) ... FAIL
+test_stub_mode_and_idempotent_start_have_no_actual_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_stub_mode_and_idempotent_start_have_no_actual_backend) ... ERROR
+test_success_roundtrip_missing_remove_and_exact_fields (offline_scheduler_r4.SchedulerReliabilityTests.test_success_roundtrip_missing_remove_and_exact_fields) ... FAIL
+test_unsupported_directory_sync_and_cleanup_reporting_failures (offline_scheduler_r4.SchedulerReliabilityTests.test_unsupported_directory_sync_and_cleanup_reporting_failures) ... ERROR
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='mkdir')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='write')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 118, in fault
+    real = self.module.tempfile.NamedTemporaryFile
+           ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='flush')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 118, in fault
+    real = self.module.tempfile.NamedTemporaryFile
+           ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='file_sync')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='create', stage='replace')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='mkdir')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='write')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 118, in fault
+    real = self.module.tempfile.NamedTemporaryFile
+           ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='flush')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 118, in fault
+    real = self.module.tempfile.NamedTemporaryFile
+           ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='file_sync')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) (operation='delete', stage='replace')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 146, in test_add_remove_prepublication_faults_preserve_disk_memory_backend
+    with self.fault(stage):
+         ~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 131, in fault
+    "mkdir": (self.module.Path, "mkdir"), "create": (self.module.tempfile, "NamedTemporaryFile"),
+                                                     ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_1553294b3b924ff19c331b29766ecbf5' has no attribute 'tempfile'
+
+======================================================================
+ERROR: test_applied_audit_failure_is_explicit_and_blocks_later_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_applied_audit_failure_is_explicit_and_blocks_later_admission)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 329, in test_applied_audit_failure_is_explicit_and_blocks_later_admission
+    with self.assertRaises(self.module.SchedulerOperationError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_845e3b81b11d4b9f91755ff0cd2d17e2' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_atomic_publication_sync_order_and_invalid_new_records (offline_scheduler_r4.SchedulerReliabilityTests.test_atomic_publication_sync_order_and_invalid_new_records)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 506, in test_atomic_publication_sync_order_and_invalid_new_records
+    replace = self.module.os.replace
+              ^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_589faac83bf54844915b6f52d27034a2' has no attribute 'os'
+
+======================================================================
+ERROR: test_create_audit_failure_after_registration_does_not_admit_new_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_create_audit_failure_after_registration_does_not_admit_new_callback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 461, in test_create_audit_failure_after_registration_does_not_admit_new_callback
+    with self.assertRaises(self.module.SchedulerOperationError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_8314b6019aaf4850bffc960c0d190d76' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_failed_start_cleanup_preserves_backend_reference_and_rejects_callbacks (offline_scheduler_r4.SchedulerReliabilityTests.test_failed_start_cleanup_preserves_backend_reference_and_rejects_callbacks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 476, in test_failed_start_cleanup_preserves_backend_reference_and_rejects_callbacks
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_2f5610b74f62446dabfbd39979d1f6bc' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_fifo_store_rejected_with_child_deadline (offline_scheduler_r4.SchedulerReliabilityTests.test_fifo_store_rejected_with_child_deadline)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 446, in test_fifo_store_rejected_with_child_deadline
+    subprocess.run([
+    ~~~~~~~~~~~~~~^^
+        sys.executable, "-B", "-c", program, str(ROOT / "tests/test_task_queue_persistence.py"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        str(source), str(self.store),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ], timeout=5, check=True, capture_output=True, text=True)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '-B', '-c', 'import importlib.util,sys\nfrom pathlib import Path\ns=importlib.util.spec_from_file_location("fixture_helpers",sys.argv[1])\nm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nmodule=m.load_definitions(Path(sys.argv[2]),injected={"audit":m.AuditRecorder()},remove_singleton="scheduler")\nowner=module.Scheduler(Path(sys.argv[3]));assert owner._load_error\n', '/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_persistence.py', '/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-scheduler-reliability-r4/scheduler.before.py', '/tmp/jarvis-scheduler-r4-_ruvdj3c/jobs.json']' returned non-zero exit status 1.
+
+======================================================================
+ERROR: test_identifier_collisions_bounded_without_overwrite (offline_scheduler_r4.SchedulerReliabilityTests.test_identifier_collisions_bounded_without_overwrite)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 319, in test_identifier_collisions_bounded_without_overwrite
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_22adbcef329e4ddbabfc1402ea6b5556' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_invalid_cron_is_rejected_before_snapshot_or_backend_start (offline_scheduler_r4.SchedulerReliabilityTests.test_invalid_cron_is_rejected_before_snapshot_or_backend_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 268, in test_invalid_cron_is_rejected_before_snapshot_or_backend_start
+    with self.assertRaises(self.module.SchedulerOperationError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_2a467f987a354d0c8abcb652b2b5ea67' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_load_io_and_nonregular_files_block_missing_delete_and_start (offline_scheduler_r4.SchedulerReliabilityTests.test_load_io_and_nonregular_files_block_missing_delete_and_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 413, in test_load_io_and_nonregular_files_block_missing_delete_and_start
+    with mock.patch.object(self.module.Scheduler, "_read_store", side_effect=PermissionError("denied")):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1510, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1480, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <class '_jarvis_offline_075a00a7ec324f7f85c16a5ee8bfbb4a.Scheduler'> does not have the attribute '_read_store'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'{invalid')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'\xff')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 308, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    owner = self.module.Scheduler(self.store)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-scheduler-reliability-r4/scheduler.before.py", line 38, in __init__
+    self._load()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-scheduler-reliability-r4/scheduler.before.py", line 106, in _load
+    raw = json.loads(self._storage_path.read_text(encoding="utf-8"))
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 789, in read_text
+    return f.read()
+           ~~~~~~^^
+  File "<frozen codecs>", line 325, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'{}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[null]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) (payload=b'[{"job_id": "legacy", "name": "legacy", ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 309, in test_malformed_stores_block_writes_and_start_without_erasing_evidence
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_ccba9624dbac4967b1281811a1b36a74' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_postpublication_failure_retains_state_and_blocks_all_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_postpublication_failure_retains_state_and_blocks_all_admission) (operation='create')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 168, in test_postpublication_failure_retains_state_and_blocks_all_admission
+    with mock.patch.object(self.owner, "_sync_directory", side_effect=OSError("uncertain")):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1510, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1480, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <_jarvis_offline_a07fabc1886f4f87ac5d016948a1d00c.Scheduler object at 0x7e525a691d10> does not have the attribute '_sync_directory'
+
+======================================================================
+ERROR: test_postpublication_failure_retains_state_and_blocks_all_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_postpublication_failure_retains_state_and_blocks_all_admission) (operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 168, in test_postpublication_failure_retains_state_and_blocks_all_admission
+    with mock.patch.object(self.owner, "_sync_directory", side_effect=OSError("uncertain")):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1510, in __enter__
+    original, local = self.get_original()
+                      ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1480, in get_original
+    raise AttributeError(
+        "%s does not have the attribute %r" % (target, name)
+    )
+AttributeError: <_jarvis_offline_a07fabc1886f4f87ac5d016948a1d00c.Scheduler object at 0x7e525a692350> does not have the attribute '_sync_directory'
+
+======================================================================
+ERROR: test_registration_failure_after_save_is_explicit_and_fail_closed (offline_scheduler_r4.SchedulerReliabilityTests.test_registration_failure_after_save_is_explicit_and_fail_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 257, in test_registration_failure_after_save_is_explicit_and_fail_closed
+    with self.assertRaises(self.module.SchedulerOperationError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_00a4b1ce7ea54594b22dccc761087e40' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_removed_callback_cannot_enqueue_even_when_backend_removal_fails (offline_scheduler_r4.SchedulerReliabilityTests.test_removed_callback_cannot_enqueue_even_when_backend_removal_fails)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 217, in test_removed_callback_cannot_enqueue_even_when_backend_removal_fails
+    with self.assertRaises(self.module.SchedulerOperationError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_fc1ff4723c5f43c9808e7cd462f64a9b' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility (offline_scheduler_r4.SchedulerReliabilityTests.test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 489, in test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility
+    with mock.patch.object(self.module.os, "replace", side_effect=OSError("private path")):
+                           ^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_2c56c7f20a114c6293afb04f54b307fd' has no attribute 'os'
+
+======================================================================
+ERROR: test_shutdown_failure_invalidates_callbacks_before_backend_call (offline_scheduler_r4.SchedulerReliabilityTests.test_shutdown_failure_invalidates_callbacks_before_backend_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 295, in test_shutdown_failure_invalidates_callbacks_before_backend_call
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_503c38b9c8f84c489e7e9a4c088ebf72' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_start_audit_failure_cleans_backend_and_blocks_captured_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_start_audit_failure_cleans_backend_and_blocks_captured_callback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 377, in test_start_audit_failure_cleans_backend_and_blocks_captured_callback
+    with self.assertRaises(self.module.SchedulerOperationError) as caught:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_d4414664d4c44b28bd9a39290479809a' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure (offline_scheduler_r4.SchedulerReliabilityTests.test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure) (method='add_job')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 285, in test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_52a297de28d54f39879e22f2d014046f' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure (offline_scheduler_r4.SchedulerReliabilityTests.test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure) (method='start')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 285, in test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure
+    with self.assertRaises(self.module.SchedulerOperationError):
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_52a297de28d54f39879e22f2d014046f' has no attribute 'SchedulerOperationError'
+
+======================================================================
+ERROR: test_stub_mode_and_idempotent_start_have_no_actual_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_stub_mode_and_idempotent_start_have_no_actual_backend)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 427, in test_stub_mode_and_idempotent_start_have_no_actual_backend
+    generation = self.owner._generation
+                 ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Scheduler' object has no attribute '_generation'
+
+======================================================================
+ERROR: test_unsupported_directory_sync_and_cleanup_reporting_failures (offline_scheduler_r4.SchedulerReliabilityTests.test_unsupported_directory_sync_and_cleanup_reporting_failures)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 387, in test_unsupported_directory_sync_and_cleanup_reporting_failures
+    real_sync = self.module.os.fsync
+                ^^^^^^^^^^^^^^
+AttributeError: module '_jarvis_offline_16fb51175ac1406b92a93569d8135a16' has no attribute 'os'
+
+======================================================================
+FAIL: test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried (offline_scheduler_r4.SchedulerReliabilityTests.test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 362, in test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried
+    self.run_async(scenario())
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 99, in run_async
+    return asyncio.run(coroutine)
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 360, in scenario
+    self.assertEqual(len(await self.queue.list_tasks()), 1)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 1
+
+======================================================================
+FAIL: test_disabled_job_is_not_registered_and_retained_callback_is_rejected (offline_scheduler_r4.SchedulerReliabilityTests.test_disabled_job_is_not_registered_and_retained_callback_is_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 202, in test_disabled_job_is_not_registered_and_retained_callback_is_rejected
+    self.assertEqual(backend.callbacks, {})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'6aeacfa4': (<function _run_job at 0x7e52[127 chars]e)])} != {}
++ {}
+- {'6aeacfa4': (<function _run_job at 0x7e525a60a350>,
+-               [ScheduledJob(job_id='6aeacfa4',
+-                             name='original',
+-                             cron_expr='* * * * *',
+-                             goal='inspect',
+-                             enabled=False,
+-                             last_run=None)])}
+
+======================================================================
+FAIL: test_old_object_same_identifier_and_disabled_bare_helper_rejected (offline_scheduler_r4.SchedulerReliabilityTests.test_old_object_same_identifier_and_disabled_bare_helper_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 250, in test_old_object_same_identifier_and_disabled_bare_helper_rejected
+    self.assertEqual(self.run_async(self.queue.list_tasks()), [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [AgentTask(task_id='0e77ce67', goal='inspe[227 chars]one)] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+AgentTask(task_id='0e77ce67', goal='inspect', status='pending', created_at='2026-10-30T22:48:16.456779+00:00', result=None, error=None)
+
++ []
+- [AgentTask(task_id='0e77ce67',
+-            goal='inspect',
+-            status='pending',
+-            created_at='2026-10-30T22:48:16.456779+00:00',
+-            result=None,
+-            error=None),
+-  AgentTask(task_id='cd245c04',
+-            goal='inspect',
+-            status='pending',
+-            created_at='2026-10-30T22:48:16.456962+00:00',
+-            result=None,
+-            error=None)]
+
+======================================================================
+FAIL: test_removed_callback_rejected_after_successful_remove (offline_scheduler_r4.SchedulerReliabilityTests.test_removed_callback_rejected_after_successful_remove)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 230, in test_removed_callback_rejected_after_successful_remove
+    self.assertEqual(self.run_async(self.queue.list_tasks()), [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [AgentTask(task_id='87b08e8c', goal='inspe[90 chars]one)] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+AgentTask(task_id='87b08e8c', goal='inspect', status='pending', created_at='2026-10-30T22:48:16.476933+00:00', result=None, error=None)
+
++ []
+- [AgentTask(task_id='87b08e8c',
+-            goal='inspect',
+-            status='pending',
+-            created_at='2026-10-30T22:48:16.476933+00:00',
+-            result=None,
+-            error=None)]
+
+======================================================================
+FAIL: test_stop_restart_rejects_prior_generation_and_accepts_current_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_stop_restart_rejects_prior_generation_and_accepts_current_callback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 239, in test_stop_restart_rejects_prior_generation_and_accepts_current_callback
+    self.assertEqual(self.run_async(self.queue.list_tasks()), [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [AgentTask(task_id='fb5ad136', goal='inspe[227 chars]one)] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+AgentTask(task_id='fb5ad136', goal='inspect', status='pending', created_at='2026-10-30T22:48:16.506688+00:00', result=None, error=None)
+
++ []
+- [AgentTask(task_id='fb5ad136',
+-            goal='inspect',
+-            status='pending',
+-            created_at='2026-10-30T22:48:16.506688+00:00',
+-            result=None,
+-            error=None),
+-  AgentTask(task_id='01acd0c5',
+-            goal='inspect',
+-            status='pending',
+-            created_at='2026-10-30T22:48:16.506914+00:00',
+-            result=None,
+-            error=None)]
+
+======================================================================
+FAIL: test_success_roundtrip_missing_remove_and_exact_fields (offline_scheduler_r4.SchedulerReliabilityTests.test_success_roundtrip_missing_remove_and_exact_fields)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_scheduler_reliability.py", line 189, in test_success_roundtrip_missing_remove_and_exact_fields
+    self.assertEqual([asdict(item) for item in loaded], [asdict(job)])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [{'jo[23 chars]e': 'name', 'cron_expr': '* * * * *', 'goal': [41 chars]one}] != [{'jo[23 chars]e': ' name ', 'cron_expr': '* * * * *', 'goal'[45 chars]one}]
+
+First differing element 0:
+{'job[22 chars]e': 'name', 'cron_expr': '* * * * *', 'goal': [40 chars]None}
+{'job[22 chars]e': ' name ', 'cron_expr': '* * * * *', 'goal'[44 chars]None}
+
+  [{'cron_expr': '* * * * *',
+    'enabled': True,
+-   'goal': 'inspect',
++   'goal': ' inspect ',
+?            +       +
+
+    'job_id': '7e09a3ba',
+    'last_run': None,
+-   'name': 'name'}]
++   'name': ' name '}]
+?            +    +
+
+
+----------------------------------------------------------------------
+Ran 25 tests in 0.212s
+
+FAILED (failures=6, errors=39)

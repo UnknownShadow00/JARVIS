@@ -1,0 +1,474 @@
+test_collision_retries_without_overwriting_original (__main__.TaskQueueStoreSafetyTests.test_collision_retries_without_overwriting_original) ... FAIL
+test_compatible_minimal_store_and_empty_and_absent_stores_accept_writes (__main__.TaskQueueStoreSafetyTests.test_compatible_minimal_store_and_empty_and_absent_stores_accept_writes) ... ok
+test_concurrent_collisions_keep_all_accepted_tasks (__main__.TaskQueueStoreSafetyTests.test_concurrent_collisions_keep_all_accepted_tasks) ... FAIL
+test_exhausted_collisions_are_bounded_and_preserve_all_state (__main__.TaskQueueStoreSafetyTests.test_exhausted_collisions_are_bounded_and_preserve_all_state) ... FAIL
+test_last_allowed_identifier_attempt_can_succeed (__main__.TaskQueueStoreSafetyTests.test_last_allowed_identifier_attempt_can_succeed) ... FAIL
+test_load_error_reporting_failure_still_blocks_writes (__main__.TaskQueueStoreSafetyTests.test_load_error_reporting_failure_still_blocks_writes) ... ERROR
+test_load_io_failure_cannot_be_hidden_by_next_write (__main__.TaskQueueStoreSafetyTests.test_load_io_failure_cannot_be_hidden_by_next_write) ... 
+  test_load_io_failure_cannot_be_hidden_by_next_write (__main__.TaskQueueStoreSafetyTests.test_load_io_failure_cannot_be_hidden_by_next_write) (fault='PermissionError') ... FAIL
+  test_load_io_failure_cannot_be_hidden_by_next_write (__main__.TaskQueueStoreSafetyTests.test_load_io_failure_cannot_be_hidden_by_next_write) (fault='OSError') ... FAIL
+test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) ... 
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=0) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=1) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=2) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=3) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=4) ... ERROR
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=5) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=6) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=7) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=8) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=9) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=10) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=11) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=12) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=13) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=14) ... FAIL
+  test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=15) ... FAIL
+test_nonfile_store_is_blocked_before_temporary_creation (__main__.TaskQueueStoreSafetyTests.test_nonfile_store_is_blocked_before_temporary_creation) ... FAIL
+test_partial_store_blocks_update_and_delete_and_restores_object (__main__.TaskQueueStoreSafetyTests.test_partial_store_blocks_update_and_delete_and_restores_object) ... 
+  test_partial_store_blocks_update_and_delete_and_restores_object (__main__.TaskQueueStoreSafetyTests.test_partial_store_blocks_update_and_delete_and_restores_object) (operation='update') ... FAIL
+  test_partial_store_blocks_update_and_delete_and_restores_object (__main__.TaskQueueStoreSafetyTests.test_partial_store_blocks_update_and_delete_and_restores_object) (operation='delete') ... FAIL
+
+======================================================================
+ERROR: test_load_error_reporting_failure_still_blocks_writes (__main__.TaskQueueStoreSafetyTests.test_load_error_reporting_failure_still_blocks_writes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/app/agent/task_queue.py", line 125, in _load
+    raw = json.loads(self._storage_path.read_text(encoding="utf-8"))
+  File "/usr/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 158, in test_load_error_reporting_failure_still_blocks_writes
+    queue = self.module.TaskQueue(self.store)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/app/agent/task_queue.py", line 44, in __init__
+    self._load()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/app/agent/task_queue.py", line 127, in _load
+    audit.log("task_queue_load_error", {"path": str(self._storage_path), "error": str(exc)})
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: audit unavailable
+
+======================================================================
+ERROR: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 107, in test_malformed_stores_block_add_without_replacing_evidence
+    queue = self.module.TaskQueue(self.store)
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/app/agent/task_queue.py", line 44, in __init__
+    self._load()
+    ~~~~~~~~~~^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/app/agent/task_queue.py", line 125, in _load
+    raw = json.loads(self._storage_path.read_text(encoding="utf-8"))
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 789, in read_text
+    return f.read()
+           ~~~~~~^^
+  File "<frozen codecs>", line 325, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte
+
+======================================================================
+FAIL: test_collision_retries_without_overwriting_original (__main__.TaskQueueStoreSafetyTests.test_collision_retries_without_overwriting_original)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 47, in test_collision_retries_without_overwriting_original
+    self.assertEqual(generated.call_count, 3)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 3
+
+======================================================================
+FAIL: test_concurrent_collisions_keep_all_accepted_tasks (__main__.TaskQueueStoreSafetyTests.test_concurrent_collisions_keep_all_accepted_tasks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 85, in test_concurrent_collisions_keep_all_accepted_tasks
+    self.assertEqual([task.task_id for task in added], ["bbbbbbbb", "cccccccc"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: ['aaaaaaaa', 'bbbbbbbb'] != ['bbbbbbbb', 'cccccccc']
+
+First differing element 0:
+'aaaaaaaa'
+'bbbbbbbb'
+
+- ['aaaaaaaa', 'bbbbbbbb']
++ ['bbbbbbbb', 'cccccccc']
+
+======================================================================
+FAIL: test_exhausted_collisions_are_bounded_and_preserve_all_state (__main__.TaskQueueStoreSafetyTests.test_exhausted_collisions_are_bounded_and_preserve_all_state)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 56, in test_exhausted_collisions_are_bounded_and_preserve_all_state
+    with self.assertRaises(RuntimeError) as caught:
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+AssertionError: RuntimeError not raised
+
+======================================================================
+FAIL: test_last_allowed_identifier_attempt_can_succeed (__main__.TaskQueueStoreSafetyTests.test_last_allowed_identifier_attempt_can_succeed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 71, in test_last_allowed_identifier_attempt_can_succeed
+    self.assertEqual(generated.call_count, 32)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 32
+
+======================================================================
+FAIL: test_load_io_failure_cannot_be_hidden_by_next_write (__main__.TaskQueueStoreSafetyTests.test_load_io_failure_cannot_be_hidden_by_next_write) (fault='PermissionError')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 141, in test_load_io_failure_cannot_be_hidden_by_next_write
+    with self.assertRaises(self.module.TaskQueuePersistenceError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: TaskQueuePersistenceError not raised
+
+======================================================================
+FAIL: test_load_io_failure_cannot_be_hidden_by_next_write (__main__.TaskQueueStoreSafetyTests.test_load_io_failure_cannot_be_hidden_by_next_write) (fault='OSError')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 141, in test_load_io_failure_cannot_be_hidden_by_next_write
+    with self.assertRaises(self.module.TaskQueuePersistenceError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: TaskQueuePersistenceError not raised
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "b6e3d2d5",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.219101+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562421740>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "9ba6e450",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.220611+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562423ec0>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "51528cb8",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.222201+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5624225c0>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "18b26602",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.223684+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5624afe40>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.225411+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "18f65b8c",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.225710+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5624af540>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=6)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "duplicate ID",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.227241+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "dac66078",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.227500+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b56246a640>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.228881+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "7670c2c0",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.229067+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5623d1600>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.231054+00:00",\n    "result": null,\n    "error": "{\'discarded\': True}"\n  },\n  {\n    "task_id": "9ecbedd0",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.231267+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5625bfa40>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=9)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.232304+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "5e4209c5",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.232494+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562451f40>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=10)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "42",\n    "created_at": "2026-10-30T22:21:12.233908+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "06a0e696",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.234225+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562449880>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=11)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "42",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "d51f8f2f",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.236132+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562449bc0>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=12)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "123",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.237495+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "c2f3ac78",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.237702+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562414540>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=13)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.238761+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "f834b6b9",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.238958+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5622d2740>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=14)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "new",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.239909+00:00",\n    "result": null,\n    "error": null\n  },\n  {\n    "task_id": "80210675",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.240092+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5622d7180>)].
+
+======================================================================
+FAIL: test_malformed_stores_block_add_without_replacing_evidence (__main__.TaskQueueStoreSafetyTests.test_malformed_stores_block_add_without_replacing_evidence) (index=15)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 114, in test_malformed_stores_block_add_without_replacing_evidence
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-lrhm1l8k'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "aaaaaaaa",\n    "goal": "retain",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.241399+00:00",\n    "result": {\n      "x": NaN\n    },\n    "error": null\n  },\n  {\n    "task_id": "fb809835",\n    "goal": "must not replace evidence",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.241698+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b562320840>)].
+
+======================================================================
+FAIL: test_nonfile_store_is_blocked_before_temporary_creation (__main__.TaskQueueStoreSafetyTests.test_nonfile_store_is_blocked_before_temporary_creation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 151, in test_nonfile_store_is_blocked_before_temporary_creation
+    opened.assert_not_called()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 947, in assert_not_called
+    raise AssertionError(msg)
+AssertionError: Expected 'NamedTemporaryFile' to not have been called. Called 1 times.
+Calls: [call(mode='w', encoding='utf-8', dir=PosixPath('/tmp/jarvis-queue-safety-iifrzl4h'), prefix='.tasks.json.', suffix='.tmp', delete=False),
+ call().__enter__(),
+ call().__enter__().name.__fspath__(),
+ call().__enter__().write('[\n  {\n    "task_id": "343e0a43",\n    "goal": "must not write",\n    "status": "pending",\n    "created_at": "2026-10-30T22:21:12.246015+00:00",\n    "result": null,\n    "error": null\n  }\n]'),
+ call().__enter__().flush(),
+ call().__enter__().fileno(),
+ call().__enter__().fileno().fileno(),
+ call().__exit__(<class 'TypeError'>, TypeError('fileno() returned a non-integer'), <traceback object at 0x78b5633ce400>)].
+
+======================================================================
+FAIL: test_partial_store_blocks_update_and_delete_and_restores_object (__main__.TaskQueueStoreSafetyTests.test_partial_store_blocks_update_and_delete_and_restores_object) (operation='update')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 126, in test_partial_store_blocks_update_and_delete_and_restores_object
+    with self.assertRaises(self.module.TaskQueuePersistenceError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: TaskQueuePersistenceError not raised
+
+======================================================================
+FAIL: test_partial_store_blocks_update_and_delete_and_restores_object (__main__.TaskQueueStoreSafetyTests.test_partial_store_blocks_update_and_delete_and_restores_object) (operation='delete')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tests/test_task_queue_store_safety.py", line 126, in test_partial_store_blocks_update_and_delete_and_restores_object
+    with self.assertRaises(self.module.TaskQueuePersistenceError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: TaskQueuePersistenceError not raised
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.058s
+
+FAILED (failures=24, errors=2)

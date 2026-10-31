@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-10-30T21:42:32.987932+00:00",
+  "scope": "post-prompt preissuance revalidation; new synthetic tests only",
+  "command": [
+    "/usr/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/proxmox-automation-phase3-review-r1/tests",
+    "-p",
+    "test_preissuance.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "source_compilation": "PASS",
+  "sha256": {
+    "src/g6k_serial/provision.py": "02247132df85448182e77525a5423e5685e6bc06c989af406949c020f4c1f317",
+    "tests/test_preissuance.py": "493cc7a9f8a494d731236f445607b79b2a47e9095497506c6d0a5e6b420fb3a0"
+  },
+  "delay_fault_cases": "8 changes x injected/default dial paths =16 cases",
+  "assertions": "zero dial/socket/send, no token write or deletion, empty stdout/stderr, hidden synthetic canaries absent from refusal",
+  "isolation": "UID, all filesystem/secret/state/transport effects mocked; no real privileged operation or network"
+}
+
+test_absent_unreadable_or_unprotected_record_has_constant_error (test_preissuance.PreissuanceTests.test_absent_unreadable_or_unprotected_record_has_constant_error) ... ok
+test_all_checks_require_actual_true_boolean (test_preissuance.PreissuanceTests.test_all_checks_require_actual_true_boolean) ... ok
+test_close_failure_is_constant_and_does_not_accept (test_preissuance.PreissuanceTests.test_close_failure_is_constant_and_does_not_accept) ... ok
+test_each_binding_must_match_exact_grant_and_exact_type (test_preissuance.PreissuanceTests.test_each_binding_must_match_exact_grant_and_exact_type) ... ok
+test_issuance_gate_failure_precedes_token_output_prompt_and_network (test_preissuance.PreissuanceTests.test_issuance_gate_failure_precedes_token_output_prompt_and_network) ... ok
+test_malformed_duplicate_nonobject_and_oversized_json_refused (test_preissuance.PreissuanceTests.test_malformed_duplicate_nonobject_and_oversized_json_refused) ... ok
+test_marker_presence_or_metadata_failure_blocks_before_record_read (test_preissuance.PreissuanceTests.test_marker_presence_or_metadata_failure_blocks_before_record_read) ... ok
+test_missing_extra_or_nested_extra_fields_refused (test_preissuance.PreissuanceTests.test_missing_extra_or_nested_extra_fields_refused) ... ok
+test_prompt_delay_revalidates_expiry_markers_config_ca_and_release_before_network (test_preissuance.PreissuanceTests.test_prompt_delay_revalidates_expiry_markers_config_ca_and_release_before_network) ... ok
+test_time_age_expiry_and_grant_expiry_are_bounded (test_preissuance.PreissuanceTests.test_time_age_expiry_and_grant_expiry_are_bounded) ... ok
+test_valid_fresh_exact_record_and_inclusive_time_boundaries (test_preissuance.PreissuanceTests.test_valid_fresh_exact_record_and_inclusive_time_boundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.061s
+
+OK

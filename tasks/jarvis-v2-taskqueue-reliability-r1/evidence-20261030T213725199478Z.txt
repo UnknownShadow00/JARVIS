@@ -1,0 +1,36 @@
+{
+  "timestamp_utc": "2026-10-30T21:37:25.198113+00:00",
+  "scope": "offline source-level isolated definitions; not full application integration",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "head": "7f4ae164261b792262eb9b818421c444c2d4ccff",
+  "tests_run": 13,
+  "existing_regressions_run_as_subtests": 10,
+  "success": true,
+  "forbidden_modules_imported": [],
+  "sha256": {
+    "app/agent/task_queue.py": "e134bb268b2a2bb9ca222218a4783aba84e75a21bf7298c4e0f00c2226b3e7bd",
+    "app/agent/scheduler.py": "2c2f65d843aa07ab2ff313d5c1d417180d0c68ef2e0d6788a060a24aca9a5dfc",
+    "tests/test_agent_stubs.py": "78dc5312911a423ff58f6ecbffc8daf6358b2592ea7e29bc3c6de30df7f898aa",
+    "tests/test_task_queue_persistence.py": "bcf83dbce735f2692c8236c5e5b373a6196806c3ad016997f997dcdc3981adb4",
+    "tasks/jarvis-v2-taskqueue-reliability-r1/run_checks.py": "563ab62ffde3a77203f1e2501641a70ef09c82039749bbf38a97aee41dc43e7c"
+  }
+}
+
+test_audit_failure_cannot_mask_persistence_error_or_prevent_rollback (offline_task_queue_persistence.TaskQueuePersistenceTests.test_audit_failure_cannot_mask_persistence_error_or_prevent_rollback) ... ok
+test_cleanup_failure_keeps_original_persistence_error (offline_task_queue_persistence.TaskQueuePersistenceTests.test_cleanup_failure_keeps_original_persistence_error) ... ok
+test_concurrent_local_mutations_remain_serialized_and_reloadable (offline_task_queue_persistence.TaskQueuePersistenceTests.test_concurrent_local_mutations_remain_serialized_and_reloadable) ... ok
+test_directory_sync_distinguishes_unsupported_from_io_failure (offline_task_queue_persistence.TaskQueuePersistenceTests.test_directory_sync_distinguishes_unsupported_from_io_failure) ... ok
+test_existing_agent_stub_regressions_in_exclusive_temporary_cwd (offline_task_queue_persistence.TaskQueuePersistenceTests.test_existing_agent_stub_regressions_in_exclusive_temporary_cwd) ... ok
+test_failed_first_write_does_not_create_final_file (offline_task_queue_persistence.TaskQueuePersistenceTests.test_failed_first_write_does_not_create_final_file) ... ok
+test_invalid_store_behavior_remains_unchanged_without_automatic_repair (offline_task_queue_persistence.TaskQueuePersistenceTests.test_invalid_store_behavior_remains_unchanged_without_automatic_repair) ... ok
+test_postpublication_failure_retains_visible_state_and_blocks_all_writes (offline_task_queue_persistence.TaskQueuePersistenceTests.test_postpublication_failure_retains_visible_state_and_blocks_all_writes) ... ok
+test_prepublication_failures_restore_add_update_delete (offline_task_queue_persistence.TaskQueuePersistenceTests.test_prepublication_failures_restore_add_update_delete) ... ok
+test_replace_receives_complete_synced_file_in_same_directory (offline_task_queue_persistence.TaskQueuePersistenceTests.test_replace_receives_complete_synced_file_in_same_directory) ... ok
+test_serialization_errors_restore_state_before_any_file_operation (offline_task_queue_persistence.TaskQueuePersistenceTests.test_serialization_errors_restore_state_before_any_file_operation) ... ok
+test_success_add_update_delete_reload_and_audit (offline_task_queue_persistence.TaskQueuePersistenceTests.test_success_add_update_delete_reload_and_audit) ... ok
+test_unpersisted_queue_does_not_serialize (offline_task_queue_persistence.TaskQueuePersistenceTests.test_unpersisted_queue_does_not_serialize) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.066s
+
+OK

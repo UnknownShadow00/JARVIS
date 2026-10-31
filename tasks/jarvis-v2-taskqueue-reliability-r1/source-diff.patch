@@ -1,0 +1,160 @@
+diff --git a/app/agent/task_queue.py b/app/agent/task_queue.py
+index 0a4940c..4ae4f16 100644
+--- a/app/agent/task_queue.py
++++ b/app/agent/task_queue.py
+@@ -1,7 +1,10 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import errno
+ import json
++import os
++import tempfile
+ import uuid
+ from dataclasses import asdict, dataclass, field
+ from datetime import UTC, datetime
+@@ -14,6 +17,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ DEFAULT_TASK_STORE = PROJECT_ROOT / "data" / "agent_tasks.json"
+ 
+ 
++class TaskQueuePersistenceError(RuntimeError):
++    """A write failed; ``published`` means the replacement may already be visible."""
++
++    def __init__(self, message: str, *, published: bool = False) -> None:
++        super().__init__(message)
++        self.published = published
++
++
+ @dataclass
+ class AgentTask:
+     task_id: str
+@@ -29,6 +40,7 @@ class TaskQueue:
+         self._tasks: dict[str, AgentTask] = {}
+         self._lock: asyncio.Lock | None = None
+         self._storage_path = Path(storage_path) if storage_path is not None else None
++        self._persistence_uncertain = False
+         self._load()
+ 
+     async def _get_lock(self) -> asyncio.Lock:
+@@ -41,8 +53,14 @@ class TaskQueue:
+         task = AgentTask(task_id=task_id, goal=goal)
+         lock = await self._get_lock()
+         async with lock:
++            previous = self._tasks.copy()
+             self._tasks[task_id] = task
+-            self._save()
++            try:
++                self._save()
++            except TaskQueuePersistenceError as exc:
++                if not exc.published:
++                    self._tasks = previous
++                raise
+         audit.log("task_queued", {"task_id": task_id, "goal": goal})
+         return task
+ 
+@@ -71,10 +89,16 @@ class TaskQueue:
+             task = self._tasks.get(task_id)
+             if task is None:
+                 return False
++            previous = (task.status, task.result, task.error)
+             task.status = status
+             task.result = result
+             task.error = error
+-            self._save()
++            try:
++                self._save()
++            except TaskQueuePersistenceError as exc:
++                if not exc.published:
++                    task.status, task.result, task.error = previous
++                raise
+         audit.log("task_status_update", {"task_id": task_id, "status": status})
+         return True
+ 
+@@ -83,8 +107,14 @@ class TaskQueue:
+         async with lock:
+             if task_id not in self._tasks:
+                 return False
++            previous = self._tasks.copy()
+             del self._tasks[task_id]
+-            self._save()
++            try:
++                self._save()
++            except TaskQueuePersistenceError as exc:
++                if not exc.published:
++                    self._tasks = previous
++                raise
+         audit.log("task_deleted", {"task_id": task_id})
+         return True
+ 
+@@ -110,12 +140,68 @@ class TaskQueue:
+     def _save(self) -> None:
+         if self._storage_path is None:
+             return
++        if self._persistence_uncertain:
++            raise TaskQueuePersistenceError(
++                "Task queue writes are blocked after an uncertain publication; "
++                "review the store and create a new TaskQueue instance."
++            )
++        temporary_path: Path | None = None
++        published = False
+         try:
+-            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
+             payload = [asdict(task) for task in self._tasks.values()]
+-            self._storage_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
++            serialized = json.dumps(payload, indent=2)
++            self._storage_path.parent.mkdir(parents=True, exist_ok=True)
++            with tempfile.NamedTemporaryFile(
++                mode="w", encoding="utf-8", dir=self._storage_path.parent,
++                prefix=f".{self._storage_path.name}.", suffix=".tmp", delete=False,
++            ) as temporary_file:
++                temporary_path = Path(temporary_file.name)
++                temporary_file.write(serialized)
++                temporary_file.flush()
++                os.fsync(temporary_file.fileno())
++            os.replace(temporary_path, self._storage_path)
++            published = True
++            temporary_path = None
++            self._sync_directory()
++        except Exception as exc:
++            # After replace, keep the published in-memory state and require review.
++            # Rolling it back or retrying could overwrite a change already visible.
++            self._persistence_uncertain = published
++            try:
++                audit.log("task_queue_save_error", {
++                    "path": str(self._storage_path), "error": str(exc),
++                    "published": published, "durability_uncertain": published,
++                })
++            except Exception:
++                pass  # Reporting must not hide the persistence failure or prevent rollback.
++            raise TaskQueuePersistenceError(
++                f"Task queue persistence failed for {self._storage_path}: {exc}",
++                published=published,
++            ) from exc
++        finally:
++            if temporary_path is not None:
++                try:
++                    temporary_path.unlink(missing_ok=True)
++                except OSError:
++                    # Do not hide the persistence failure if cleanup also fails.
++                    pass
++
++    def _sync_directory(self) -> None:
++        """Sync the replacement directory on POSIX where the filesystem supports it."""
++        if os.name != "posix":
++            return
++        unsupported = {errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP, errno.ENOSYS}
++        try:
++            descriptor = os.open(
++                self._storage_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
++            )
++            try:
++                os.fsync(descriptor)
++            finally:
++                os.close(descriptor)
+         except OSError as exc:
+-            audit.log("task_queue_save_error", {"path": str(self._storage_path), "error": str(exc)})
++            if exc.errno not in unsupported:
++                raise
+ 
+     def _task_from_dict(self, item: dict[str, Any]) -> AgentTask | None:
+         task_id = str(item.get("task_id") or "").strip()

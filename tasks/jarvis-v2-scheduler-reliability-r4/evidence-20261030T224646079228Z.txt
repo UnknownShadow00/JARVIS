@@ -1,0 +1,70 @@
+{
+  "timestamp_utc": "2026-10-30T22:46:46.077802+00:00",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "head": "7f4ae164261b792262eb9b818421c444c2d4ccff",
+  "scope": "isolated actual definitions + fresh files + inert backend/audit/HTTP recorders; not framework or service startup",
+  "baseline": false,
+  "expected_baseline_failures": false,
+  "tests_run": 36,
+  "subtests": 54,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "success": true,
+  "forbidden_modules_imported": [],
+  "blocked_parent_network_attempts": [],
+  "sha256": {
+    "app/agent/scheduler.py": "71183f5bf54bc36f96a62abf04a1ca73566805f0eda67cdefba5f4410a726181",
+    "app/server.py": "613a3b08ae074484f0187b0234105c05b85239c45c577eee69a2b0bd8e17052c",
+    "app/agent/task_queue.py": "50d1a4ebd6132f2593095874b170fa895d09c5bcd9ead9c598312cbf3314fc4c",
+    "tests/test_scheduler_reliability.py": "7362e28acf9d813fa9a98a24cdb77fd32543edcecab7f91fc5e722e52401984d",
+    "tests/test_task_queue_callers.py": "78b60338abc3efb7182cd2a93300fdff4ec29c689e18ac7cb6f0c3eca5e6dcb4",
+    "tests/test_task_queue_persistence.py": "bcf83dbce735f2692c8236c5e5b373a6196806c3ad016997f997dcdc3981adb4",
+    "tests/test_agent_stubs.py": "78dc5312911a423ff58f6ecbffc8daf6358b2592ea7e29bc3c6de30df7f898aa",
+    "tasks/jarvis-v2-scheduler-reliability-r4/scheduler.before.py": "696a32f6adb02fbfe0bd48688903cccdf49a125543a12e7d8ea4a4341f52b855",
+    "tasks/jarvis-v2-scheduler-reliability-r4/server.before.py": "6e9f1a5a8d6055617acc25976d45dcdad67f4eb67521f2f2aa6a75fb6ba9f89a",
+    "tasks/jarvis-v2-scheduler-reliability-r4/run_checks.py": "4eed594cff928d4c5fa6797e6aafa56265247886f40798a6eab530a59d96677a"
+  }
+}
+
+test_api_identifier_exhaustion_is_explicit_and_keeps_original (offline_queue_callers.TaskQueueCallerTests.test_api_identifier_exhaustion_is_explicit_and_keeps_original) ... ok
+test_api_postcommit_audit_failures_report_applied_state_without_repeating (offline_queue_callers.TaskQueueCallerTests.test_api_postcommit_audit_failures_report_applied_state_without_repeating) ... ok
+test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry (offline_queue_callers.TaskQueueCallerTests.test_api_postpublication_uncertainty_returns_reconciliation_id_and_no_retry) ... ok
+test_api_prepublication_failures_return_explicit_outcomes_without_retry (offline_queue_callers.TaskQueueCallerTests.test_api_prepublication_failures_return_explicit_outcomes_without_retry) ... ok
+test_api_quarantined_load_is_not_reported_as_success (offline_queue_callers.TaskQueueCallerTests.test_api_quarantined_load_is_not_reported_as_success) ... ok
+test_queue_errors_bind_operation_and_identifier (offline_queue_callers.TaskQueueCallerTests.test_queue_errors_bind_operation_and_identifier) ... ok
+test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success (offline_queue_callers.TaskQueueCallerTests.test_scheduler_failed_enqueue_never_updates_last_run_or_emits_success) ... ok
+test_scheduler_failure_audit_cannot_mask_original_queue_error (offline_queue_callers.TaskQueueCallerTests.test_scheduler_failure_audit_cannot_mask_original_queue_error) ... ok
+test_scheduler_identifier_exhaustion_does_not_update_success_or_retry (offline_queue_callers.TaskQueueCallerTests.test_scheduler_identifier_exhaustion_does_not_update_success_or_retry) ... ok
+test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp (offline_queue_callers.TaskQueueCallerTests.test_scheduler_postcommit_audit_failure_retains_enqueue_and_original_timestamp) ... ok
+test_scheduler_success_event_audit_failure_carries_reconciliation_id (offline_queue_callers.TaskQueueCallerTests.test_scheduler_success_event_audit_failure_carries_reconciliation_id) ... ok
+test_scheduler_success_marks_enqueue_only_after_return (offline_queue_callers.TaskQueueCallerTests.test_scheduler_success_marks_enqueue_only_after_return) ... ok
+test_successful_api_and_missing_task_responses_remain_compatible (offline_queue_callers.TaskQueueCallerTests.test_successful_api_and_missing_task_responses_remain_compatible) ... ok
+test_existing_agent_stub_regressions_in_exclusive_temporary_cwd (offline_queue_helpers.TaskQueuePersistenceTests.test_existing_agent_stub_regressions_in_exclusive_temporary_cwd) ... ok
+test_add_remove_prepublication_faults_preserve_disk_memory_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_add_remove_prepublication_faults_preserve_disk_memory_backend) ... ok
+test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried (offline_scheduler_r4.SchedulerReliabilityTests.test_already_admitted_enqueue_can_finish_after_remove_and_is_not_retried) ... ok
+test_applied_audit_failure_is_explicit_and_blocks_later_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_applied_audit_failure_is_explicit_and_blocks_later_admission) ... ok
+test_atomic_publication_sync_order_and_invalid_new_records (offline_scheduler_r4.SchedulerReliabilityTests.test_atomic_publication_sync_order_and_invalid_new_records) ... ok
+test_disabled_job_is_not_registered_and_retained_callback_is_rejected (offline_scheduler_r4.SchedulerReliabilityTests.test_disabled_job_is_not_registered_and_retained_callback_is_rejected) ... ok
+test_identifier_collisions_bounded_without_overwrite (offline_scheduler_r4.SchedulerReliabilityTests.test_identifier_collisions_bounded_without_overwrite) ... ok
+test_invalid_cron_is_rejected_before_snapshot_or_backend_start (offline_scheduler_r4.SchedulerReliabilityTests.test_invalid_cron_is_rejected_before_snapshot_or_backend_start) ... ok
+test_load_io_and_nonregular_files_block_missing_delete_and_start (offline_scheduler_r4.SchedulerReliabilityTests.test_load_io_and_nonregular_files_block_missing_delete_and_start) ... ok
+test_malformed_stores_block_writes_and_start_without_erasing_evidence (offline_scheduler_r4.SchedulerReliabilityTests.test_malformed_stores_block_writes_and_start_without_erasing_evidence) ... ok
+test_old_object_same_identifier_and_disabled_bare_helper_rejected (offline_scheduler_r4.SchedulerReliabilityTests.test_old_object_same_identifier_and_disabled_bare_helper_rejected) ... ok
+test_postpublication_failure_retains_state_and_blocks_all_admission (offline_scheduler_r4.SchedulerReliabilityTests.test_postpublication_failure_retains_state_and_blocks_all_admission) ... ok
+test_registration_failure_after_save_is_explicit_and_fail_closed (offline_scheduler_r4.SchedulerReliabilityTests.test_registration_failure_after_save_is_explicit_and_fail_closed) ... ok
+test_removed_callback_cannot_enqueue_even_when_backend_removal_fails (offline_scheduler_r4.SchedulerReliabilityTests.test_removed_callback_cannot_enqueue_even_when_backend_removal_fails) ... ok
+test_removed_callback_rejected_after_successful_remove (offline_scheduler_r4.SchedulerReliabilityTests.test_removed_callback_rejected_after_successful_remove) ... ok
+test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility (offline_scheduler_r4.SchedulerReliabilityTests.test_scheduler_api_returns_sanitized_failure_outcomes_and_success_compatibility) ... ok
+test_shutdown_failure_invalidates_callbacks_before_backend_call (offline_scheduler_r4.SchedulerReliabilityTests.test_shutdown_failure_invalidates_callbacks_before_backend_call) ... ok
+test_start_audit_failure_cleans_backend_and_blocks_captured_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_start_audit_failure_cleans_backend_and_blocks_captured_callback) ... ok
+test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure (offline_scheduler_r4.SchedulerReliabilityTests.test_start_registration_or_start_failure_blocks_callbacks_and_reports_failure) ... ok
+test_stop_restart_rejects_prior_generation_and_accepts_current_callback (offline_scheduler_r4.SchedulerReliabilityTests.test_stop_restart_rejects_prior_generation_and_accepts_current_callback) ... ok
+test_stub_mode_and_idempotent_start_have_no_actual_backend (offline_scheduler_r4.SchedulerReliabilityTests.test_stub_mode_and_idempotent_start_have_no_actual_backend) ... ok
+test_success_roundtrip_missing_remove_and_exact_fields (offline_scheduler_r4.SchedulerReliabilityTests.test_success_roundtrip_missing_remove_and_exact_fields) ... ok
+test_unsupported_directory_sync_and_cleanup_reporting_failures (offline_scheduler_r4.SchedulerReliabilityTests.test_unsupported_directory_sync_and_cleanup_reporting_failures) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 0.301s
+
+OK

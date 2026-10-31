@@ -1,0 +1,194 @@
+{
+  "started_at": "2026-10-31T01:42:39.026796+00:00",
+  "scope": "ONE recognized existing unprivileged bubblewrap/stdlb synthetic prerequisite attempt; no candidate execution",
+  "installer": {
+    "recognized": true,
+    "source": "retained PyPA pip 26.2.1 public wheel",
+    "sha256_verified": "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e",
+    "retained_record": {
+      "name": "pip",
+      "version": "26.2.1",
+      "purpose": "The PyPA recommended tool for installing Python packages.",
+      "necessity": "transitive or inherited OS/tooling pin; individual app necessity not established",
+      "artifact_type": "PyPI wheel",
+      "abi_platform_tags": [
+        "py3-none-any"
+      ],
+      "artifact": {
+        "url": "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl",
+        "path": "artifacts/wheels/pip-26.2.1-py3-none-any.whl",
+        "bytes": 1816632,
+        "sha256": "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e",
+        "expected_sha256": "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e",
+        "hash_matches": true
+      },
+      "verification": "PEP740 signature verified against publisher repository",
+      "status": "ACQUIRED_AND_INSTALLED_EXACT",
+      "hooks": "no .pth or installer scripts",
+      "compatibility": "exact version check PASS; core smoke only, no operational functions executed"
+    },
+    "retained_origin_record_sha256": "e802f32b1eca5dd3c8b41b8d0d47fcf2b6e13fea5dd6cb75306ae3e187de626e",
+    "retained_signature_claim_not_reverified_now": "PEP740 signature verified against publisher repository",
+    "executed": false
+  },
+  "bwrap": {
+    "package_metadata": "bubblewrap 0.11.1-1ubuntu0.3 install ok installed\npython3.14 3.14.4-1ubuntu0.2 install ok installed\npython3.14-minimal 3.14.4-1ubuntu0.2 install ok installed\nutil-linux 2.41.3-3ubuntu2.2 install ok installed\n",
+    "binary_sha256": "523da3e7399044be5163aee6f57a77a6bef7454376e28f0a0627920bae1b76b6",
+    "installed_package_md5_matches": true,
+    "root_owned_not_setuid_or_setgid_or_file_capable": true
+  },
+  "runtime": {
+    "version": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "executable": "/usr/bin/python3",
+    "binary_realpath": "/usr/bin/python3.14",
+    "binary_sha256": "52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+  },
+  "closure_lock_sha256": "c33e6a6d1b55691d2ccb32896fc8bc60ebaf213e0060275aadbfd230cfff0ac8",
+  "argv": [
+    "/usr/bin/bwrap",
+    "--unshare-all",
+    "--die-with-parent",
+    "--new-session",
+    "--clearenv",
+    "--setenv",
+    "PATH",
+    "/usr/bin:/bin",
+    "--setenv",
+    "LANG",
+    "C.UTF-8",
+    "--cap-drop",
+    "ALL",
+    "--ro-bind",
+    "/usr",
+    "/usr",
+    "--ro-bind",
+    "/lib",
+    "/lib",
+    "--ro-bind",
+    "/lib64",
+    "/lib64",
+    "--proc",
+    "/proc",
+    "--dev",
+    "/dev",
+    "--dir",
+    "/run",
+    "--ro-bind",
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-fixture-integration-r1/work/probe-input",
+    "/input",
+    "--bind",
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-fixture-integration-r1/work/probe-output",
+    "/work",
+    "--symlink",
+    "/work/tmp",
+    "/tmp",
+    "--chdir",
+    "/work",
+    "--remount-ro",
+    "/",
+    "--",
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "/input/probe.py"
+  ],
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8"
+  },
+  "close_fds": true,
+  "deliberately_inheritable_synthetic_parent_fd": 3,
+  "preexec_limits": {
+    "address_space_bytes": 1073741824,
+    "cpu_seconds": [
+      5,
+      6
+    ],
+    "file_bytes": 1048576,
+    "open_fds": 64,
+    "core_bytes": 0
+  },
+  "wall_timeout_seconds": 20,
+  "expected": {
+    "outside_canary_path": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-fixture-integration-r1/work/outside-canary.txt",
+    "readable_canary_sha256": "b1e69353c3f6948da6161e4b337f90a780f222ea420ee9e46f3f367cd5098780",
+    "parent_namespaces": {
+      "user": "user:[4026531837]",
+      "mnt": "mnt:[4026531832]",
+      "pid": "pid:[4026531836]",
+      "net": "net:[4026531833]",
+      "ipc": "ipc:[4026531839]",
+      "uts": "uts:[4026531838]"
+    }
+  },
+  "attempts": 1,
+  "no_installer_or_candidate_import_before_boundary_pass": true,
+  "returncode": 0,
+  "stdout": "{\"address_space_limit\": [1073741824, 1073741824], \"cap_eff\": \"0000000000000000\", \"child_namespaces\": {\"ipc\": \"ipc:[4026532404]\", \"mnt\": \"mnt:[4026532402]\", \"net\": \"net:[4026532408]\", \"pid\": \"pid:[4026532405]\", \"user\": \"user:[4026532961]\", \"uts\": \"uts:[4026532403]\"}, \"core_limit\": [0, 0], \"cpu_limit\": [5, 6], \"file_size_limit\": [1048576, 1048576], \"inherited_fd_targets\": {\"0\": \"/dev/null\", \"1\": \"pipe:[8918806]\", \"2\": \"pipe:[8918807]\"}, \"network_canaries\": [{\"errno\": 101, \"family\": 2}, {\"errno\": 101, \"family\": 10}], \"no_new_privs\": \"1\", \"open_files_limit\": [64, 64], \"outside_synthetic_read_denied_errno\": 2, \"readonly_input_write_denied_errno\": 30, \"scope\": \"stdlib synthetic child boundary probe, not framework integration\", \"status\": \"SYNTHETIC_BOUNDARIES_PASSED\", \"write_paths\": [\"/work/write-canary.txt\", \"/work/tmp/tmp-canary.txt\"]}\n",
+  "stderr": "",
+  "probe_result": {
+    "address_space_limit": [
+      1073741824,
+      1073741824
+    ],
+    "cap_eff": "0000000000000000",
+    "child_namespaces": {
+      "ipc": "ipc:[4026532404]",
+      "mnt": "mnt:[4026532402]",
+      "net": "net:[4026532408]",
+      "pid": "pid:[4026532405]",
+      "user": "user:[4026532961]",
+      "uts": "uts:[4026532403]"
+    },
+    "core_limit": [
+      0,
+      0
+    ],
+    "cpu_limit": [
+      5,
+      6
+    ],
+    "file_size_limit": [
+      1048576,
+      1048576
+    ],
+    "inherited_fd_targets": {
+      "0": "/dev/null",
+      "1": "pipe:[8918806]",
+      "2": "pipe:[8918807]"
+    },
+    "network_canaries": [
+      {
+        "errno": 101,
+        "family": 2
+      },
+      {
+        "errno": 101,
+        "family": 10
+      }
+    ],
+    "no_new_privs": "1",
+    "open_files_limit": [
+      64,
+      64
+    ],
+    "outside_synthetic_read_denied_errno": 2,
+    "readonly_input_write_denied_errno": 30,
+    "scope": "stdlib synthetic child boundary probe, not framework integration",
+    "status": "SYNTHETIC_BOUNDARIES_PASSED",
+    "write_paths": [
+      "/work/write-canary.txt",
+      "/work/tmp/tmp-canary.txt"
+    ]
+  },
+  "outcome": "ISOLATION_PREFLIGHT_PASSED_INTEGRATION_NOT_YET_RUN",
+  "finished_at": "2026-10-31T01:42:39.063393+00:00",
+  "elapsed_seconds": 0.019659647019580007,
+  "new_tree_file_count": 6,
+  "new_tree_bytes": 4107,
+  "probe_output_entries": [
+    "tmp",
+    "tmp/tmp-canary.txt",
+    "write-canary.txt"
+  ]
+}

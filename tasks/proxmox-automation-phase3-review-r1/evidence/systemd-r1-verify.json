@@ -1,0 +1,18 @@
+{
+  "command": [
+    "systemd-analyze",
+    "--root=<exclusive-staged-fixture>",
+    "verify",
+    "--man=no",
+    "--generators=no",
+    "g6k-serial-precheck.service",
+    "g6k-serial-precheck.socket",
+    "g6k-serial-worker.service",
+    "g6k-serial.service",
+    "g6k-serial.socket"
+  ],
+  "returncode": 0,
+  "unit_files": 5,
+  "installed_or_started": false,
+  "limits": "Syntax only in an exclusive disposable root fixture; no host unit changes, runtime enforcement or guest compatibility proof"
+}

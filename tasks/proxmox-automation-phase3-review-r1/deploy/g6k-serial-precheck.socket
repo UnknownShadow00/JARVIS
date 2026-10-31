@@ -1,0 +1,15 @@
+[Unit]
+Description=Transport-disabled peer qualification socket
+
+[Socket]
+ListenStream=/run/g6k-serial/precheck.sock
+SocketUser=root
+SocketGroup=g6k-submit
+SocketMode=0660
+DirectoryMode=0755
+Backlog=4
+RemoveOnStop=yes
+Service=g6k-serial-precheck.service
+
+[Install]
+WantedBy=sockets.target
