@@ -1,0 +1,3761 @@
+{
+  "at_utc": "2026-10-31T09:21:39.863691+00:00",
+  "status": "SCOPED_FIRST_PARTY_SOURCE_SCAN",
+  "command": [
+    "rg",
+    "--files",
+    "app",
+    "frontend",
+    "scripts",
+    "evals",
+    "docs",
+    ".github"
+  ],
+  "explicit_top_level_files": [
+    "README.md",
+    "CLAUDE.md",
+    "HANDOFF.md",
+    "CONTRIBUTING.md",
+    "SESSION_STARTER.md",
+    "PHASE_0_TASKS.md",
+    "PHASE_1_TASKS.md",
+    "jarvis.py",
+    "jarvis.cmd"
+  ],
+  "active_top_level_task_scripts": [
+    "tasks/readiness_report.py",
+    "tasks/tool_readiness_smoke.py",
+    "tasks/pre_server_readiness.py",
+    "tasks/manual_voice_smoke.py"
+  ],
+  "suffixes": [
+    ".cmd",
+    ".html",
+    ".js",
+    ".jsx",
+    ".md",
+    ".ps1",
+    ".py",
+    ".sh",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml"
+  ],
+  "excluded_path_components": [
+    "__pycache__",
+    "baselines",
+    "build",
+    "coverage",
+    "dist",
+    "node_modules",
+    "snapshots",
+    "vendor"
+  ],
+  "excluded_scopes": [
+    "all sealed/historical tasks directories, run copies and snapshots",
+    "dependency/generated bundles and binary assets",
+    "tests (test callers are fixtures, not deployed clients)",
+    "real config.yaml, environment files, credentials, runtime state",
+    "historical top-level task13 benchmark scripts and historical reports"
+  ],
+  "patterns": {
+    "changed_api": "/tasks\\b|/schedule/jobs\\b|/requests/|agent_tasks|scheduled_jobs",
+    "facade_or_authority": "\\btask_queue\\b|\\b(?:add_task|delete_task|update_status|add_job|remove_job|submit|set_schedule|admit_occurrence)\\s*\\(",
+    "transport": "\\b(?:fetch|urlopen|WebSocket|XMLHttpRequest)\\s*\\(|\\b(?:httpx|requests|axios)\\b|\\b_(?:get|post)\\s*\\(|\\.(?:get|post|put|patch|delete|send)\\s*\\(",
+    "lifecycle_or_backlog": "scheduler\\.(?:start|stop)|pending_task_count|pending_count|tasks/state|TaskQueue|Scheduler\\("
+  },
+  "source_bytes": 627183,
+  "files": [
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "bytes": 312,
+      "sha256": "dc64ff331e12b9fd95f36aff4137990d0f4b84e8768c32085e21fd8ca4954afb",
+      "hits": []
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+      "bytes": 313,
+      "sha256": "67e0fa65b74a0cc65ccb53cd060704f177552b6e4325f805a77525827ec550a4",
+      "hits": []
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "bytes": 240,
+      "sha256": "173772617707bbd921b171698e22d51bc11b5d46da6ba6cc62c7e90f5897c0d4",
+      "hits": []
+    },
+    {
+      "path": ".github/workflows/tests.yml",
+      "bytes": 818,
+      "sha256": "ed6129706f58af2bd7761a43fabb0f78db3734702067d118e5455954212cfa09",
+      "hits": []
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 44262,
+      "sha256": "5db0c8a7a542a128f0de871cd758a22520fcc3ccd10d846ae8b9b7f48e1e1700",
+      "hits": [
+        {
+          "line": 76,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "receipts; it must not replace `task_queue.py` or run a parallel writer. No Kanban"
+        },
+        {
+          "line": 136,
+          "kinds": [
+            "transport"
+          ],
+          "source": "**Context pre-fetch (`boot.py`):** `asyncio.gather` GPU temp, task count, last active project, recent errors. Morning report reads from `SESSION_CONTEXT` instantly."
+        },
+        {
+          "line": 139,
+          "kinds": [
+            "transport"
+          ],
+          "source": "FastAPI + uvicorn, httpx (Discord/Telegram REST), APScheduler (cron, replaced by Hermes Kanban when active), duckduckgo-search, Tailscale."
+        },
+        {
+          "line": 173,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "agent/        task_queue.py  scheduler.py  reporter.py  sensor_store.py"
+        },
+        {
+          "line": 318,
+          "kinds": [
+            "transport"
+          ],
+          "source": "T+0.0s login \u2192 `boot.py` starts (Task Scheduler) | T+0.1s context pre-fetch (parallel) | T+0.5s Electron HUD launches | T+1.0s boot music (4s, pygame.mixer) | T+2.5s text crawl | T+5.0s arc reactor pulses, HUD loads via WebSocket | T+5.5s morning status report TTS | T+8.0s `is_listening=True`, wake word active."
+        },
+        {
+          "line": 652,
+          "kinds": [
+            "transport"
+          ],
+          "source": "Proof rather than assertion: 260 requests x 2 context shapes x 16 fields were"
+        }
+      ]
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 551,
+      "sha256": "2a4ce0d2ee93e3b3b8e6299acb2ac868f1a55e39def3c1f2d70e8094b9b3e29c",
+      "hits": []
+    },
+    {
+      "path": "HANDOFF.md",
+      "bytes": 10331,
+      "sha256": "908bd54b16ca41bbf3a69db0265506628e92ae095633968474d507eaa29e42bc",
+      "hits": [
+        {
+          "line": 17,
+          "kinds": [
+            "transport"
+          ],
+          "source": "| 0.3 LLM client | DONE | `app/brain/llm_client.py` \u2014 httpx direct REST, `think:false` enforced |"
+        },
+        {
+          "line": 36,
+          "kinds": [
+            "transport"
+          ],
+          "source": "llm_client.py            httpx direct REST to Ollama \u2014 think:false, num_predict=120, no ollama SDK"
+        },
+        {
+          "line": 69,
+          "kinds": [
+            "transport"
+          ],
+          "source": "httpx POST to `{ollama_base_url}/api/chat` with `\"think\": false` in the JSON body."
+        },
+        {
+          "line": 73,
+          "kinds": [
+            "transport"
+          ],
+          "source": "as defense-in-depth, but the httpx fix is the actual solution."
+        },
+        {
+          "line": 77,
+          "kinds": [
+            "transport"
+          ],
+          "source": "1. httpx JSON body: `\"think\": false`"
+        },
+        {
+          "line": 223,
+          "kinds": [
+            "transport"
+          ],
+          "source": "1. **Ollama Python SDK breaks think=False** \u2014 use httpx direct REST, never `AsyncClient.chat()`"
+        }
+      ]
+    },
+    {
+      "path": "PHASE_0_TASKS.md",
+      "bytes": 11312,
+      "sha256": "bfa439fa04242fe83598dac6779b9c355686e019e670ef95d1798f5755c3c126",
+      "hits": []
+    },
+    {
+      "path": "PHASE_1_TASKS.md",
+      "bytes": 8495,
+      "sha256": "74c2f2678fa2b6b70635091de6abc37f911bf93933f196435ccc53e6fddb77f2",
+      "hits": []
+    },
+    {
+      "path": "README.md",
+      "bytes": 8043,
+      "sha256": "56c171f0f0ed1d65d479dfcdc44ef574ab29f11314a02709008d68b5ab3e2149",
+      "hits": []
+    },
+    {
+      "path": "SESSION_STARTER.md",
+      "bytes": 2543,
+      "sha256": "f336192da6349f56a7f2c586cfef5e303ddefd085c0f1ab9cc4a00164a72ab5e",
+      "hits": []
+    },
+    {
+      "path": "app/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/agent/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/agent/api.py",
+      "bytes": 3134,
+      "sha256": "f9551b7eb2f420cf8f12011996c204295b23daed0691241e327b6f004a865976",
+      "hits": [
+        {
+          "line": 33,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.post(\"/tasks\")"
+        },
+        {
+          "line": 34,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "async def submit(request: Submission):"
+        },
+        {
+          "line": 35,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "return invoke(lambda: get_authority().submit(SERVICE_ACTOR, request.request_id, request.goal))"
+        },
+        {
+          "line": 38,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.get(\"/tasks\")"
+        },
+        {
+          "line": 46,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.get(\"/tasks/{task_id}\")"
+        },
+        {
+          "line": 56,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.delete(\"/tasks/{task_id}\")"
+        },
+        {
+          "line": 61,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.get(\"/requests/{request_id}\")"
+        },
+        {
+          "line": 71,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.post(\"/schedule/jobs\")"
+        },
+        {
+          "line": 72,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "async def add_job(request: Schedule):"
+        },
+        {
+          "line": 73,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "return invoke(lambda: scheduler.add_job(request.name, request.cron_expr, request.goal, request_id=request.request_id))"
+        },
+        {
+          "line": 76,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.get(\"/schedule/jobs\")"
+        },
+        {
+          "line": 81,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "@router.delete(\"/schedule/jobs/{job_id}\")"
+        },
+        {
+          "line": 82,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "async def remove_job(job_id: str, request_id: str):"
+        },
+        {
+          "line": 83,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "return invoke(lambda: scheduler.remove_job(job_id, request_id=request_id))"
+        },
+        {
+          "line": 86,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@router.get(\"/ready\")"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/authority.py",
+      "bytes": 22108,
+      "sha256": "9168d7bb02c40d519c75b55b658b42b5e618ec7b1c3c24d24adb0268b2acb5a4",
+      "hits": [
+        {
+          "line": 171,
+          "kinds": [
+            "transport"
+          ],
+          "source": "task = self._get(\"task\", row[0])"
+        },
+        {
+          "line": 258,
+          "kinds": [
+            "transport"
+          ],
+          "source": "def _get(self, kind, ident, scope=None):"
+        },
+        {
+          "line": 278,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "def submit(self, actor, request_id, goal):"
+        },
+        {
+          "line": 317,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return self._mutate(actor, request_id, \"cancel\", {\"task_id\": task_id}, lambda scope: self._cancel(self._get(\"task\", task_id, scope)))"
+        },
+        {
+          "line": 329,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "def set_schedule(self, actor, request_id, job_id, *, enabled=False, removed=False):"
+        },
+        {
+          "line": 334,
+          "kinds": [
+            "transport"
+          ],
+          "source": "job = self._get(\"schedule\", job_id, scope)"
+        },
+        {
+          "line": 342,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if task[\"metadata\"].get(\"job_id\") == job_id:"
+        },
+        {
+          "line": 362,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "def admit_occurrence(self, actor, job_id, revision, nominal, epoch, next_run_at):"
+        },
+        {
+          "line": 369,
+          "kinds": [
+            "transport"
+          ],
+          "source": "job = self._get(\"schedule\", job_id, scope)"
+        },
+        {
+          "line": 388,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self._new_task(scope, new_id, old[\"goal\"], status=\"pending\" if old.get(\"status\", \"pending\") == \"pending\" else \"unknown\", metadata={\"legacy\": old})"
+        },
+        {
+          "line": 392,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self._create(\"schedule\", new_id, scope, dict(job_id=new_id, scope=scope, name=old[\"name\"], cron_expr=old[\"cron_expr\"], goal=old[\"goal\"], enabled=False, removed=False, revision=1, last_run=None, next_run_at=None, metadata={\"legacy\": old, \"legacy_last_run\": old.get(\"last_run\")}))"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/migration.py",
+      "bytes": 7825,
+      "sha256": "84b5723466072e147277229a0e4dd589540686d3525f885f6d7319a78cff732a",
+      "hits": [
+        {
+          "line": 146,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if item.get(\"result\") is not None and type(item[\"result\"]) is not dict:"
+        },
+        {
+          "line": 148,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if item.get(\"error\") is not None and type(item[\"error\"]) is not str:"
+        },
+        {
+          "line": 153,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if item.get(\"last_run\") is not None and type(item[\"last_run\"]) is not str:"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/reporter.py",
+      "bytes": 2778,
+      "sha256": "77a247a9f34cf25ef2294acd1c9785373da6987757fdbdabd27a548cf9bea545",
+      "hits": [
+        {
+          "line": 8,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "from app.agent.task_queue import task_queue"
+        },
+        {
+          "line": 17,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "return list(task_queue.tasks)"
+        },
+        {
+          "line": 28,
+          "kinds": [
+            "transport"
+          ],
+          "source": "counts[task.status] = counts.get(task.status, 0) + 1"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/runtime.py",
+      "bytes": 1047,
+      "sha256": "1f7d71e36140143e098fbba5a19e6e35bc95d964570d745161ea16c1404170cd",
+      "hits": [
+        {
+          "line": 16,
+          "kinds": [
+            "changed_api"
+          ],
+          "source": "_authority = Authority(PROJECT_ROOT / \"data/authority/queue.sqlite\", legacy_paths=(PROJECT_ROOT / \"data/agent_tasks.json\", PROJECT_ROOT / \"data/scheduled_jobs.json\"))"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/scheduler.py",
+      "bytes": 5525,
+      "sha256": "39b2e09db07b709553513810c4c3e57705a774676212c286465c29746d57cb17",
+      "hits": [
+        {
+          "line": 26,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "def add_job(self, name, cron_expr, goal, *, request_id):"
+        },
+        {
+          "line": 29,
+          "kinds": [
+            "transport"
+          ],
+          "source": "nominal = previous[\"result\"].get(\"next_run_at\") if previous and previous[\"operation\"] == \"add_schedule\" else cron_next(cron_expr, datetime.now(UTC).isoformat())"
+        },
+        {
+          "line": 40,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "def remove_job(self, job_id, *, request_id):"
+        },
+        {
+          "line": 41,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "result = get_authority().set_schedule(SERVICE_ACTOR, request_id, job_id, removed=True)"
+        },
+        {
+          "line": 44,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "self._backend.remove_job(job_id)"
+        },
+        {
+          "line": 70,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "self._backend = AsyncIOScheduler(timezone=UTC)"
+        },
+        {
+          "line": 102,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "self._backend.add_job(self._dispatch, trigger=DateTrigger(run_date=datetime.fromisoformat(job[\"next_run_at\"])), args=[job[\"job_id\"], job[\"revision\"], job[\"next_run_at\"], self._epoch], id=job[\"job_id\"], replace_existing=True)"
+        },
+        {
+          "line": 111,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "get_authority().admit_occurrence(SERVICE_ACTOR, job_id, revision, nominal, epoch, cron_next(job[\"cron_expr\"], nominal))"
+        },
+        {
+          "line": 126,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "scheduler = Scheduler()"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/sensor_store.py",
+      "bytes": 595,
+      "sha256": "b0bf333c037dfd86becabeb24c643e9ab45e237a007c725ac94e2cdfea2075a5",
+      "hits": [
+        {
+          "line": 19,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return list(_store.get(node_id, deque()))[:limit]"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/simulation.py",
+      "bytes": 4607,
+      "sha256": "20d2684f20e80d7d18cef3fe16a1652daf4fabfbdb2905ef392008290b04b89e",
+      "hits": [
+        {
+          "line": 17,
+          "kinds": [
+            "transport"
+          ],
+          "source": "task = a._get(\"task\", task_id, scope)"
+        },
+        {
+          "line": 31,
+          "kinds": [
+            "transport"
+          ],
+          "source": "task = a._get(\"task\", task_id, scope)"
+        },
+        {
+          "line": 49,
+          "kinds": [
+            "transport"
+          ],
+          "source": "task = a._get(\"task\", task_id, scope)"
+        },
+        {
+          "line": 64,
+          "kinds": [
+            "transport"
+          ],
+          "source": "task = a._get(\"task\", task_id, scope)"
+        }
+      ]
+    },
+    {
+      "path": "app/agent/task_queue.py",
+      "bytes": 1448,
+      "sha256": "b2f17be0c97a3dfbbf9cf00ba7ac9491bed4de9dba04b016a488747684210ac4",
+      "hits": [
+        {
+          "line": 22,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "class TaskQueue:"
+        },
+        {
+          "line": 31,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "async def add_task(self, goal, *, request_id):"
+        },
+        {
+          "line": 32,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "return snapshot(get_authority().submit(SERVICE_ACTOR, request_id, goal)[\"result\"])"
+        },
+        {
+          "line": 40,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "async def update_status(self, *args, **kwargs):"
+        },
+        {
+          "line": 43,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "async def delete_task(self, task_id, *, request_id):"
+        },
+        {
+          "line": 47,
+          "kinds": [
+            "facade_or_authority",
+            "lifecycle_or_backlog"
+          ],
+          "source": "task_queue = TaskQueue()"
+        }
+      ]
+    },
+    {
+      "path": "app/boot.py",
+      "bytes": 10220,
+      "sha256": "46a54b70338e2dd1b3a408dcda020fc0cbc080c4f33bc5acfe1d6869d6e12b9e",
+      "hits": [
+        {
+          "line": 15,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 108,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = await asyncio.to_thread(httpx.get, url, timeout=2.0)"
+        },
+        {
+          "line": 158,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "_safe_prefetch(\"pending_tasks\", _prefetch_pending_task_count),"
+        },
+        {
+          "line": 182,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"gpu_temp\": stats.get(\"gpu_temp\") or \"unknown\","
+        },
+        {
+          "line": 187,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "async def _prefetch_pending_task_count() -> dict[str, Any]:"
+        },
+        {
+          "line": 188,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "return {\"pending_tasks\": await asyncio.to_thread(pending_task_count)}"
+        },
+        {
+          "line": 221,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "f\"Pending tasks: {pending_task_count()}\""
+        },
+        {
+          "line": 228,
+          "kinds": [
+            "transport"
+          ],
+          "source": "f\"Good morning, sir. The time is {values.get('Current time', 'unknown')}. \""
+        },
+        {
+          "line": 229,
+          "kinds": [
+            "transport"
+          ],
+          "source": "f\"GPU temperature {values.get('GPU temperature', 'unknown')}. \""
+        },
+        {
+          "line": 230,
+          "kinds": [
+            "transport"
+          ],
+          "source": "f\"{values.get('Pending tasks', '0')} pending tasks. \""
+        },
+        {
+          "line": 231,
+          "kinds": [
+            "transport"
+          ],
+          "source": "f\"Last project: {values.get('Last project', 'no active project')}.\""
+        },
+        {
+          "line": 263,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "def pending_task_count() -> int:"
+        },
+        {
+          "line": 268,
+          "kinds": [
+            "transport",
+            "lifecycle_or_backlog"
+          ],
+          "source": "value = payload.get(\"pending_count\", 0) if isinstance(payload, dict) else 0"
+        },
+        {
+          "line": 302,
+          "kinds": [
+            "transport"
+          ],
+          "source": "async with httpx.AsyncClient(timeout=httpx.Timeout(1.0)) as client:"
+        },
+        {
+          "line": 303,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = await client.get(url)"
+        }
+      ]
+    },
+    {
+      "path": "app/brain/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/brain/cancel_token.py",
+      "bytes": 484,
+      "sha256": "e5c449c4320b47749d5f4a2f9577237de0a5f3db5a7f749762be0b1310c10e1b",
+      "hits": []
+    },
+    {
+      "path": "app/brain/complexity_router.py",
+      "bytes": 1918,
+      "sha256": "f3f3f7531bc0a54bd1292403f3affbfcc568540d6e6c239819cc52a5a732d9e6",
+      "hits": []
+    },
+    {
+      "path": "app/brain/direct_responder.py",
+      "bytes": 2719,
+      "sha256": "efe89f2762318c87436372f96d7ac027abc12ccd2b308a9d340de5552a28fae9",
+      "hits": [
+        {
+          "line": 71,
+          "kinds": [
+            "transport"
+          ],
+          "source": "op = _OPS.get(type(node.op))"
+        },
+        {
+          "line": 79,
+          "kinds": [
+            "transport"
+          ],
+          "source": "op = _UNARY_OPS.get(type(node.op))"
+        }
+      ]
+    },
+    {
+      "path": "app/brain/kill_switch.py",
+      "bytes": 2787,
+      "sha256": "7e8e82a45e108d24e7dd0a930542b1ea4091702e78cd6d32e7ddf71ad3d439a7",
+      "hits": []
+    },
+    {
+      "path": "app/brain/llm_client.py",
+      "bytes": 11384,
+      "sha256": "f3ac97c4d3d2d079446b1da117d24410c6fa1a1ca448b7b7566f526999cf79bf",
+      "hits": [
+        {
+          "line": 9,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 127,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if result[i].get(\"role\") == \"user\":"
+        },
+        {
+          "line": 129,
+          "kinds": [
+            "transport"
+          ],
+          "source": "content = str(msg.get(\"content\", \"\"))"
+        },
+        {
+          "line": 204,
+          "kinds": [
+            "transport"
+          ],
+          "source": "async with httpx.AsyncClient(timeout=httpx.Timeout(600.0)) as client:"
+        },
+        {
+          "line": 205,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = await client.post(url, json=payload)"
+        },
+        {
+          "line": 266,
+          "kinds": [
+            "transport"
+          ],
+          "source": "message = response.get(\"message\")"
+        },
+        {
+          "line": 268,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return str(message.get(\"content\", \"\") or \"\")"
+        },
+        {
+          "line": 269,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return str(response.get(\"response\", \"\") or \"\")"
+        },
+        {
+          "line": 282,
+          "kinds": [
+            "transport"
+          ],
+          "source": "httpx.ConnectError,"
+        },
+        {
+          "line": 283,
+          "kinds": [
+            "transport"
+          ],
+          "source": "httpx.TimeoutException,"
+        },
+        {
+          "line": 284,
+          "kinds": [
+            "transport"
+          ],
+          "source": "httpx.ReadError,"
+        },
+        {
+          "line": 309,
+          "kinds": [
+            "transport"
+          ],
+          "source": ") -> AsyncGenerator[httpx.Response, None]:"
+        },
+        {
+          "line": 313,
+          "kinds": [
+            "transport"
+          ],
+          "source": "async with httpx.AsyncClient(timeout=httpx.Timeout(600.0)) as client:"
+        },
+        {
+          "line": 329,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(exc, httpx.TimeoutException):"
+        },
+        {
+          "line": 331,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(exc, (httpx.ConnectError, ConnectionError, OSError)):"
+        },
+        {
+          "line": 333,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(exc, httpx.ReadError):"
+        }
+      ]
+    },
+    {
+      "path": "app/brain/morning_report.py",
+      "bytes": 2515,
+      "sha256": "fe14da5b011e0f5663c946b21c42f78f56fc51503425e855319ec39f79d24cd2",
+      "hits": [
+        {
+          "line": 18,
+          "kinds": [
+            "transport"
+          ],
+          "source": "gpu_temp = str(context.get(\"gpu_temp\") or _gpu_temp())"
+        },
+        {
+          "line": 19,
+          "kinds": [
+            "transport"
+          ],
+          "source": "last_project = str(context.get(\"last_project\") or _last_project())"
+        },
+        {
+          "line": 20,
+          "kinds": [
+            "transport",
+            "lifecycle_or_backlog"
+          ],
+          "source": "pending_tasks = _coerce_int(context.get(\"pending_tasks\"), _pending_task_count())"
+        },
+        {
+          "line": 21,
+          "kinds": [
+            "transport"
+          ],
+          "source": "recent_errors = _coerce_int(context.get(\"recent_errors\"), 0)"
+        },
+        {
+          "line": 45,
+          "kinds": [
+            "transport"
+          ],
+          "source": "temp = stats.get(\"gpu_temp\")"
+        },
+        {
+          "line": 54,
+          "kinds": [
+            "transport"
+          ],
+          "source": "value = payload.get(\"last_project\")"
+        },
+        {
+          "line": 58,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "def _pending_task_count() -> int:"
+        },
+        {
+          "line": 60,
+          "kinds": [
+            "transport",
+            "lifecycle_or_backlog"
+          ],
+          "source": "value = payload.get(\"pending_count\", 0)"
+        }
+      ]
+    },
+    {
+      "path": "app/brain/planner.py",
+      "bytes": 3731,
+      "sha256": "1a6bb736c0d7b5ff9705a41af68e0b9f7d5e524d4481f0e7bb8b7f1ce0879fa2",
+      "hits": []
+    },
+    {
+      "path": "app/brain/prompts.py",
+      "bytes": 3836,
+      "sha256": "c750a776f0403a6d1380c714ce272493aee2a87b75d199acfa859667ed82c521",
+      "hits": []
+    },
+    {
+      "path": "app/brain/response_cleaner.py",
+      "bytes": 1756,
+      "sha256": "882d7d211bbfe4788b0080da7461879a6621c50175146ea870825fd8a391ff4e",
+      "hits": []
+    },
+    {
+      "path": "app/brain/router.py",
+      "bytes": 12205,
+      "sha256": "d44ebf3eedda8456d6ea606897dadb83a433b448dd6e2260912cc87d05a3ace3",
+      "hits": [
+        {
+          "line": 7,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 106,
+          "kinds": [
+            "transport"
+          ],
+          "source": "with httpx.Client(timeout=httpx.Timeout(20.0)) as client:"
+        },
+        {
+          "line": 107,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = client.post(url, json=payload)"
+        },
+        {
+          "line": 111,
+          "kinds": [
+            "transport"
+          ],
+          "source": "message = data.get(\"message\", {})"
+        },
+        {
+          "line": 113,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return str(message.get(\"content\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 114,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return str(data.get(\"response\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 304,
+          "kinds": [
+            "transport"
+          ],
+          "source": "intent = data.get(\"intent\", \"respond\")"
+        },
+        {
+          "line": 307,
+          "kinds": [
+            "transport"
+          ],
+          "source": "confidence = max(0.0, min(1.0, float(data.get(\"confidence\", 0.5))))"
+        },
+        {
+          "line": 311,
+          "kinds": [
+            "transport"
+          ],
+          "source": "suggested_tool=str(data.get(\"suggested_tool\", \"\")),"
+        },
+        {
+          "line": 312,
+          "kinds": [
+            "transport"
+          ],
+          "source": "reasoning=str(data.get(\"reasoning\", \"\")),"
+        }
+      ]
+    },
+    {
+      "path": "app/brain/tool_embeddings.py",
+      "bytes": 4631,
+      "sha256": "e471be6b38e2073f64c9fbe5b64098389a4b4d8e9b5e40876bb9d618a7a204da",
+      "hits": [
+        {
+          "line": 8,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 70,
+          "kinds": [
+            "transport"
+          ],
+          "source": "description = descriptions.get(name, \"\").strip()"
+        },
+        {
+          "line": 73,
+          "kinds": [
+            "transport"
+          ],
+          "source": "entry = tools_cache.get(name)"
+        },
+        {
+          "line": 76,
+          "kinds": [
+            "transport"
+          ],
+          "source": "and entry.get(\"model\") == model"
+        },
+        {
+          "line": 77,
+          "kinds": [
+            "transport"
+          ],
+          "source": "and entry.get(\"description\") == description"
+        },
+        {
+          "line": 78,
+          "kinds": [
+            "transport"
+          ],
+          "source": "and isinstance(entry.get(\"embedding\"), list)"
+        },
+        {
+          "line": 96,
+          "kinds": [
+            "transport"
+          ],
+          "source": "with httpx.Client(timeout=httpx.Timeout(10.0)) as client:"
+        },
+        {
+          "line": 97,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = client.post(url, json=payload)"
+        },
+        {
+          "line": 101,
+          "kinds": [
+            "transport"
+          ],
+          "source": "embedding = data.get(\"embedding\")"
+        },
+        {
+          "line": 124,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if not isinstance(data, dict) or data.get(\"model\") != settings.routing.embedding_model:"
+        },
+        {
+          "line": 126,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if not isinstance(data.get(\"tools\"), dict):"
+        }
+      ]
+    },
+    {
+      "path": "app/brain/tool_params.py",
+      "bytes": 6274,
+      "sha256": "a0664a15c3e6fa1810feb1bbaf6ac6785649cc796065ef63fd94ace885170ffd",
+      "hits": []
+    },
+    {
+      "path": "app/cli.py",
+      "bytes": 8114,
+      "sha256": "e8219eb4e8a9c3e41c693922d8c28e9b88287fc3f3f9ea41545b304a3b0d8902",
+      "hits": [
+        {
+          "line": 11,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 68,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload = _post(\"/resource/sleep/light\")"
+        },
+        {
+          "line": 74,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload = _post(\"/resource/sleep/deep\")"
+        },
+        {
+          "line": 99,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload = _post(\"/resource/wake\", params=params)"
+        },
+        {
+          "line": 109,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if persisted_state.get(\"state\") != \"DEEP_SLEEP\":"
+        },
+        {
+          "line": 110,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload = _get(\"/resource/status\", timeout=0.4)"
+        },
+        {
+          "line": 125,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload = _post(\"/resource/shutdown\")"
+        },
+        {
+          "line": 155,
+          "kinds": [
+            "transport"
+          ],
+          "source": "def _get(path: str, *, timeout: float = 3.0) -> dict[str, Any] | None:"
+        },
+        {
+          "line": 157,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.get(f\"{_base_url()}{path}\", timeout=timeout)"
+        },
+        {
+          "line": 165,
+          "kinds": [
+            "transport"
+          ],
+          "source": "def _post(path: str, *, params: dict[str, str] | None = None) -> dict[str, Any] | None:"
+        },
+        {
+          "line": 167,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.post(f\"{_base_url()}{path}\", params=params, timeout=120.0)"
+        },
+        {
+          "line": 176,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return _get(\"/health\", timeout=0.5) is not None"
+        },
+        {
+          "line": 189,
+          "kinds": [
+            "transport"
+          ],
+          "source": "state = payload.get(\"state\") or payload.get(\"persisted_state\", {}).get(\"state\") or \"UNKNOWN\""
+        },
+        {
+          "line": 191,
+          "kinds": [
+            "transport"
+          ],
+          "source": "actions = payload.get(\"actions\") or []"
+        },
+        {
+          "line": 196,
+          "kinds": [
+            "transport"
+          ],
+          "source": "resources = payload.get(\"resources\") or {}"
+        },
+        {
+          "line": 201,
+          "kinds": [
+            "transport"
+          ],
+          "source": "state = payload.get(\"state\")"
+        },
+        {
+          "line": 203,
+          "kinds": [
+            "transport"
+          ],
+          "source": "state = payload.get(\"persisted_state\", {}).get(\"state\", \"UNKNOWN\")"
+        },
+        {
+          "line": 205,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if payload.get(\"server\"):"
+        },
+        {
+          "line": 207,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if payload.get(\"idle_seconds\") is not None:"
+        },
+        {
+          "line": 209,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if payload.get(\"wake_listener_running\") is not None:"
+        },
+        {
+          "line": 211,
+          "kinds": [
+            "transport"
+          ],
+          "source": "_print_resource_summary(payload.get(\"resources\") or {})"
+        },
+        {
+          "line": 217,
+          "kinds": [
+            "transport"
+          ],
+          "source": "print(f\"Estimated loaded-model VRAM: {resources.get('estimated_vram_mb', 0)} MB\")"
+        },
+        {
+          "line": 218,
+          "kinds": [
+            "transport"
+          ],
+          "source": "print(f\"JARVIS RSS RAM: {resources.get('jarvis_rss_ram_mb', 0)} MB\")"
+        },
+        {
+          "line": 219,
+          "kinds": [
+            "transport"
+          ],
+          "source": "print(f\"JARVIS committed RAM: {resources.get('jarvis_committed_ram_mb', 0)} MB\")"
+        },
+        {
+          "line": 220,
+          "kinds": [
+            "transport"
+          ],
+          "source": "processes = resources.get(\"running_jarvis_processes\") or []"
+        },
+        {
+          "line": 222,
+          "kinds": [
+            "transport"
+          ],
+          "source": "models = [model for model in resources.get(\"loaded_models\") or [] if not model.get(\"error\")]"
+        },
+        {
+          "line": 224,
+          "kinds": [
+            "transport"
+          ],
+          "source": "cuda = resources.get(\"active_cuda_contexts\") or {}"
+        },
+        {
+          "line": 225,
+          "kinds": [
+            "transport"
+          ],
+          "source": "contexts = cuda.get(\"contexts\") or []"
+        },
+        {
+          "line": 226,
+          "kinds": [
+            "transport"
+          ],
+          "source": "print(f\"CUDA contexts: {len(contexts)}\" if cuda.get(\"available\") else \"CUDA contexts: unavailable\")"
+        }
+      ]
+    },
+    {
+      "path": "app/comms/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/comms/audio2face.py",
+      "bytes": 3063,
+      "sha256": "56a241581fea4885b6b6f502b63e4665475053620732075984d3765fe6331fce",
+      "hits": [
+        {
+          "line": 74,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self._connection.send(payload)"
+        },
+        {
+          "line": 87,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self._connection.send(payload)"
+        }
+      ]
+    },
+    {
+      "path": "app/comms/discord_bot.py",
+      "bytes": 2372,
+      "sha256": "1dc25e2cf3c1dbe3ac78a6f70e3655366fa46b2c19ef658403072380920b6cd4",
+      "hits": [
+        {
+          "line": 5,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 52,
+          "kinds": [
+            "transport"
+          ],
+          "source": "httpx.post,"
+        },
+        {
+          "line": 59,
+          "kinds": [
+            "transport"
+          ],
+          "source": "timeout=httpx.Timeout(10.0),"
+        },
+        {
+          "line": 62,
+          "kinds": [
+            "transport"
+          ],
+          "source": "except httpx.HTTPError as exc:"
+        }
+      ]
+    },
+    {
+      "path": "app/comms/telegram_bot.py",
+      "bytes": 2143,
+      "sha256": "86ffe412319a50a27f0978a42e87e1f015293cd7a92554d9fdc0bc540e3000d1",
+      "hits": [
+        {
+          "line": 5,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 50,
+          "kinds": [
+            "transport"
+          ],
+          "source": "httpx.post,"
+        },
+        {
+          "line": 53,
+          "kinds": [
+            "transport"
+          ],
+          "source": "timeout=httpx.Timeout(10.0),"
+        }
+      ]
+    },
+    {
+      "path": "app/comms/ue5_bridge.py",
+      "bytes": 2100,
+      "sha256": "48dad229975174de6c4b8ebf5935b1d37a2563ab97c6193287ee7451101714af",
+      "hits": []
+    },
+    {
+      "path": "app/computer/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/computer/gesture.py",
+      "bytes": 764,
+      "sha256": "052de73f2983b7a852a46198a32a0dbae231fb2427c5ecbf75e8526573bfd22d",
+      "hits": [
+        {
+          "line": 23,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = params.get(\"action\", \"start\")"
+        }
+      ]
+    },
+    {
+      "path": "app/computer/mouse_keyboard.py",
+      "bytes": 3077,
+      "sha256": "64b207fcfbe645968be289bd14f60a1b53bc9797973f54be237effdd8719de8b",
+      "hits": [
+        {
+          "line": 13,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if os.name != \"nt\" and not os.environ.get(\"DISPLAY\"):"
+        },
+        {
+          "line": 46,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(\"action\") or \"\").strip().lower()"
+        },
+        {
+          "line": 68,
+          "kinds": [
+            "transport"
+          ],
+          "source": "text = str(params.get(\"text\") or \"\")"
+        },
+        {
+          "line": 74,
+          "kinds": [
+            "transport"
+          ],
+          "source": "keys = params.get(\"keys\")"
+        },
+        {
+          "line": 78,
+          "kinds": [
+            "transport"
+          ],
+          "source": "key = params.get(\"key\", keys)"
+        },
+        {
+          "line": 81,
+          "kinds": [
+            "transport"
+          ],
+          "source": "clicks = int(params.get(\"clicks\", 0))"
+        }
+      ]
+    },
+    {
+      "path": "app/computer/safety.py",
+      "bytes": 1291,
+      "sha256": "a41127209add60d196ffacf9db655953108e31e1d69f6a7159ef9baf97c4c887",
+      "hits": []
+    },
+    {
+      "path": "app/computer/screenshot.py",
+      "bytes": 1427,
+      "sha256": "7fd47396d8fc78616866392979a7bfa2e0a234869437604fd054d163fa7d6135",
+      "hits": [
+        {
+          "line": 39,
+          "kinds": [
+            "transport"
+          ],
+          "source": "monitor = int(params.get(\"monitor\", 0))"
+        },
+        {
+          "line": 40,
+          "kinds": [
+            "transport"
+          ],
+          "source": "output_dir = params.get(\"output_dir\")"
+        }
+      ]
+    },
+    {
+      "path": "app/computer/verifier.py",
+      "bytes": 772,
+      "sha256": "6e11592eceee87fb518de96176ff384fbf1f1ed7e78ea8001f6769e3522b7eba",
+      "hits": []
+    },
+    {
+      "path": "app/computer/vision.py",
+      "bytes": 3669,
+      "sha256": "2fee8b05962fc1fec91f04fedbd8b041f6225cac46402393dde337347586c3b9",
+      "hits": [
+        {
+          "line": 7,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 82,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.post(url, json=payload, timeout=httpx.Timeout(120.0))"
+        },
+        {
+          "line": 84,
+          "kinds": [
+            "transport"
+          ],
+          "source": "except httpx.HTTPError as exc:"
+        },
+        {
+          "line": 89,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload_result.get(\"response\")"
+        },
+        {
+          "line": 90,
+          "kinds": [
+            "transport"
+          ],
+          "source": "or payload_result.get(\"message\", {}).get(\"content\")"
+        },
+        {
+          "line": 116,
+          "kinds": [
+            "transport"
+          ],
+          "source": "source = params.get(\"source\", VISION_SOURCE_SCREEN)"
+        },
+        {
+          "line": 117,
+          "kinds": [
+            "transport"
+          ],
+          "source": "prompt = params.get(\"prompt\", \"What do you see?\")"
+        }
+      ]
+    },
+    {
+      "path": "app/computer/yolo_detector.py",
+      "bytes": 2589,
+      "sha256": "23ea32ac22ab1f05aa1a732e0708f6c87d3e2bbe1a3ca14abb5f98baba29c674",
+      "hits": []
+    },
+    {
+      "path": "app/config.py",
+      "bytes": 7606,
+      "sha256": "447a1be6a5950f53adbac4d35b6a51ba6bd62207279774e9fa7183561b930cbf",
+      "hits": [
+        {
+          "line": 265,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if os.environ.get(OLLAMA_BASE_URL_ENV) and isinstance(raw_config.get(\"models\"), dict):"
+        },
+        {
+          "line": 268,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if os.environ.get(API_TOKEN_ENV) and isinstance(raw_config.get(\"server\"), dict):"
+        }
+      ]
+    },
+    {
+      "path": "app/config_check.py",
+      "bytes": 1407,
+      "sha256": "8f5866872775599d8a9dece0ccbf13cf663ce02f0445917479be237ea93e9c86",
+      "hits": [
+        {
+          "line": 7,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 34,
+          "kinds": [
+            "transport"
+          ],
+          "source": "ollama_ok = httpx.get(f\"{settings.models.ollama_base_url}/api/tags\", timeout=2.0).status_code == 200"
+        },
+        {
+          "line": 35,
+          "kinds": [
+            "transport"
+          ],
+          "source": "except httpx.HTTPError:"
+        }
+      ]
+    },
+    {
+      "path": "app/logs/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/logs/audit.py",
+      "bytes": 2973,
+      "sha256": "835fb246a4e28d02e2f4436e091b6591d490714797620981ef0a3e8447c588e1",
+      "hits": [
+        {
+          "line": 57,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self._queue.put(entry)"
+        },
+        {
+          "line": 61,
+          "kinds": [
+            "transport"
+          ],
+          "source": "entry = self._queue.get()"
+        },
+        {
+          "line": 83,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self._queue.put(None)"
+        }
+      ]
+    },
+    {
+      "path": "app/main.py",
+      "bytes": 342,
+      "sha256": "93788adfac34fc5a4e4d6caa58e1ee4a034ffbbbd97906d3ff900f50e8ce48b8",
+      "hits": []
+    },
+    {
+      "path": "app/memory/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/memory/graphiti_client.py",
+      "bytes": 5377,
+      "sha256": "1e9422e405c8a49e567e4833206290ff38e507233c6f71b33496d2afb55f2743",
+      "hits": [
+        {
+          "line": 92,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return os.environ.get(settings.memory.neo4j_password_env, \"\")"
+        }
+      ]
+    },
+    {
+      "path": "app/memory/memory_client.py",
+      "bytes": 1876,
+      "sha256": "9c6a87c6c051e6d2556c31583b99076f84919a7d0b37e35ec4cb5e8b2187fbd7",
+      "hits": []
+    },
+    {
+      "path": "app/memory/procedural.py",
+      "bytes": 2190,
+      "sha256": "2e66b8a66076449c6e77aadf3b480a91fee7fb04bb1bc65d2f64322f00f30b6c",
+      "hits": []
+    },
+    {
+      "path": "app/memory/project_indexer.py",
+      "bytes": 2914,
+      "sha256": "715d6376e3dc1b7bdb21cd36ab49ead53e4c6772ebb2249bf86eeb1def9f8c52",
+      "hits": []
+    },
+    {
+      "path": "app/memory/rag_client.py",
+      "bytes": 4016,
+      "sha256": "b5e5babb9f32f47e61c13eaa12d74baccc02f2161bdd7f18796cd712c083b7bd",
+      "hits": []
+    },
+    {
+      "path": "app/network/__init__.py",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "hits": []
+    },
+    {
+      "path": "app/network/tailscale.py",
+      "bytes": 1291,
+      "sha256": "3379b4e8b9ba24adf5fd0b85c0caf8f48787be4e4578dcbc78f47e4ecdaa59ee",
+      "hits": [
+        {
+          "line": 28,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self_data = parsed.get(\"Self\", {})"
+        },
+        {
+          "line": 29,
+          "kinds": [
+            "transport"
+          ],
+          "source": "tailscale_ips = self_data.get(\"TailscaleIPs\") or []"
+        },
+        {
+          "line": 31,
+          "kinds": [
+            "transport"
+          ],
+          "source": "self_hostname = str(self_data.get(\"HostName\") or \"\")"
+        },
+        {
+          "line": 37,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"peers\": len(parsed.get(\"Peer\", {})),"
+        },
+        {
+          "line": 44,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return str(status.get(\"self_ip\", \"\"))"
+        }
+      ]
+    },
+    {
+      "path": "app/observability/__init__.py",
+      "bytes": 247,
+      "sha256": "15ff29a8ae523f3a85031f929065cbbffb4aa8eb4ed2f2d0efe6bfb2642df0d1",
+      "hits": [
+        {
+          "line": 1,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"\"\"Local structured observability for JARVIS requests.\"\"\""
+        }
+      ]
+    },
+    {
+      "path": "app/observability/tracing.py",
+      "bytes": 8156,
+      "sha256": "e6defa78dbf9b1fe76cf1cb29ef051075f2b7ea2d36bb105fee116bca1cc38ec",
+      "hits": [
+        {
+          "line": 110,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return _trace_id_var.get()"
+        },
+        {
+          "line": 115,
+          "kinds": [
+            "transport"
+          ],
+          "source": "stack = _span_stack_var.get()"
+        },
+        {
+          "line": 157,
+          "kinds": [
+            "transport"
+          ],
+          "source": "stack_token = _span_stack_var.set((*_span_stack_var.get(), span_id))"
+        }
+      ]
+    },
+    {
+      "path": "app/resource_manager.py",
+      "bytes": 31982,
+      "sha256": "43e293d07aa7ed33b240c45033912d6a7c45658577367244503356825ec58ed6",
+      "hits": [
+        {
+          "line": 19,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 300,
+          "kinds": [
+            "transport"
+          ],
+          "source": "sum(float(model.get(\"size_vram_mb\") or 0.0) for model in loaded_models),"
+        },
+        {
+          "line": 369,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "await scheduler.stop()"
+        },
+        {
+          "line": 387,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "await scheduler.start()"
+        },
+        {
+          "line": 532,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.get(_ollama_endpoint(\"/api/ps\"), timeout=timeout_seconds)"
+        },
+        {
+          "line": 538,
+          "kinds": [
+            "transport"
+          ],
+          "source": "models = payload.get(\"models\", []) if isinstance(payload, dict) else []"
+        },
+        {
+          "line": 546,
+          "kinds": [
+            "transport"
+          ],
+          "source": "size = float(model.get(\"size\") or 0.0)"
+        },
+        {
+          "line": 547,
+          "kinds": [
+            "transport"
+          ],
+          "source": "size_vram = float(model.get(\"size_vram\") or 0.0)"
+        },
+        {
+          "line": 550,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"name\": model.get(\"name\") or model.get(\"model\") or \"\","
+        },
+        {
+          "line": 553,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"expires_at\": model.get(\"expires_at\"),"
+        },
+        {
+          "line": 562,
+          "kinds": [
+            "transport"
+          ],
+          "source": "str(model.get(\"name\"))"
+        },
+        {
+          "line": 564,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(model, dict) and model.get(\"name\") and not model.get(\"error\")"
+        },
+        {
+          "line": 586,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.post(_ollama_endpoint(\"/api/generate\"), json=payload, timeout=10.0)"
+        },
+        {
+          "line": 618,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.post(_ollama_endpoint(\"/api/generate\"), json=payload, timeout=120.0)"
+        },
+        {
+          "line": 708,
+          "kinds": [
+            "transport"
+          ],
+          "source": "cmdline_parts = proc.info.get(\"cmdline\") or []"
+        },
+        {
+          "line": 710,
+          "kinds": [
+            "transport"
+          ],
+          "source": "name = str(proc.info.get(\"name\") or \"\")"
+        },
+        {
+          "line": 714,
+          "kinds": [
+            "transport"
+          ],
+          "source": "memory_info = proc.info.get(\"memory_info\") or proc.memory_info()"
+        }
+      ]
+    },
+    {
+      "path": "app/server.py",
+      "bytes": 32408,
+      "sha256": "4e480c74ca857b356b706813a5b34c36f38550baae673a8b7ff08da719cbb76b",
+      "hits": [
+        {
+          "line": 120,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "await scheduler.start()"
+        },
+        {
+          "line": 149,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "await scheduler.stop()"
+        },
+        {
+          "line": 193,
+          "kinds": [
+            "transport"
+          ],
+          "source": "supplied = _bearer_token(websocket.headers.get(\"authorization\"))"
+        },
+        {
+          "line": 198,
+          "kinds": [
+            "transport"
+          ],
+          "source": "origin = websocket.headers.get(\"origin\")"
+        },
+        {
+          "line": 236,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if _api_token_ok(_bearer_token(request.headers.get(\"authorization\"))):"
+        },
+        {
+          "line": 296,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/health\")"
+        },
+        {
+          "line": 309,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/resource/status\")"
+        },
+        {
+          "line": 314,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/resource/sleep/light\")"
+        },
+        {
+          "line": 320,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/resource/sleep/deep\")"
+        },
+        {
+          "line": 326,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/resource/wake\")"
+        },
+        {
+          "line": 332,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/resource/shutdown\")"
+        },
+        {
+          "line": 338,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/health/tools\")"
+        },
+        {
+          "line": 343,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/health/readiness\")"
+        },
+        {
+          "line": 348,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/network/status\")"
+        },
+        {
+          "line": 360,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/chat\", response_model=ChatResponse)"
+        },
+        {
+          "line": 385,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/stop\")"
+        },
+        {
+          "line": 395,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/memory/skills\")"
+        },
+        {
+          "line": 401,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/memory/skills\")"
+        },
+        {
+          "line": 408,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/memory/graph/add\")"
+        },
+        {
+          "line": 415,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/memory/graph/query\")"
+        },
+        {
+          "line": 422,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/sensors/data\")"
+        },
+        {
+          "line": 429,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/sensors/{node_id}\")"
+        },
+        {
+          "line": 434,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.get(\"/sensors\")"
+        },
+        {
+          "line": 456,
+          "kinds": [
+            "transport"
+          ],
+          "source": "message = data.get(\"message\", raw)"
+        },
+        {
+          "line": 739,
+          "kinds": [
+            "transport"
+          ],
+          "source": "@app.post(\"/confirm/{request_id}\", response_model=None)"
+        },
+        {
+          "line": 742,
+          "kinds": [
+            "transport"
+          ],
+          "source": "correlated_trace_id = str(pending.get(\"trace_id\")) if pending and pending.get(\"trace_id\") else None"
+        },
+        {
+          "line": 891,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(mem_result, dict) and mem_result.get(\"stub\"):"
+        },
+        {
+          "line": 892,
+          "kinds": [
+            "transport"
+          ],
+          "source": "parts.append(f\"Long-term memory: disabled or unavailable ({mem_result.get('note', 'stub')}).\")"
+        },
+        {
+          "line": 893,
+          "kinds": [
+            "transport"
+          ],
+          "source": "elif isinstance(mem_result, dict) and mem_result.get(\"error\"):"
+        },
+        {
+          "line": 903,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(rag_result, dict) and rag_result.get(\"stub\"):"
+        },
+        {
+          "line": 904,
+          "kinds": [
+            "transport"
+          ],
+          "source": "parts.append(f\"RAG memory: disabled or unavailable ({rag_result.get('note', 'stub')}).\")"
+        },
+        {
+          "line": 905,
+          "kinds": [
+            "transport"
+          ],
+          "source": "elif isinstance(rag_result, dict) and rag_result.get(\"error\"):"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/tools/apps.py",
+      "bytes": 2833,
+      "sha256": "faafc0f7712552a5392ed4c952560abd64fe098306fd01f89a9ab90d38f94407",
+      "hits": [
+        {
+          "line": 38,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(\"action\", \"open\")).lower().strip()"
+        },
+        {
+          "line": 69,
+          "kinds": [
+            "transport"
+          ],
+          "source": "executable = _APP_MAP.get(normalized, [normalized])[0]"
+        },
+        {
+          "line": 80,
+          "kinds": [
+            "transport"
+          ],
+          "source": "explicit = str(params.get(\"app\") or params.get(\"name\") or \"\").lower().strip()"
+        },
+        {
+          "line": 84,
+          "kinds": [
+            "transport"
+          ],
+          "source": "query = str(params.get(\"query\", \"\")).lower().replace(\"visual studio code\", \"vscode\")"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/browser.py",
+      "bytes": 1776,
+      "sha256": "7f1974d32a17ec0f88548b9c15c840786295c718b220cc065eea7b8bbe051d5a",
+      "hits": [
+        {
+          "line": 33,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(ACTION_KEY, DEFAULT_ACTION))"
+        },
+        {
+          "line": 34,
+          "kinds": [
+            "transport"
+          ],
+          "source": "raw_url = params.get(URL_KEY)"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/browser_use.py",
+      "bytes": 1296,
+      "sha256": "0bd2183ed7e5cb9b8c85188b9f61cae86ef80be4898d7dffe328426136dc8aea",
+      "hits": [
+        {
+          "line": 15,
+          "kinds": [
+            "transport"
+          ],
+          "source": "goal = str(params.get(\"goal\") or params.get(\"query\") or \"\").strip()"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/cad.py",
+      "bytes": 1531,
+      "sha256": "0243cd876c36fec303cc91133e28e195f0c7925880896f77a3be1f5cea11fed2",
+      "hits": [
+        {
+          "line": 14,
+          "kinds": [
+            "transport"
+          ],
+          "source": "prompt = str(params.get(\"prompt\") or params.get(\"design\") or \"\").strip()"
+        },
+        {
+          "line": 15,
+          "kinds": [
+            "transport"
+          ],
+          "source": "export = str(params.get(\"export\", \"stl\")).lower().strip()"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/calendar.py",
+      "bytes": 3327,
+      "sha256": "b204c87d11d1ca5d7876d2524fe392543389c861239fa2b5c6a9e258cf7fae0b",
+      "hits": [
+        {
+          "line": 23,
+          "kinds": [
+            "transport"
+          ],
+          "source": "date_str = str(params.get(\"date\") or date.today().isoformat())"
+        },
+        {
+          "line": 50,
+          "kinds": [
+            "transport"
+          ],
+          "source": "start = _extract_value(component.get(\"DTSTART\"))"
+        },
+        {
+          "line": 54,
+          "kinds": [
+            "transport"
+          ],
+          "source": "end = _extract_value(component.get(\"DTEND\"))"
+        },
+        {
+          "line": 57,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"summary\": str(component.get(\"SUMMARY\") or \"\"),"
+        },
+        {
+          "line": 60,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"location\": _optional_text(component.get(\"LOCATION\")),"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/cli/__init__.py",
+      "bytes": 1424,
+      "sha256": "40ee4dddb2826d17cd647c7846c8bb6bc3d5e2e7383d9a75a29b1e203f7d7711",
+      "hits": [
+        {
+          "line": 20,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(\"action\", \"status\")).lower().strip()"
+        },
+        {
+          "line": 21,
+          "kinds": [
+            "transport"
+          ],
+          "source": "target = str(params.get(\"target\", \"\")).lower().strip()"
+        },
+        {
+          "line": 30,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"command\": params.get(\"command\"),"
+        },
+        {
+          "line": 42,
+          "kinds": [
+            "transport"
+          ],
+          "source": "names = KNOWN_COMMANDS.get(name, (name,))"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/computer_use.py",
+      "bytes": 888,
+      "sha256": "fe6862dfed2152cf45915dd54d5bd8fbd9e9b0bda86cc7e53e2fb6d1cf76e04a",
+      "hits": [
+        {
+          "line": 8,
+          "kinds": [
+            "transport"
+          ],
+          "source": "task = str(params.get(\"task\") or \"\").strip()"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/files.py",
+      "bytes": 4735,
+      "sha256": "6589d296557b86d5f02a1e29f64381523137a5b5a4ad6ee9012a34e2e02c3587",
+      "hits": [
+        {
+          "line": 20,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action: str = str(params.get(\"action\", \"list\")).lower()"
+        },
+        {
+          "line": 26,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return list_dir(str(params.get(\"path\", \".\")))"
+        },
+        {
+          "line": 28,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return read_file(str(params.get(\"path\", \"\")))"
+        },
+        {
+          "line": 30,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return search_files(str(params.get(\"path\", \".\")), str(params.get(\"query\", \"\")))"
+        },
+        {
+          "line": 96,
+          "kinds": [
+            "transport"
+          ],
+          "source": "src = _safe_path(str(params.get(\"src\", \"\")))"
+        },
+        {
+          "line": 97,
+          "kinds": [
+            "transport"
+          ],
+          "source": "dst = _safe_path(str(params.get(\"dst\", \"\")))"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/health_check.py",
+      "bytes": 8570,
+      "sha256": "8ce87e7a64a86dcb4b01c1ba527bb710fd986ddf6a8208176040ff33f356474b",
+      "hits": [
+        {
+          "line": 8,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 81,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = httpx.get(f\"{settings.models.ollama_base_url}/api/tags\", timeout=2.0)"
+        },
+        {
+          "line": 82,
+          "kinds": [
+            "transport"
+          ],
+          "source": "except httpx.HTTPError as exc:"
+        },
+        {
+          "line": 107,
+          "kinds": [
+            "transport"
+          ],
+          "source": "input_count += 1 if int(device.get(\"max_input_channels\", 0)) > 0 else 0"
+        },
+        {
+          "line": 108,
+          "kinds": [
+            "transport"
+          ],
+          "source": "output_count += 1 if int(device.get(\"max_output_channels\", 0)) > 0 else 0"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/kasa.py",
+      "bytes": 1385,
+      "sha256": "c043a654add667fc6a4b8a7a117800688eea7c15d1600534ca70fb2fd660111d",
+      "hits": [
+        {
+          "line": 17,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(\"action\", \"status\")).lower().strip()"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/mcp_client.py",
+      "bytes": 2434,
+      "sha256": "5f872d2dfdddc8b10f6afed963fe1111842590d453fa63555f2cf80ee7eac780",
+      "hits": [
+        {
+          "line": 23,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(\"action\", \"status\")).lower().strip()"
+        },
+        {
+          "line": 24,
+          "kinds": [
+            "transport"
+          ],
+          "source": "server = str(params.get(\"server\", \"\")).lower().strip()"
+        },
+        {
+          "line": 67,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return WHITELISTED_SERVERS.get(server)"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/mouse_keyboard.py",
+      "bytes": 111,
+      "sha256": "59c753b35ee3528b94040d57d48b7dce5a47e6c1a9756e4a47118c261e47e088",
+      "hits": []
+    },
+    {
+      "path": "app/tools/obsidian.py",
+      "bytes": 6598,
+      "sha256": "934eb17b3efc7f3b86791a523fa5bf0ee6cc7eed8105b003a7b50b1fb2a08202",
+      "hits": [
+        {
+          "line": 21,
+          "kinds": [
+            "transport"
+          ],
+          "source": "action = str(params.get(\"action\", \"note_search\")).strip().lower()"
+        },
+        {
+          "line": 60,
+          "kinds": [
+            "transport"
+          ],
+          "source": "content = str(params.get(\"content\", \"\"))"
+        },
+        {
+          "line": 61,
+          "kinds": [
+            "transport"
+          ],
+          "source": "overwrite = bool(params.get(\"overwrite\", False))"
+        },
+        {
+          "line": 73,
+          "kinds": [
+            "transport"
+          ],
+          "source": "content = str(params.get(\"content\", \"\"))"
+        },
+        {
+          "line": 93,
+          "kinds": [
+            "transport"
+          ],
+          "source": "query = str(params.get(\"query\", \"\")).strip()"
+        },
+        {
+          "line": 122,
+          "kinds": [
+            "transport"
+          ],
+          "source": "note = str(params.get(\"path\") or params.get(\"note\") or params.get(\"title\") or \"\").strip()"
+        },
+        {
+          "line": 173,
+          "kinds": [
+            "transport"
+          ],
+          "source": "note = params.get(\"path\") or params.get(\"note\") or params.get(\"title\")"
+        },
+        {
+          "line": 177,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload[\"content_chars\"] = len(str(params.get(\"content\") or \"\"))"
+        },
+        {
+          "line": 179,
+          "kinds": [
+            "transport"
+          ],
+          "source": "payload[\"query_chars\"] = len(str(params.get(\"query\") or \"\"))"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/registry.py",
+      "bytes": 9648,
+      "sha256": "e70d4d50cc11395253648194a82506bb5a2a53be446f47bb7d00f7a720b99b41",
+      "hits": [
+        {
+          "line": 95,
+          "kinds": [
+            "transport"
+          ],
+          "source": "module_path = self._tool_modules.get(name)"
+        },
+        {
+          "line": 255,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return \"close_app\" if params.get(\"action\") == \"close\" else \"open_app\""
+        },
+        {
+          "line": 257,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return \"web_search\" if params.get(\"action\") == \"search\" else \"browser_open\""
+        },
+        {
+          "line": 263,
+          "kinds": [
+            "transport"
+          ],
+          "source": "}.get(str(params.get(\"action\")), \"file_access\")"
+        },
+        {
+          "line": 273,
+          "kinds": [
+            "transport"
+          ],
+          "source": "}.get(tool_name, tool_name)"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/screenshot.py",
+      "bytes": 193,
+      "sha256": "6e10a57e0500afb47a4c3ce19a0709b1190ae4a1fa542d57e2686bd2acfeb4d1",
+      "hits": []
+    },
+    {
+      "path": "app/tools/shell.py",
+      "bytes": 2929,
+      "sha256": "2f7dacba5fefb0de876cacbbf56b3e3f57df968b2da9799b52fd6893be7ef616",
+      "hits": [
+        {
+          "line": 38,
+          "kinds": [
+            "transport"
+          ],
+          "source": "command = str(params.get(\"command\") or \"\").strip()"
+        },
+        {
+          "line": 51,
+          "kinds": [
+            "transport"
+          ],
+          "source": "timeout = min(int(params.get(\"timeout\") or 30), 120)"
+        },
+        {
+          "line": 52,
+          "kinds": [
+            "transport"
+          ],
+          "source": "resolved_cwd = _resolve_cwd(params.get(\"cwd\"))"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/system_stats.py",
+      "bytes": 2691,
+      "sha256": "359c1bdf865454bdd58f97f08e21d844a8dc34bf36c9154d789886b866f51737",
+      "hits": [
+        {
+          "line": 72,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"pid\": info.get(\"pid\"),"
+        },
+        {
+          "line": 73,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"name\": info.get(\"name\") or \"\","
+        },
+        {
+          "line": 74,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"cpu_percent\": float(info.get(\"cpu_percent\") or 0.0),"
+        },
+        {
+          "line": 75,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"memory_percent\": round(float(info.get(\"memory_percent\") or 0.0), 2),"
+        }
+      ]
+    },
+    {
+      "path": "app/tools/vision.py",
+      "bytes": 191,
+      "sha256": "c5d28ec33a8897c51ba598d2273729b8c4047bf0d65cc02c1dbc0779ccbf4de8",
+      "hits": []
+    },
+    {
+      "path": "app/tools/web_search.py",
+      "bytes": 2022,
+      "sha256": "b15133f040c9c3749af154995a418a678ca7f39e5d712f73aa4cd47cb1e4d45c",
+      "hits": [
+        {
+          "line": 6,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 20,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if params.get(\"action\") == \"fetch\":"
+        },
+        {
+          "line": 21,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return fetch_page(str(params.get(\"url\", \"\")))"
+        },
+        {
+          "line": 31,
+          "kinds": [
+            "transport"
+          ],
+          "source": "query: str = params.get(\"query\", \"\")"
+        },
+        {
+          "line": 32,
+          "kinds": [
+            "transport"
+          ],
+          "source": "max_results: int = int(params.get(\"max_results\", 5))"
+        },
+        {
+          "line": 42,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"title\": r.get(\"title\", \"\"),"
+        },
+        {
+          "line": 43,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"url\": r.get(\"href\", \"\"),"
+        },
+        {
+          "line": 44,
+          "kinds": [
+            "transport"
+          ],
+          "source": "\"snippet\": r.get(\"body\", \"\"),"
+        },
+        {
+          "line": 56,
+          "kinds": [
+            "transport"
+          ],
+          "source": "with httpx.Client(timeout=httpx.Timeout(15.0), follow_redirects=True) as client:"
+        },
+        {
+          "line": 57,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = client.get(url, headers={\"User-Agent\": \"JARVIS/0.1\"})"
+        },
+        {
+          "line": 59,
+          "kinds": [
+            "transport"
+          ],
+          "source": "except httpx.HTTPError as exc:"
+        }
+      ]
+    },
+    {
+      "path": "app/voice/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hits": []
+    },
+    {
+      "path": "app/voice/audio_stream.py",
+      "bytes": 4182,
+      "sha256": "60a3026396b204ffc1e905d2f58c34b3f26c9f7bd7b20d39f0d65577ccdc34c8",
+      "hits": []
+    },
+    {
+      "path": "app/voice/dictation.py",
+      "bytes": 2417,
+      "sha256": "55e25b496f176e9a1dedefb6250deb9587f431578ac9ce76a9437020d585594b",
+      "hits": []
+    },
+    {
+      "path": "app/voice/error_recovery.py",
+      "bytes": 1075,
+      "sha256": "c4fd2b175c5631bd1e6e126b6483b81bd1ca9ea69f0b0c7e4e2f270efa853439",
+      "hits": []
+    },
+    {
+      "path": "app/voice/filler_manager.py",
+      "bytes": 927,
+      "sha256": "55d60ff84c8cbb66ecbd6d127372ebbd8cc0a70049b03a4d4025da2abc080bce",
+      "hits": [
+        {
+          "line": 24,
+          "kinds": [
+            "transport"
+          ],
+          "source": "phrase_key = TOOL_FILLERS.get(tool_name, TOOL_FILLERS[\"default\"])"
+        },
+        {
+          "line": 25,
+          "kinds": [
+            "transport"
+          ],
+          "source": "phrase = phrase_cache.get(phrase_key)"
+        }
+      ]
+    },
+    {
+      "path": "app/voice/phrase_cache.py",
+      "bytes": 1105,
+      "sha256": "d799b910233bca624db25757a244be00162a2aad04f741dc8b8eb5f993ef1c40",
+      "hits": [
+        {
+          "line": 32,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return self.phrases.get(key, default)"
+        }
+      ]
+    },
+    {
+      "path": "app/voice/push_to_talk.py",
+      "bytes": 5683,
+      "sha256": "7bcd915561ef549b582b1f30dc04977d757cfb276c157d7bc137217de651bc9f",
+      "hits": []
+    },
+    {
+      "path": "app/voice/sounds.py",
+      "bytes": 4044,
+      "sha256": "4229e87b0887358fc7e5b2635ba93ca2662274ebab3beb83cc1bc8508ceb336f",
+      "hits": [
+        {
+          "line": 58,
+          "kinds": [
+            "transport"
+          ],
+          "source": "filename = SOUND_FILES.get(sound_name)"
+        }
+      ]
+    },
+    {
+      "path": "app/voice/stt.py",
+      "bytes": 4268,
+      "sha256": "0103b0a6c8260314d037ffff0fe28b35c4eb675c2a03a5d630d596ca05417df2",
+      "hits": []
+    },
+    {
+      "path": "app/voice/tts.py",
+      "bytes": 17551,
+      "sha256": "f34046a50d732e5d1bdf092da01cd5bc86469b8d50826708cf4886e96ed425ad",
+      "hits": []
+    },
+    {
+      "path": "app/voice/vad.py",
+      "bytes": 3907,
+      "sha256": "a9fb14ecc423f195b9c8cbdcdaaa9ea9950984385c112f5a80c821f17e77aa38",
+      "hits": [
+        {
+          "line": 36,
+          "kinds": [
+            "transport"
+          ],
+          "source": "audio_queue.put(bytes(indata))"
+        },
+        {
+          "line": 59,
+          "kinds": [
+            "transport"
+          ],
+          "source": "frame = audio_queue.get(timeout=0.1)"
+        }
+      ]
+    },
+    {
+      "path": "app/voice/wake_word.py",
+      "bytes": 8643,
+      "sha256": "a6cd1190a2e4672d3a21dbf05b5ef32061a1926688e989fe8f60bd17929bb716",
+      "hits": [
+        {
+          "line": 66,
+          "kinds": [
+            "transport"
+          ],
+          "source": "audio_queue.put(bytes(indata))"
+        },
+        {
+          "line": 86,
+          "kinds": [
+            "transport"
+          ],
+          "source": "frame = audio_queue.get(timeout=0.1)"
+        },
+        {
+          "line": 213,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return float(prediction.get(settings.voice.wake_word_model, max(prediction.values(), default=0.0)))"
+        }
+      ]
+    },
+    {
+      "path": "docs/5090_migration.md",
+      "bytes": 6380,
+      "sha256": "bf92fed880d181b23a2d759348bf725449d5629a695c7a32ab50f25bba643734",
+      "hits": []
+    },
+    {
+      "path": "docs/BACKUP.md",
+      "bytes": 4955,
+      "sha256": "08280d83bdd6463f20c29d319304a28ae151f0c9b3441b4be3dc064eea918088",
+      "hits": []
+    },
+    {
+      "path": "docs/EVALS.md",
+      "bytes": 4465,
+      "sha256": "b08f7b6db37dc732bdcc1999e963fed13be6fffd216f3c8acac58e09d915f1b6",
+      "hits": [
+        {
+          "line": 20,
+          "kinds": [
+            "transport"
+          ],
+          "source": "The adapter calls the production router, parameter builder, tool metadata, confirmation policy, and pure shell deny-list validation. It deliberately stops before `ToolRegistry.call()`. It cannot launch applications, control input devices, run shell commands, delete files, shut down the host, send network requests for tools, or write calendar/habit data."
+        }
+      ]
+    },
+    {
+      "path": "docs/OBSERVABILITY.md",
+      "bytes": 4888,
+      "sha256": "dcb687a08688d80be09ab7125b13aa38d1837d6a7e89bd58d5fc0b402cbf6370",
+      "hits": [
+        {
+          "line": 3,
+          "kinds": [
+            "transport"
+          ],
+          "source": "JARVIS assigns one random UUID4 `trace_id` to each logical chat, WebSocket message, voice request, evaluation scenario, or confirmation continuation. The ID contains no user data and is propagated with Python `ContextVar`s, so concurrent asynchronous requests retain isolated trace state."
+        }
+      ]
+    },
+    {
+      "path": "docs/TARGET_HOST_READINESS.md",
+      "bytes": 8236,
+      "sha256": "b74dec86cf15ec571d95adab7968fb14e8ca7981a40466d520954c41fd7e2894",
+      "hits": [
+        {
+          "line": 20,
+          "kinds": [
+            "transport"
+          ],
+          "source": "| Native FastAPI HTTP/WebSocket (`/ws`, `/ue5`) | 8000 | `127.0.0.1` | HOST-LOCAL | `/ue5` is disabled by default and shares the FastAPI listener. |"
+        }
+      ]
+    },
+    {
+      "path": "docs/content/episode_01_script.md",
+      "bytes": 8649,
+      "sha256": "6c0d2cb9b90c952cca21d425512b53a61fac39333a15b49e6898313d50abd2d1",
+      "hits": [
+        {
+          "line": 66,
+          "kinds": [
+            "transport"
+          ],
+          "source": "**Host:** \"So the Phase 0 architecture is basically this: FastAPI handles requests, the router decides intent, tools can execute if needed, the main model crafts the JARVIS-style response, and every important event gets logged.\""
+        }
+      ]
+    },
+    {
+      "path": "docs/content/episode_arc.md",
+      "bytes": 4129,
+      "sha256": "da91e8c1bdab056314c21517adc01fdbcf7d341614dc8554bb6589270b08023f",
+      "hits": []
+    },
+    {
+      "path": "docs/content/recording_setup.md",
+      "bytes": 3141,
+      "sha256": "128270c67085e61cc75b99807fe69b616a7f73f77f815971fa043ea00d14c271",
+      "hits": []
+    },
+    {
+      "path": "docs/content/tiktok_60s_cut.md",
+      "bytes": 1528,
+      "sha256": "672113a50e69320bb83dc0086544c215ae1218374a801d29bbd0321e319c4ac0",
+      "hits": []
+    },
+    {
+      "path": "docs/graphiti_setup.md",
+      "bytes": 1014,
+      "sha256": "c886932e88e86297d5ef2cebf9f1b7a63088658e10cb7a6feddeb6863d59b6c2",
+      "hits": []
+    },
+    {
+      "path": "docs/hermes_setup.md",
+      "bytes": 4024,
+      "sha256": "ad631bb909f0327b47014ba66aa83084e3dbd4e836af1b1da0bf9d45ccc219f1",
+      "hits": [
+        {
+          "line": 40,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "> a separately reviewed adapter; do not replace `task_queue.py`, write its database"
+        },
+        {
+          "line": 139,
+          "kinds": [
+            "facade_or_authority"
+          ],
+          "source": "- **Kanban and task_queue.py:** A future adapter must preserve the single-writer authority, receipt/reconciliation contract and disabled-execution boundary. No simultaneous independent writer or automatic takeover is supported."
+        }
+      ]
+    },
+    {
+      "path": "docs/repos.md",
+      "bytes": 3568,
+      "sha256": "d47e0c8c172f644aedc3b96ad224f34c192baccb8753fbbd963d21524a4035a7",
+      "hits": []
+    },
+    {
+      "path": "docs/resource_management.md",
+      "bytes": 4888,
+      "sha256": "d3514906d8d81186006897cd603d3e0e913cf7d7a9545e8f0db5ea0f1c9ef570",
+      "hits": [
+        {
+          "line": 86,
+          "kinds": [
+            "changed_api"
+          ],
+          "source": "[offline recovery procedure](../tasks/jarvis-authority-readiness-r1/REPORT.md)."
+        }
+      ]
+    },
+    {
+      "path": "docs/task_api.md",
+      "bytes": 4323,
+      "sha256": "eac997b3707463e310b3aa39c1a924cb8e31eba877cf285870de63082beef789",
+      "hits": [
+        {
+          "line": 9,
+          "kinds": [
+            "transport"
+          ],
+          "source": "The service worker forwards requests and does not construct task/schedule"
+        },
+        {
+          "line": 14,
+          "kinds": [
+            "lifecycle_or_backlog"
+          ],
+          "source": "Boot's `tasks/state.json`/todo counters are project-backlog inputs, not runtime"
+        },
+        {
+          "line": 24,
+          "kinds": [
+            "changed_api"
+          ],
+          "source": "2. `POST /tasks` takes exactly request_id and goal. `POST /schedule/jobs` also"
+        },
+        {
+          "line": 32,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "`GET /requests/{original_request_id}` under the same existing authenticated"
+        },
+        {
+          "line": 38,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "5. `DELETE /tasks/{full_task_id}?request_id={retained_cancel_uuid}` requests soft"
+        },
+        {
+          "line": 43,
+          "kinds": [
+            "changed_api"
+          ],
+          "source": "6. `DELETE /schedule/jobs/{full_job_id}?request_id={retained_remove_uuid}` removes"
+        },
+        {
+          "line": 47,
+          "kinds": [
+            "changed_api"
+          ],
+          "source": "7. Public `PATCH /tasks/{id}` completion/result updates are removed. No client may"
+        },
+        {
+          "line": 52,
+          "kinds": [
+            "changed_api"
+          ],
+          "source": "`GET /tasks`, `/tasks/{id}` and `/schedule/jobs` expose current snapshots;"
+        },
+        {
+          "line": 53,
+          "kinds": [
+            "changed_api",
+            "transport"
+          ],
+          "source": "`GET /requests/{id}` exposes the original committed decision. Do not overwrite"
+        }
+      ]
+    },
+    {
+      "path": "evals/__init__.py",
+      "bytes": 177,
+      "sha256": "3296c74b867e0ec3e1ff07acd5bc3474a5f2cb75104fbdb0359dbac6ac983e8e",
+      "hits": []
+    },
+    {
+      "path": "evals/adapter.py",
+      "bytes": 11864,
+      "sha256": "5951dddb57c93abe4519219870aed13a2aa56177338885e315b4132ae2eee8ff",
+      "hits": [
+        {
+          "line": 10,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import httpx"
+        },
+        {
+          "line": 92,
+          "kinds": [
+            "transport"
+          ],
+          "source": "with httpx.Client(timeout=httpx.Timeout(3.0)) as client:"
+        },
+        {
+          "line": 93,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = client.get(url)"
+        },
+        {
+          "line": 100,
+          "kinds": [
+            "transport"
+          ],
+          "source": "str(item.get(\"name\") or item.get(\"model\") or \"\")"
+        },
+        {
+          "line": 101,
+          "kinds": [
+            "transport"
+          ],
+          "source": "for item in payload.get(\"models\", [])"
+        },
+        {
+          "line": 116,
+          "kinds": [
+            "transport"
+          ],
+          "source": "origin = request.context.get(\"origin\") or \"user_direct\""
+        },
+        {
+          "line": 152,
+          "kinds": [
+            "transport"
+          ],
+          "source": "module = registry.get(tool_name)"
+        },
+        {
+          "line": 170,
+          "kinds": [
+            "transport"
+          ],
+          "source": "_ensure_command_allowed(str(params.get(\"command\") or \"\"))"
+        },
+        {
+          "line": 249,
+          "kinds": [
+            "transport"
+          ],
+          "source": "fixture = self._fixtures.get(message)"
+        },
+        {
+          "line": 256,
+          "kinds": [
+            "transport"
+          ],
+          "source": "content = request.context.get(\"content\")"
+        },
+        {
+          "line": 264,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if payload.get(\"schema_version\") != 1 or not isinstance(payload.get(\"router_outputs\"), dict):"
+        },
+        {
+          "line": 271,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return \"close_app\" if params.get(\"action\") == \"close\" else \"open_app\""
+        },
+        {
+          "line": 273,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return \"web_search\" if params.get(\"action\") == \"search\" else \"browser_open\""
+        },
+        {
+          "line": 275,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return {\"read\": \"file_read\", \"list\": \"file_list\", \"move\": \"file_move\"}.get("
+        },
+        {
+          "line": 276,
+          "kinds": [
+            "transport"
+          ],
+          "source": "str(params.get(\"action\")), \"file_access\""
+        },
+        {
+          "line": 289,
+          "kinds": [
+            "transport"
+          ],
+          "source": "}.get(tool_name, tool_name)"
+        },
+        {
+          "line": 302,
+          "kinds": [
+            "transport"
+          ],
+          "source": "canonical[\"app\"] = aliases.get(app, app)"
+        }
+      ]
+    },
+    {
+      "path": "evals/grader.py",
+      "bytes": 5288,
+      "sha256": "db654a0bcf471166bc451f9e2302046600a9cd62131d7283d6cf747bd660225a",
+      "hits": [
+        {
+          "line": 69,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(value_expectation, dict) and value_expectation.get(\"matcher\") == \"absent\":"
+        },
+        {
+          "line": 79,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(value, dict) and value.get(\"matcher\") == \"absent\""
+        },
+        {
+          "line": 99,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return actual == expected.get(\"value\")"
+        },
+        {
+          "line": 101,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return _normalize(actual) == _normalize(expected.get(\"value\"))"
+        },
+        {
+          "line": 103,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return any(actual == candidate for candidate in expected.get(\"values\", []))"
+        }
+      ]
+    },
+    {
+      "path": "evals/runner.py",
+      "bytes": 4613,
+      "sha256": "e29bbba3773174ff388a45aa4a95df4c7c14b555646e22f90bb810bc618414c0",
+      "hits": []
+    },
+    {
+      "path": "evals/schema.py",
+      "bytes": 9519,
+      "sha256": "9c40a5c097512525cb5f4e4889b83947b6a9716df9d0ac47a2f4e019e0c103dc",
+      "hits": [
+        {
+          "line": 126,
+          "kinds": [
+            "transport"
+          ],
+          "source": "must_not = _parse_must_not(data.get(\"must_not\", {}))"
+        },
+        {
+          "line": 147,
+          "kinds": [
+            "transport"
+          ],
+          "source": "content = data.get(\"content\")"
+        },
+        {
+          "line": 173,
+          "kinds": [
+            "transport"
+          ],
+          "source": "tool_name = data.get(\"tool_name\")"
+        },
+        {
+          "line": 182,
+          "kinds": [
+            "transport"
+          ],
+          "source": "match = data.get(\"match\", \"subset\")"
+        },
+        {
+          "line": 185,
+          "kinds": [
+            "transport"
+          ],
+          "source": "values = _object(data.get(\"values\", {}), \"expected.params.values\")"
+        },
+        {
+          "line": 189,
+          "kinds": [
+            "transport"
+          ],
+          "source": "optional = _string_tuple(data.get(\"optional\", []), \"expected.params.optional\")"
+        },
+        {
+          "line": 190,
+          "kinds": [
+            "transport"
+          ],
+          "source": "absent = _string_tuple(data.get(\"absent\", []), \"expected.params.absent\")"
+        },
+        {
+          "line": 199,
+          "kinds": [
+            "transport"
+          ],
+          "source": "matcher = value.get(\"matcher\")"
+        },
+        {
+          "line": 209,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if not isinstance(value.get(\"values\"), list) or not value[\"values\"]:"
+        },
+        {
+          "line": 217,
+          "kinds": [
+            "transport"
+          ],
+          "source": "modes = _string_tuple(data.get(\"modes\", []), \"must_not.modes\")"
+        },
+        {
+          "line": 222,
+          "kinds": [
+            "transport"
+          ],
+          "source": "capabilities=_string_tuple(data.get(\"capabilities\", []), \"must_not.capabilities\"),"
+        },
+        {
+          "line": 223,
+          "kinds": [
+            "transport"
+          ],
+          "source": "tool_names=_string_tuple(data.get(\"tool_names\", []), \"must_not.tool_names\"),"
+        },
+        {
+          "line": 226,
+          "kinds": [
+            "transport"
+          ],
+          "source": "data.get(\"executed_capabilities\", []), \"must_not.executed_capabilities\""
+        }
+      ]
+    },
+    {
+      "path": "frontend/electron/README.md",
+      "bytes": 226,
+      "sha256": "03d4a71a8bc7b6d49a60591752cc14a48ef678a96a60069c91e6d05a0967a87d",
+      "hits": []
+    },
+    {
+      "path": "frontend/electron/main.js",
+      "bytes": 828,
+      "sha256": "11b67ce728ec65b8d182ac7aa5cbe24c8834629dd6f86d21a70aa3034d3cfbd3",
+      "hits": []
+    },
+    {
+      "path": "frontend/electron/preload.js",
+      "bytes": 1297,
+      "sha256": "8738401bab49baa4dcf421e8c6f38d4fcebbe60a7d0e6c43867589d16e05a691",
+      "hits": [
+        {
+          "line": 26,
+          "kinds": [
+            "transport"
+          ],
+          "source": "messageCallbacks.delete(callback);"
+        },
+        {
+          "line": 31,
+          "kinds": [
+            "transport"
+          ],
+          "source": "ipcRenderer.send(channel, data);"
+        },
+        {
+          "line": 34,
+          "kinds": [
+            "transport"
+          ],
+          "source": "const socket = new WebSocket(\"ws://localhost:8000/ws\");"
+        }
+      ]
+    },
+    {
+      "path": "frontend/electron/renderer/index.html",
+      "bytes": 5994,
+      "sha256": "65b8dd321b23d3be2b76d2c51906cb23f3f0e8781abeab387ae924bd35207fb0",
+      "hits": []
+    },
+    {
+      "path": "frontend/hologram/README.md",
+      "bytes": 161,
+      "sha256": "948e0c0f263d84f302c0f1b91f5574e9e100f0373df5dd7704591d04878ef018",
+      "hits": []
+    },
+    {
+      "path": "frontend/hologram/app.js",
+      "bytes": 4124,
+      "sha256": "99282e385ba8e2dc54316d6cb9d81d96230fa86a1f2f9ea0b286bd4db21ee401",
+      "hits": [
+        {
+          "line": 120,
+          "kinds": [
+            "transport"
+          ],
+          "source": "socket = new WebSocket(WS_URL);"
+        }
+      ]
+    },
+    {
+      "path": "frontend/hologram/index.html",
+      "bytes": 679,
+      "sha256": "b1cd2bd57789a70ca1c4ec7b5f92f6a0120240578dec2be5c845a8079e2e9ca9",
+      "hits": []
+    },
+    {
+      "path": "frontend/pwa/app.js",
+      "bytes": 15587,
+      "sha256": "003ea4cfdf02674fd984978501105fcbe97513493c3b21c77265fd63030c8bde",
+      "hits": [
+        {
+          "line": 372,
+          "kinds": [
+            "transport"
+          ],
+          "source": "state.socket = new WebSocket(url);"
+        },
+        {
+          "line": 402,
+          "kinds": [
+            "transport"
+          ],
+          "source": "var response = await fetch(getRestUrl(getServerUrl()), {"
+        },
+        {
+          "line": 426,
+          "kinds": [
+            "transport"
+          ],
+          "source": "state.socket.send(JSON.stringify({ message: trimmed }));"
+        }
+      ]
+    },
+    {
+      "path": "frontend/pwa/index.html",
+      "bytes": 8571,
+      "sha256": "d17576b71d75f307ac9e661d6fcf216b5dbbb434018d88c6eadb6e39dfc253bf",
+      "hits": []
+    },
+    {
+      "path": "frontend/pwa/sw.js",
+      "bytes": 1299,
+      "sha256": "e2ee7691b2493f619655321013b988af8c22e93caa2eced4b1666bb23cf677de",
+      "hits": [
+        {
+          "line": 22,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return caches.delete(key);"
+        },
+        {
+          "line": 47,
+          "kinds": [
+            "transport"
+          ],
+          "source": "return fetch(event.request).then(function (networkResponse) {"
+        },
+        {
+          "line": 49,
+          "kinds": [
+            "transport"
+          ],
+          "source": "cache.put(event.request, networkResponse.clone());"
+        }
+      ]
+    },
+    {
+      "path": "jarvis.cmd",
+      "bytes": 31,
+      "sha256": "a60525ab730e83ee30c75d8b5b43139287c064efa3b0c0379b478f4dec6eeb5d",
+      "hits": []
+    },
+    {
+      "path": "jarvis.py",
+      "bytes": 143,
+      "sha256": "bec4615393a509b66e24defceb1b5353e6f7ed838a38803faadd18ecddf50eca",
+      "hits": []
+    },
+    {
+      "path": "scripts/backup_restic.sh",
+      "bytes": 2212,
+      "sha256": "48ae94e9292fde00444f452064542f7590c2c07dc1291f96bfac698d9d20de75",
+      "hits": []
+    },
+    {
+      "path": "scripts/install.ps1",
+      "bytes": 347,
+      "sha256": "5eb9b7bee8fd55cfb8ec711def8ade1ef12a3afc4ccae381ac3fe6fc2dc34f14",
+      "hits": []
+    },
+    {
+      "path": "scripts/install.py",
+      "bytes": 6130,
+      "sha256": "3e604180f3e0603272950ac30838707473d952608ef6652c520ea68dab325e90",
+      "hits": []
+    },
+    {
+      "path": "scripts/install_piper.py",
+      "bytes": 4862,
+      "sha256": "c4fd0cfa4a0457447b8849cf93098fe3dbe9bc77860ef8bb642fe5a3a6054179",
+      "hits": []
+    },
+    {
+      "path": "scripts/sensor_node.py",
+      "bytes": 2468,
+      "sha256": "ca4776cb57c3a1eb8a5e6d85c985812e73b752db66ffc27fcfb88978dd38740b",
+      "hits": [
+        {
+          "line": 55,
+          "kinds": [
+            "transport"
+          ],
+          "source": "import requests  # type: ignore"
+        },
+        {
+          "line": 59,
+          "kinds": [
+            "transport"
+          ],
+          "source": "with urlopen(request, timeout=10) as response:"
+        },
+        {
+          "line": 65,
+          "kinds": [
+            "transport"
+          ],
+          "source": "response = requests.post(endpoint, json=payload, timeout=10)"
+        }
+      ]
+    },
+    {
+      "path": "scripts/setup_autostart.py",
+      "bytes": 705,
+      "sha256": "164fab53b066b39d97de9c5738645d170b9e67bd6eeecc34e61302fa4addf806",
+      "hits": []
+    },
+    {
+      "path": "scripts/switch_models.py",
+      "bytes": 1386,
+      "sha256": "2b2c5acb38e4fa994e6c5c0f67a2fdb344af2eb0fee24317cd8a3f5e40bc2b09",
+      "hits": []
+    },
+    {
+      "path": "scripts/verify_restic_backup.sh",
+      "bytes": 3432,
+      "sha256": "91f760cdcb8431a7daa7c3816f47d3e5d3af5870d23c7c236cdb4ab400fd7496",
+      "hits": []
+    },
+    {
+      "path": "scripts/wake_diag.py",
+      "bytes": 4894,
+      "sha256": "71eb1562e68156af300dc943f47039d568a0a35a53413370cc8203c58da789eb",
+      "hits": [
+        {
+          "line": 61,
+          "kinds": [
+            "transport"
+          ],
+          "source": "prediction.get("
+        }
+      ]
+    },
+    {
+      "path": "tasks/manual_voice_smoke.py",
+      "bytes": 7719,
+      "sha256": "9a2fa8755a076b721debdb03815b9bc79c49644326c925063c79b0912549520c",
+      "hits": []
+    },
+    {
+      "path": "tasks/pre_server_readiness.py",
+      "bytes": 3607,
+      "sha256": "10bf3c1712ba300aeb895a513a150483ee70d45ee5ea2a4e471dbba292656d51",
+      "hits": []
+    },
+    {
+      "path": "tasks/readiness_report.py",
+      "bytes": 1539,
+      "sha256": "e59eb7a8531da512ce9d1cb43dd150f1d2d4109f97d28ced1568676aeb4e5e6c",
+      "hits": [
+        {
+          "line": 35,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if not item[\"available\"] and item.get(\"remediation\"):"
+        }
+      ]
+    },
+    {
+      "path": "tasks/tool_readiness_smoke.py",
+      "bytes": 9995,
+      "sha256": "67788e1c0fee9f378989ba6ed1eb68415cc18756f4a96f4f006603ad776c52af",
+      "hits": [
+        {
+          "line": 91,
+          "kinds": [
+            "transport"
+          ],
+          "source": "if isinstance(result, dict) and result.get(\"count\") == 0 and result.get(\"events\") == []:"
+        }
+      ]
+    }
+  ],
+  "excluded_inventory_paths": [
+    "docs/baselines/PRE_HERMES_BASELINE.md",
+    "evals/fixtures/current_deterministic.json",
+    "evals/golden.jsonl",
+    "frontend/electron/package-lock.json",
+    "frontend/electron/package.json",
+    "frontend/pwa/icon.png",
+    "frontend/pwa/manifest.json"
+  ],
+  "limits": {
+    "per_source_bytes": 1048576,
+    "total_bytes": 16777216
+  }
+}

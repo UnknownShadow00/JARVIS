@@ -77,3 +77,10 @@ The exact numbers are hardware and model dependent, so status reports measure li
 ## Wake Flow
 
 `jarvis wake` starts the FastAPI runtime if it is offline, moves the resource state through WAKING to ACTIVE, restarts only required services, and starts voice only when `server.enable_voice_on_startup` is true. If model preload is enabled, the configured primary model is loaded during wake; otherwise the first request pays the cold-start cost.
+
+The task scheduler does not catch up overdue occurrences automatically. Sleep or
+downtime across a persisted nominal run can require explicit owner-quiesced
+disable/recreation before scheduler startup; ACTIVE resource state is not proof
+of scheduler readiness. Check `/ready` and retain reconciliation evidence. See
+the [task API contract](task_api.md) and the preserved
+[offline recovery procedure](../tasks/jarvis-authority-readiness-r1/REPORT.md).

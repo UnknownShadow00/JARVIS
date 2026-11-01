@@ -1,5 +1,37 @@
 # JARVIS Project Status
 
+Latest first-party compatibility continuation (2026-10-31):
+[`tasks/jarvis-client-compatibility-deliverable-r1/JARVIS-CONSOLIDATED-REPORT.md`](tasks/jarvis-client-compatibility-deliverable-r1/JARVIS-CONSOLIDATED-REPORT.md)
+consolidates prior durability/readiness and the scoped143-file caller inventory.
+No first-party task/schedule mutation client exists; external adapters remain a
+rollout gate. The actual read-only reporter and its existing test file now show
+admitted/held, UNKNOWN, cancel_requested, simulation and unavailable states honestly.
+Ten focused actual-reader cases pass with no real sends; only reporter.py changed
+among application files. The eight reviewed backend files and prior840451e8... seal
+are unchanged; prior80 backend/full-app evidence is preserved, not rerun or summed.
+Active client/Hermes/resource guidance is corrected. Real execution/production,
+identities/permissions/credentials, PVE/guest/live/Gate6K remain unmodified/disabled.
+No security stage is actionable until restricted Nexus execution identities/path
+and trusted guest/bootstrap/grant bindings exist; this document approves none.
+Earlier continuity entries below retain their historical source/evidence scope.
+
+
+Current source/offline milestone (2026-10-31):
+[`tasks/jarvis-authority-readiness-r1/REPORT.md`](tasks/jarvis-authority-readiness-r1/REPORT.md)
+contains the implemented single-writer SQLite task/scheduler authority, durable
+receipts/occurrences/outbox, explicit migration, truthful cancellation and test-only
+simulation. Final80 focused cases pass (zero skips), including8 independent-process
+cases; the actual existing app.main/server lifespan and native dependency checks
+pass under synthetic offline configuration with a fresh exact28-wheel target.
+Eight current source hashes have independent gpt-6-astra/high static closure.
+Real execution, production startup/migration, broker wiring/activation, permissions,
+guest changes and privileged Gate6K remain disabled/unperformed. Overdue schedules
+require explicit owner-quiesced recovery; this is not power-loss/live-isolation proof.
+The report contains ONE staged eventual-live proposal and remaining actual-principal/
+guest/bootstrap facts. Earlier continuity sections below are historical source and
+evidence versions; their limitations are superseded only where this new report proves it.
+
+
 Consolidated review (2026-10-30):
 [`tasks/jarvis-consolidated-review-r1/REVIEW.md`](tasks/jarvis-consolidated-review-r1/REVIEW.md)
 binds the current dirty source, per-milestone evidence, overlapping test scopes,

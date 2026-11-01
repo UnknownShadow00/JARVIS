@@ -25,6 +25,14 @@ JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enab
 
 ## Hardware Requirements
 
+Task/schedule API compatibility: the current transactional authority requires a
+retained canonical full UUID for each logical mutation and returns durable
+receipts. A committed receipt records admission or a cancellation decision;
+execution remains disabled. See [the current contract](docs/task_api.md) before
+connecting a client. The in-repository CLI/HUD/PWA do not submit queue mutations;
+external clients remain a rollout prerequisite. Hermes integration is planned
+and cannot replace or run a parallel queue writer.
+
 JARVIS is built for local inference first. It can start on a strong consumer GPU and scales up to a dedicated always-on host.
 
 | Component | Minimum | Recommended |

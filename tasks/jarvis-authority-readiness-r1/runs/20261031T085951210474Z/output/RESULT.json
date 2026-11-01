@@ -1,0 +1,43 @@
+{
+  "status": "CORE_PASS_FULL_APP_BLOCKED",
+  "started_at": "2026-10-31T08:59:51.266979+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026532961]",
+    "mnt_namespace": "mnt:[4026532402]",
+    "pid_namespace": "pid:[4026532405]",
+    "net_namespace": "net:[4026532408]",
+    "ipc_namespace": "ipc:[4026532404]",
+    "uts_namespace": "uts:[4026532403]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-readiness-r1/runs/20261031T085951210474Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-readiness-r1/runs/20261031T085951210474Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-readiness-r1/runs/20261031T085951210474Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 75,
+    "failed": 0,
+    "exitstatus": 0
+  },
+  "full_app_import_attempts": {
+    "app.main": {
+      "imported": false,
+      "missing_module": "uvicorn",
+      "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 47, in <module>\n    imported=importlib.import_module(module)\n  File \"/usr/lib/python3.14/importlib/__init__.py\", line 88, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1406, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1371, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1342, in _find_and_load_unlocked\n  File \"<frozen importlib._bootstrap>\", line 938, in _load_unlocked\nModuleNotFoundError: No module named 'uvicorn'\n",
+      "lifespan_tested": false
+    },
+    "app.server": {
+      "imported": false,
+      "missing_module": "yaml",
+      "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 47, in <module>\n    imported=importlib.import_module(module)\n  File \"/usr/lib/python3.14/importlib/__init__.py\", line 88, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1406, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1371, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1342, in _find_and_load_unlocked\n  File \"<frozen importlib._bootstrap>\", line 938, in _load_unlocked\nModuleNotFoundError: No module named 'yaml'\n",
+      "lifespan_tested": false
+    }
+  },
+  "finished_at": "2026-10-31T09:00:00.044704+00:00"
+}

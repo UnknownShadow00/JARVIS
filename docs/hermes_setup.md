@@ -35,10 +35,12 @@ hermes status
 hermes kanban init
 ```
 
-> **Note:** When Hermes Kanban is active it replaces `app/agent/task_queue.py`.
-> The FastAPI `/confirm/{id}` endpoint maps to Kanban unblock — do not remove it.
->
-> Hermes v0.13.0+ has durable Kanban with zombie detection, retry budgets, and `/goal` persistence.
+> **Integration boundary:** Hermes integration is planned, not implemented or
+> activated here. It must use the existing single task/schedule authority through
+> a separately reviewed adapter; do not replace `task_queue.py`, write its database
+> directly or run a parallel writer. Retain UUIDs, original payloads and receipts
+> as described in [the task API contract](task_api.md). `/confirm/{id}` is the
+> existing tool-confirmation route, not a verified Kanban-unblock integration.
 
 ---
 
@@ -134,5 +136,5 @@ hermes plugins list  # Should show hermes-labyrinth
 
 - **4070 Ti constraint:** qwen3:14b is the max single-load model for Hermes profiles. After 5090 arrives, switch to qwen3:32b for all profiles — run `scripts/switch_models.py --profile 5090`.
 - **WSL2 networking:** Use `http://host.docker.internal:11434/v1` if Ollama is on Windows and Hermes is inside WSL2 Docker. Use `http://localhost:11434/v1` if Hermes runs natively in WSL2 (no Docker).
-- **Kanban and task_queue.py:** Both can run simultaneously during transition. Kanban takes over permanently once Hermes is stable.
+- **Kanban and task_queue.py:** A future adapter must preserve the single-writer authority, receipt/reconciliation contract and disabled-execution boundary. No simultaneous independent writer or automatic takeover is supported.
 - **MCP via Hermes:** Hermes has native MCP support — connect it to the same whitelisted servers defined in `app/tools/mcp_client.py`.

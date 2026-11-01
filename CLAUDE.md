@@ -71,7 +71,11 @@ Caveats live in Known Risks (FLASH_ATTENTION regression, KV cache accuracy).
 - `app/tools/registry.py` — modular tools, one file each
 
 ### Layer 2 — Hermes Agent (NousResearch, 23k+ stars)
-Self-improving Kanban multi-agent board, 19 messaging platforms, autonomous Curator, MCP support, cron. Install via WSL2 pointing at existing Ollama. **Kanban replaces `task_queue.py` when active**; `/confirm/{id}` endpoint maps to Kanban unblock. Full install commands in `docs/hermes_setup.md`. Specialist profiles: `jarvis-researcher` (search/web/memory/rag/files), `jarvis-coder` (terminal/files/git/shell), `jarvis-reviewer` (files/web/memory). Plugins: `hermes-labyrinth` (observability — always install), `hermes-workspace` or `hermes-webui` (UI).
+Hermes remains a planned integration. A future adapter must use the existing
+single task/schedule authority and retain UUIDs, identical retry payloads and
+receipts; it must not replace `task_queue.py` or run a parallel writer. No Kanban
+mapping for `/confirm/{id}` is implemented. See `docs/hermes_setup.md` and
+`docs/task_api.md`; those documents do not authorize installation or activation.
 
 ### Layer 3 — OpenJarvis (Phase 4+ only, after 500 real interactions)
 Stanford SAIL skill optimizer. Trace logging already wired from Phase 0. `audit.jsonl` is in the right format for `jarvis optimize skills`. Public catalog has Hermes skills + 13,700+ OpenClaw community skills (agentskills.io standard).

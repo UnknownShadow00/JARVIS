@@ -4,6 +4,7 @@ import asyncio
 
 import psutil
 
+from app.agent.authority import AuthorityError
 from app.agent.task_queue import task_queue
 from app.comms.discord_bot import discord_bot
 from app.comms.telegram_bot import telegram_bot
@@ -13,27 +14,33 @@ from app.logs.audit import audit
 
 class Reporter:
     def _task_snapshot(self) -> list[object]:
-        tasks = getattr(task_queue, "tasks", None)
-        if tasks is not None:
-            return list(tasks)
+        return list(task_queue.tasks)
 
-        stored_tasks = getattr(task_queue, "_tasks", {})
-        if isinstance(stored_tasks, dict):
-            return list(stored_tasks.values())
-
-        return []
-
-    def _stats(self) -> tuple[float, float, int, int]:
+    def _stats(self) -> tuple[float, float, str]:
         cpu = psutil.cpu_percent(interval=0.1)
         ram = psutil.virtual_memory().percent
-        tasks = self._task_snapshot()
-        pending = len([task for task in tasks if getattr(task, "status", None) == "pending"])
-        active = len([task for task in tasks if getattr(task, "status", None) == "in_progress"])
-        return cpu, ram, active, pending
+        try:
+            tasks = self._task_snapshot()
+        except AuthorityError:
+            return cpu, ram, "Task state unavailable; reconciliation required."
+        counts: dict[str, int] = {}
+        for task in tasks:
+            counts[task.status] = counts.get(task.status, 0) + 1
+        summary = (
+            f"Tasks {counts.pop('in_progress', 0)} in progress, "
+            f"{counts.pop('pending', 0)} pending (admitted, execution held); "
+            f"UNKNOWN {counts.pop('unknown', 0)}; "
+            f"cancel_requested {sum(task.cancel_requested for task in tasks)}."
+        )
+        if counts:
+            # Preserve actual states, including simulated_completed/simulating.
+            # They are never represented as real execution or completed work.
+            summary += " Other task states: " + ", ".join(f"{state}={count}" for state, count in sorted(counts.items())) + "."
+        return cpu, ram, summary
 
     async def build_report(self) -> str:
-        cpu, ram, active, pending = self._stats()
-        return f"JARVIS status: CPU {cpu}% | RAM {ram}% | Tasks {active} active, {pending} pending."
+        cpu, ram, tasks = self._stats()
+        return f"JARVIS status: CPU {cpu}% | RAM {ram}% | {tasks}"
 
     async def send_report(self) -> dict:
         report = await self.build_report()
@@ -63,10 +70,10 @@ class Reporter:
         }
 
     async def morning_report(self) -> str:
-        cpu, ram, active, pending = self._stats()
+        cpu, ram, tasks = self._stats()
         return (
             f"Good morning, sir. CPU {cpu}%, RAM {ram}%. "
-            f"{active} tasks running, {pending} pending. All systems nominal."
+            f"{tasks}"
         )
 
 

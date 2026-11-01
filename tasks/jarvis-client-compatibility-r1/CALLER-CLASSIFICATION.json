@@ -1,0 +1,95 @@
+{
+  "basis": "Static bounded source inventory plus manual inspection of actual path construction/transport and facade references; not external-client discovery or arbitrary dynamic-program proof.",
+  "mutation_clients_found": [],
+  "server_and_backend_definitions": [
+    "app/agent/api.py",
+    "app/agent/authority.py",
+    "app/agent/runtime.py",
+    "app/agent/task_queue.py",
+    "app/agent/scheduler.py",
+    "app/agent/migration.py",
+    "app/agent/simulation.py"
+  ],
+  "surfaces": [
+    {
+      "paths": [
+        "app/cli.py",
+        "jarvis.py",
+        "jarvis.cmd"
+      ],
+      "role": "CLI health/resource lifecycle; no queue CRUD; _post callers use resource paths; local fallback does not call task mutations"
+    },
+    {
+      "paths": [
+        "frontend/electron/main.js",
+        "frontend/electron/preload.js",
+        "frontend/electron/renderer/index.html"
+      ],
+      "role": "HUD window/IPC and ws://localhost:8000/ws; no queue mutation"
+    },
+    {
+      "paths": [
+        "frontend/pwa/app.js",
+        "frontend/pwa/sw.js"
+      ],
+      "role": "WebSocket chat; getRestUrl maps /ws to /chat; generic service worker network forwarding is not a queue mutation producer"
+    },
+    {
+      "paths": [
+        "frontend/hologram/app.js"
+      ],
+      "role": "WebSocket visual messages; no queue mutation"
+    },
+    {
+      "paths": [
+        "app/agent/reporter.py"
+      ],
+      "role": "Actual queue read consumer; updated UNKNOWN/cancel_requested/held/simulation/unavailable truthfulness"
+    },
+    {
+      "paths": [
+        "app/resource_manager.py"
+      ],
+      "role": "Existing scheduler lifecycle start/stop only, unchanged; overdue readiness limitation documented"
+    },
+    {
+      "paths": [
+        "app/boot.py",
+        "app/brain/morning_report.py"
+      ],
+      "role": "Independent tasks/state.json or todo project-backlog counters, not queue/API receipts; unchanged and explicitly distinguished in docs"
+    },
+    {
+      "paths": [
+        "scripts/sensor_node.py"
+      ],
+      "role": "Sensor POST /sensors/data; unrelated"
+    },
+    {
+      "paths": [
+        "evals/adapter.py"
+      ],
+      "role": "Model/evaluation transport, no queue CRUD"
+    },
+    {
+      "paths": [
+        "tasks/readiness_report.py",
+        "tasks/tool_readiness_smoke.py",
+        "tasks/pre_server_readiness.py",
+        "tasks/manual_voice_smoke.py"
+      ],
+      "role": "Active diagnostics, not queue mutation clients; not executed"
+    }
+  ],
+  "changed_public_sources": [
+    "app/agent/reporter.py",
+    "tests/test_reporter.py",
+    "README.md",
+    "CLAUDE.md",
+    "docs/hermes_setup.md",
+    "docs/resource_management.md",
+    "docs/task_api.md"
+  ],
+  "test_distinction": "Legacy queue JSON/eight-character-ID/status-update fixture tests elsewhere are not deployed callers and are not current-contract evidence. The directly affected existing reporter test file is updated, not left stale.",
+  "external_rollout_gate": "No external clients accessed or verified. Future mutation callers must retain canonical UUIDs/identical payload/full IDs, reconcile original receipts, preserve soft-cancel/UNKNOWN and never fabricate completion."
+}

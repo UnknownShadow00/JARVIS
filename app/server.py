@@ -30,9 +30,10 @@ from app.brain.complexity_router import complexity_router
 from app.brain.router import router as intent_router
 from app.brain.tool_params import build_tool_params as _tool_params
 from app.brain.tool_params import is_cancel_command as _is_cancel_command
-from app.agent.scheduler import SchedulerOperationError, scheduler
+from app.agent.scheduler import scheduler
+from app.agent.api import router as authority_router
+from app.agent.runtime import close_authority, get_authority
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
-from app.agent.task_queue import TaskQueueAuditError, TaskQueueIdentifierError, TaskQueuePersistenceError, task_queue
 from app.config import settings
 from app.config_check import check_startup
 from app.logs.audit import audit
@@ -108,44 +109,46 @@ def _register_runtime_callbacks(voice_pipeline: Any | None = None) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(asyncio.to_thread(_log_startup_checks))
-    _register_runtime_callbacks()
-    resource_manager.mark_activity("server_start")
-    await scheduler.start()
-    await resource_manager.start_idle_monitor()
-
+    # Mandatory storage errors propagate before readiness or background work.
+    authority = get_authority()
     voice_pipeline = None
     voice_started = False
-
-    if settings.server.enable_hotkey_listener:
-        start_hotkey_listener()
-
-    if settings.server.enable_voice_on_startup:
-        from app.voice.audio_stream import voice_pipeline as configured_voice_pipeline
-
-        voice_pipeline = configured_voice_pipeline
-        _register_runtime_callbacks(voice_pipeline)
-        voice_pipeline.start()
-        voice_started = True
-
-    audit.log(
-        "server_start",
-        {
-            "host": settings.server.host,
-            "port": settings.server.port,
-            "voice_started": voice_started,
-            "hotkey_listener_enabled": settings.server.enable_hotkey_listener,
-        },
-    )
+    idle_started = False
+    startup_check = None
     try:
+        authority.readiness()
+        await scheduler.start()
+        _register_runtime_callbacks()
+        resource_manager.mark_activity("server_start")
+        await resource_manager.start_idle_monitor()
+        idle_started = True
+        startup_check = asyncio.create_task(asyncio.to_thread(_log_startup_checks))
+        if settings.server.enable_hotkey_listener:
+            start_hotkey_listener()
+        if settings.server.enable_voice_on_startup:
+            from app.voice.audio_stream import voice_pipeline as configured_voice_pipeline
+            voice_pipeline = configured_voice_pipeline
+            _register_runtime_callbacks(voice_pipeline)
+            voice_pipeline.start()
+            voice_started = True
+        audit.log("server_start", {"host": settings.server.host, "port": settings.server.port,
+            "voice_started": voice_started, "hotkey_listener_enabled": settings.server.enable_hotkey_listener})
         yield
     finally:
-        audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
-        await resource_manager.stop_idle_monitor()
-        tts.stop()
-        if voice_started and voice_pipeline is not None:
-            voice_pipeline.stop()
-        await scheduler.stop()
+        try:
+            if idle_started:
+                await resource_manager.stop_idle_monitor()
+            tts.stop()
+            if voice_started and voice_pipeline is not None:
+                voice_pipeline.stop()
+            if startup_check is not None:
+                await startup_check
+            audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
+        finally:
+            try:
+                await scheduler.stop()
+            finally:
+                close_authority()
 
 
 app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
@@ -386,116 +389,7 @@ async def stop_response() -> dict[str, str]:
     return {"status": "stopped"}
 
 
-@app.post("/tasks")
-async def create_task(request: TaskCreateRequest) -> dict[str, Any]:
-    try:
-        task = await task_queue.add_task(request.goal)
-    except (TaskQueuePersistenceError, TaskQueueIdentifierError, TaskQueueAuditError) as exc:
-        return _task_write_error(exc, operation="create")
-    return asdict(task)
-
-
-def _task_write_error(
-    exc: TaskQueuePersistenceError | TaskQueueIdentifierError | TaskQueueAuditError,
-    *, operation: str, task_id: str | None = None,
-) -> JSONResponse:
-    """Report this attempt's publication state without paths, secrets or a retry."""
-    published = isinstance(exc, TaskQueuePersistenceError) and exc.published
-    error = "task_queue_write_uncertain" if published else "task_queue_write_failed"
-    if isinstance(exc, TaskQueueIdentifierError):
-        error = "task_queue_identifier_exhausted"
-    publication = "published_durability_unknown" if published else "not_published"
-    reconcile = published
-    if isinstance(exc, TaskQueueAuditError):
-        error, reconcile = "task_queue_audit_failed", True
-        publication = "published_audit_failed" if exc.published else "memory_applied_audit_failed"
-    return JSONResponse(status_code=409 if reconcile else 503, content={
-        "error": error, "operation": operation,
-        "task_id": getattr(exc, "task_id", None) or task_id,
-        "publication": publication,
-        "automatic_retry": False, "reconcile_required": reconcile,
-    })
-
-
-@app.get("/tasks")
-async def list_tasks(status: str | None = None) -> dict[str, Any]:
-    tasks = await task_queue.list_tasks(status=status)
-    return {"tasks": [asdict(task) for task in tasks], "count": len(tasks)}
-
-
-@app.get("/tasks/{task_id}")
-async def get_task(task_id: str) -> Any:
-    task = await task_queue.get_task(task_id)
-    if task is None:
-        return JSONResponse(status_code=404, content={"error": "Unknown task"})
-    return asdict(task)
-
-
-@app.patch("/tasks/{task_id}")
-async def update_task(task_id: str, request: TaskStatusRequest) -> Any:
-    try:
-        updated = await task_queue.update_status(
-            task_id,
-            request.status,
-            result=request.result,
-            error=request.error,
-        )
-    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
-        return _task_write_error(exc, operation="update", task_id=task_id)
-    if not updated:
-        return JSONResponse(status_code=404, content={"error": "Unknown task"})
-    task = await task_queue.get_task(task_id)
-    return asdict(task) if task is not None else {"updated": True}
-
-
-@app.delete("/tasks/{task_id}")
-async def delete_task(task_id: str) -> dict[str, bool]:
-    try:
-        deleted = await task_queue.delete_task(task_id)
-    except (TaskQueuePersistenceError, TaskQueueAuditError) as exc:
-        return _task_write_error(exc, operation="delete", task_id=task_id)
-    return {"deleted": deleted}
-
-
-@app.post("/schedule/jobs")
-async def create_scheduled_job(request: ScheduledJobRequest) -> dict[str, Any]:
-    try:
-        job = scheduler.add_job(request.name, request.cron_expr, request.goal)
-    except SchedulerOperationError as exc:
-        return _schedule_write_error(exc)
-    return asdict(job)
-
-
-def _schedule_write_error(exc: SchedulerOperationError) -> JSONResponse:
-    publication = "not_published"
-    if exc.published:
-        publication = "published_durability_unknown" if exc.phase == "persistence" else "published"
-    elif exc.applied and exc.operation in {"create", "delete"}:
-        publication = "memory_applied"
-    return JSONResponse(
-        status_code=400 if exc.phase == "validation" else (409 if exc.applied else 503),
-        content={
-            "error": "scheduler_operation_failed", "operation": exc.operation,
-            "job_id": exc.job_id, "phase": exc.phase, "state_applied": exc.applied,
-            "publication": publication, "uncertain": exc.uncertain,
-            "automatic_retry": False, "reconcile_required": exc.applied or exc.uncertain,
-        },
-    )
-
-
-@app.get("/schedule/jobs")
-async def list_scheduled_jobs() -> dict[str, Any]:
-    jobs = scheduler.list_jobs()
-    return {"jobs": [asdict(job) for job in jobs], "count": len(jobs)}
-
-
-@app.delete("/schedule/jobs/{job_id}")
-async def delete_scheduled_job(job_id: str) -> dict[str, bool]:
-    try:
-        removed = scheduler.remove_job(job_id)
-    except SchedulerOperationError as exc:
-        return _schedule_write_error(exc)
-    return {"deleted": removed}
+app.include_router(authority_router)
 
 
 @app.get("/memory/skills")
