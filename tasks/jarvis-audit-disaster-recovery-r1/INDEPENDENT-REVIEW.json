@@ -1,0 +1,100 @@
+{
+  "at": "2026-11-06T04:57:31.216639+00:00",
+  "reviewer": "separate /root/audit_review agent",
+  "method": "Independent read-only static source review and final run evidence spot checks; primary executed guarded runtime tests",
+  "verdict": "PASS",
+  "unresolved_scoped_findings": [],
+  "source_sha256": {
+    "app/agent/api.py": "cd7dd1582f74f47bcf5148c69bd7f83943876402fa1e0f91de6d354367715d38",
+    "app/agent/archive_restore.py": "44273eea23aff0203c49480c804c35673af21578c1ce81c711a91c9569173e31",
+    "app/agent/audit_attestations.py": "e4227787e2be87355b2f5e77aa6390bbb558b4f0b22b5c9e867777668f205bb3",
+    "app/agent/authority.py": "76abf0bd1492c00ad2d57020dd613e13ea03d29e9f3d545415e5df472743887b",
+    "app/agent/checkpoint_epochs.py": "b9ed850c4950c8add10c594c72ba2c43456e12e0333957c563ddee3468c942b7",
+    "app/agent/ledger.py": "8712e679cc831eebde12800c0217fd657ee16ab1a8141bf8fe96bda23a18c2e5",
+    "app/agent/ledger_schema.py": "460ef2e5b7e61e846d32254db94d235110bfd497f8855e11662cf5e5a64c54a5",
+    "app/agent/operator_cli.py": "2b2cebde14545052d8e44d926bacea81ccb67194b74a2a2a76e981dcacc9ae35",
+    "app/agent/recovery.py": "ac409e4650e46fc0e3eca0a1cae5a575db52cb0e42378c8cb054ab3af3cec3e7",
+    "app/agent/reporter.py": "6aa7009c51337601e335a0e220fc5d873efaf19c57ad64133370cb276bcdfed0"
+  },
+  "findings": [
+    {
+      "severity": "HIGH",
+      "finding": "Standalone archive could not prove audited export completion",
+      "state": "CLOSED",
+      "resolution": "Protected post-completion attestation binds manifest, snapshot, completion receipt and publication checkpoint; later SQL marker binds attestation."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Rollover required authenticated continuity, not local head selection",
+      "state": "CLOSED",
+      "resolution": "Retained generations, global sequence, previous transition/head/policy/key bindings, exact inventory and external expected-ancestor reference."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Reference head not constrained to declared generation",
+      "state": "CLOSED",
+      "resolution": "Epoch range, rollover hash and head ancestry now checked; wrong generation/rollback/key/expiry tests."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Shallow restore phase checks could misreport missing prepared evidence",
+      "state": "CLOSED",
+      "resolution": "Exact phase groups, UUID/schema/auth, intent/prepared/final hashes, source attestation and lineage validated before reporting."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Restore required exact reconstruction and exclusive durable publication",
+      "state": "CLOSED",
+      "resolution": "Trusted schema/no archive SQL, strict ordered types/rowids, FULL transaction, integrity/logical/semantic checks, fsync, read-only inert artifact and RENAME_NOREPLACE."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Shared live operations could race",
+      "state": "CLOSED",
+      "resolution": "Shared reentrant serialization; separate CLI requires exclusive existing journal lock."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Admitted rollover recovery could become stuck after permit expiry",
+      "state": "CLOSED",
+      "resolution": "Continue exact durable original admission without new authorization; recovery receipt hash bound to commit; independent SIGKILL test."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Missing attestations/receipts needed durable linkage",
+      "state": "CLOSED",
+      "resolution": "Cross-linked phase records, source attestation markers, readiness and missing-phase negative tests."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Disaster and hostile archive coverage incomplete",
+      "state": "CLOSED",
+      "resolution": "Page corruption, missing/duplicate/reordered content, HMAC/trust/policy errors, injected storage failures, paths/races,15 SIGKILL cases and UNKNOWN cancellation preservation."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Restore accepted legacy v1 despite documented lineage requirement",
+      "state": "CLOSED",
+      "resolution": "Explicit v2 guard added; actual signed v1 remains inspectable but restore fails with restore_checkpoint_lineage_required."
+    },
+    {
+      "severity": "BENCHMARK",
+      "finding": "Initial synthetic fixture violated guarded import/admission requirements",
+      "state": "CLOSED",
+      "resolution": "Fenced synthetic historical batch preserves provenance; UNKNOWN created first; migration/admission capacity unchanged."
+    }
+  ],
+  "observed_final_runs": {
+    "core": "20261106T045300094243Z",
+    "full_app": "20261106T045456293219Z",
+    "benchmark": "20261106T045518994872Z"
+  },
+  "limitations": [
+    "Local HMAC and custody do not defeat privileged/same-UID coordinated rollback or key compromise",
+    "Externally trusted reference provenance and time are required",
+    "SIGKILL is not physical power loss",
+    "Restored artifacts remain inert; future separately authorized re-anchor needed",
+    "16 finite generations eventually fail closed",
+    "No live/privileged or independent runtime test execution claimed"
+  ]
+}

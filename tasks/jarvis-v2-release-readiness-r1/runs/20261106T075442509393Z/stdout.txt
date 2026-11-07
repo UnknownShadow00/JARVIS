@@ -1,0 +1,252 @@
+FAIL import: ollama package is not installed (No module named 'ollama')
+tests/boot_test.py::test_boot_sequence
+tests/direct_responder_test.py::test_direct_responder
+tests/e2e/test_full_loop.py::test_cancel_token_stops_pipeline
+tests/e2e/test_full_loop.py::test_router_returns_respond_intent
+tests/e2e/test_full_loop.py::test_full_loop_timing_mock
+tests/e2e/test_full_loop.py::test_pipeline_imports
+tests/hardware_smoke_test.py::test_tts_speaks
+tests/hardware_smoke_test.py::test_sfx_plays
+tests/hardware_smoke_test.py::test_vad_records
+tests/hardware_smoke_test.py::test_stt_transcribes
+tests/hardware_smoke_test.py::test_wake_word_listens
+tests/hardware_smoke_test.py::test_self_suppression
+INTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "/work/project/tests/ollama_test.py", line 17, in <module>
+INTERNALERROR>     from ollama import Client, RequestError
+INTERNALERROR> ModuleNotFoundError: No module named 'ollama'
+INTERNALERROR> 
+INTERNALERROR> The above exception was the direct cause of the following exception:
+INTERNALERROR> 
+INTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "/deps/_pytest/main.py", line 330, in wrap_session
+INTERNALERROR>     session.exitstatus = doit(config, session) or 0
+INTERNALERROR>                          ~~~~^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/main.py", line 383, in _main
+INTERNALERROR>     config.hook.pytest_collection(session=session)
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/pluggy/_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/pluggy/_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/logging.py", line 803, in pytest_collection
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/warnings.py", line 99, in pytest_collection
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/config/__init__.py", line 1445, in pytest_collection
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>   File "/deps/_pytest/main.py", line 394, in pytest_collection
+INTERNALERROR>     session.perform_collect()
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~~~~~~~^^
+INTERNALERROR>   File "/deps/_pytest/main.py", line 869, in perform_collect
+INTERNALERROR>     self.items.extend(self.genitems(node))
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/main.py", line 1035, in genitems
+INTERNALERROR>     yield from self.genitems(subnode)
+INTERNALERROR>   File "/deps/_pytest/main.py", line 1032, in genitems
+INTERNALERROR>     rep, duplicate = self._collect_one_node(node, handle_dupes)
+INTERNALERROR>                      ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/main.py", line 895, in _collect_one_node
+INTERNALERROR>     rep = collect_one_node(node)
+INTERNALERROR>   File "/deps/_pytest/runner.py", line 589, in collect_one_node
+INTERNALERROR>     rep: CollectReport = ihook.pytest_make_collect_report(collector=collector)
+INTERNALERROR>                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/pluggy/_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/pluggy/_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/fixtures.py", line 1798, in pytest_make_collect_report
+INTERNALERROR>     result = yield
+INTERNALERROR>              ^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/capture.py", line 880, in pytest_make_collect_report
+INTERNALERROR>     rep = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "/deps/pluggy/_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>   File "/deps/_pytest/runner.py", line 408, in pytest_make_collect_report
+INTERNALERROR>     call = CallInfo.from_call(
+INTERNALERROR>         collect, "collect", reraise=(KeyboardInterrupt, SystemExit)
+INTERNALERROR>     )
+INTERNALERROR>   File "/deps/_pytest/runner.py", line 361, in from_call
+INTERNALERROR>     result: TResult | None = func()
+INTERNALERROR>                              ~~~~^^
+INTERNALERROR>   File "/deps/_pytest/runner.py", line 406, in collect
+INTERNALERROR>     return list(collector.collect())
+INTERNALERROR>                 ~~~~~~~~~~~~~~~~~^^
+INTERNALERROR>   File "/deps/_pytest/python.py", line 564, in collect
+INTERNALERROR>     self._register_setup_module_fixture()
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+INTERNALERROR>   File "/deps/_pytest/python.py", line 577, in _register_setup_module_fixture
+INTERNALERROR>     self.obj, ("setUpModule", "setup_module")
+INTERNALERROR>     ^^^^^^^^
+INTERNALERROR>   File "/deps/_pytest/python.py", line 290, in obj
+INTERNALERROR>     self._obj = obj = self._getobj()
+INTERNALERROR>                       ~~~~~~~~~~~~^^
+INTERNALERROR>   File "/deps/_pytest/python.py", line 561, in _getobj
+INTERNALERROR>     return importtestmodule(self.path, self.config)
+INTERNALERROR>   File "/deps/_pytest/python.py", line 508, in importtestmodule
+INTERNALERROR>     mod = import_path(
+INTERNALERROR>         path,
+INTERNALERROR>     ...<2 lines>...
+INTERNALERROR>         consider_namespace_packages=config.getini("consider_namespace_packages"),
+INTERNALERROR>     )
+INTERNALERROR>   File "/deps/_pytest/pathlib.py", line 562, in import_path
+INTERNALERROR>     mod = _import_module_using_spec(module_name, path, insert_modules=False)
+INTERNALERROR>   File "/deps/_pytest/pathlib.py", line 716, in _import_module_using_spec
+INTERNALERROR>     spec.loader.exec_module(mod)  # type: ignore[union-attr]
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+INTERNALERROR>   File "/deps/_pytest/assertion/rewrite.py", line 188, in exec_module
+INTERNALERROR>     exec(co, module.__dict__)
+INTERNALERROR>     ~~~~^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/work/project/tests/ollama_test.py", line 20, in <module>
+INTERNALERROR>     raise SystemExit(1) from exc
+INTERNALERROR> SystemExit: 1
+
+12 tests collected in 0.41s
+{
+  "status": "BROAD_INCOMPLETE",
+  "started_at": "2026-11-06T07:54:42.628446+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533029]",
+    "mnt_namespace": "mnt:[4026532971]",
+    "pid_namespace": "pid:[4026532974]",
+    "net_namespace": "net:[4026532976]",
+    "ipc_namespace": "ipc:[4026532973]",
+    "uts_namespace": "uts:[4026532972]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T075442509393Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T075442509393Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T075442509393Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "native_execution": {
+    "pydantic_core._pydantic_core": {
+      "path": "/deps/pydantic_core/_pydantic_core.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "189fe5feb2b829cb99ea089c7372c2b1a8592b2f2df6b46b4113af2dc61bcdac"
+    },
+    "yaml._yaml": {
+      "path": "/deps/yaml/_yaml.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "458bd0cb0030102b9bcffb7689696ac87bedcbd5384bc4c7883e7bbe0ce4e0a1"
+    },
+    "psutil._psutil_linux": {
+      "path": "/deps/psutil/_psutil_linux.abi3.so",
+      "sha256": "8085c743a77f6059be6d18d54317ccce2e715425bb5f15aa8835770463d6b9fd"
+    }
+  },
+  "synthetic_config_sha256": "5e612eac50912879db95088e5bfffb479ae247c829f465cde26968a861a44af0",
+  "collection_errors": [],
+  "deselected": [],
+  "collected_nodes": [
+    {
+      "nodeid": "tests/boot_test.py::test_boot_sequence",
+      "markers": [
+        "asyncio"
+      ]
+    },
+    {
+      "nodeid": "tests/direct_responder_test.py::test_direct_responder",
+      "markers": []
+    },
+    {
+      "nodeid": "tests/e2e/test_full_loop.py::test_cancel_token_stops_pipeline",
+      "markers": [
+        "unit"
+      ]
+    },
+    {
+      "nodeid": "tests/e2e/test_full_loop.py::test_router_returns_respond_intent",
+      "markers": [
+        "unit"
+      ]
+    },
+    {
+      "nodeid": "tests/e2e/test_full_loop.py::test_full_loop_timing_mock",
+      "markers": [
+        "unit"
+      ]
+    },
+    {
+      "nodeid": "tests/e2e/test_full_loop.py::test_pipeline_imports",
+      "markers": [
+        "unit"
+      ]
+    },
+    {
+      "nodeid": "tests/hardware_smoke_test.py::test_tts_speaks",
+      "markers": [
+        "manual"
+      ]
+    },
+    {
+      "nodeid": "tests/hardware_smoke_test.py::test_sfx_plays",
+      "markers": [
+        "manual"
+      ]
+    },
+    {
+      "nodeid": "tests/hardware_smoke_test.py::test_vad_records",
+      "markers": [
+        "manual"
+      ]
+    },
+    {
+      "nodeid": "tests/hardware_smoke_test.py::test_stt_transcribes",
+      "markers": [
+        "manual"
+      ]
+    },
+    {
+      "nodeid": "tests/hardware_smoke_test.py::test_wake_word_listens",
+      "markers": [
+        "manual"
+      ]
+    },
+    {
+      "nodeid": "tests/hardware_smoke_test.py::test_self_suppression",
+      "markers": [
+        "manual"
+      ]
+    }
+  ],
+  "outcomes": [],
+  "tests": {
+    "collected": 0,
+    "failed": 0,
+    "exitstatus": 3
+  },
+  "finished_at": "2026-11-06T07:54:43.325735+00:00"
+}

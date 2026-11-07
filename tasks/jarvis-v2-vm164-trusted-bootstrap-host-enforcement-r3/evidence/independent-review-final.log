@@ -1,0 +1,58 @@
+Independent reviewer: /root/independent_security_review_r3
+Scope: pure Python source review and mocked tests only. No network, Proxmox,
+systemd, timer, VM, guest, credential, or host subprocess operation was run.
+
+Command:
+python3 -I -B -S -m unittest discover -s tasks/jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3/tests -p 'test_independent_review.py' -v
+
+Final result after reviewed source fixes:
+- Ran: 13 test methods
+- Passed: 13
+- Failed: 0
+- Errors: 0
+- Skipped: 0
+
+Independently covered controls:
+- runtime Policy B rejection and absence of a NativeBackend/qm-stop force path;
+- exact VMID, UUID, disk, serial, network, ISO, boot, agent, pending state,
+  configuration digest and timer/service command validation negatives;
+- inactive, late, wrong-deadline and wrong-argv timer proof negatives;
+- setup rollback attempts owned-unit cancellation and verifies inactivity;
+- pre-action snapshot failure remains retryable under bounded phase attempts;
+- evidence failure after phase claim blocks VM actuation and releases retryably;
+- Policy A never forces or reports an expiration guarantee;
+- natural poweroff races require a fresh stopped observation;
+- duplicate cleanup is historical-only and performs no fresh host action;
+- retirement requires CLOSED state and a distinct finite approval and preserves
+  the prior in-memory evidence in the fixture-backed test;
+- host authorization binds canonical protected Stage2 and review records to
+  source, scope and approval hashes.
+
+Code findings fixed during independent review:
+- setup-failure owned-unit cancellation coverage;
+- retryable bounded phase claims after pre-action interface failure;
+- evidence-preserving CLOSED-session retirement path;
+- duplicate cleanup no longer performs an unnecessary live read;
+- protected Stage2/review record hash and scope binding;
+- strict durable ACTION_INTENT before any VM shutdown/force call.
+
+Remaining qualification gaps (not converted to PASS):
+- mocked timers do not prove systemd 257 transient-unit behavior or timing;
+- exact Proxmox qm/pvesh/pvesm semantics and systemd show serialization require
+  separately authorized Stage2/Stage3 host qualification;
+- Policy A cannot guarantee temporary-access expiration when graceful shutdown
+  fails; Policy B remains disabled and separately unauthorized;
+- transient units do not provide a demonstrated host-reboot guarantee;
+- no live proof exists for journal retention, manager reexec, timer firing,
+  guest response, protection/lock behavior, or exclusive external control;
+- properties requested for UMask, MemoryMax, TasksMax, SendSIGKILL and standard
+  streams are not all included in current unit readback verification; their
+  effective systemd 257 contract remains Stage2-unverified;
+- the interval between an accepted snapshot and an action remains subject to
+  separately controlled host-side configuration/VM changes; exclusive custody
+  and real-host race behavior require Stage3 validation.
+
+Review conclusion:
+PASS_OFFLINE_HOST_ENFORCEMENT_ENGINEERING_ONLY for the independently exercised
+offline controls. This is not live host qualification, temporary-root or
+forced-stop authorization, installation readiness, or an expiration guarantee.

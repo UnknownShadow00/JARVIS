@@ -1,0 +1,116 @@
+..............................FE                                         [100%]
+==================================== ERRORS ====================================
+___ ERROR at teardown of test_recovery_witness_failure_blocks_each_boundary ____
+
+tmp_path = PosixPath('/work/pytest/test_recovery_witness_failure_0')
+
+    @pytest.fixture
+    def env(tmp_path):
+        state=provision(tmp_path/'state');a,p,t=opened(state)
+        yield state,a,p,t
+>       a.close()
+
+/input/tests/test_secure_transport.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/authority.py:561: in close
+    self._shutdown_recovery_status = self._recovery_registry.inspect()
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:29: in checked
+    try:return method(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:290: in inspect
+    events,commits,rows,proposals,witness,head=self._load()
+                                               ^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:266: in _load
+    events,commits,history_state=self._protected_history()
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.recovery_decisions.RecoveryRegistry object at 0x7e9ba5a53540>
+
+    def _protected_history(self):
+        self._fence(); g = self.guard
+        head, pending, history = g.history()
+        if pending: raise AuthorityError('recovery_checkpoint_incomplete')
+        names = {p.name for p in self.custody.iterdir()}
+        if len(names) > self.config['capacity']*2+1: raise AuthorityError('recovery_registry_capacity')
+        events=[]; commits=[]; expected={'journal.lock'}; previous=ZERO
+        nonce=set()
+        for seq in range(1,self.config['capacity']+1):
+            ip, fp = self._path(seq,'intent'), self._path(seq,'final')
+            if ip.name not in names: break
+            expected.add(ip.name)
+            event, digest = g._read(ip)
+            fields={'format','registry_id','config_sha256','sequence','previous_sha256','request_id','command','payload','permit','checkpoint','result','execution_enabled','activation_authorized','admitted_at'}
+            if (type(event) is not dict or set(event)!=fields or event['format']!='jarvis-recovery-event-v1'
+                or event['registry_id']!=self.config['registry_id'] or event['config_sha256']!=fingerprint(self.config)
+                or type(event['sequence']) is not int or event['sequence']!=seq or event['previous_sha256']!=previous or event['execution_enabled'] is not False
+                or event['activation_authorized'] is not False):
+                raise AuthorityError('recovery_registry_history_conflict')
+            self._historical_authorization(event)
+            identifier(event['request_id'])
+            if event['request_id'] in nonce: raise AuthorityError('recovery_registry_duplicate_nonce')
+            nonce.add(event['request_id'])
+            if event['checkpoint'] not in history: raise AuthorityError('recovery_registry_checkpoint_rollback')
+            if fp.name in names:
+                expected.add(fp.name)
+                commit,_ = g._read(fp)
+                if commit != self.commit_body(event,digest): raise AuthorityError('recovery_registry_commit_invalid')
+                commits.append(g.signed(commit))
+            else: commits.append(None)
+            events.append((event,digest)); previous=digest
+        if names != expected or any(c is None for c in commits[:-1]):
+>           raise AuthorityError('recovery_registry_incomplete_history')
+E           app.agent.authority.AuthorityError: recovery_registry_incomplete_history
+
+/input/source/app/agent/recovery_decisions.py:206: AuthorityError
+=================================== FAILURES ===================================
+______________ test_recovery_witness_failure_blocks_each_boundary ______________
+
+env = ({'root': '/work/pytest/test_recovery_witness_failure_0/state', 'database': '/work/pytest/test_recovery_witness_failur...ecutionPipeline object at 0x7e9ba5f21f40>, <app.agent.execution_transport.SyntheticTransport object at 0x7e9ba5a1fcf0>)
+
+    def test_recovery_witness_failure_blocks_each_boundary(env):
+        _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
+        def revoke_witness(stage):
+            if stage=='transport_before_reserve':a._recovery_registry._path(1,'final').rename(a._recovery_registry.custody/'missing-final')
+        t._fault=revoke_witness
+>       with pytest.raises(AuthorityError):p.run_once(ACTOR)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE AuthorityError
+
+/input/tests/test_secure_transport.py:146: Failed
+=========================== short test summary info ============================
+FAILED ../input/tests/test_secure_transport.py::test_recovery_witness_failure_blocks_each_boundary
+ERROR ../input/tests/test_secure_transport.py::test_recovery_witness_failure_blocks_each_boundary
+1 failed, 30 passed, 1 error in 11.47s
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T06:44:38.118016+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533029]",
+    "mnt_namespace": "mnt:[4026532971]",
+    "pid_namespace": "pid:[4026532974]",
+    "net_namespace": "net:[4026532976]",
+    "ipc_namespace": "ipc:[4026532973]",
+    "uts_namespace": "uts:[4026532972]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-end-to-end-readiness-r1/runs/20261106T064438016872Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-end-to-end-readiness-r1/runs/20261106T064438016872Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-end-to-end-readiness-r1/runs/20261106T064438016872Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 31,
+    "failed": 2,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T06:44:49.849669+00:00"
+}

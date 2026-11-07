@@ -1,0 +1,1721 @@
+--- /dev/null
++++ b/app/agent/admission.py
+@@ -0,0 +1,49 @@
++"""Bound admission bodies before JSON decoding, including chunked requests."""
++import asyncio
++from starlette.responses import JSONResponse
++
++
++class AdmissionBodyLimit:
++    def __init__(self, app, max_bytes=262144, read_timeout=5):
++        self.app, self.max_bytes = app, max_bytes
++        self.read_timeout = read_timeout
++
++    async def __call__(self, scope, receive, send):
++        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"] not in {"/tasks", "/execution/tasks", "/schedule/jobs"}:
++            return await self.app(scope, receive, send)
++        lengths = [v for k, v in scope.get("headers", []) if k.lower() == b"content-length"]
++        try:
++            if len(lengths) > 1 or lengths and (not lengths[0].isdigit() or len(lengths[0]) > 10):
++                raise ValueError()
++            if lengths and int(lengths[0]) > self.max_bytes:
++                response = JSONResponse({"error": "admission_body_too_large"}, status_code=413)
++                return await response(scope, receive, send)
++        except ValueError:
++            return await JSONResponse({"error": "invalid_content_length"}, status_code=400)(scope, receive, send)
++        chunks, size = [], 0
++        try:
++            async with asyncio.timeout(self.read_timeout):
++                for _ in range(1024):
++                    message = await receive()
++                    if message["type"] == "http.disconnect":
++                        return
++                    body = message.get("body", b"")
++                    size += len(body)
++                    if size > self.max_bytes:
++                        return await JSONResponse({"error": "admission_body_too_large"}, status_code=413)(scope, receive, send)
++                    chunks.append(body)
++                    if not message.get("more_body", False):
++                        break
++                else:
++                    return await JSONResponse({"error": "admission_chunk_limit"}, status_code=413)(scope, receive, send)
++        except TimeoutError:
++            return await JSONResponse({"error": "admission_read_timeout"}, status_code=408)(scope, receive, send)
++        buffered = b"".join(chunks)
++        delivered = False
++        async def bounded_receive():
++            nonlocal delivered
++            if not delivered:
++                delivered = True
++                return {"type": "http.request", "body": buffered, "more_body": False}
++            return await receive()
++        return await self.app(scope, bounded_receive, send)
+--- /dev/null
++++ b/app/agent/execution.py
+@@ -0,0 +1,343 @@
++"""Opt-in offline execution. Only the sealed, in-process synthetic adapter exists.
++
++Actor is a trusted server namespace. This module does not grant HTTP identity,
++host isolation, or permission to run external effects. No real adapter can be
++registered here. Audit, decisions, evidence and publication use Authority's
++fenced transactions; publication is never a public API operation.
++"""
++from __future__ import annotations
++
++import asyncio
++from dataclasses import dataclass
++from datetime import UTC, datetime, timedelta
++import hashlib
++import threading
++import time
++import uuid
++
++from app.agent.authority import AuthorityError, canonical, identifier, instant, text
++
++
++CAPABILITIES = frozenset({"synthetic.echo", "synthetic.sha256", "synthetic.fail"})
++TERMINAL = frozenset({"simulated_completed", "simulated_failed", "denied", "cancelled", "timed_out", "unknown"})
++
++
++def phase_id(operation_id, phase):
++    """Stable internal receipt key, never a replacement logical operation ID."""
++    return str(uuid.uuid5(uuid.UUID(identifier(operation_id)), "offline-execution:" + phase))
++
++
++def validate_spec(capability, payload, expires_at, timeout_seconds):
++    text(capability, 128)
++    if type(payload) is not dict or set(payload) != {"value"}:
++        raise AuthorityError("invalid_execution_payload")
++    text(payload["value"], 8192)
++    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= 60:
++        raise AuthorityError("invalid_execution_timeout")
++    return dict(capability=capability, payload={"value": payload["value"]},
++                expires_at=instant(expires_at), timeout_seconds=timeout_seconds)
++
++
++@dataclass(frozen=True)
++class SimulatedPolicy:
++    scope: str
++    capabilities: frozenset[str] = frozenset({"synthetic.echo", "synthetic.sha256"})
++    revision: str = "offline-v1"
++
++    def __post_init__(self):
++        text(self.scope, 128)
++        text(self.revision, 128)
++        if type(self.capabilities) is not frozenset or not self.capabilities <= CAPABILITIES:
++            raise AuthorityError("invalid_simulated_policy")
++
++    def permits(self, scope, capability):
++        return scope == self.scope and capability in self.capabilities
++
++
++class DisabledExecutor:
++    def execute(self, operation_id, spec):
++        raise AuthorityError("real_execution_disabled")
++
++
++class SyntheticExecutor:
++    """Bounded pure computation; never imports tools or interprets goals."""
++    capabilities = CAPABILITIES
++
++    def execute(self, operation_id, spec):
++        value = spec["payload"]["value"]
++        capability = spec["capability"]
++        if capability not in self.capabilities:
++            raise AuthorityError("capability_unavailable")
++        output = hashlib.sha256(value.encode()).hexdigest() if capability == "synthetic.sha256" else value
++        return {"operation_id": operation_id, "capability": capability,
++                "status": "simulated_failed" if capability == "synthetic.fail" else "simulated_completed",
++                "output": None if capability == "synthetic.fail" else output,
++                "error": "synthetic_failure" if capability == "synthetic.fail" else None}
++
++
++class ExecutorRegistry:
++    """No arbitrary plugins/callbacks: real executor registration is prohibited."""
++    def __init__(self, *, enabled=False):
++        self._executor = None
++        self._enabled = enabled is True
++
++    def register(self, executor):
++        if not self._enabled:
++            raise AuthorityError("execution_disabled")
++        if type(executor) is not SyntheticExecutor:
++            raise AuthorityError("real_execution_disabled")
++        if self._executor is not None:
++            raise AuthorityError("executor_already_registered")
++        self._executor = executor
++
++    def resolve(self, capability):
++        if not self._enabled or self._executor is None:
++            raise AuthorityError("execution_disabled")
++        if capability not in CAPABILITIES:
++            raise AuthorityError("capability_unavailable")
++        return self._executor
++
++
++class ExecutionPipeline:
++    def __init__(self, authority, policy, *, enabled=False, max_pending=128, clock=None, fault_hook=None):
++        if enabled is not True or not authority.allow_simulation:
++            raise AuthorityError("execution_disabled")
++        if type(policy) is not SimulatedPolicy:
++            raise AuthorityError("invalid_simulated_policy")
++        if type(max_pending) is not int or not 1 <= max_pending <= 1000:
++            raise AuthorityError("invalid_pending_limit")
++        self.authority, self.policy = authority, policy
++        self.registry = ExecutorRegistry(enabled=True)
++        self.registry.register(SyntheticExecutor())
++        self.max_pending = max_pending
++        self._clock = clock or (lambda: datetime.now(UTC))
++        self._fault = fault_hook or (lambda stage: None)
++        self._dispatch_mutex = threading.Lock()
++
++    def schedule_template(self, actor, capability, payload, timeout_seconds=10, expires_after_seconds=60):
++        """Authorize an explicitly synthetic recurring intent, rechecked at dispatch."""
++        if type(expires_after_seconds) is not int or not 1 <= expires_after_seconds <= 3600:
++            raise AuthorityError("invalid_execution_expiry")
++        # Reuse strict payload/capability/timeout checks; expiry is occurrence-relative.
++        spec = validate_spec(capability, payload, self._clock().isoformat(), timeout_seconds)
++        del spec["expires_at"]
++        scope = self.authority._scope(actor)
++        if not self.policy.permits(scope, capability):
++            raise AuthorityError("policy_denied")
++        return dict(spec, expires_after_seconds=expires_after_seconds,
++                    authorization=dict(allowed=True, policy_revision=self.policy.revision,
++                                       capability=capability, scope=scope, at=self._clock().isoformat()))
++
++    def submit(self, actor, request_id, goal, capability, payload, expires_at, timeout_seconds=10):
++        a = self.authority
++        identifier(request_id)
++        if uuid.UUID(request_id).version != 4:
++            raise AuthorityError("invalid_public_request_identifier")
++        text(goal)
++        spec = validate_spec(capability, payload, expires_at, timeout_seconds)
++        def effect(scope):
++            now = self._clock()
++            expiry = datetime.fromisoformat(spec["expires_at"])
++            if expiry <= now or expiry > now + timedelta(hours=24):
++                raise AuthorityError("stale_execution_request")
++            count = a._conn.execute("SELECT COUNT(*) FROM outbox WHERE state IN ('held','execution_claimed','unknown')").fetchone()[0]
++            if count >= self.max_pending:
++                raise AuthorityError("queue_capacity_exceeded")
++            allowed = self.policy.permits(scope, capability) and capability in CAPABILITIES
++            task = a._new_task(scope, request_id, goal)
++            decision = dict(allowed=allowed, policy_revision=self.policy.revision,
++                            capability=capability, scope=scope, at=now.isoformat())
++            task["execution"] = dict(spec, operation_id=request_id, authorization=decision,
++                                     receipt_ids={phase: phase_id(request_id, phase) for phase in ("claim", "dispatch", "record", "publish", "unknown")})
++            if not allowed:
++                task.update(status="denied", error="policy_denied")
++                a._conn.execute("UPDATE outbox SET state='denied' WHERE task_id=?", (request_id,))
++            a._put("task", request_id, scope, task)
++            return task
++        return a._mutate(actor, request_id, "execution_submit", dict(goal=goal, **spec), effect)
++
++    def _state(self, task, state, *, result=None, error=None):
++        a = self.authority
++        task.update(status=state, result=result, error=error)
++        a._put("task", task["task_id"], task["scope"], task)
++        a._conn.execute("UPDATE outbox SET state=? WHERE task_id=?", (state, task["task_id"]))
++        return task
++
++    def _claim(self, actor, operation_id):
++        a = self.authority
++        def effect(scope):
++            task = a._get("task", operation_id, scope)
++            spec = task.get("execution")
++            row = a._conn.execute("SELECT state FROM outbox WHERE task_id=?", (operation_id,)).fetchone()
++            if not spec or row[0] != "held" or task["cancel_requested"]:
++                raise AuthorityError("not_claimable")
++            decision = spec.get("authorization")
++            if type(decision) is not dict or spec.get("operation_id") != operation_id or decision.get("scope") != scope or decision.get("capability") != spec.get("capability") or decision.get("allowed") is not True:
++                return self._state(task, "denied", error="inconsistent_authorization")
++            now = self._clock()
++            if datetime.fromisoformat(spec["expires_at"]) <= now:
++                return self._state(task, "timed_out", error="expired_before_dispatch")
++            if not self.policy.permits(scope, spec["capability"]):
++                return self._state(task, "denied", error="policy_denied_at_dispatch")
++            self.registry.resolve(spec["capability"])
++            task["execution"].update(dispatch_policy_revision=self.policy.revision,
++                                     deadline=min(datetime.fromisoformat(spec["expires_at"]), now + timedelta(seconds=spec["timeout_seconds"])).isoformat())
++            task["status"] = "executing_synthetic"
++            a._put("task", operation_id, scope, task)
++            a._conn.execute("UPDATE outbox SET state='execution_claimed',claim_id=?,generation=? WHERE task_id=?", (operation_id, a.generation, operation_id))
++            return task
++        return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
++
++    def _claimed(self, scope, operation_id, generation):
++        a = self.authority
++        task = a._get("task", operation_id, scope)
++        row = a._conn.execute("SELECT * FROM outbox WHERE task_id=?", (operation_id,)).fetchone()
++        if row["state"] != "execution_claimed" or row["claim_id"] != operation_id or row["generation"] != generation or generation != a.generation:
++            raise AuthorityError("stale_claim")
++        return task
++
++    def _pre_dispatch(self, actor, operation_id, generation):
++        """Final fenced cancellation/policy/deadline check before pure computation."""
++        a = self.authority
++        def effect(scope):
++            task = self._claimed(scope, operation_id, generation)
++            spec = task["execution"]
++            if task["cancel_requested"]:
++                return self._state(task, "cancelled")
++            if self._clock() >= datetime.fromisoformat(spec["deadline"]):
++                return self._state(task, "timed_out", error="expired_before_dispatch")
++            if not self.policy.permits(scope, spec["capability"]):
++                return self._state(task, "denied", error="policy_denied_at_dispatch")
++            return task
++        return a._mutate(actor, phase_id(operation_id, "dispatch"), "execution_dispatch", {"operation_id": operation_id, "generation": generation}, effect)
++
++    def _record(self, actor, operation_id, generation, response):
++        a = self.authority
++        def effect(scope):
++            task = self._claimed(scope, operation_id, generation)
++            # Recompute bounded pure output to reject forged IDs, fields, types,
++            # capabilities and values. Never evaluate response-provided code.
++            expected = SyntheticExecutor().execute(operation_id, task["execution"])
++            if canonical(response) != canonical(expected):
++                raise AuthorityError("untrusted_executor_response")
++            evidence = dict(response=response, generation=generation, operation_id=operation_id,
++                            at=self._clock().isoformat(), source="synthetic_pure_computation")
++            a._create("execution_evidence", operation_id, scope, evidence)
++            return evidence
++        return a._mutate(actor, phase_id(operation_id, "record"), "execution_record", {"operation_id": operation_id, "generation": generation, "response": response}, effect)
++
++    def _publish(self, actor, operation_id):
++        a = self.authority
++        def effect(scope):
++            task = a._get("task", operation_id, scope)
++            evidence = a._get("execution_evidence", operation_id, scope)
++            row = a._conn.execute("SELECT state,claim_id,generation FROM outbox WHERE task_id=?", (operation_id,)).fetchone()
++            if row["state"] not in {"execution_claimed", "unknown"} or row["claim_id"] != operation_id or row["generation"] != evidence["generation"]:
++                raise AuthorityError("invalid_execution_provenance")
++            response = evidence["response"]
++            return self._state(task, response["status"], result=response, error=response["error"])
++        return a._mutate(actor, phase_id(operation_id, "publish"), "execution_publish", {"operation_id": operation_id}, effect)
++
++    def _unknown(self, actor, operation_id, generation, reason):
++        a = self.authority
++        def effect(scope):
++            task = self._claimed(scope, operation_id, generation)
++            return self._state(task, "unknown", error=reason)
++        return a._mutate(actor, phase_id(operation_id, "unknown"), "execution_unknown", {"operation_id": operation_id, "generation": generation, "reason": reason}, effect)
++
++    def run_once(self, actor):
++        """Dispatch at most one admitted task, never automatically retry a claim."""
++        if not self._dispatch_mutex.acquire(blocking=False):
++            raise AuthorityError("dispatcher_busy")
++        try:
++            task = next(iter(self.authority.execution_tasks(actor, "held")), None)
++            if task is None:
++                return None
++            operation_id = task["task_id"]
++            claim = self._claim(actor, operation_id)
++            if claim["replayed"]:
++                # A claimed request can never be replayed into adapter invocation.
++                raise AuthorityError("claim_reconciliation_required")
++            if claim["result"]["status"] in TERMINAL:
++                return claim
++            generation = claim["owner_generation"]
++            self._fault("after_claim")
++            dispatch = self._pre_dispatch(actor, operation_id, generation)
++            if dispatch["result"]["status"] in TERMINAL:
++                return dispatch
++            self._fault("before_execute")
++            dispatch_started = time.monotonic()
++            try:
++                executor = self.registry.resolve(task["execution"]["capability"])
++                response = executor.execute(operation_id, task["execution"])
++                self._fault("after_execute")
++            except Exception:
++                return self._unknown(actor, operation_id, generation, "dispatch_outcome_unestablished")
++            if time.monotonic() - dispatch_started >= task["execution"]["timeout_seconds"] or self._clock() >= datetime.fromisoformat(dispatch["result"]["execution"]["deadline"]):
++                return self._unknown(actor, operation_id, generation, "dispatch_timeout_outcome_unestablished")
++            try:
++                self._record(actor, operation_id, generation, response)
++            except AuthorityError as exc:
++                if exc.code in {"untrusted_executor_response", "invalid_payload", "payload_too_large"}:
++                    return self._unknown(actor, operation_id, generation, "untrusted_executor_response")
++                raise
++            self._fault("after_record")
++            receipt = self._publish(actor, operation_id)
++            self._fault("after_publish")
++            return receipt
++        finally:
++            self._dispatch_mutex.release()
++
++    def reconcile(self, actor):
++        """Publish existing evidence only. UNKNOWN without evidence stays UNKNOWN."""
++        published = []
++        for task in self.authority.execution_tasks(actor, "unknown"):
++            with self.authority._mutex:
++                self.authority._fence()
++                try:
++                    self.authority._get("execution_evidence", task["task_id"], self.authority._scope(actor))
++                except AuthorityError as exc:
++                    if exc.code == "not_found":
++                        continue
++                    raise
++            published.append(self._publish(actor, task["task_id"]))
++        return published
++
++
++class ExecutionWorker:
++    """Single bounded offline worker; a storage/audit error stops admission to it."""
++    def __init__(self, pipeline, actor):
++        self.pipeline, self.actor = pipeline, actor
++        self._task = None
++        self.failure = None
++
++    async def start(self):
++        if self._task is not None:
++            raise AuthorityError("worker_already_started")
++        self.pipeline.authority.readiness()
++        self.pipeline.reconcile(self.actor)
++        self.failure = None
++        self._task = asyncio.create_task(self._run())
++
++    async def _run(self):
++        try:
++            while True:
++                self.pipeline.run_once(self.actor)
++                await asyncio.sleep(0.02)
++        except asyncio.CancelledError:
++            raise
++        except Exception:
++            self.failure = "execution_worker_reconcile_required"
++
++    async def stop(self):
++        task, self._task = self._task, None
++        if task is not None:
++            task.cancel()
++            try:
++                await task
++            except asyncio.CancelledError:
++                pass
++
++    def readiness(self):
++        return {"synthetic_execution_enabled": True, "execution_worker_ready": self._task is not None and not self._task.done() and self.failure is None,
++                "execution_worker_failure": self.failure, "real_execution_enabled": False}
+--- a/app/agent/api.py
++++ b/app/agent/api.py
+@@ -1,30 +1,56 @@
+ """Authority routes under the existing server authentication middleware."""
+-from fastapi import APIRouter
++from typing import Annotated
++from fastapi import APIRouter, Query
+ from fastapi.responses import JSONResponse
+-from pydantic import BaseModel, ConfigDict, StrictStr
++from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
+ from app.agent.authority import AuthorityError
+-from app.agent.runtime import SERVICE_ACTOR, get_authority
++from app.agent.runtime import SERVICE_ACTOR, get_authority, get_execution_pipeline, execution_readiness
+ from app.agent.scheduler import scheduler
+ 
+ router = APIRouter()
++PUBLIC_REQUEST_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
++UNAVAILABLE = frozenset({"execution_disabled", "execution_worker_not_ready", "execution_worker_reconcile_required",
++    "owner_busy", "owner_fenced", "store_replaced", "authority_unavailable", "storage_unknown_reconcile",
++    "legacy_migration_required", "backend_registration_reconcile", "backend_removal_reconcile"})
+ 
+ 
+ class Submission(BaseModel):
+     model_config = ConfigDict(extra="forbid")
+-    request_id: StrictStr
+-    goal: StrictStr
++    request_id: StrictStr = Field(max_length=36, pattern=PUBLIC_REQUEST_PATTERN)
++    goal: StrictStr = Field(max_length=8192)
++
++
++class ScheduledExecution(BaseModel):
++    model_config = ConfigDict(extra="forbid")
++    capability: StrictStr = Field(max_length=128)
++    payload: dict[str, Annotated[StrictStr, Field(max_length=8192)]] = Field(min_length=1, max_length=1)
++    timeout_seconds: StrictInt = 10
++    expires_after_seconds: StrictInt = 60
+ 
+ 
+ class Schedule(Submission):
+-    name: StrictStr
+-    cron_expr: StrictStr
++    name: StrictStr = Field(max_length=256)
++    cron_expr: StrictStr = Field(max_length=256)
++    execution: ScheduledExecution | None = None
++
++
++class ExecutionSubmission(Submission):
++    capability: StrictStr = Field(max_length=128)
++    payload: dict[str, Annotated[StrictStr, Field(max_length=8192)]] = Field(min_length=1, max_length=1)
++    expires_at: StrictStr = Field(max_length=64)
++    timeout_seconds: StrictInt = 10
+ 
+ 
+ def invoke(operation):
+     try:
+         return operation()
+     except AuthorityError as exc:
+-        code = 404 if exc.code == "not_found" else 409 if exc.code in {"request_conflict", "stale_occurrence"} else 503 if exc.code in {"owner_busy", "authority_unavailable", "storage_unknown_reconcile", "legacy_migration_required", "backend_registration_reconcile", "backend_removal_reconcile"} else 400
++        if exc.code in UNAVAILABLE:
++            code = 503
++        elif exc.code in {"request_conflict", "stale_occurrence"}:
++            code = 409
++        else:
++            code = {"not_found": 404, "queue_capacity_exceeded": 429}.get(exc.code, 400)
+         return JSONResponse(status_code=code, content={"error": exc.code, "automatic_retry": False, "reconcile_with_original_request_id": True})
+     except ValueError:
+         return JSONResponse(status_code=400, content={"error": "invalid_cron", "automatic_retry": False})
+@@ -35,26 +61,28 @@
+     return invoke(lambda: get_authority().submit(SERVICE_ACTOR, request.request_id, request.goal))
+ 
+ 
++@router.post("/execution/tasks")
++async def submit_execution(request: ExecutionSubmission):
++    return invoke(lambda: get_execution_pipeline().submit(SERVICE_ACTOR, **request.model_dump()))
++
++
++@router.get("/execution/status")
++async def execution_status():
++    return invoke(lambda: {**get_authority().readiness(), **execution_readiness()})
++
++
+ @router.get("/tasks")
+-async def tasks(status: str | None = None):
+-    def read():
+-        rows = [t for t in get_authority().list_tasks(SERVICE_ACTOR) if status is None or t["status"] == status]
+-        return {"tasks": rows, "count": len(rows)}
+-    return invoke(read)
++async def tasks(status: str | None = None, limit: Annotated[int, Query(ge=1, le=200)] = 100, offset: Annotated[int, Query(ge=0, le=1000000)] = 0):
++    return invoke(lambda: get_authority().task_page(SERVICE_ACTOR, status=status, limit=limit, offset=offset))
+ 
+ 
+ @router.get("/tasks/{task_id}")
+ async def task(task_id: str):
+-    def read():
+-        rows = [t for t in get_authority().list_tasks(SERVICE_ACTOR) if t["task_id"] == task_id]
+-        if not rows:
+-            raise AuthorityError("not_found")
+-        return rows[0]
+-    return invoke(read)
++    return invoke(lambda: get_authority().get_task(SERVICE_ACTOR, task_id))
+ 
+ 
+ @router.delete("/tasks/{task_id}")
+-async def cancel(task_id: str, request_id: str):
++async def cancel(task_id: str, request_id: Annotated[str, Query(pattern=PUBLIC_REQUEST_PATTERN)]):
+     return invoke(lambda: get_authority().cancel(SERVICE_ACTOR, request_id, task_id))
+ 
+ 
+@@ -70,7 +98,8 @@
+ 
+ @router.post("/schedule/jobs")
+ async def add_job(request: Schedule):
+-    return invoke(lambda: scheduler.add_job(request.name, request.cron_expr, request.goal, request_id=request.request_id))
++    return invoke(lambda: scheduler.add_job(request.name, request.cron_expr, request.goal, request_id=request.request_id,
++        execution=request.execution.model_dump() if request.execution is not None else None))
+ 
+ 
+ @router.get("/schedule/jobs")
+@@ -79,13 +108,15 @@
+ 
+ 
+ @router.delete("/schedule/jobs/{job_id}")
+-async def remove_job(job_id: str, request_id: str):
++async def remove_job(job_id: str, request_id: Annotated[str, Query(pattern=PUBLIC_REQUEST_PATTERN)]):
+     return invoke(lambda: scheduler.remove_job(job_id, request_id=request_id))
+ 
+ 
+ @router.get("/ready")
+ async def readiness():
+     result = invoke(scheduler.readiness)
+-    if isinstance(result, dict) and not result["scheduler_ready"]:
+-        return JSONResponse(status_code=503, content=result)
++    if isinstance(result, dict):
++        result.update(execution_readiness())
++        if not result["scheduler_ready"] or result["synthetic_execution_enabled"] and not result["execution_worker_ready"]:
++            return JSONResponse(status_code=503, content=result)
+     return result
+--- a/app/agent/authority.py
++++ b/app/agent/authority.py
+@@ -1,4 +1,4 @@
+-"""Single-writer transactional task authority. There is deliberately no executor.
++"""Single-writer transactional task authority. Real execution is disabled.
+ 
+ Local code controlling this process/database is trusted. Actor is a server-owned
+ namespace, not a replacement for the application's authentication policy.
+@@ -7,7 +7,7 @@
+ 
+ from contextlib import contextmanager
+ from dataclasses import dataclass
+-from datetime import UTC, datetime
++from datetime import UTC, datetime, timedelta
+ import fcntl
+ import hashlib
+ import json
+@@ -55,6 +55,10 @@
+ def text(value, limit=8192):
+     if type(value) is not str or not value.strip() or len(value) > limit or "\x00" in value:
+         raise AuthorityError("invalid_text")
++    try:
++        value.encode("utf-8")
++    except UnicodeError as exc:
++        raise AuthorityError("invalid_text") from exc
+     return value
+ 
+ 
+@@ -166,12 +170,12 @@
+             self._conn.execute("UPDATE control SET enabled=0,epoch=epoch+1")
+             # Admission never implies execution. A killed simulator may have
+             # applied its synthetic effect; retain ambiguity across takeover.
+-            abandoned = self._conn.execute("SELECT task_id FROM outbox WHERE state='simulating'").fetchall()
++            abandoned = self._conn.execute("SELECT task_id FROM outbox WHERE state IN ('simulating','execution_claimed')").fetchall()
+             for row in abandoned:
+                 task = self._get("task", row[0])
+                 task["status"] = "unknown"
+                 self._put("task", task["task_id"], task["scope"], task)
+-            self._conn.execute("UPDATE outbox SET state='unknown' WHERE state='simulating'")
++            self._conn.execute("UPDATE outbox SET state='unknown' WHERE state IN ('simulating','execution_claimed')")
+             self._conn.execute("INSERT INTO events(request_id,data) VALUES(?,?)", (self.owner_id, canonical({"operation": "owner_acquired", "generation": self.generation, "recovered_unknown_count": len(abandoned), "at": datetime.now(UTC).isoformat()})))
+             self._conn.execute("COMMIT")
+             directory = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
+@@ -270,6 +274,8 @@
+         self._put(kind, ident, scope, value)
+ 
+     def _new_task(self, scope, task_id, goal, *, status="pending", metadata=None, occurrence_id=None):
++        if self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state IN ('held','execution_claimed','simulating','unknown')").fetchone()[0] >= 1000:
++            raise AuthorityError("queue_capacity_exceeded")
+         task = {"task_id": task_id, "scope": scope, "goal": goal, "status": status, "created_at": datetime.now(UTC).isoformat(), "result": None, "error": None, "cancel_requested": False, "metadata": metadata or {}, "occurrence_id": occurrence_id}
+         self._create("task", task_id, scope, task)
+         self._conn.execute("INSERT INTO outbox(task_id,state) VALUES(?,?)", (task_id, "held" if status == "pending" else "unknown"))
+@@ -277,7 +283,7 @@
+ 
+     def submit(self, actor, request_id, goal):
+         text(goal)
+-        return self._mutate(actor, request_id, "submit", {"goal": goal}, lambda scope: self._new_task(scope, str(uuid.uuid4()), goal))
++        return self._mutate(actor, request_id, "submit", {"goal": goal}, lambda scope: self._new_task(scope, request_id, goal))
+ 
+     def receipt(self, actor, request_id):
+         scope = self._scope(actor)
+@@ -302,6 +308,48 @@
+ 
+     def list_schedules(self, actor, include_removed=False):
+         return [j for j in self._list("schedule", actor) if include_removed or not j["removed"]]
++
++    def get_task(self, actor, task_id):
++        identifier(task_id)
++        with self._mutex:
++            self._fence()
++            task = self._get("task", task_id, self._scope(actor))
++            task["outbox_state"] = self._conn.execute("SELECT state FROM outbox WHERE task_id=?", (task_id,)).fetchone()[0]
++            return task
++
++    def task_page(self, actor, *, status=None, limit=100, offset=0):
++        if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or not 0 <= offset <= 1000000:
++            raise AuthorityError("invalid_pagination")
++        scope = self._scope(actor)
++        states = {"pending": "held", "executing_synthetic": "execution_claimed"}
++        state = states.get(status, status)
++        if status is not None:
++            text(status, 64)
++        query = "FROM records r JOIN outbox o ON r.id=o.task_id WHERE r.kind='task' AND r.scope=?"
++        params = [scope]
++        if state is not None:
++            query += " AND o.state=?"
++            params.append(state)
++        with self._mutex:
++            self._fence()
++            total = self._conn.execute("SELECT COUNT(*) " + query, params).fetchone()[0]
++            rows = self._conn.execute("SELECT r.data,o.state " + query + " ORDER BY r.rowid LIMIT ? OFFSET ?", [*params, limit, offset]).fetchall()
++            tasks = [{**json.loads(row[0]), "outbox_state": row[1]} for row in rows]
++            return {"tasks": tasks, "count": len(tasks), "total": total, "offset": offset,
++                    "next_offset": offset + len(tasks) if offset + len(tasks) < total else None}
++
++    def execution_tasks(self, actor, state):
++        """Read only active outbox rows; completed history is not a polling cost."""
++        scope = self._scope(actor)
++        with self._mutex:
++            self._fence()
++            rows = self._conn.execute("SELECT r.data FROM records r JOIN outbox o ON o.task_id=r.id WHERE r.kind='task' AND r.scope=? AND o.state=? ORDER BY r.rowid", (scope, state))
++            result = []
++            for row in rows:
++                task = json.loads(row[0])
++                if task.get("execution"):
++                    result.append({**task, "outbox_state": state})
++            return result
+ 
+     def _cancel(self, task):
+         state = self._conn.execute("SELECT state FROM outbox WHERE task_id=?", (task["task_id"],)).fetchone()[0]
+@@ -316,15 +364,24 @@
+         identifier(task_id)
+         return self._mutate(actor, request_id, "cancel", {"task_id": task_id}, lambda scope: self._cancel(self._get("task", task_id, scope)))
+ 
+-    def add_schedule(self, actor, request_id, name, cron_expr, goal, next_run_at):
++    def add_schedule(self, actor, request_id, name, cron_expr, goal, next_run_at, *, execution=None):
+         text(name, 256); text(cron_expr, 256); text(goal)
+         next_run_at = instant(next_run_at)
+         def effect(scope):
+             job_id = str(uuid.uuid4())
+             job = dict(job_id=job_id, scope=scope, name=name, cron_expr=cron_expr, goal=goal, enabled=True, removed=False, revision=1, last_run=None, next_run_at=next_run_at, metadata={})
++            if execution is not None:
++                if not self.allow_simulation:
++                    raise AuthorityError("execution_disabled")
++                # This trusted-local template is issued by ExecutionPipeline;
++                # callers cannot supply it through the ordinary schedule route.
++                job["execution_template"] = json.loads(canonical(execution))
+             self._create("schedule", job_id, scope, job)
+             return job
+-        return self._mutate(actor, request_id, "add_schedule", dict(name=name, cron_expr=cron_expr, goal=goal, next_run_at=next_run_at), effect)
++        payload = dict(name=name, cron_expr=cron_expr, goal=goal, next_run_at=next_run_at)
++        if execution is not None:
++            payload["execution"] = execution
++        return self._mutate(actor, request_id, "add_schedule", payload, effect)
+ 
+     def set_schedule(self, actor, request_id, job_id, *, enabled=False, removed=False):
+         identifier(job_id)
+@@ -370,7 +427,17 @@
+             control = self._conn.execute("SELECT enabled,epoch FROM control").fetchone()
+             if not control["enabled"] or control["epoch"] != epoch or not job["enabled"] or job["removed"] or job["revision"] != revision or job["next_run_at"] != nominal:
+                 raise AuthorityError("stale_occurrence")
+-            task = self._new_task(scope, str(uuid.uuid5(uuid.UUID(occurrence_id), "task")), job["goal"], metadata={"job_id": job_id, "revision": revision, "nominal": nominal}, occurrence_id=occurrence_id)
++            task = self._new_task(scope, occurrence_id, job["goal"], metadata={"job_id": job_id, "revision": revision, "nominal": nominal}, occurrence_id=occurrence_id)
++            if job.get("execution_template") is not None:
++                if not self.allow_simulation:
++                    raise AuthorityError("execution_disabled")
++                template = job["execution_template"]
++                from app.agent.execution import phase_id
++                task["execution"] = {k: v for k, v in template.items() if k != "expires_after_seconds"}
++                task["execution"].update(operation_id=occurrence_id,
++                    receipt_ids={phase: phase_id(occurrence_id, phase) for phase in ("claim", "dispatch", "record", "publish", "unknown")},
++                    expires_at=(datetime.fromisoformat(nominal)+timedelta(seconds=template["expires_after_seconds"])).isoformat())
++                self._put("task", occurrence_id, scope, task)
+             self._put("occurrence", occurrence_id, scope, {"occurrence_id": occurrence_id, "task_id": task["task_id"], "nominal": nominal})
+             job.update(last_run=nominal, next_run_at=next_run_at)
+             self._put("schedule", job_id, scope, job)
+--- a/app/agent/runtime.py
++++ b/app/agent/runtime.py
+@@ -6,6 +6,7 @@
+ PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ SERVICE_ACTOR = Actor("local-service")
+ _authority = None
++_execution_worker = None
+ _mutex = threading.RLock()
+ 
+ 
+@@ -27,8 +28,45 @@
+ 
+ 
+ def close_authority():
+-    global _authority
++    global _authority, _execution_worker
+     with _mutex:
++        if _execution_worker is not None and _execution_worker._task is not None:
++            raise AuthorityError("execution_worker_must_stop")
++        _execution_worker = None
+         if _authority is not None:
+             _authority.close()
+             _authority = None
++
++
++def bind_offline_execution(policy, *, max_pending=128):
++    """Trusted embedding opt-in only; no environment/HTTP live execution switch."""
++    global _execution_worker
++    from app.agent.execution import ExecutionPipeline, ExecutionWorker
++    with _mutex:
++        if _execution_worker is not None:
++            raise AuthorityError("execution_already_bound")
++        pipeline = ExecutionPipeline(get_authority(), policy, enabled=True, max_pending=max_pending)
++        _execution_worker = ExecutionWorker(pipeline, SERVICE_ACTOR)
++        return _execution_worker
++
++
++def get_execution_worker():
++    with _mutex:
++        return _execution_worker
++
++
++def execution_readiness():
++    worker = get_execution_worker()
++    return worker.readiness() if worker else {"synthetic_execution_enabled": False, "execution_worker_ready": False,
++                                           "execution_worker_failure": None, "real_execution_enabled": False}
++
++
++def get_execution_pipeline():
++    worker = get_execution_worker()
++    if worker is None:
++        raise AuthorityError("execution_disabled")
++    if worker.failure is not None:
++        raise AuthorityError("execution_worker_reconcile_required")
++    if not worker.readiness()["execution_worker_ready"]:
++        raise AuthorityError("execution_worker_not_ready")
++    return worker.pipeline
+--- a/app/agent/scheduler.py
++++ b/app/agent/scheduler.py
+@@ -2,7 +2,7 @@
+ from datetime import UTC, datetime
+ import uuid
+ from app.agent.authority import AuthorityError, instant
+-from app.agent.runtime import SERVICE_ACTOR, get_authority
++from app.agent.runtime import SERVICE_ACTOR, get_authority, get_execution_pipeline
+ 
+ 
+ def cron_next(expression, after):
+@@ -23,11 +23,21 @@
+         self._epoch = None
+         self._failure = None
+ 
+-    def add_job(self, name, cron_expr, goal, *, request_id):
++    def add_job(self, name, cron_expr, goal, *, request_id, execution=None):
+         a = get_authority()
+         previous = a.receipt(SERVICE_ACTOR, request_id)
+         nominal = previous["result"].get("next_run_at") if previous and previous["operation"] == "add_schedule" else cron_next(cron_expr, datetime.now(UTC).isoformat())
+-        result = a.add_schedule(SERVICE_ACTOR, request_id, name, cron_expr, goal, nominal)
++        template = None
++        if execution is not None:
++            pipeline = get_execution_pipeline()
++            # Preserve the first server-derived authorization time on retries.
++            old = previous["result"].get("execution_template") if previous and previous["operation"] == "add_schedule" else None
++            normalized = {"timeout_seconds": 10, "expires_after_seconds": 60, **execution}
++            if old and {k:v for k,v in old.items() if k != "authorization"} == normalized:
++                template = old
++            else:
++                template = pipeline.schedule_template(SERVICE_ACTOR, **execution)
++        result = a.add_schedule(SERVICE_ACTOR, request_id, name, cron_expr, goal, nominal, execution=template)
+         if self._backend is not None:
+             try:
+                 current = next(j for j in a.list_schedules(SERVICE_ACTOR, include_removed=True) if j["job_id"] == result["result"]["job_id"])
+--- a/app/cli.py
++++ b/app/cli.py
+@@ -31,6 +31,8 @@
+             return _status(args)
+         if args.command == "shutdown":
+             return _shutdown(args)
++        if args.command == "tasks":
++            return _tasks(args)
+     except KeyboardInterrupt:
+         return 130
+     parser.print_help()
+@@ -60,7 +62,41 @@
+ 
+     shutdown = subparsers.add_parser("shutdown", help="Unload models and stop JARVIS-owned runtime processes.")
+     shutdown.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
++    tasks = subparsers.add_parser("tasks", help="Read durable task states from the running API.")
++    tasks.add_argument("--task-id", help="Show one canonical task UUID.")
++    tasks.add_argument("--request-id", help="Look up a durable request receipt.")
++    tasks.add_argument("--limit", type=int, default=100, help="Tasks per page (1-200).")
++    tasks.add_argument("--offset", type=int, default=0, help="Task page offset.")
++    tasks.add_argument("--status", help="Filter by the exact durable task state.")
+     return parser
++
++
++def _tasks(args: argparse.Namespace) -> int:
++    from app.agent.authority import AuthorityError, identifier
++    if args.task_id and args.request_id:
++        print("Choose either --task-id or --request-id.", file=sys.stderr)
++        return 2
++    try:
++        key = identifier(args.task_id or args.request_id) if args.task_id or args.request_id else None
++    except AuthorityError:
++        print("A canonical UUID is required.", file=sys.stderr)
++        return 2
++    path = f"/tasks/{key}" if args.task_id else f"/requests/{key}" if args.request_id else "/tasks"
++    if key is None:
++        if not 1 <= args.limit <= 200 or not 0 <= args.offset <= 1000000:
++            print("Invalid task pagination bounds.", file=sys.stderr)
++            return 2
++        from urllib.parse import urlencode
++        query = {"limit": args.limit, "offset": args.offset}
++        if args.status is not None:
++            query["status"] = args.status
++        path += "?" + urlencode(query)
++    payload = _get(path)
++    if payload is None:
++        print("Task state unavailable; reconcile using the original request UUID.", file=sys.stderr)
++        return 1
++    print(json.dumps(payload, indent=2))
++    return 0
+ 
+ 
+ def _sleep(args: argparse.Namespace) -> int:
+@@ -154,7 +190,8 @@
+ 
+ def _get(path: str, *, timeout: float = 3.0) -> dict[str, Any] | None:
+     try:
+-        response = httpx.get(f"{_base_url()}{path}", timeout=timeout)
++        headers = {"Authorization": f"Bearer {settings.server.api_token}"} if settings.server.api_token else {}
++        response = httpx.get(f"{_base_url()}{path}", timeout=timeout, headers=headers)
+         response.raise_for_status()
+         payload = response.json()
+         return payload if isinstance(payload, dict) else {"result": payload}
+--- a/app/resource_manager.py
++++ b/app/resource_manager.py
+@@ -365,8 +365,15 @@
+     async def _stop_background_services(self, actions: list[str]) -> None:
+         try:
+             from app.agent.scheduler import scheduler
+-
+-            await scheduler.stop()
++            from app.agent.runtime import get_execution_worker
++
++            worker = get_execution_worker()
++            try:
++                if worker is not None:
++                    await worker.stop()
++                    actions.append("synthetic_execution_worker_stopped")
++            finally:
++                await scheduler.stop()
+             actions.append("scheduler_stopped")
+         except Exception as exc:  # noqa: BLE001
+             actions.append(f"scheduler_stop_error:{exc}")
+@@ -383,9 +390,14 @@
+ 
+         try:
+             from app.agent.scheduler import scheduler
++            from app.agent.runtime import get_execution_worker
+ 
+             await scheduler.start()
+             actions.append("scheduler_started")
++            worker = get_execution_worker()
++            if worker is not None and worker._task is None:
++                await worker.start()
++                actions.append("synthetic_execution_worker_started")
+         except Exception as exc:  # noqa: BLE001
+             actions.append(f"scheduler_start_error:{exc}")
+             audit.log("resource_scheduler_start_error", {"error": str(exc)})
+--- a/app/server.py
++++ b/app/server.py
+@@ -32,7 +32,8 @@
+ from app.brain.tool_params import is_cancel_command as _is_cancel_command
+ from app.agent.scheduler import scheduler
+ from app.agent.api import router as authority_router
+-from app.agent.runtime import close_authority, get_authority
++from app.agent.admission import AdmissionBodyLimit
++from app.agent.runtime import close_authority, get_authority, get_execution_worker
+ from app.agent.sensor_store import add_reading, get_readings, list_nodes
+ from app.config import settings
+ from app.config_check import check_startup
+@@ -115,9 +116,12 @@
+     voice_started = False
+     idle_started = False
+     startup_check = None
++    execution_worker = get_execution_worker()
+     try:
+         authority.readiness()
+         await scheduler.start()
++        if execution_worker is not None:
++            await execution_worker.start()
+         _register_runtime_callbacks()
+         resource_manager.mark_activity("server_start")
+         await resource_manager.start_idle_monitor()
+@@ -146,9 +150,13 @@
+             audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
+         finally:
+             try:
+-                await scheduler.stop()
++                if execution_worker is not None:
++                    await execution_worker.stop()
+             finally:
+-                close_authority()
++                try:
++                    await scheduler.stop()
++                finally:
++                    close_authority()
+ 
+ 
+ app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
+@@ -164,6 +172,7 @@
+     allow_methods=["*"],
+     allow_headers=["*"],
+ )
++app.add_middleware(AdmissionBodyLimit)
+ 
+ 
+ _RESOURCE_ACTIVITY_EXEMPT_PREFIXES = ("/health", "/resource", "/pwa")
+@@ -386,6 +395,9 @@
+ async def stop_response() -> dict[str, str]:
+     current_token.cancel()
+     tts.stop()
++    worker = get_execution_worker()
++    if worker is not None:
++        await worker.stop()
+     return {"status": "stopped"}
+ 
+ 
+--- /dev/null
++++ b/tests/test_execution_pipeline.py
+@@ -0,0 +1,579 @@
++"""Offline pipeline with actual SQLite, receipts, API and independent processes."""
++from datetime import UTC, datetime, timedelta
++import json
++import os
++from pathlib import Path
++import sqlite3
++import subprocess
++import sys
++import time
++import uuid
++
++import httpx
++import pytest
++
++from app.agent.authority import Actor, Authority, AuthorityError
++from app.agent.execution import (DisabledExecutor, ExecutionPipeline, ExecutionWorker,
++                                 ExecutorRegistry, SimulatedPolicy, SyntheticExecutor, phase_id)
++from app.agent import runtime
++
++ACTOR = runtime.SERVICE_ACTOR
++
++
++def key():
++    return str(uuid.uuid4())
++
++
++@pytest.fixture
++def env(tmp_path):
++    a = Authority(tmp_path / 'state' / 'queue.sqlite', allow_simulation=True)
++    p = ExecutionPipeline(a, SimulatedPolicy(ACTOR.scope), enabled=True)
++    yield a, p
++    a.close()
++
++
++def submit(p, **changes):
++    body = dict(request_id=key(), goal='offline echo', capability='synthetic.echo',
++                payload={'value': 'hello'}, expires_at=(datetime.now(UTC) + timedelta(minutes=5)).isoformat(), timeout_seconds=10)
++    body.update(changes)
++    return p.submit(ACTOR, **body)
++
++
++def task(a):
++    return a.list_tasks(ACTOR)[-1]
++
++
++def test_complete_pipeline_and_stable_operation_identity(env):
++    a, p = env
++    admitted = submit(p)
++    op = admitted['request_id']
++    assert admitted['result']['task_id'] == op
++    result = p.run_once(ACTOR)
++    assert result['result']['status'] == 'simulated_completed'
++    assert task(a)['result']['output'] == 'hello'
++    assert task(a)['outbox_state'] == 'simulated_completed'
++    assert p.run_once(ACTOR) is None
++    assert a.receipt(ACTOR, phase_id(op, 'record'))['result']['operation_id'] == op
++    assert a.receipt(ACTOR, phase_id(op, 'publish'))['result']['task_id'] == op
++    assert a._conn.execute("SELECT COUNT(*) FROM events WHERE request_id=?", (phase_id(op, 'publish'),)).fetchone()[0] == 1
++
++
++@pytest.mark.parametrize('capability', ['shell.exec', 'synthetic.fail', 'proxmox.console', 'synthetic.echo; id'])
++def test_policy_denies_without_dispatch(env, capability):
++    a, p = env
++    result = submit(p, capability=capability)
++    assert result['result']['status'] == 'denied'
++    assert result['result']['execution']['authorization']['allowed'] is False
++    assert p.run_once(ACTOR) is None
++    assert a._conn.execute("SELECT COUNT(*) FROM records WHERE kind='execution_evidence'").fetchone()[0] == 0
++
++
++def test_scope_boundary(env):
++    a, p = env
++    result = p.submit(Actor('untrusted'), key(), 'x', 'synthetic.echo', {'value': 'x'}, (datetime.now(UTC)+timedelta(minutes=1)).isoformat())
++    assert result['result']['status'] == 'denied'
++    with pytest.raises(AuthorityError, match='not_found'):
++        p._publish(ACTOR, result['request_id'])
++
++
++@pytest.mark.parametrize('changes,code', [
++    ({'request_id': 'short'}, 'invalid_identifier'),
++    ({'request_id': '00000000-0000-0000-0000-000000000000'}, 'invalid_identifier'),
++    ({'payload': {'value': 'x', 'command': 'id'}}, 'invalid_execution_payload'),
++    ({'payload': {'value': True}}, 'invalid_text'),
++    ({'payload': {'value': 'x'*8193}}, 'invalid_text'),
++    ({'timeout_seconds': True}, 'invalid_execution_timeout'),
++    ({'timeout_seconds': 0}, 'invalid_execution_timeout'),
++    ({'timeout_seconds': 61}, 'invalid_execution_timeout'),
++    ({'expires_at': '2000-01-01T00:00:00+00:00'}, 'stale_execution_request'),
++    ({'expires_at': '2099-01-01T00:00:00+00:00'}, 'stale_execution_request'),
++    ({'expires_at': '2026-11-05T00:00:00'}, 'invalid_time'),
++])
++def test_invalid_admission_is_atomic(env, changes, code):
++    a, p = env
++    with pytest.raises(AuthorityError, match=code):
++        submit(p, **changes)
++    assert a.list_tasks(ACTOR) == []
++
++
++def test_replay_conflict_and_expired_replay(env):
++    a, p = env
++    op = key()
++    expiry = (datetime.now(UTC)+timedelta(minutes=1)).isoformat()
++    first = submit(p, request_id=op, expires_at=expiry)
++    p._clock = lambda: datetime.now(UTC)+timedelta(hours=2)
++    second = submit(p, request_id=op, expires_at=expiry)
++    assert second['replayed'] and second['result'] == first['result']
++    with pytest.raises(AuthorityError, match='request_conflict'):
++        submit(p, request_id=op, expires_at=expiry, payload={'value': 'changed'})
++    assert len(a.list_tasks(ACTOR)) == 1
++
++
++def test_disabled_and_real_registration(tmp_path):
++    a = Authority(tmp_path/'state'/'db')
++    try:
++        with pytest.raises(AuthorityError, match='execution_disabled'):
++            ExecutionPipeline(a, SimulatedPolicy(ACTOR.scope), enabled=True)
++        with pytest.raises(AuthorityError, match='execution_disabled'):
++            ExecutorRegistry().register(SyntheticExecutor())
++        with pytest.raises(AuthorityError, match='real_execution_disabled'):
++            ExecutorRegistry(enabled=True).register(DisabledExecutor())
++        with pytest.raises(AuthorityError, match='real_execution_disabled'):
++            DisabledExecutor().execute(key(), {})
++        class PretendSynthetic(SyntheticExecutor):
++            pass
++        with pytest.raises(AuthorityError, match='real_execution_disabled'):
++            ExecutorRegistry(enabled=True).register(PretendSynthetic())
++    finally:
++        a.close()
++
++
++def test_revoked_policy_checked_at_dispatch(env):
++    a, p = env
++    submit(p)
++    p.policy = SimulatedPolicy(ACTOR.scope, frozenset(), revision='revoked')
++    assert p.run_once(ACTOR)['result']['status'] == 'denied'
++    assert task(a)['result'] is None
++
++
++def test_cancellation_before_dispatch(env):
++    a, p = env
++    op = submit(p)['request_id']
++    a.cancel(ACTOR, key(), op)
++    assert p.run_once(ACTOR) is None
++    assert task(a)['status'] == 'cancelled'
++
++
++def test_cancellation_after_claim_before_dispatch(env):
++    a, p = env
++    op = submit(p)['request_id']
++    p._fault = lambda stage: a.cancel(ACTOR, key(), op) if stage == 'after_claim' else None
++    assert p.run_once(ACTOR)['result']['status'] == 'cancelled'
++    assert a.receipt(ACTOR, phase_id(op, 'record')) is None
++
++
++def test_cancellation_after_result_preserves_completion(env):
++    a, p = env
++    op = submit(p)['request_id']
++    p._fault = lambda stage: a.cancel(ACTOR, key(), op) if stage == 'after_record' else None
++    p.run_once(ACTOR)
++    assert task(a)['status'] == 'simulated_completed'
++    assert task(a)['cancel_requested'] is True
++
++
++def test_expiry_before_claim(env):
++    a, p = env
++    submit(p)
++    p._clock = lambda: datetime.now(UTC)+timedelta(hours=1)
++    assert p.run_once(ACTOR)['result']['status'] == 'timed_out'
++
++
++def test_timeout_after_dispatch_stays_unknown(env):
++    a, p = env
++    submit(p)
++    def fault(stage):
++        if stage == 'after_execute':
++            p._clock = lambda: datetime.now(UTC)+timedelta(hours=1)
++    p._fault = fault
++    assert p.run_once(ACTOR)['result']['status'] == 'unknown'
++    assert p.reconcile(ACTOR) == []
++    assert p.run_once(ACTOR) is None
++
++
++def test_failed_dispatch_stays_unknown(env, monkeypatch):
++    a, p = env
++    submit(p)
++    def broken(*args):
++        raise RuntimeError('private failure detail')
++    monkeypatch.setattr(SyntheticExecutor, 'execute', broken)
++    p.run_once(ACTOR)
++    assert task(a)['status'] == 'unknown'
++    assert 'private' not in json.dumps(task(a))
++    assert p.run_once(ACTOR) is None
++
++
++@pytest.mark.parametrize('bad', [None, {}, {'operation_id': 'forged'}, {'status': 'completed', 'output': 'forged'}, {'output': 'x'*1048577}])
++def test_untrusted_response_fails_closed(env, bad):
++    a, p = env
++    submit(p)
++    p.registry._executor.execute = lambda *args: bad
++    p.run_once(ACTOR)
++    assert task(a)['status'] == 'unknown'
++    assert task(a)['result'] is None
++
++
++def test_synthetic_failure_and_hash(env):
++    a, p = env
++    p.policy = SimulatedPolicy(ACTOR.scope, frozenset({'synthetic.fail','synthetic.sha256'}))
++    submit(p, capability='synthetic.fail')
++    assert p.run_once(ACTOR)['result']['status'] == 'simulated_failed'
++    submit(p, capability='synthetic.sha256')
++    assert p.run_once(ACTOR)['result']['result']['output'] == '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'
++
++
++def test_capacity_replay_and_release(env):
++    a, p = env
++    p.max_pending = 1
++    first = submit(p)
++    with pytest.raises(AuthorityError, match='queue_capacity_exceeded'):
++        submit(p)
++    p.run_once(ACTOR)
++    submit(p)
++    assert len(a.list_tasks(ACTOR)) == 2
++
++
++def test_audit_failure_prevents_dispatch(env):
++    a, p = env
++    submit(p)
++    a._conn.execute("CREATE TRIGGER reject_audit BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT,'audit unavailable'); END")
++    with pytest.raises(AuthorityError, match='storage_unknown_reconcile'):
++        p.run_once(ACTOR)
++    assert a._conn.execute("SELECT COUNT(*) FROM records WHERE kind='execution_evidence'").fetchone()[0] == 0
++    assert a._conn.execute("SELECT state FROM outbox").fetchone()[0] == 'held'
++
++
++def test_lock_contention_poison_and_reopen(env):
++    a, p = env
++    op = submit(p)['request_id']
++    other = sqlite3.connect(a.path, isolation_level=None)
++    try:
++        other.execute('BEGIN IMMEDIATE')
++        with pytest.raises(AuthorityError, match='storage_unknown_reconcile'):
++            p.run_once(ACTOR)
++    finally:
++        other.execute('ROLLBACK')
++        other.close()
++    with pytest.raises(AuthorityError, match='authority_unavailable'):
++        p.run_once(ACTOR)
++    a.close()
++    recovered = Authority(a.path, allow_simulation=True)
++    try:
++        assert recovered.list_tasks(ACTOR)[0]['status'] == 'pending'
++        new = ExecutionPipeline(recovered, p.policy, enabled=True)
++        assert new.run_once(ACTOR)['result']['task_id'] == op
++    finally:
++        recovered.close()
++
++
++def test_stale_owner_fenced(env):
++    a, p = env
++    submit(p)
++    a._conn.execute('UPDATE ownership SET generation=generation+1')
++    with pytest.raises(AuthorityError, match='owner_fenced'):
++        p.run_once(ACTOR)
++    assert a._conn.execute("SELECT COUNT(*) FROM records WHERE kind='execution_evidence'").fetchone()[0] == 0
++
++
++@pytest.mark.asyncio
++async def test_real_api_worker_receipts_and_restart(env):
++    from fastapi import FastAPI
++    from app.agent.api import router
++    a, p = env
++    runtime.bind_authority(a)
++    worker = runtime.bind_offline_execution(p.policy)
++    app = FastAPI()
++    app.include_router(router)
++    try:
++        await worker.start()
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic') as client:
++            op = key()
++            body = dict(request_id=op, goal='API pipeline', capability='synthetic.echo', payload={'value': 'through API'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
++            admitted = await client.post('/execution/tasks', json=body)
++            assert admitted.status_code == 200
++            for _ in range(100):
++                current = (await client.get('/tasks/'+op)).json()
++                if current['status'] == 'simulated_completed':
++                    break
++                await __import__('asyncio').sleep(.01)
++            assert current['result']['output'] == 'through API'
++            assert (await client.post('/execution/tasks', json=body)).json()['replayed']
++            assert (await client.post('/execution/tasks', json={**body, 'goal':'conflict'})).status_code == 409
++            assert (await client.patch('/tasks/'+op, json={'status':'completed'})).status_code == 405
++            assert (await client.post('/execution/tasks', json={**body, 'scope':'root'})).status_code == 422
++            assert (await client.post('/execution/tasks', json={**body, 'timeout_seconds':True})).status_code == 422
++            receipt = (await client.get('/requests/'+phase_id(op, 'publish'))).json()
++            assert receipt['result']['task_id'] == op
++            assert (await client.get('/execution/status')).json()['real_execution_enabled'] is False
++    finally:
++        await worker.stop()
++        runtime.close_authority()
++    reopened = Authority(a.path, allow_simulation=True)
++    try:
++        assert reopened.list_tasks(ACTOR)[0]['status'] == 'simulated_completed'
++    finally:
++        reopened.close()
++
++
++@pytest.mark.asyncio
++async def test_worker_failure_is_visible_and_stops(env):
++    a, p = env
++    submit(p)
++    worker = ExecutionWorker(p, ACTOR)
++    a._poisoned = True
++    with pytest.raises(AuthorityError, match='authority_unavailable'):
++        await worker.start()
++    a._poisoned = False
++    await worker.start()
++    a._poisoned = True
++    await __import__('asyncio').sleep(.03)
++    assert not worker.readiness()['execution_worker_ready']
++    assert worker.failure == 'execution_worker_reconcile_required'
++    await worker.stop()
++
++
++@pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
++def test_sigkill_independent_process_recovery(tmp_path, stage):
++    if not Path('/input/source').is_dir():
++        pytest.skip('run with the network-isolated task runner')
++    state = tmp_path/'process-state'
++    state.mkdir(mode=0o700)
++    db, ready = state/'queue.sqlite', state/'ready'
++    op = key()
++    helper = Path(__file__).with_name('execution_process_actor.py')
++    with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
++        child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
++        try:
++            deadline = time.monotonic()+4
++            while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
++                time.sleep(.01)
++            assert ready.exists(), (state/'stderr').read_text()
++            with pytest.raises(AuthorityError, match='owner_busy'):
++                Authority(db)
++            child.kill()
++            child.wait(timeout=1)
++            assert child.returncode < 0
++        finally:
++            if child.poll() is None:
++                child.kill()
++            child.wait(timeout=1)
++    a = Authority(db, allow_simulation=True)
++    try:
++        p = ExecutionPipeline(a, SimulatedPolicy(ACTOR.scope), enabled=True)
++        assert task(a)['status'] == ('simulated_completed' if stage == 'after_publish' else 'unknown')
++        assert p.run_once(ACTOR) is None
++        results = p.reconcile(ACTOR)
++        if stage in {'after_record','publish_before_commit','after_publish'}:
++            assert task(a)['status'] == 'simulated_completed'
++            assert task(a)['result']['output'] == 'crash marker'
++            assert len(results) == (1 if stage in {'after_record','publish_before_commit'} else 0)
++        else:
++            assert task(a)['status'] == 'unknown'
++            assert results == []
++        assert p.run_once(ACTOR) is None
++        assert a._conn.execute("SELECT COUNT(*) FROM records WHERE kind='execution_evidence'").fetchone()[0] == (1 if stage in {'after_record','publish_before_commit','after_publish'} else 0)
++    finally:
++        a.close()
++
++
++@pytest.mark.asyncio
++async def test_scheduler_callback_creates_authorized_execution(env, monkeypatch):
++    import asyncio
++    from app.agent.scheduler import Scheduler
++    import app.agent.scheduler as module
++    a, p = env
++    runtime.bind_authority(a)
++    worker = runtime.bind_offline_execution(p.policy)
++    scheduler = Scheduler()
++    first = datetime.now(UTC)+timedelta(seconds=.06)
++    monkeypatch.setattr(module, 'cron_next', lambda expression, after: (datetime.fromisoformat(after)+timedelta(minutes=1)).isoformat() if datetime.fromisoformat(after)>=first else first.isoformat())
++    try:
++        await worker.start()
++        await scheduler.start()
++        op = key()
++        spec = dict(capability='synthetic.echo', payload={'value':'timer result'}, timeout_seconds=10, expires_after_seconds=30)
++        job = scheduler.add_job('synthetic timer', '* * * * *', 'never interpreted as a tool', request_id=op, execution=spec)
++        assert scheduler.add_job('synthetic timer', '* * * * *', 'never interpreted as a tool', request_id=op, execution=spec)['replayed']
++        for _ in range(100):
++            rows = a.list_tasks(ACTOR)
++            if rows and rows[0]['status']=='simulated_completed':
++                break
++            await asyncio.sleep(.01)
++        assert len(rows) == 1 and rows[0]['result']['output'] == 'timer result'
++        assert rows[0]['task_id'] == rows[0]['occurrence_id']
++        assert a.list_schedules(ACTOR)[0]['last_run'] == first.isoformat()
++        assert a.receipt(ACTOR, rows[0]['occurrence_id'])['operation'] == 'occurrence'
++    finally:
++        await worker.stop()
++        await scheduler.stop()
++        runtime.close_authority()
++
++
++@pytest.mark.asyncio
++async def test_scheduled_cancellation_policy_and_stopped_admission(env):
++    from fastapi import FastAPI
++    from app.agent.api import router
++    from app.agent.scheduler import scheduler
++    a, p = env
++    runtime.bind_authority(a)
++    worker = runtime.bind_offline_execution(p.policy)
++    app = FastAPI()
++    app.include_router(router)
++    try:
++        await worker.start()
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic') as client:
++            body = dict(request_id=key(), goal='schedule', name='scheduled echo', cron_expr='* * * * *', execution=dict(capability='shell.exec', payload={'value':'no'}))
++            assert (await client.post('/schedule/jobs', json=body)).status_code == 400
++            assert a.list_schedules(ACTOR) == []
++            body['execution']['capability']='synthetic.echo'
++            response = await client.post('/schedule/jobs', json=body)
++            assert response.status_code==200
++            job = response.json()['result']
++            worker.pipeline.policy=SimulatedPolicy(ACTOR.scope, frozenset(), revision='revoked')
++            assert (await client.post('/schedule/jobs', json=body)).json()['replayed']
++            control=a.scheduler_control(ACTOR, key(), True)['result']
++            occurrence=a.admit_occurrence(ACTOR, job['job_id'], job['revision'], job['next_run_at'], control['epoch'], (datetime.fromisoformat(job['next_run_at'])+timedelta(minutes=1)).isoformat())
++            a.set_schedule(ACTOR, key(), job['job_id'], removed=True)
++            assert a.list_tasks(ACTOR)[0]['status']=='cancelled'
++            assert worker.pipeline.run_once(ACTOR) is None
++            await worker.stop()
++            request=dict(request_id=key(),goal='stopped',capability='synthetic.echo',payload={'value':'x'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
++            assert (await client.post('/execution/tasks',json=request)).status_code==503
++    finally:
++        await worker.stop()
++        runtime.close_authority()
++
++
++def test_precommit_result_rollback_and_lost_publication_ack(env):
++    a, p = env
++    op = submit(p)['request_id']
++    def lose_ack(stage):
++        if stage=='after_commit_before_ack' and a._conn.execute('SELECT 1 FROM receipts WHERE request_id=?',(phase_id(op,'publish'),)).fetchone():
++            raise RuntimeError('lost response')
++    a._fault=lose_ack
++    with pytest.raises(RuntimeError,match='lost response'):
++        p.run_once(ACTOR)
++    a._fault=lambda stage:None
++    assert task(a)['status']=='simulated_completed'
++    assert a.receipt(ACTOR, phase_id(op,'publish'))['result']['result']['output']=='hello'
++    assert p.run_once(ACTOR) is None
++
++
++def test_polling_does_not_read_completed_history(env, monkeypatch):
++    a, p = env
++    submit(p)
++    p.run_once(ACTOR)
++    submit(p)
++    monkeypatch.setattr(a,'list_tasks',lambda *args: (_ for _ in ()).throw(AssertionError('unbounded history read')))
++    assert p.run_once(ACTOR)['result']['status']=='simulated_completed'
++
++
++@pytest.mark.parametrize('change', [{'scope':'other'}, {'capability':'shell.exec'}, {'allowed':1}, {'allowed':False}])
++def test_inconsistent_authorization_never_dispatches(env, change):
++    a, p = env
++    op=submit(p)['request_id']
++    row=a._get('task',op,ACTOR.scope)
++    row['execution']['authorization'].update(change)
++    a._put('task',op,ACTOR.scope,row)
++    assert p.run_once(ACTOR)['result']['status']=='denied'
++    assert a.receipt(ACTOR,phase_id(op,'record')) is None
++
++
++def test_concurrent_same_operation_admits_once(env):
++    from concurrent.futures import ThreadPoolExecutor
++    a, p=env
++    op=key()
++    expiry=(datetime.now(UTC)+timedelta(minutes=1)).isoformat()
++    with ThreadPoolExecutor(max_workers=2) as pool:
++        results=list(pool.map(lambda _:submit(p,request_id=op,expires_at=expiry),range(4)))
++    assert sum(not r['replayed'] for r in results)==1
++    assert len(a.list_tasks(ACTOR))==1
++    p.run_once(ACTOR)
++    assert len(a.execution_tasks(ACTOR,'held'))==0
++
++
++def test_pagination_and_direct_lookup(env, monkeypatch):
++    a, p=env
++    ops=[submit(p)['request_id'] for _ in range(3)]
++    p.run_once(ACTOR)
++    monkeypatch.setattr(a,'list_tasks',lambda *args: (_ for _ in ()).throw(AssertionError('unbounded read')))
++    page=a.task_page(ACTOR,limit=1)
++    assert page['total']==3 and page['next_offset']==1
++    assert a.task_page(ACTOR,limit=1,offset=1)['tasks'][0]['task_id']==ops[1]
++    assert a.task_page(ACTOR,status='pending')['total']==2
++    assert a.task_page(ACTOR,status='simulated_completed')['total']==1
++    assert a.get_task(ACTOR,ops[0])['status']=='simulated_completed'
++    with pytest.raises(AuthorityError,match='invalid_pagination'):
++        a.task_page(ACTOR,limit=1000)
++    with pytest.raises(AuthorityError,match='not_found'):
++        a.get_task(Actor('other'),ops[0])
++
++
++@pytest.mark.asyncio
++async def test_admission_body_stream_bound_precedes_json(env):
++    from fastapi import FastAPI
++    from app.agent.api import router
++    from app.agent.admission import AdmissionBodyLimit
++    a, p=env
++    runtime.bind_authority(a)
++    app=FastAPI()
++    app.include_router(router)
++    app.add_middleware(AdmissionBodyLimit)
++    try:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic') as client:
++            response=await client.post('/execution/tasks',content=b'x'*262145)
++            assert response.status_code==413
++            async def chunks():
++                yield b'x'*150000
++                yield b'x'*150000
++                raise AssertionError('read beyond request limit')
++            assert (await client.post('/execution/tasks',content=chunks())).status_code==413
++            assert (await client.post('/tasks',content=b'{}',headers={'content-length':'-1'})).status_code==400
++            assert (await client.post('/tasks',json={'request_id':key(),'goal':'within bound'})).status_code==200
++            assert (await client.get('/tasks?limit=1000')).status_code==422
++            assert (await client.get('/tasks/invalid')).status_code==400
++        assert len(a.list_tasks(ACTOR))==1
++    finally:
++        runtime.close_authority()
++
++
++@pytest.mark.asyncio
++async def test_public_mutations_cannot_reserve_internal_phase_receipts(env):
++    from fastapi import FastAPI
++    from app.agent.api import router
++    a, p=env
++    runtime.bind_authority(a)
++    worker=runtime.bind_offline_execution(p.policy)
++    app=FastAPI()
++    app.include_router(router)
++    try:
++        await worker.start()
++        await worker.stop()
++        op=submit(p)['request_id']
++        reserved=phase_id(op,'publish')
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic') as client:
++            assert (await client.post('/tasks',json={'request_id':reserved,'goal':'reserve internal receipt'})).status_code==422
++            assert (await client.delete('/tasks/'+op,params={'request_id':reserved})).status_code==422
++            assert (await client.delete('/schedule/jobs/'+op,params={'request_id':reserved})).status_code==422
++            assert (await client.post('/schedule/jobs',json={'request_id':reserved,'name':'x','goal':'x','cron_expr':'* * * * *'})).status_code==422
++        result=worker.pipeline.run_once(ACTOR)
++        assert result['request_id']==reserved and task(a)['status']=='simulated_completed'
++    finally:
++        await worker.stop()
++        runtime.close_authority()
++
++
++@pytest.mark.parametrize('changes', [{'goal':'bad\ud800'}, {'payload':{'value':'bad\udfff'}}])
++def test_invalid_unicode_rejected_before_commit(env, changes):
++    a,p=env
++    with pytest.raises(AuthorityError,match='invalid_text'):
++        submit(p,**changes)
++    assert a.list_tasks(ACTOR)==[]
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize('mode', ['too_many_chunks','slow_body'])
++async def test_admission_empty_chunk_and_read_deadline(mode):
++    import asyncio
++    from app.agent.admission import AdmissionBodyLimit
++    scope={'type':'http','method':'POST','path':'/execution/tasks','headers':[]}
++    sent=[]
++    async def receive():
++        if mode=='slow_body':
++            await asyncio.Event().wait()
++        return {'type':'http.request','body':b'', 'more_body':True}
++    async def send(message):
++        sent.append(message)
++    async def app(*args):
++        raise AssertionError('unbounded request reached application')
++    await AdmissionBodyLimit(app,read_timeout=.01)(scope,receive,send)
++    assert sent[0]['status']==(408 if mode=='slow_body' else 413)
+--- /dev/null
++++ b/tests/execution_process_actor.py
+@@ -0,0 +1,33 @@
++"""Independent crash helper. Only the disposable cage state path is opened."""
++from pathlib import Path
++import sys
++import time
++from datetime import UTC, datetime, timedelta
++
++if not Path('/input/source').is_dir() or not Path('/deps').is_dir():
++    raise SystemExit('isolated runner required')
++sys.path[:0] = ['/input/source', '/deps']
++from app.agent.authority import Authority
++from app.agent.execution import ExecutionPipeline, SimulatedPolicy
++from app.agent.runtime import SERVICE_ACTOR
++
++database, ready, op, stage = sys.argv[1:]
++a = Authority(database, allow_simulation=True)
++def fault(current):
++    if current == stage:
++        Path(ready).write_text(current)
++        deadline = time.monotonic()+4
++        while time.monotonic()<deadline:
++            time.sleep(.01)
++        raise RuntimeError('parent failed to kill owned child')
++def storage_fault(current):
++    phase = {'record_before_commit':'record', 'publish_before_commit':'publish'}.get(stage)
++    if current=='before_commit' and phase:
++        from app.agent.execution import phase_id
++        if a._conn.execute('SELECT 1 FROM receipts WHERE request_id=?',(phase_id(op,phase),)).fetchone():
++            fault(stage)
++a._fault = storage_fault
++p = ExecutionPipeline(a, SimulatedPolicy(SERVICE_ACTOR.scope), enabled=True, fault_hook=fault)
++p.submit(SERVICE_ACTOR, op, 'crash probe', 'synthetic.echo', {'value':'crash marker'}, (datetime.now(UTC)+timedelta(minutes=1)).isoformat())
++p.run_once(SERVICE_ACTOR)
++raise SystemExit('fault boundary was not reached')
+--- a/docs/task_api.md
++++ b/docs/task_api.md
+@@ -1,10 +1,14 @@
+ # Task and schedule client contract
+ 
+-The current authority stores decisions and held work. Real execution is disabled.
++The authority stores decisions, held work, and opt-in synthetic execution results.
++Real execution is disabled; no real adapter can be registered.
+ This document changes no authentication policy or permissions and approves no
+ service startup, client rollout, broker connection or privileged action.
+ 
+-The repository CLI only calls health/resource routes. Electron, hologram and PWA
++The repository CLI also exposes read-only `jarvis tasks`, `--task-id UUID`,
++`--request-id UUID`, and paginated `--limit`, `--offset`, `--status` queries.
++It returns a nonzero exit code when task state is unavailable and sends the
++configured bearer token. It never starts a service to read task status. Electron, hologram and PWA
+ clients use chat/WebSocket transport; PWA REST fallback targets `/chat`.
+ The service worker forwards requests and does not construct task/schedule
+ mutations. No in-repository first-party mutation client needs UUID retry logic
+@@ -17,17 +21,24 @@
+ Any future first-party adapter or external client must meet these requirements
+ before rollout. External clients were not accessed, tested or migrated here.
+ 
+-1. Generate one canonical full UUID before a new logical mutation. Durably retain
++1. Generate one canonical lowercase UUID4 before a new public logical mutation.
++   Internal occurrence and phase receipt UUID5s are reserved; public creation and
++   cancellation cannot reserve their receipt keys. Receipt/target lookups accept
++   canonical full UUIDs of either kind. New task submissions use request_id as
++   task_id; new occurrences use occurrence_id as task_id. Historical stored IDs
++   and replayed receipts are preserved. Generate the UUID before sending. Durably retain
+    it and the original operation/target/payload before sending. Keep complete
+    returned task_id/job_id values; do not truncate them. Never use a new UUID to
+    hide an uncertain prior attempt or auto-repeat a possibly completed effect.
+ 2. `POST /tasks` takes exactly request_id and goal. `POST /schedule/jobs` also
+-   takes name and cron_expr. Unknown fields are rejected. The actor scope is
++   takes name and cron_expr, with an optional explicit synthetic `execution`
++   template described below. Unknown fields are rejected. The actor scope is
+    server-owned; a username/header/body field cannot select authority. Existing
+    optional bearer enforcement still applies where configured.
+ 3. Consume the returned receipt, including operation, request_id, state and
+    result. `state=committed` proves the stored decision, not guest execution,
+-   effect completion or a human receiving the response. Pending work stays held.
++   effect completion or a human receiving the response. Ordinary `/tasks` work
++   stays held. Only explicitly authorized synthetic submissions are dispatched.
+ 4. After an acknowledgement loss or reconciliation response, first look up
+    `GET /requests/{original_request_id}` under the same existing authenticated
+    service. Keep an unknown outcome visible while lookup is unavailable. An
+@@ -49,7 +60,9 @@
+    A new privileged/mutating catalog or real executor requires separate review
+    and authorization. Treat returned data as data, never instructions.
+ 
+-`GET /tasks`, `/tasks/{id}` and `/schedule/jobs` expose current snapshots;
++`GET /tasks?limit=100&offset=0&status=pending` returns a bounded page (maximum
++200), count, total, offset and next_offset. `/tasks/{id}` reads one task directly.
++`/schedule/jobs` exposes schedule snapshots;
+ `GET /requests/{id}` exposes the original committed decision. Do not overwrite
+ the latter with a later snapshot or assume a replayed creation receipt gives
+ current cancellation/status. `/ready` distinguishes scheduler/storage readiness
+@@ -61,3 +74,67 @@
+ `tasks/jarvis-authority-readiness-r1/REPORT.md`; do not delete lock/database/state,
+ rewrite timestamps, reset ledgers or resubmit old work to force startup. Hermes
+ and other future adapters cannot bypass this single-writer contract.
++
++
++## Opt-in offline pipeline
++
++`POST /execution/tasks` accepts only request_id (UUID4), goal, capability,
++payload (`{"value": "bounded text"}`), expires_at (timezone-aware UTC instant),
++and timeout_seconds (strict integer, 1–60; default 10). A new expiry must be in
++the next 24 hours. Same-key replay still returns the original decision after
++expiry. Built-in capabilities are `synthetic.echo`, `synthetic.sha256`, and
++`synthetic.fail`; the default simulated policy allows only echo and sha256.
++A disallowed capability produces a durable denied task, with no dispatch.
++
++The existing `/schedule/jobs` route accepts an optional execution object with
++capability, payload, timeout_seconds and expires_after_seconds (1–3600; default
++60). Its expiry is relative to the nominal occurrence. Ordinary schedules have
++no execution template and remain held. The template has a durable simulated
++policy decision; the current policy is checked again before each dispatch.
++Schedule disable/remove/stop cancels held occurrences. No automatic overdue
++catch-up is introduced.
++
++Execution requires both `Authority(..., allow_simulation=True)` and the trusted
++local `runtime.bind_offline_execution(SimulatedPolicy(SERVICE_ACTOR.scope))`
++embedding hook. The actual app lifespan starts/stops the resulting worker.
++Neither configuration nor an HTTP route can enable a real executor. `/ready`
++and `/execution/status` report synthetic worker readiness separately from
++`real_execution_enabled=false` and the legacy `execution_enabled=false` flag.
++Admission returns 503 if the worker is disabled, stopped, or failed.
++
++The states are pending/held → executing_synthetic/execution_claimed →
++simulated_completed or simulated_failed. Durable denial, pre-dispatch timeout,
++and confirmed pre-dispatch cancellation have separate terminal states. A result
++records the canonical operation_id and capability. `execution.receipt_ids`
++contains deterministic phase receipt UUIDs for `/requests/{id}` lookup. Creation
++receipts stay immutable; current task snapshots report the current outcome.
++There is no public claim, result, completion, or reconciliation-write endpoint.
++
++Dispatch interruption, invalid responses, or post-dispatch timeout produce
++UNKNOWN. Ownership takeover converts unfinished claims to UNKNOWN. Startup
++publishes a previously recorded synthetic result, without invoking the executor.
++UNKNOWN without durable evidence stays UNKNOWN and is never automatically
++resubmitted. Cancellation after a result exists keeps its honest completion and
++cancel_requested flag. This makes no exactly-once external execution claim.
++The synthetic adapter performs bounded pure computation only; its evidence
++cannot establish any future external effect.
++
++The worker polls one operation per 20 ms, reads active outbox rows, and stops on
++storage/audit failure. Manual synthetic admission defaults to 128 unresolved
++requests; the authority caps total unresolved work at 1000. The three admission
++routes bound request bodies to 256 KiB, 1024 chunks, and five seconds before JSON
++decoding. Invalid Unicode and oversized fields are rejected. Sleep and `/stop`
++pause the worker; wake restarts the explicitly bound synthetic worker after the
++scheduler starts. These limits are not a disk-retention policy.
++
++Run the network-isolated reproduction from the project root using the retained
++read-only dependency target. The full-app mode creates a disposable synthetic
++configuration and writes an actual ASGI demonstration and restart snapshot:
++
++```sh
++python3 -I -B -S tasks/jarvis-offline-execution-r1/run_checks.py --mode full-app --target tasks/jarvis-authority-readiness-r1/runs/20261031T090522534346Z/output/site-packages
++```
++
++The hook trusts local Python/database ownership and the existing single-service
++namespace. It does not provide multiuser isolation or live security qualification.
++The actual Proxmox broker, tools, providers and credentials remain disconnected.
+--- a/README.md
++++ b/README.md
+@@ -26,9 +26,12 @@
+ ## Hardware Requirements
+ 
+ Task/schedule API compatibility: the current transactional authority requires a
+-retained canonical full UUID for each logical mutation and returns durable
++retained canonical UUID4 for each public logical mutation and returns durable
+ receipts. A committed receipt records admission or a cancellation decision;
+-execution remains disabled. See [the current contract](docs/task_api.md) before
++real execution remains disabled. An explicitly enabled offline synthetic pipeline
++now connects policy, queue, execution, durable results and restart recovery; see
++[the sprint evidence](tasks/jarvis-offline-execution-r1/REPORT.md). See
++[the current contract](docs/task_api.md) before
+ connecting a client. The in-repository CLI/HUD/PWA do not submit queue mutations;
+ external clients remain a rollout prerequisite. Hermes integration is planned
+ and cannot replace or run a parallel queue writer.
+--- a/PROJECT_STATUS.md
++++ b/PROJECT_STATUS.md
+@@ -1,4 +1,17 @@
+ # JARVIS Project Status
++
++Latest offline engineering sprint (2026-11-05 America/Chicago; evidence UTC
++2026-11-06): [offline execution report](tasks/jarvis-offline-execution-r1/REPORT.md).
++The actual app now connects explicit synthetic task/schedule admission, simulated
++capability policy, the fenced durable queue, bounded worker, durable result and
++receipt publication, API/CLI/reporter status, cancellation, sleep/stop/wake and
++restart reconciliation. New public mutation IDs are canonical UUID4; deterministic
++internal UUID5 receipts are reserved. No public completion endpoint was added.
++Real executor registration is rejected. No production service, real state migration,
++provider, broker, infrastructure, credentials or Gate6K activity was enabled.
++Final exact source-bound counts and remaining limits are in the new report;
++all earlier paragraphs below describe their historical implementation versions.
++
+ 
+ Latest first-party compatibility continuation (2026-10-31):
+ [`tasks/jarvis-client-compatibility-deliverable-r1/JARVIS-CONSOLIDATED-REPORT.md`](tasks/jarvis-client-compatibility-deliverable-r1/JARVIS-CONSOLIDATED-REPORT.md)

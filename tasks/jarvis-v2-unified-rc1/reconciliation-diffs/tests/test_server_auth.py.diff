@@ -1,0 +1,11 @@
+--- codex1/tests/test_server_auth.py
++++ codex2/tests/test_server_auth.py
+@@ -27,7 +27,7 @@
+     return token
+ 
+ 
+-def test_empty_token_cannot_access_authority() -> None:
++def test_blank_token_does_not_grant_task_authority() -> None:
+     assert settings.server.api_token == ""
+     response = client.get("/tasks")
+     assert response.status_code == 401

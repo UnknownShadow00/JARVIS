@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import math
 import queue
 import time
 import wave
@@ -17,7 +18,7 @@ class VoiceActivityDetector:
     max_record_seconds = 12.0
     trailing_silence_seconds = 0.5
 
-    def record_until_silence(self, timeout: float | None = None) -> bytes:
+    def record_until_silence(self, timeout: float | None = None, cancelled=None) -> bytes:
         try:
             import sounddevice as sd
             import webrtcvad
@@ -25,15 +26,21 @@ class VoiceActivityDetector:
             audit.log("vad_unavailable", {"reason": str(exc)})
             return b""
 
-        vad = webrtcvad.Vad(settings.voice.vad_aggressiveness)
+        return self._record_from_stream(sd.RawInputStream,webrtcvad.Vad(settings.voice.vad_aggressiveness),timeout,cancelled)
+
+    def _record_from_stream(self, stream_factory, vad, timeout=None, cancelled=None):
+        from app.brain.cancel_token import current_token
+        cancelled=cancelled or current_token.is_cancelled
+        if timeout is not None and (type(timeout) not in (int,float) or not math.isfinite(timeout) or timeout<=0):return b""
         frame_samples = int(self.sample_rate * self.frame_ms / 1000)
         frame_bytes = frame_samples * 2
-        audio_queue: queue.Queue[bytes] = queue.Queue()
+        audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=64)
 
         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
             if status:
                 audit.log("vad_stream_status", {"status": str(status)})
-            audio_queue.put(bytes(indata))
+            try:audio_queue.put_nowait(bytes(indata))
+            except queue.Full:pass
 
         recorded: list[bytes] = []
         speech_started = False
@@ -46,7 +53,7 @@ class VoiceActivityDetector:
         started_at = time.perf_counter()
         pre_speech_deadline = started_at + max_record_seconds
 
-        with sd.RawInputStream(
+        with stream_factory(
             samplerate=self.sample_rate,
             blocksize=frame_samples,
             dtype="int16",
@@ -55,9 +62,10 @@ class VoiceActivityDetector:
             callback=callback,
         ):
             while True:
+                if cancelled() or time.perf_counter()>=pre_speech_deadline or len(recorded)>=max_post_speech_frames:break
                 try:
                     frame = audio_queue.get(timeout=0.1)
-                except Exception:
+                except queue.Empty:
                     if not speech_started and time.perf_counter() > pre_speech_deadline:
                         break
                     continue

@@ -1,0 +1,42 @@
+{
+  "verdict": "PASS",
+  "reviewer": "/root/sprint6_security_review",
+  "review_type": "independent_read_only_static_delta",
+  "runtime_tests_run_by_reviewer": false,
+  "open_findings": [],
+  "source_sha256": {
+    "app/agent/api.py": "90c5a2279f3aea0704cfd2caddb6da4d59280fe83151a2f8d2686bee05ccddbf",
+    "app/agent/storage_paths.py": "2a99ec832aca3c097cb34292dfb4e777ba43b07646824a2b43ee78d9174f5e9f",
+    "app/agent/authority.py": "ef6277075896f9b69c4469ab126fafacaaee072ca94ea85a9d3660c46c83f787",
+    "app/agent/ledger.py": "5b5e449949c7297b3f39872c83ad1d32e58bb5efc2b5ab1ea943a03de7ed2982",
+    "app/server.py": "3f0f7fa15ce77bae2daadfa181f76308ab2f28c6d6ddcb57eb2c850c4ccf6c5e",
+    "app/comms/ue5_bridge.py": "c0db92b0e6921b5c3b95903f68ca2ab4271a3fd15487e6c00a27ab130b2fd61d",
+    "app/config.py": "5cc6c228ed9edec5b5ef3436130961718aa5373d8a98df1a526891b239758963",
+    "config.yaml.example": "60306a3031cb5c0fd2fcd5ca96605435d13ffffc2c2de7e774aa5f2bf33c792d",
+    ".dockerignore": "3c3b117d0f26d3532e28817d580b4795d5e3bf3fccc2922204cc996d3b9190b4"
+  },
+  "closed_findings": [
+    "anonymous authority reads/cancellation/readiness",
+    "unchecked pathname mkdir before ancestor validation",
+    "slow failed broadcast peers escaping connection bound",
+    "unbounded direct WebSocket sends/closes",
+    "main connection audit failure registration leak",
+    "UTF8 allocation before character bound",
+    "ResourceModeConfig partial/default automatic host controls require explicit opt-in"
+  ],
+  "limitations": [
+    "same-UID/root compromise excluded",
+    "ancestry checks are not atomic SQLite VFS or protection from privileged database/WAL/SHM races",
+    "local filesystem lock/rename/fsync semantics",
+    "external witness/checkpoint/key/token/time custody",
+    "shared bearer is not per-principal authorization",
+    "per-process WS limits, not global multiworker admission",
+    "upstream WS frame-size limit still required before ASGI allocation",
+    "sequential broadcast bound is peer count times per-peer timeout",
+    "ready now authenticated; probes require bearer",
+    "no production/TLS/network filesystem/live deployment qualification",
+    "Explicit existing legacy config values are not silently migrated",
+    ".dockerignore applies to Docker context only; source release uses its separate allowlist"
+  ],
+  "final_formatting_repin_independently_confirmed": true
+}

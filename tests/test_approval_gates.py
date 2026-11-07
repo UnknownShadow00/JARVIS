@@ -1,45 +1,26 @@
+"""The old public confirmation route cannot activate a real tool."""
 from unittest.mock import patch
-
 from fastapi.testclient import TestClient
-
-from app.server import _is_confirmation_required_error, _pending_confirmations, app
-from app.tools.registry import ToolError, ToolResult
+from app.server import _is_confirmation_required_error,_pending_confirmations,app
 
 
-def setup_function() -> None:
-    _pending_confirmations.clear()
+def setup_function():_pending_confirmations.clear()
+def teardown_function():_pending_confirmations.clear()
 
 
-def teardown_function() -> None:
-    _pending_confirmations.clear()
+def test_pending_dict_starts_empty():assert _pending_confirmations=={}
+def test_is_confirmation_error_true():assert _is_confirmation_required_error(Exception('Requires user confirmation'))
+def test_is_confirmation_error_false():assert not _is_confirmation_required_error(Exception('blocked'))
 
 
-def test_pending_dict_starts_empty() -> None:
-    assert _pending_confirmations == {}
+def test_confirm_unknown_request_id():
+    response=TestClient(app).post('/confirm/badid')
+    assert response.status_code==404
 
 
-def test_is_confirmation_error_true() -> None:
-    assert _is_confirmation_required_error(ToolError("Tool requires user confirmation")) is True
-
-
-def test_is_confirmation_error_false() -> None:
-    assert _is_confirmation_required_error(ToolError("blocked")) is False
-
-
-def test_confirm_unknown_request_id() -> None:
-    with TestClient(app) as client:
-        response = client.post("/confirm/badid")
-    assert response.status_code == 404
-    assert response.json()["error"] == "Unknown or expired request"
-
-
-def test_confirm_known_request_id() -> None:
-    _pending_confirmations["abc12345"] = {"tool": "shell", "params": {"command": "echo hi"}}
-    with patch("app.server.registry.call", return_value=ToolResult(tool="shell", output="hi")) as mock_call:
-        with TestClient(app) as client:
-            response = client.post("/confirm/abc12345")
-    assert response.status_code == 200
-    assert response.json()["confirmed"] is True
-    assert response.json()["tool"] == "shell"
-    assert response.json()["output"] == "hi"
-    mock_call.assert_called_once_with("shell", {"command": "echo hi"}, confirmed=True)
+def test_confirm_known_request_id_cannot_dispatch():
+    _pending_confirmations['abc12345']={'tool':'shell','params':{'command':'synthetic canary'}}
+    with patch('app.server.registry.call',side_effect=AssertionError('tool dispatch forbidden')) as call:
+        response=TestClient(app).post('/confirm/abc12345')
+    assert response.status_code==404
+    call.assert_not_called()

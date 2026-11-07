@@ -1,0 +1,29 @@
+{
+  "status": "STOPPED",
+  "started_at": "2026-11-06T14:08:25.208358+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533081]",
+    "mnt_namespace": "mnt:[4026533024]",
+    "pid_namespace": "pid:[4026533027]",
+    "net_namespace": "net:[4026533029]",
+    "ipc_namespace": "ipc:[4026533026]",
+    "uts_namespace": "uts:[4026533025]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140825109823Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140825109823Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140825109823Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "node_outcomes": [],
+  "pytest_warnings": [],
+  "error_type": "PluginValidationError",
+  "error": "Plugin '130101560357088' for hook 'pytest_runtest_logreport'\nhookimpl definition: pytest_runtest_logreport(r)\nArgument(s) {'r'} are declared in the hookimpl but can not be found in the hookspec",
+  "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 46, in <module>\n    code=pytest.main(['-q','-p','pytest_asyncio.plugin','-p','no:cacheprovider','--basetemp=/work/pytest','/input/tests','--ignore=/input/tests/test_authority_enrollment.py','--ignore=/input/tests/test_recovery_decisions.py','--ignore=/input/tests/test_secure_transport.py'],plugins=[Results()])\n  File \"/deps/_pytest/config/__init__.py\", line 201, in main\n    return _main(args=args, plugins=plugins, prog=\"pytest.main()\")\n  File \"/deps/_pytest/config/__init__.py\", line 223, in _main\n    config = _prepareconfig(new_args, plugins, prog=prog)\n  File \"/deps/_pytest/config/__init__.py\", line 409, in _prepareconfig\n    pluginmanager.register(plugin)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"/deps/_pytest/config/__init__.py\", line 571, in register\n    plugin_name = super().register(plugin, name)\n  File \"/deps/pluggy/_manager.py\", line 168, in register\n    self._verify_hook(hook, hookimpl)\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^\n  File \"/deps/pluggy/_manager.py\", line 343, in _verify_hook\n    raise PluginValidationError(\n    ...<5 lines>...\n    )\npluggy._manager.PluginValidationError: Plugin '130101560357088' for hook 'pytest_runtest_logreport'\nhookimpl definition: pytest_runtest_logreport(r)\nArgument(s) {'r'} are declared in the hookimpl but can not be found in the hookspec\n",
+  "finished_at": "2026-11-06T14:08:25.454127+00:00"
+}

@@ -57,13 +57,14 @@ class WakeWordDetector:
         if model is None:
             return b""
 
-        audio_queue: queue.Queue[bytes] = queue.Queue()
+        audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=64)
         deadline = time.monotonic() + timeout if timeout is not None else None
 
         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
             if status:
                 audit.log("wake_stream_status", {"status": str(status)})
-            audio_queue.put(bytes(indata))
+            try:audio_queue.put_nowait(bytes(indata))
+            except queue.Full:pass
 
         try:
             with sd.RawInputStream(

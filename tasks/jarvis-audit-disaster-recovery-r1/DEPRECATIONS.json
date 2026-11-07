@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-06T04:55:15.915975+00:00",
+  "method": "Read retained package source as data; no dependency imports/install or network",
+  "target": "tasks/jarvis-authority-readiness-r1/runs/20261031T090522534346Z/output/site-packages",
+  "source_sha256": {
+    "fastapi/testclient.py": "9c1bda0265fae9895d45e24d6573ce935b1fba8d90ea1b3c6cebc86827a9e8b4",
+    "starlette/testclient.py": "4cf49139b46669742733f24c2e6baab0a358f4f1772f775f5f1d03b59aa42d6d",
+    "anyio/abc/__init__.py": "5c856f088d9cea8c9a39ca977bde24dabcd4e7fb3bf99367971193937e07e13d"
+  },
+  "warnings": [
+    {
+      "origin": "starlette/testclient.py lines35-51",
+      "reason": "Retained httpx0.28.1 fallback; preferred httpx2 extra absent",
+      "change": "requires new approved verified offline dependency closure"
+    },
+    {
+      "origin": "starlette/testclient.py line53; anyio/abc/__init__.py alias map",
+      "reason": "BlockingPortal alias deprecated in favor of anyio.from_thread.BlockingPortal",
+      "change": "upstream dependency compatibility update required"
+    }
+  ],
+  "warning_suppression_added": false,
+  "target_changed": false
+}

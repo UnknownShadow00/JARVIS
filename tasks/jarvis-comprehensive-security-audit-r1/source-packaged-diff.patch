@@ -1,0 +1,972 @@
+--- snapshot-latest/app/agent/authority.py
++++ snapshot-packaged/app/agent/authority.py
+@@ -79,7 +79,7 @@
+     A lost commit acknowledgement is reconciled with the original request ID.
+     Storage exceptions poison this instance; reopening is an explicit action.
+     """
+-    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None, recovery_registry=None):
++    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None, recovery_registry=None, expected_open_checkpoint=None):
+         self.path = Path(path).absolute()
+         self._closed = False
+         self._poisoned = False
+@@ -169,6 +169,9 @@
+                     probe.close()
+             if legacy_present and not initialized:
+                 raise AuthorityError("legacy_migration_required")
++            self._opening_checkpoint=self._ledger.history()[0] if self._ledger is not None else None
++            if expected_open_checkpoint is not None and self._opening_checkpoint!=expected_open_checkpoint:
++                raise AuthorityError("stale_offline_open_checkpoint")
+             fd = os.open(self.path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
+             try:
+                 self._check_file(fd)
+@@ -207,7 +210,8 @@
+             try: os.fsync(directory)
+             finally: os.close(directory)
+         except BaseException:
+-            self.close()
++            try:self.close()
++            except (AuthorityError,OSError,sqlite3.Error):pass
+             raise
+ 
+     @staticmethod
+@@ -545,7 +549,7 @@
+             if not consistency["consistent"]:
+                 raise AuthorityError("ledger_inconsistent")
+             transport_status={"configured":False,"real_execution_enabled":False}
+-            if self._conn.execute("SELECT 1 FROM records WHERE kind='execution_transport_grant' LIMIT 1").fetchone():
++            if getattr(self,"_transport_verifier",None) is not None or self._conn.execute("SELECT 1 FROM records WHERE kind='execution_transport_grant' LIMIT 1").fetchone():
+                 from app.agent.execution_transport import SyntheticTransport
+                 verifier=getattr(self,'_transport_verifier',None)
+                 if type(verifier) is not SyntheticTransport:raise AuthorityError("transport_verifier_required")
+@@ -563,7 +567,7 @@
+             self._closed = True
+             try:
+                 try:
+-                    if self._recovery_registry is not None:
++                    if self._recovery_registry is not None and self._ledger_acquired and self._conn is not None:
+                         self._shutdown_recovery_status = self._recovery_registry.inspect()
+                 finally:
+                     if self._conn is not None:
+--- snapshot-latest/app/agent/execution.py
++++ snapshot-packaged/app/agent/execution.py
+@@ -289,6 +289,8 @@
+             self._recovery_boundary()
+             from app.agent.execution_transport import verify_transport_evidence
+             verify_transport_evidence(a,actor,task,evidence)
++            if evidence.get('publication_authorization_required'):
++                raise AuthorityError('operator_publication_authorization_required')
+             response = evidence["response"]
+             expected = SyntheticExecutor().execute(operation_id, task["execution"])
+             if response.get("status") not in {"simulated_completed", "simulated_failed"} or canonical(response) != canonical(expected):
+@@ -359,7 +361,8 @@
+             with self.authority._mutex:
+                 self.authority._fence()
+                 try:
+-                    self.authority._get("execution_evidence", task["task_id"], self.authority._scope(actor))
++                    evidence=self.authority._get("execution_evidence", task["task_id"], self.authority._scope(actor))
++                    if evidence.get("publication_authorization_required"):continue
+                 except AuthorityError as exc:
+                     if exc.code == "not_found":
+                         continue
+--- snapshot-latest/app/agent/execution_transport.py
++++ snapshot-packaged/app/agent/execution_transport.py
+@@ -212,6 +212,7 @@
+         reply=_sign(self._response_key,{'format':'jarvis-synthetic-response-v1','request_sha256':digest(envelope),
+                                       'request':wire,'response':response,'reported_at':datetime.now(UTC).isoformat()})
+         def report(scope):
++            self._live(authority,actor,wire)
+             authority._create('execution_transport_report',task['task_id'],scope,reply)
+             return {'operation_id':task['task_id'],'endpoint_id':self.endpoint_id,'response_sha256':digest(reply),
+                     'state':'REPORTED_SYNTHETIC_NOT_PUBLISHED'}
+@@ -267,3 +268,17 @@
+     if type(verifier) is not SyntheticTransport:raise AuthorityError('transport_verifier_required')
+     if verifier.verify_evidence(authority,actor,task,evidence['transport_receipt'])!=evidence['response']:
+         raise AuthorityError('transport_response_binding_invalid')
++
++
++def verify_history_readonly(conn, ledger, registry, verifier):
++    """Key verification on an existing mode=ro connection; no writer facade."""
++    from types import SimpleNamespace
++    from app.agent.authority import Authority
++    def get(kind, ident, scope=None):
++        row=conn.execute('SELECT scope,data FROM records WHERE kind=? AND id=?',(kind,ident)).fetchone()
++        if row is None or scope is not None and row[0]!=scope:raise AuthorityError('not_found')
++        return strict_json(row[1])
++    view=SimpleNamespace(_mutex=ledger._operation_mutex,_conn=conn,_ledger=ledger,_get=get,
++        _scope=Authority._scope,_fence=lambda:ledger.verify(conn),
++        recovery_decision_status=lambda:{'configured':True,**registry.inspect()})
++    return verifier.ready(view)
+--- snapshot-latest/app/agent/operator_cli.py
++++ snapshot-packaged/app/agent/operator_cli.py
+@@ -4,12 +4,13 @@
+ no credential paths/environment lookup, runtime startup or executor activation.
+ """
+ import argparse
++import hashlib
+ import json
+ import os
+ import sqlite3
+ from pathlib import Path
+ from app.agent.authority import AuthorityError,identifier
+-from app.agent.ledger import LedgerGuard,strict_json,private_directory
++from app.agent.ledger import LedgerGuard,strict_json,private_directory,encode
+ from app.agent.recovery import inspect_offline,OperatorPermits
+ from app.agent.runtime import SERVICE_ACTOR
+ 
+@@ -52,6 +53,12 @@
+     modes.add_argument('--record-recovery-decision',action='store_true')
+     modes.add_argument('--renew-recovery-witness',action='store_true')
+     modes.add_argument('--reconcile-recovery-operation',action='store_true')
++    modes.add_argument('--reconcile-transport-report')
++    modes.add_argument('--publish-transport-evidence')
++    parser.add_argument('--synthetic-endpoint-id')
++    parser.add_argument('--transport-operator-key-fd',type=int)
++    parser.add_argument('--transport-request-key-fd',type=int)
++    parser.add_argument('--transport-response-key-fd',type=int)
+     parser.add_argument('--registry-config-fd',type=int)
+     parser.add_argument('--registry-reference-fd',type=int)
+     parser.add_argument('--recovery-payload-fd',type=int)
+@@ -68,10 +75,11 @@
+     args=parser.parse_args(argv)
+     registry=bool(args.recovery_registry_status or args.initialize_recovery_registry or args.publish_recovery_proposal or args.record_recovery_decision or args.renew_recovery_witness or args.reconcile_recovery_operation)
+     registry_mutation=registry and not args.recovery_registry_status
+-    mutation=bool(registry_mutation or args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
++    transport_recovery=bool(args.reconcile_transport_report or args.publish_transport_evidence)
++    mutation=bool(transport_recovery or registry_mutation or args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
+     enrollment=bool(args.enrollment_status or args.enroll_store or args.reconcile_enrollment)
+     disaster=bool(registry or args.checkpoint_status or args.verify_archive or args.verify_restored or args.verify_branch or enrollment or mutation)
+-    ledger=None
++    ledger=None;authority=None
+     try:
+         configured=(args.checkpoints is not None,args.store_id is not None,args.key_fd is not None)
+         if any(configured) and not all(configured):raise AuthorityError('complete_checkpoint_configuration_required')
+@@ -84,7 +92,54 @@
+             trust=strict_json(_read_fd(args.trust_fd,16384)) if args.trust_fd is not None else None
+             ledger=LedgerGuard(args.checkpoints,raw,args.store_id,initialize=args.enroll_store or args.reconcile_enrollment,rollover=args.rollover_enabled,
+                                epoch_capacity=args.epoch_capacity,max_epochs=args.max_epochs,recovery=disaster or args.disaster_recovery_enabled or args.rollover_enabled,trust_context=trust)
+-        if not disaster:
++        if transport_recovery:
++            from app.agent.authority import Authority
++            from app.agent.enrollment import verify_authority_enrollment
++            from app.agent.recovery import RecoveryActions
++            from app.agent.recovery_decisions import RecoveryRegistry
++            from app.agent.execution_transport import SyntheticTransport,verify_history_readonly
++            from app.agent.ledger import read_file
++            if not args.database:raise AuthorityError('database_path_required')
++            operation=identifier(args.operation_id)
++            task=identifier(args.reconcile_transport_report or args.publish_transport_evidence)
++            command='reconcile_synthetic_transport_report' if args.reconcile_transport_report else 'publish_synthetic_evidence'
++            payload={'task_id':task}
++            permits=OperatorPermits(_read_fd(args.operator_key_fd,128))
++            permit=strict_json(_read_fd(args.permit_fd,65536))
++            auth=permits.authenticate(permit)
++            witness=strict_json(_read_fd(args.enrollment_witness_fd,16384))
++            config=strict_json(_read_fd(args.registry_config_fd,16384))
++            reference=strict_json(_read_fd(args.registry_reference_fd,16384))
++            transport=SyntheticTransport(args.synthetic_endpoint_id,OperatorPermits(_read_fd(args.transport_operator_key_fd,128)),
++                _read_fd(args.transport_request_key_fd,128),_read_fd(args.transport_response_key_fd,128),enabled=True)
++            database=Path(args.database).absolute();read_file(database,32*1024*1024)
++            ledger.acquire(database,readonly=True)
++            registry_service=RecoveryRegistry(ledger,config,reference,permits)
++            if not registry_service.inspect()['verified']:raise AuthorityError('recovery_reconciliation_required')
++            conn=sqlite3.connect(database.as_uri()+'?mode=ro',uri=True,isolation_level=None)
++            try:
++                ledger.verify(conn);verify_authority_enrollment(conn,database,ledger,witness)
++                verify_history_readonly(conn,ledger,registry_service,transport)
++                row=conn.execute('SELECT data FROM receipts WHERE request_id=?',(operation,)).fetchone()
++                if row:
++                    previous=strict_json(row[0]);expected=previous['result'].get('operator_authorization')
++                    if (previous['operation']!='operator_recovery' or expected!=auth
++                        or auth['request_id']!=operation or auth['scope']!=SERVICE_ACTOR.scope or auth['command']!=command
++                        or auth['payload_hash']!=hashlib.sha256(encode(payload)).hexdigest()):
++                        raise AuthorityError('request_conflict')
++                    print(json.dumps({'receipt':previous,'replayed':True,'executor_invoked':False,'execution_enabled':False}));return 0
++            finally:conn.close()
++            permits.verify(permit,SERVICE_ACTOR,operation,command,payload)
++            opening=ledger.history()[0]
++            if auth['checkpoint']!=opening:raise AuthorityError('stale_operator_permit')
++            ledger.close()
++            registry_service=RecoveryRegistry(ledger,config,reference,permits)
++            authority=Authority(database,ledger=ledger,enrollment_context=witness,recovery_registry=registry_service,
++                                allow_simulation=True,expected_open_checkpoint=opening)
++            transport.configure(authority)
++            result=RecoveryActions(authority,permits).apply(SERVICE_ACTOR,operation,command,payload,permit,offline_open=True)
++            authority.close();authority=None;success=True
++        elif not disaster:
+             if not args.database:raise AuthorityError('database_path_required')
+             witness=strict_json(_read_fd(args.enrollment_witness_fd,16384)) if args.enrollment_witness_fd is not None else None
+             result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,enrollment_context=witness,task_id=args.task_id,limit=args.limit,offset=args.offset)
+@@ -175,6 +230,9 @@
+             'execution_enabled':False}))
+         return 1
+     finally:
++        if authority is not None:
++            try:authority.close()
++            except (AuthorityError,OSError,sqlite3.Error):pass
+         if ledger is not None:ledger.close()
+ 
+ 
+--- snapshot-latest/app/agent/recovery.py
++++ snapshot-packaged/app/agent/recovery.py
+@@ -422,10 +422,10 @@
+     """Local, authenticated, audited, checkpoint-bound conservative operations."""
+     def __init__(self, authority, permits):self.authority,self.permits=authority,permits
+ 
+-    def apply(self, actor, request_id, command, payload, permit):
+-        return self._apply(actor,request_id,command,payload,permit)
+-
+-    def _apply(self, actor, request_id, command, payload, permit, *, verified_export=None):
++    def apply(self, actor, request_id, command, payload, permit, *, offline_open=False):
++        return self._apply(actor,request_id,command,payload,permit,offline_open=offline_open)
++
++    def _apply(self, actor, request_id, command, payload, permit, *, verified_export=None, offline_open=False):
+         a=self.authority
+         identifier(request_id)
+         if uuid.UUID(request_id).version!=4:raise AuthorityError('invalid_public_request_identifier')
+@@ -434,9 +434,17 @@
+         if a._ledger is None:raise AuthorityError('ledger_checkpoint_required')
+         auth=self.permits.verify(permit,actor,request_id,command,payload)
+         def authorized(result):
++            if self.permits.verify(permit,actor,request_id,command,payload)!=auth:
++                raise AuthorityError('operator_permit_binding_mismatch')
+             return {**result,'operator_authorization':auth,'permit_fingerprint':hashlib.sha256(encode(permit)).hexdigest()}
+         def effect(scope):
+-            if auth['checkpoint']!=a._ledger._head:raise AuthorityError('stale_operator_permit')
++            if offline_open:
++                if command not in {'reconcile_synthetic_transport_report','publish_synthetic_evidence'}:
++                    raise AuthorityError('unsafe_recovery_action')
++                head,pending,history=a._ledger.history()
++                if (auth['checkpoint']!=a._opening_checkpoint or pending or head['sequence']!=a._opening_checkpoint['sequence']+1
++                    or len(history)<2 or history[-2]!=a._opening_checkpoint):raise AuthorityError('stale_operator_permit')
++            elif auth['checkpoint']!=a._ledger._head:raise AuthorityError('stale_operator_permit')
+             report=analyze(snapshot(a),scope)
+             if not report['consistent']:raise AuthorityError('recovery_inconsistent_state')
+             if command=='reconcile_synthetic_transport_report':
+@@ -448,7 +456,8 @@
+                 from app.agent.execution_transport import verify_transport_evidence,digest
+                 reply=a._get('execution_transport_report',task_id,scope)
+                 evidence={'response':reply['body']['response'],'generation':row['generation'],'operation_id':task_id,
+-                          'at':reply['body']['reported_at'],'source':'synthetic_authenticated_transport','transport_receipt':reply}
++                          'at':reply['body']['reported_at'],'source':'synthetic_authenticated_transport','transport_receipt':reply,
++                          'publication_authorization_required':True}
+                 if not task['execution'].get('transport'):raise AuthorityError('unsafe_recovery_action')
+                 verify_transport_evidence(a,actor,task,evidence)
+                 a._create('execution_evidence',task_id,scope,evidence)
+--- snapshot-latest/app/cli.py
++++ snapshot-packaged/app/cli.py
+@@ -17,6 +17,10 @@
+     start_server_process,
+     terminate_jarvis_processes,
+ )
++
++
++class ClientControlError(RuntimeError):
++    pass
+ 
+ 
+ def main(argv: list[str] | None = None) -> int:
+@@ -35,6 +39,9 @@
+             return _tasks(args)
+         if args.command == "recovery":
+             return _recovery(args)
++    except ClientControlError as exc:
++        print(str(exc),file=sys.stderr)
++        return 1
+     except KeyboardInterrupt:
+         return 130
+     parser.print_help()
+@@ -59,10 +66,14 @@
+     wake.add_argument("--preload", action="store_true", help="Preload the configured primary model during wake.")
+     wake.add_argument("--no-preload", action="store_true", help="Skip primary model preload even if configured.")
+ 
++    for control in (sleep,wake):
++        control.add_argument("--offline",action="store_true",help="Explicitly allow local control only when no server connection exists.")
++
+     status = subparsers.add_parser("status", help="Show runtime state and resource report.")
+     status.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+ 
+     shutdown = subparsers.add_parser("shutdown", help="Unload models and stop JARVIS-owned runtime processes.")
++    shutdown.add_argument("--offline",action="store_true",help="Explicitly allow local control when no server connection exists.")
+     shutdown.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+     tasks = subparsers.add_parser("tasks", help="Read durable task states from the running API.")
+     tasks.add_argument("--task-id", help="Show one canonical task UUID.")
+@@ -129,12 +140,14 @@
+     if args.light:
+         payload = _post("/resource/sleep/light")
+         if payload is None:
++            if not getattr(args,"offline",False):raise ClientControlError("server_unavailable_no_local_fallback")
+             payload = asyncio.run(_local_light_sleep())
+         _print_payload(payload)
+         return 0
+ 
+     payload = _post("/resource/sleep/deep")
+     if payload is None:
++        if not getattr(args,"offline",False):raise ClientControlError("server_unavailable_no_local_fallback")
+         payload = asyncio.run(_local_deep_sleep(terminate=not args.no_process_stop))
+     elif not args.no_process_stop:
+         stopped = terminate_jarvis_processes()
+@@ -146,6 +159,7 @@
+ 
+ def _wake(args: argparse.Namespace) -> int:
+     if not _server_responds():
++        if not getattr(args,"offline",False):raise ClientControlError("server_unavailable_no_automatic_start")
+         start_server_process()
+         _wait_for_server()
+ 
+@@ -160,6 +174,7 @@
+         params["preload_primary_model"] = str(preload).lower()
+     payload = _post("/resource/wake", params=params)
+     if payload is None:
++        if not getattr(args,"offline",False):raise ClientControlError("server_unavailable_no_local_fallback")
+         payload = asyncio.run(resource_manager.wake(reason="cli", preload_primary_model=preload)).__dict__
+     _print_payload(payload)
+     return 0
+@@ -186,6 +201,7 @@
+ def _shutdown(args: argparse.Namespace) -> int:
+     payload = _post("/resource/shutdown")
+     if payload is None:
++        if not getattr(args,"offline",False):raise ClientControlError("server_unavailable_no_local_fallback")
+         payload = asyncio.run(_local_deep_sleep(terminate=True))
+     stopped = terminate_jarvis_processes()
+     payload.setdefault("actions", []).append(f"terminated_processes:{len(stopped)}")
+@@ -226,13 +242,19 @@
+ 
+ 
+ def _post(path: str, *, params: dict[str, str] | None = None) -> dict[str, Any] | None:
++    headers={"Authorization":f"Bearer {settings.server.api_token}"} if settings.server.api_token else {}
+     try:
+-        response = httpx.post(f"{_base_url()}{path}", params=params, timeout=120.0)
++        response=httpx.post(f"{_base_url()}{path}",params=params,timeout=10.0,headers=headers)
+         response.raise_for_status()
+-        payload = response.json()
+-        return payload if isinstance(payload, dict) else {"result": payload}
+-    except Exception:
++        payload=response.json()
++        if not isinstance(payload,dict):raise ClientControlError("invalid_control_response_no_retry")
++        return payload
++    except httpx.ConnectError:
+         return None
++    except httpx.HTTPStatusError as exc:
++        raise ClientControlError(f"control_api_refused_{exc.response.status_code}_no_local_fallback") from None
++    except (httpx.TransportError,ValueError):
++        raise ClientControlError("control_outcome_unknown_no_retry") from None
+ 
+ 
+ def _server_responds() -> bool:
+--- snapshot-latest/app/resource_manager.py
++++ snapshot-packaged/app/resource_manager.py
+@@ -24,6 +24,11 @@
+ 
+ PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ DEFAULT_STATE_PATH = PROJECT_ROOT / "data" / "resource_state.json"
++
++
++# Only children positively captured at launch by THIS process may be signalled.
++# Cross-process adoption requires a future protected persistent lease ceremony.
++_owned_processes: dict[int,dict[str,Any]] = {}
+ 
+ 
+ class RuntimeState(StrEnum):
+@@ -754,15 +759,15 @@
+     root = str(PROJECT_ROOT).replace("\\", "/").lower()
+     lowered_name = name.lower()
+ 
+-    if "app.main:app" in normalized or "python -m app.main" in normalized:
++    if ("app.main:app" in normalized or "python -m app.main" in normalized) and _cwd_under_project(proc):
+         return "fastapi_server"
+-    if "uvicorn" in normalized and "app.main:app" in normalized:
++    if "uvicorn" in normalized and "app.main:app" in normalized and _cwd_under_project(proc):
+         return "fastapi_server"
+-    if "python -m app.boot" in normalized or "app/boot.py" in normalized:
++    if ("python -m app.boot" in normalized or "app/boot.py" in normalized) and _cwd_under_project(proc):
+         return "boot_orchestrator"
+-    if "scripts/sensor_node.py" in normalized:
++    if "scripts/sensor_node.py" in normalized and _cwd_under_project(proc):
+         return "sensor_node"
+-    if "wake_diag.py" in normalized:
++    if "wake_diag.py" in normalized and _cwd_under_project(proc):
+         return "wake_diagnostics"
+     if (
+         any(keyword in normalized for keyword in ("browser_use", "computer_use", "open-computer-use"))
+@@ -787,23 +792,24 @@
+ 
+ 
+ def terminate_jarvis_processes(exclude_pids: set[int] | None = None, timeout: float = 3.0) -> list[dict[str, Any]]:
+-    stopped: list[dict[str, Any]] = []
+-    for process in discover_jarvis_processes(exclude_pids=exclude_pids):
+-        try:
+-            proc = psutil.Process(process.pid)
++    stopped=[];exclude=exclude_pids or set()
++    for pid,lease in list(_owned_processes.items()):
++        if pid in exclude:continue
++        try:
++            proc=psutil.Process(pid)
++            def matches():
++                return (proc.create_time()==lease['created_at'] and proc.exe()==lease['executable']
++                        and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve() and proc.ppid()==os.getpid())
++            if not matches():continue
+             proc.terminate()
+-            try:
+-                proc.wait(timeout=timeout)
+-                outcome = "terminated"
++            try:proc.wait(timeout=timeout);outcome='terminated'
+             except psutil.TimeoutExpired:
+-                proc.kill()
+-                proc.wait(timeout=timeout)
+-                outcome = "killed"
+-            stopped.append({**asdict(process), "outcome": outcome})
+-            audit.log("resource_process_stopped", {"pid": process.pid, "role": process.role, "outcome": outcome})
+-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired) as exc:
+-            stopped.append({**asdict(process), "outcome": f"error:{exc}"})
+-            audit.log("resource_process_stop_error", {"pid": process.pid, "role": process.role, "error": str(exc)})
++                if not matches():continue
++                proc.kill();proc.wait(timeout=timeout);outcome='killed'
++            stopped.append({'pid':pid,'role':lease['role'],'outcome':outcome})
++            _owned_processes.pop(pid,None)
++        except (psutil.NoSuchProcess,psutil.AccessDenied,psutil.TimeoutExpired,OSError):
++            continue
+     return stopped
+ 
+ 
+@@ -835,13 +841,19 @@
+     creationflags = 0
+     if os.name == "nt":
+         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+-    return subprocess.Popen(
++    child = subprocess.Popen(
+         command,
+         cwd=PROJECT_ROOT,
+         stdout=subprocess.DEVNULL,
+         stderr=subprocess.DEVNULL,
+         creationflags=creationflags,
+     )
++    try:
++        proc=psutil.Process(child.pid)
++        if proc.ppid()==os.getpid() and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve():
++            _owned_processes[child.pid]={'created_at':proc.create_time(),'executable':proc.exe(),'role':'fastapi_server'}
++    except (psutil.NoSuchProcess,psutil.AccessDenied,OSError):pass
++    return child
+ 
+ 
+ resource_manager = ResourceManager()
+--- snapshot-latest/app/server.py
++++ snapshot-packaged/app/server.py
+@@ -120,6 +120,9 @@
+     execution_worker = get_execution_worker()
+     try:
+         authority.readiness()
++        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token:
++            from app.agent.authority import AuthorityError
++            raise AuthorityError("transport_client_authentication_required")
+         await scheduler.start()
+         if execution_worker is not None:
+             await execution_worker.start()
+@@ -246,6 +249,8 @@
+ @app.middleware("http")
+ async def api_token_middleware(request: Request, call_next):  # noqa: ANN001, ANN201
+     if not settings.server.api_token:
++        if request.url.path=="/stop":
++            return JSONResponse(status_code=401,content={"error":"operator_authentication_required"})
+         return await call_next(request)
+     path = request.url.path
+     if path in _AUTH_EXEMPT_EXACT or any(path.startswith(prefix) for prefix in _AUTH_EXEMPT_PREFIXES):
+@@ -329,27 +334,12 @@
+ 
+ 
+ @app.post("/resource/sleep/light")
+-async def resource_light_sleep() -> dict[str, Any]:
+-    result = await resource_manager.light_sleep(reason="api")
+-    return asdict(result)
+-
+-
+ @app.post("/resource/sleep/deep")
+-async def resource_deep_sleep(terminate_processes: bool = False) -> dict[str, Any]:
+-    result = await resource_manager.deep_sleep(reason="api", terminate_processes=terminate_processes)
+-    return asdict(result)
+-
+-
+ @app.post("/resource/wake")
+-async def resource_wake(preload_primary_model: bool | None = None) -> dict[str, Any]:
+-    result = await resource_manager.wake(reason="api", preload_primary_model=preload_primary_model)
+-    return asdict(result)
+-
+-
+ @app.post("/resource/shutdown")
+-async def resource_shutdown(terminate_processes: bool = False) -> dict[str, Any]:
+-    result = await resource_manager.deep_sleep(reason="api_shutdown", terminate_processes=terminate_processes)
+-    return asdict(result)
++async def resource_mutation_unavailable() -> Any:
++    # HTTP identity alone is not independent host-control authorization.
++    return JSONResponse(status_code=403,content={"error":"offline_operator_control_required","automatic_retry":False})
+ 
+ 
+ @app.get("/health/tools")
+@@ -471,11 +461,18 @@
+     try:
+         while True:
+             raw = await websocket.receive_text()
++            if len(raw.encode('utf-8'))>8192:
++                await websocket.close(code=1009,reason="message_bound");return
+             try:
+                 data = json.loads(raw)
+-                message = data.get("message", raw)
+             except json.JSONDecodeError:
+                 message = raw
++            else:
++                if type(data) is not dict or type(data.get('message')) is not str:
++                    await websocket.close(code=1008,reason="invalid_message");return
++                message=data['message']
++            if not message.strip():
++                await websocket.close(code=1008,reason="invalid_message");return
+ 
+             if not await resource_manager.ensure_awake_for_interaction("websocket"):
+                 await websocket.send_json(
+@@ -523,6 +520,8 @@
+                 current_token.reset()
+                 await manager.broadcast({"type": "listening", "active": False})
+     except WebSocketDisconnect:
++        pass
++    finally:
+         manager.disconnect(websocket)
+         audit.log("ws_disconnect", {"client": str(websocket.client)})
+ 
+--- snapshot-latest/app/voice/vad.py
++++ snapshot-packaged/app/voice/vad.py
+@@ -2,6 +2,7 @@
+ from __future__ import annotations
+ 
+ import io
++import math
+ import queue
+ import time
+ import wave
+@@ -17,7 +18,7 @@
+     max_record_seconds = 12.0
+     trailing_silence_seconds = 0.5
+ 
+-    def record_until_silence(self, timeout: float | None = None) -> bytes:
++    def record_until_silence(self, timeout: float | None = None, cancelled=None) -> bytes:
+         try:
+             import sounddevice as sd
+             import webrtcvad
+@@ -25,15 +26,21 @@
+             audit.log("vad_unavailable", {"reason": str(exc)})
+             return b""
+ 
+-        vad = webrtcvad.Vad(settings.voice.vad_aggressiveness)
++        return self._record_from_stream(sd.RawInputStream,webrtcvad.Vad(settings.voice.vad_aggressiveness),timeout,cancelled)
++
++    def _record_from_stream(self, stream_factory, vad, timeout=None, cancelled=None):
++        from app.brain.cancel_token import current_token
++        cancelled=cancelled or current_token.is_cancelled
++        if timeout is not None and (type(timeout) not in (int,float) or not math.isfinite(timeout) or timeout<=0):return b""
+         frame_samples = int(self.sample_rate * self.frame_ms / 1000)
+         frame_bytes = frame_samples * 2
+-        audio_queue: queue.Queue[bytes] = queue.Queue()
++        audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=64)
+ 
+         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
+             if status:
+                 audit.log("vad_stream_status", {"status": str(status)})
+-            audio_queue.put(bytes(indata))
++            try:audio_queue.put_nowait(bytes(indata))
++            except queue.Full:pass
+ 
+         recorded: list[bytes] = []
+         speech_started = False
+@@ -46,7 +53,7 @@
+         started_at = time.perf_counter()
+         pre_speech_deadline = started_at + max_record_seconds
+ 
+-        with sd.RawInputStream(
++        with stream_factory(
+             samplerate=self.sample_rate,
+             blocksize=frame_samples,
+             dtype="int16",
+@@ -55,9 +62,10 @@
+             callback=callback,
+         ):
+             while True:
++                if cancelled() or time.perf_counter()>=pre_speech_deadline or len(recorded)>=max_post_speech_frames:break
+                 try:
+                     frame = audio_queue.get(timeout=0.1)
+-                except Exception:
++                except queue.Empty:
+                     if not speech_started and time.perf_counter() > pre_speech_deadline:
+                         break
+                     continue
+--- snapshot-latest/app/voice/wake_word.py
++++ snapshot-packaged/app/voice/wake_word.py
+@@ -57,13 +57,14 @@
+         if model is None:
+             return b""
+ 
+-        audio_queue: queue.Queue[bytes] = queue.Queue()
++        audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=64)
+         deadline = time.monotonic() + timeout if timeout is not None else None
+ 
+         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
+             if status:
+                 audit.log("wake_stream_status", {"status": str(status)})
+-            audio_queue.put(bytes(indata))
++            try:audio_queue.put_nowait(bytes(indata))
++            except queue.Full:pass
+ 
+         try:
+             with sd.RawInputStream(
+--- snapshot-latest/tests/test_audit_integration_fixes.py
++++ snapshot-packaged/tests/test_audit_integration_fixes.py
+@@ -0,0 +1,130 @@
++"""Confirmed audit mechanics; all effects confined to the networkless cage."""
++from types import SimpleNamespace
++from unittest.mock import Mock,AsyncMock
++import io
++import os
++from pathlib import Path
++import subprocess
++import sys
++import wave
++import pytest
++from fastapi.testclient import TestClient
++from app.server import app,manager
++from app.config import settings
++import app.resource_manager as resources
++import app.cli as cli
++from app.voice.vad import VoiceActivityDetector
++from app.voice.dictation import Dictation
++
++
++@pytest.mark.parametrize('path',['/resource/sleep/light','/resource/sleep/deep','/resource/wake','/resource/shutdown'])
++def test_effectful_resource_http_is_inert_even_with_bearer(monkeypatch,path):
++    monkeypatch.setattr(settings.server,'api_token','synthetic-control-key')
++    for method in ('light_sleep','deep_sleep','wake'):
++        monkeypatch.setattr(resources.resource_manager,method,AsyncMock(side_effect=AssertionError('host control forbidden')))
++    response=TestClient(app).post(path,headers={'Authorization':'Bearer synthetic-control-key'})
++    assert response.status_code==403 and response.json()['error']=='offline_operator_control_required'
++
++
++def test_stop_requires_configured_identity(monkeypatch):
++    monkeypatch.setattr(settings.server,'api_token','')
++    assert TestClient(app).post('/stop').status_code==401
++
++
++@pytest.mark.parametrize('value',[[],{'message':4},{'message':{}},{'message':'x'*9000}])
++def test_malformed_websocket_closes_and_removes_manager_entry(monkeypatch,value):
++    from starlette.websockets import WebSocketDisconnect
++    monkeypatch.setattr(settings.server,'api_token','synthetic-ws-key')
++    original=len(manager.active)
++    with TestClient(app).websocket_connect('/ws',headers={'Authorization':'Bearer synthetic-ws-key'}) as channel:
++        channel.send_json(value)
++        with pytest.raises(WebSocketDisconnect):channel.receive_json()
++    assert len(manager.active)==original
++
++
++@pytest.mark.parametrize('status',[401,403,500])
++def test_cli_post_auth_and_status_failure_never_falls_back(monkeypatch,status):
++    import httpx
++    captured={}
++    monkeypatch.setattr(settings.server,'api_token','synthetic-cli-key')
++    def denied(url,**kwargs):
++        captured.update(kwargs)
++        return httpx.Response(status,request=httpx.Request('POST',url),json={'error':'synthetic refusal'})
++    monkeypatch.setattr(cli.httpx,'post',denied)
++    monkeypatch.setattr(cli,'_local_light_sleep',AsyncMock(side_effect=AssertionError('fallback forbidden')))
++    assert cli.main(['sleep','--light','--offline'])==1
++    assert captured['headers']=={'Authorization':'Bearer synthetic-cli-key'}
++
++
++def test_cli_timeout_has_unknown_outcome_and_never_falls_back(monkeypatch):
++    import httpx
++    monkeypatch.setattr(cli.httpx,'post',Mock(side_effect=httpx.ReadTimeout('synthetic timeout')))
++    monkeypatch.setattr(cli,'_local_light_sleep',AsyncMock(side_effect=AssertionError('fallback forbidden')))
++    assert cli.main(['sleep','--light','--offline'])==1
++
++
++def test_cli_unreachable_requires_explicit_offline_control(monkeypatch):
++    import httpx
++    monkeypatch.setattr(cli.httpx,'post',Mock(side_effect=httpx.ConnectError('synthetic unavailable')))
++    monkeypatch.setattr(cli,'_local_light_sleep',AsyncMock(side_effect=AssertionError('implicit local fallback forbidden')))
++    assert cli.main(['sleep','--light'])==1
++
++
++def test_untracked_same_entrypoint_child_is_never_terminated(tmp_path,monkeypatch):
++    monkeypatch.setattr(resources,'_owned_processes',{})
++    child=subprocess.Popen([sys.executable,'-I','-S','-c','import time; time.sleep(10)','app.main:app'],cwd=tmp_path)
++    try:
++        assert resources.terminate_jarvis_processes()==[] and child.poll() is None
++    finally:child.kill();child.wait(timeout=5)
++
++
++@pytest.mark.parametrize('stale',[False,True])
++def test_only_positive_native_child_lease_allows_signal(tmp_path,monkeypatch,stale):
++    real_popen=subprocess.Popen
++    monkeypatch.setattr(resources,'_owned_processes',{})
++    def dummy(*args,**kwargs):
++        return real_popen([sys.executable,'-I','-S','-c','import time; time.sleep(10)'],cwd=resources.PROJECT_ROOT)
++    monkeypatch.setattr(resources.subprocess,'Popen',dummy)
++    child=resources.start_server_process()
++    try:
++        assert child.pid in resources._owned_processes
++        if stale:resources._owned_processes[child.pid]['created_at']-=1
++        stopped=resources.terminate_jarvis_processes(timeout=.5)
++        if stale:assert stopped==[] and child.poll() is None
++        else:assert stopped[0]['pid']==child.pid and child.poll() is not None
++    finally:
++        if child.poll() is None:child.kill();child.wait(timeout=5)
++
++
++def test_vad_continuous_speech_respects_frame_and_callback_queue_bounds():
++    v=VoiceActivityDetector();v.min_speech_seconds=.03
++    frame=b'\x00'*(v.sample_rate*v.frame_ms//1000*2)
++    class Input:
++        def __init__(self,**kwargs):self.callback=kwargs['callback']
++        def __enter__(self):
++            for _ in range(200):self.callback(frame,0,None,None)
++        def __exit__(self,*args):pass
++    wav=v._record_from_stream(Input,SimpleNamespace(is_speech=lambda *args:True),timeout=.6,cancelled=lambda:False)
++    with wave.open(io.BytesIO(wav),'rb') as stream:assert stream.getnframes()==v.sample_rate*20*v.frame_ms//1000
++
++
++def test_vad_active_capture_cancellation_is_checked_each_frame():
++    v=VoiceActivityDetector();v.min_speech_seconds=.03;calls=[0]
++    frame=b'\x00'*(v.sample_rate*v.frame_ms//1000*2)
++    class Input:
++        def __init__(self,**kwargs):self.callback=kwargs['callback']
++        def __enter__(self):
++            for _ in range(50):self.callback(frame,0,None,None)
++        def __exit__(self,*args):pass
++    def speech(*args):calls[0]+=1;return True
++    wav=v._record_from_stream(Input,SimpleNamespace(is_speech=speech),timeout=1,cancelled=lambda:calls[0]>=3)
++    with wave.open(io.BytesIO(wav),'rb') as stream:assert stream.getnframes()==v.sample_rate*3*v.frame_ms//1000
++
++
++def test_dictation_never_touches_desktop_or_logs_transcript(monkeypatch):
++    from app.voice import dictation as module
++    events=[];copy=Mock(side_effect=AssertionError('clipboard forbidden'));type_out=Mock(side_effect=AssertionError('typing forbidden'))
++    monkeypatch.setattr(module,'pyperclip',SimpleNamespace(copy=copy));monkeypatch.setattr(module,'pyautogui',SimpleNamespace(write=type_out))
++    monkeypatch.setattr(module.audit,'log',lambda event,data:events.append((event,data)))
++    assert Dictation().handle_transcript('synthetic private transcript') is False
++    copy.assert_not_called();type_out.assert_not_called();assert 'synthetic private transcript' not in repr(events)
+--- snapshot-latest/tests/test_cancel_token.py
++++ snapshot-packaged/tests/test_cancel_token.py
+@@ -44,8 +44,10 @@
+     assert token.is_cancelled() is False
+ 
+ 
+-def test_stop_endpoint() -> None:
++def test_stop_endpoint(monkeypatch) -> None:
++    from app.config import settings
++    monkeypatch.setattr(settings.server,"api_token","synthetic-stop-token")
+     with TestClient(app) as client:
+-        response = client.post("/stop")
++        response = client.post("/stop",headers={"Authorization":"Bearer synthetic-stop-token"})
+     assert response.status_code == 200
+     assert response.json() == {"status": "stopped"}
+--- snapshot-latest/tests/test_resource_manager.py
++++ snapshot-packaged/tests/test_resource_manager.py
+@@ -144,6 +144,7 @@
+ 
+ 
+ def test_classify_jarvis_process_matches_runtime_workers() -> None:
+-    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", None) == "fastapi_server"
+-    assert classify_jarvis_process("python.exe", "python scripts/sensor_node.py", None) == "sensor_node"
++    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", None) is None
++    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", Mock(cwd=lambda: str(resource_module.PROJECT_ROOT))) == "fastapi_server"
++    assert classify_jarvis_process("python.exe", "python scripts/sensor_node.py", None) is None
+     assert classify_jarvis_process("python.exe", "python -m pytest", None) is None
+--- snapshot-latest/tests/test_secure_transport.py
++++ snapshot-packaged/tests/test_secure_transport.py
+@@ -196,3 +196,134 @@
+     assert a.get_task(ACTOR,r['request_id'])['status']=='unknown'
+     op=uid();actions.apply(ACTOR,op,'publish_synthetic_evidence',payload,grant(op,'publish_synthetic_evidence'))
+     assert a.get_task(ACTOR,r['request_id'])['status']=='simulated_completed' and t.invocations==1
++
++
++@pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
++    'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
++    'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
++def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
++    from app.agent.authority import Authority
++    state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
++    case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
++    child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
++    try:
++        end=time.monotonic()+10
++        while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
++        assert (root/'ready').exists(),child.poll()
++        with pytest.raises(AuthorityError,match='busy'):opened(state)
++        child.kill();child.wait(timeout=5);assert child.returncode==-9
++    finally:
++        if child.poll() is None:child.kill();child.wait(timeout=5)
++    recovered,pipeline,transport=opened(state)
++    try:
++        before=recovered.get_task(ACTOR,op)['status'];pipeline.reconcile(ACTOR)
++        after=recovered.get_task(ACTOR,op)['status']
++        if stage in {'after_record','after_publish','record_database_committed','publish_before_commit','publish_database_committed'}:
++            assert after=='simulated_completed'
++        else:assert after=='unknown'
++        original=json.loads((root/'original-request.json').read_text());assert pipeline.submit(ACTOR,**original)['replayed']
++        assert pipeline.run_once(ACTOR) is None and transport.invocations==0
++        observed=(root/'invocations.jsonl').read_text().splitlines() if (root/'invocations.jsonl').exists() else []
++        assert len(observed)<=1
++        assert OperatorRecovery(recovered).diagnose(ACTOR)['consistent']
++        with Path('/work/TRANSPORT-CRASHES.jsonl').open('a') as f:f.write(json.dumps({'stage':stage,'exitcode':child.returncode,
++            'operation_id':op,'restart_before':before,'restart_after':after,'new_endpoint_invocations':transport.invocations,
++            'observed_original_computations':len(observed),'canonical_payload_sha256':digest(original),'real_execution_enabled':False})+'\n')
++    finally:recovered.close()
++
++
++def test_operator_promoted_evidence_cannot_auto_publish_on_restart(env):
++    from app.agent.recovery import RecoveryActions
++    from enrollment_fixtures import OPKEY
++    state,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    def lost(stage):
++        if stage=='transport_reported':raise OSError('synthetic lost response')
++    t._fault=lost;p.run_once(ACTOR)
++    start,end=times();op=uid();payload={'task_id':r['request_id']}
++    permit=OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-recovery-operator',scope=ACTOR.scope,
++        command='reconcile_synthetic_transport_report',payload=payload,checkpoint=a._ledger.history()[0],issued_at=start,expires_at=end)
++    RecoveryActions(a,OperatorPermits(OPKEY)).apply(ACTOR,op,'reconcile_synthetic_transport_report',payload,permit)
++    a.close();fresh,pipeline,transport=opened(state)
++    try:
++        assert pipeline.reconcile(ACTOR)==[] and fresh.get_task(ACTOR,r['request_id'])['status']=='unknown'
++        assert transport.invocations==0
++        with pytest.raises(AuthorityError,match='operator_publication_authorization_required'):pipeline._publish(ACTOR,r['request_id'])
++    finally:fresh.close()
++
++
++def test_late_computation_does_not_commit_invalid_report(env):
++    _,a,p,t=env;r=request(p,timeout_seconds=1);p.submit(ACTOR,**r)
++    t._fault=lambda stage:time.sleep(1.02) if stage=='transport_computed' else None
++    assert p.run_once(ACTOR)['result']['status']=='unknown'
++    with pytest.raises(AuthorityError,match='not_found'):a._get('execution_transport_report',r['request_id'],ACTOR.scope)
++    assert a.readiness()['storage_ready'] and t.invocations==1
++
++
++def test_configured_transport_readiness_matches_before_first_grant(env):
++    _,a,p,t=env
++    assert a.readiness()['execution_transport']['configured'] and t.ready(a)['historical_grants']==0
++
++
++def test_recovery_permit_expiring_during_verification_rolls_back(env,monkeypatch):
++    import app.agent.execution_transport as module
++    from app.agent.recovery import RecoveryActions
++    from enrollment_fixtures import OPKEY
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    t._fault=lambda stage:(_ for _ in ()).throw(OSError('lost report')) if stage=='transport_reported' else None
++    p.run_once(ACTOR)
++    original=module.verify_transport_evidence
++    def slow(*args,**kwargs):
++        result=original(*args,**kwargs);time.sleep(.35);return result
++    monkeypatch.setattr(module,'verify_transport_evidence',slow)
++    start,end=times(.3);op=uid();payload={'task_id':r['request_id']}
++    permit=OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-recovery-operator',scope=ACTOR.scope,
++        command='reconcile_synthetic_transport_report',payload=payload,checkpoint=a._ledger.history()[0],issued_at=start,expires_at=end)
++    with pytest.raises(AuthorityError,match='operator_permit_expired'):RecoveryActions(a,OperatorPermits(OPKEY)).apply(ACTOR,op,'reconcile_synthetic_transport_report',payload,permit)
++    assert a.receipt(ACTOR,op) is None
++    with pytest.raises(AuthorityError,match='not_found'):a._get('execution_evidence',r['request_id'],ACTOR.scope)
++
++
++def test_real_offline_cli_reconciles_and_explicitly_publishes_with_identical_replay(env):
++    from app.agent.operator_cli import main
++    from enrollment_fixtures import KEY,OPKEY
++    from contextlib import redirect_stdout
++    import io
++    state,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    t._fault=lambda stage:(_ for _ in ()).throw(OSError('lost report')) if stage=='transport_reported' else None
++    p.run_once(ACTOR);a.close()
++    def invoke(action,op,permit):
++        args=['--database',state['database'],'--checkpoints',state['config']['checkpoints'],'--store-id',state['config']['store_id'],
++              '--rollover-enabled','--epoch-capacity','64','--synthetic-endpoint-id','synthetic.local.echo-v1',
++              '--operation-id',op,'--commit-recovery',action,r['request_id']]
++        blobs={'--key-fd':KEY,'--operator-key-fd':OPKEY,'--trust-fd':state['trust'],
++            '--enrollment-witness-fd':state['enrollment']['witness'],'--registry-config-fd':state['config'],
++            '--registry-reference-fd':state['reference'],'--transport-operator-key-fd':EXEC_KEY,
++            '--transport-request-key-fd':REQUEST_KEY,'--transport-response-key-fd':RESPONSE_KEY,'--permit-fd':permit}
++        fds=[]
++        try:
++            for flag,value in blobs.items():
++                fd=os.memfd_create('synthetic-cli');fds.append(fd);raw=value if type(value) is bytes else json.dumps(value).encode()
++                os.write(fd,raw);os.lseek(fd,0,0);args.extend([flag,str(fd)])
++            out=io.StringIO()
++            with redirect_stdout(out):code=main(args)
++            return code,json.loads(out.getvalue())
++        finally:
++            for fd in fds:os.close(fd)
++    def grant(op,command):
++        from app.agent.ledger import LedgerGuard
++        g=LedgerGuard(state['config']['checkpoints'],KEY,state['config']['store_id'],rollover=True,epoch_capacity=64,recovery=True,trust_context=state['trust'])
++        g.acquire(state['database'],readonly=True)
++        try:
++            start,end=times()
++            return OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-offline-recovery',scope=ACTOR.scope,
++                command=command,payload={'task_id':r['request_id']},checkpoint=g.history()[0],issued_at=start,expires_at=end)
++        finally:g.close()
++    op=uid();permit=grant(op,'reconcile_synthetic_transport_report')
++    code,recorded=invoke('--reconcile-transport-report',op,permit);assert code==0,recorded
++    assert recorded['result']['state']=='EVIDENCE_RECORDED_NOT_PUBLISHED'
++    code,replayed=invoke('--reconcile-transport-report',op,permit);assert code==0 and replayed['replayed'],replayed
++    op=uid();permit=grant(op,'publish_synthetic_evidence')
++    code,published=invoke('--publish-transport-evidence',op,permit);assert code==0,published
++    fresh,pipeline,transport=opened(state)
++    try:assert fresh.get_task(ACTOR,r['request_id'])['status']=='simulated_completed' and transport.invocations==0
++    finally:fresh.close()
+--- snapshot-latest/tests/test_server_integration.py
++++ snapshot-packaged/tests/test_server_integration.py
+@@ -164,19 +164,10 @@
+     assert status.status_code == 200
+     assert status.json()["state"] == "ACTIVE"
+ 
+-    light = client.post("/resource/sleep/light")
+-    assert light.status_code == 200
+-    assert light.json()["state"] == "LIGHT_SLEEP"
+-
+-    deep = client.post("/resource/sleep/deep", params={"terminate_processes": "true"})
+-    assert deep.status_code == 200
+-    assert deep.json()["state"] == "DEEP_SLEEP"
+-    assert deep.json()["reason"] == "api:True"
+-
+-    wake = client.post("/resource/wake", params={"preload_primary_model": "true"})
+-    assert wake.status_code == 200
+-    assert wake.json()["state"] == "ACTIVE"
+-    assert wake.json()["reason"] == "api:True"
++    for route in ('/resource/sleep/light','/resource/sleep/deep','/resource/wake','/resource/shutdown'):
++        blocked=client.post(route)
++        assert blocked.status_code==403
++        assert blocked.json()['error']=='offline_operator_control_required'
+ 
+ 
+ def test_procedural_memory_routes(monkeypatch) -> None:  # noqa: ANN001
+--- snapshot-latest/tests/transport_process_actor.py
++++ snapshot-packaged/tests/transport_process_actor.py
+@@ -0,0 +1,30 @@
++"""Actual independent crash actor; guarded disposable runner only."""
++import json
++import os
++from pathlib import Path
++import sys
++import time
++sys.path[:0]=['/input/source','/input/tests','/input','/deps']
++from transport_fixtures import opened,request,ACTOR
++from app.agent.execution import phase_id
++c=json.loads(Path(sys.argv[1]).read_text());root=Path(c['state']['root']);target=c['stage']
++a,p,t=opened(c['state'])
++
++def pause(stage):
++    if stage=='transport_computed':
++        with (root/'invocations.jsonl').open('a') as f:f.write(json.dumps({'operation_id':c['operation_id'],'event':'pure_computation_observed'})+'\n')
++    if stage==target:
++        (root/'ready').write_text(stage)
++        while True:time.sleep(.02)
++p._fault=t._fault=pause
++r=request(p,operation_id=c['operation_id']);(root/'original-request.json').write_text(json.dumps(r));(root/'original-request.json').chmod(0o600)
++if target.startswith(('reserve_','record_','publish_')):
++    phase,boundary=target.split('_',1)
++    ident=phase_id(c['operation_id'],'transport_reserve' if phase=='reserve' else phase)
++    def authority_fault(stage):
++        expected='before_commit' if boundary=='before_commit' else 'ledger_database_committed'
++        if stage==expected and a._conn.execute('SELECT 1 FROM receipts WHERE request_id=?',(ident,)).fetchone():pause(target)
++    a._fault=authority_fault
++p.submit(ACTOR,**r)
++p.run_once(ACTOR)
++raise SystemExit('requested crash point not reached')

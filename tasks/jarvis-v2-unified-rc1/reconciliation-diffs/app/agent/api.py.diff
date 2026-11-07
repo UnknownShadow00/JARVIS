@@ -1,0 +1,23 @@
+--- codex1/app/agent/api.py
++++ codex2/app/agent/api.py
+@@ -1,4 +1,4 @@
+-"""Authority routes under the existing server authentication middleware."""
++"""Authority routes enforce configured identity even when embedded independently."""
+ from typing import Annotated
+ from fastapi import APIRouter, Depends, HTTPException, Query, Request
+ import secrets
+@@ -8,12 +8,12 @@
+ from app.agent.runtime import SERVICE_ACTOR, get_authority, get_execution_pipeline, execution_readiness
+ from app.agent.scheduler import scheduler
+ 
+-def require_authority_identity(request: Request):
++async def require_authority_identity(request: Request):
+     """Loopback reachability is not operator identity, including embedded routers."""
+     from app.config import settings
+     expected = settings.server.api_token
+     supplied = request.headers.get("authorization", "")
+-    if not expected or not secrets.compare_digest(supplied.encode(), ("Bearer " + expected).encode()):
++    if not expected.strip() or not secrets.compare_digest(supplied.encode(), ("Bearer " + expected).encode()):
+         raise HTTPException(status_code=401, detail="authority_authentication_required")
+ 
+ 

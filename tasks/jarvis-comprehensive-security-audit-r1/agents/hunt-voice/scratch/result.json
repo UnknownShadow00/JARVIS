@@ -1,0 +1,49 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fvoice%2Fvad.py%23record_until_silence::app%2Fvoice%2Fvad.py%23recording-duration-and-buffer::app%2Fvoice::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Unbounded%20buffering%20and%20cardinality",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/voice/audio_stream.py",
+        "app/voice/push_to_talk.py",
+        "app/voice/vad.py",
+        "app/voice/wake_word.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-voice",
+          "reviewed_paths": [
+            "app/voice/audio_stream.py",
+            "app/voice/push_to_talk.py",
+            "app/voice/vad.py",
+            "app/voice/wake_word.py"
+          ],
+          "invariant": "Voice capture must have an effective frame/deadline bound and a stop path; do not equate an optional local recording defect with a demonstrated shared-service denial.",
+          "method": "source",
+          "result": "vad.py17/42-45 declares a12s default/frame budget, but positive speech appends and continues69-74 before the only length check85; after speech begins, empty-queue exceptions61-63 ignore the deadline. The callback queue31/36 is unbounded. wake_word.py116/203/209 calls the recorder without timeout or stop token; outer listen deadline80 does not execute during nested capture. The wake callback queue60/66 can also accumulate while nested VAD holds its input-stream context. VoicePipeline.stop47-50 only sets an event, which run58 checks outside the blocking to_thread(wake_word.listen)64. Missing audio dependencies fail closed at vad.py21-26, and wake/listen exceptions return empty audio119-121. Push-to-talk release clears its own event but does not signal the active recorder. These are concrete resource/cancellation weaknesses; no actual hostile microphone input, deployed voice enablement or shared-service availability loss was demonstrated.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-voice",
+          "reviewed_paths": [
+            "app/voice/vad.py"
+          ],
+          "invariant": "Positive speech must count toward the configured finite recording frame cap.",
+          "method": "local",
+          "result": "Parent executed finite fake-audio vad_bounds.py in the approved OS sandbox. Genuine record_until_silence configured for0.6s/20 frames accepted41 speech frames followed by1 silence frame and returned42 frames,1.26 seconds of encoded audio,40364 WAV bytes. No real microphone, VAD native library, provider, subprocess, saturation or shared-service denial was involved. Parent-promoted artifact records exit0.",
+          "artifact": "agents/hunt-voice/artifacts/vad_bounds.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Fix the demonstrated recorder cap defect at app/voice/vad.py57-86: check an unconditional monotonic deadline and recorded-frame/byte budget on every iteration, including speech, malformed frames and queue timeouts. The finite fixture returned42 frames for a20-frame cap. Add regression cases for continuous speech and post-speech input loss; do not describe this fixture as a reproduced shared-service DoS.",
+    "Pass a cancellation event through VoicePipeline.run -> WakeWordDetector.listen -> VoiceActivityDetector.record_until_silence and check it in capture/queue loops; close capture resources promptly when VoicePipeline.stop is requested. Present stop signaling cannot interrupt an already active recorder.",
+    "Bound callback queues in both app/voice/vad.py31 and wake_word.py60, with an explicit drop/backpressure policy that cannot block the real-time audio callback. Exit the wake input-stream context before starting a separate VAD stream, so the unused wake queue does not keep buffering the whole utterance.",
+    "Security severity is intentionally unassigned: local optional microphone control-flow and buffering defects are source/local-established, but no lower-trust principal caused a demonstrated shared-service availability or safety loss in this audit. A deployment-level claim would require an enabled voice runtime and a bounded, approved observation of the specific affected safety/availability function."
+  ],
+  "uncovered": []
+}

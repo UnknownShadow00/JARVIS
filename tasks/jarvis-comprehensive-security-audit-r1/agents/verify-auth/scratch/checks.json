@@ -1,0 +1,38 @@
+[
+  {
+    "agent_id": "verify-auth",
+    "reviewed_paths": [
+      "app/server.py",
+      "app/config.py",
+      "config.yaml.example",
+      "app/main.py",
+      "app/agent/api.py",
+      "app/agent/runtime.py",
+      "app/agent/authority.py",
+      "app/agent/enrollment.py",
+      "tests/test_server_auth.py",
+      "tests/test_loopback_boundary.py",
+      "tests/synthetic_authority.py"
+    ],
+    "invariant": "Distinguish actual ordinary launch/admission and configured credentials from conditional anonymous route policy and browser/local-principal hypotheses.",
+    "method": "source",
+    "result": "Independently verified final expanded-source call chain, corrected Authority.cancel/_cancel lines426/417-423, stock lifespan/default opener admission refusal, trusted bind hook, deliberate empty-token loopback mode, constant-time configured-token enforcement, operator-diagnostics credential requirement and present-Origin WebSocket rejection. The specific admitted deployment and untrusted OS/browser reachability remain decisive external facts; no confirmation or severity is justified.",
+    "artifact": null
+  },
+  {
+    "agent_id": "verify-auth",
+    "reviewed_paths": [
+      "app/server.py",
+      "app/agent/api.py",
+      "app/agent/runtime.py",
+      "app/agent/authority.py",
+      "app/agent/enrollment.py",
+      "app/config.py",
+      "tests/synthetic_authority.py"
+    ],
+    "invariant": "Final source default startup refuses missing authority before side effects; only explicitly admitted anonymous-mode route behavior is demonstrated, while configured credentials remain effective.",
+    "method": "local",
+    "result": "Trusted parent executed verify_auth_controls.py against snapshot-expanded in the approved isolation and promoted output: exit0. Genuine stock lifespan refused with authority_unenrolled_or_missing and created no DB. Explicitly bound synthetic authority accepted native arbitrary-Host/Origin read200/cancel200 and cancelled one dummy held task; operator diagnostics with empty token401, configured token absent401 and valid200. No real socket, browser or other-UID reachability was tested. Reviewer executed no target code.",
+    "artifact": "agents/verify-auth/artifacts/verify_auth_controls.txt"
+  }
+]

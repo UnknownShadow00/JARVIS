@@ -1,0 +1,27 @@
+{
+  "status": "STOPPED",
+  "started_at": "2026-11-06T04:19:37.988197+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533029]",
+    "mnt_namespace": "mnt:[4026532971]",
+    "pid_namespace": "pid:[4026532974]",
+    "net_namespace": "net:[4026532976]",
+    "ipc_namespace": "ipc:[4026532973]",
+    "uts_namespace": "uts:[4026532972]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-audit-disaster-recovery-r1/runs/20261106T041937892947Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-audit-disaster-recovery-r1/runs/20261106T041937892947Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-audit-disaster-recovery-r1/runs/20261106T041937892947Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "error_type": "AuthorityError",
+  "error": "queue_capacity_exceeded",
+  "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 35, in <module>\n    report['benchmarks']=run()\n                         ~~~^^\n  File \"/input/benchmark_workload.py\", line 58, in run\n    p.submit(ACTOR,unknown_id,'uncertain benchmark','synthetic.echo',{'value':'never dispatched'},(datetime.now(UTC)+timedelta(minutes=5)).isoformat())\n    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/input/source/app/agent/execution.py\", line 157, in submit\n    return a._mutate(actor, request_id, \"execution_submit\", dict(goal=goal, **spec), effect)\n           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/input/source/app/agent/authority.py\", line 301, in _mutate\n    result = effect(scope)\n  File \"/input/source/app/agent/execution.py\", line 145, in effect\n    raise AuthorityError(\"queue_capacity_exceeded\")\napp.agent.authority.AuthorityError: queue_capacity_exceeded\n",
+  "finished_at": "2026-11-06T04:19:39.217602+00:00"
+}

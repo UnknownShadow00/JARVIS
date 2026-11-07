@@ -1,0 +1,225 @@
+# ============================================================
+# JARVIS — Master Configuration File
+# All models, ports, safety settings, paths controlled here.
+# Never hardcode these values in Python or TypeScript files.
+# ============================================================
+
+# ─── AI Models ───────────────────────────────────────────────
+models:
+  # Primary brain — conversation, reasoning, planning, tool calls
+  # Use qwen3:14b on 4070 Ti. Switch to qwen3:32b when 5090 arrives.
+  main: "qwen3-nothink"
+
+  # Dedicated coding model — code gen, review, debug
+  # Use qwen2.5-coder:14b on 4070 Ti. Switch to qwen2.5-coder:32b on 5090.
+  coder: "qwen2.5-coder:14b"
+
+  # Intent router sidecar — must be fast and small
+  router: "gemma3:4b"
+
+  # Vision model — screen reading, webcam, hardware photos
+  # Requires Ollama 0.12.7+. Activate at Phase 4.
+  vision: "qwen3-vl"
+
+  # Ollama server endpoint
+  ollama_base_url: "http://localhost:11434"
+
+  # Context windows (tokens)
+  main_context: 32768
+  coder_context: 32768
+  router_context: 4096
+  vision_context: 8192
+
+# ─── Safety ──────────────────────────────────────────────────
+safety:
+  # Approval mode controls which safety levels require confirmation
+  # safe     = Level 1+ always confirms
+  # balanced = Level 2+ confirms (recommended default)
+  # strict   = Level 0+ confirms everything
+  approval_mode: "balanced"
+
+  # Dry run: JARVIS narrates what it would do instead of doing it
+  # Set true during early testing. false for normal operation.
+  dry_run: true
+
+  # Confidence threshold — below this, JARVIS asks before acting
+  # even on Level 1 actions
+  confidence_threshold: 0.75
+
+  # Maximum consecutive tool calls before JARVIS pauses and checks in
+  max_tool_chain: 5
+
+# ─── Voice Pipeline ──────────────────────────────────────────
+voice:
+  # Wake word model — pre-built "hey_jarvis" ships with OpenWakeWord
+  wake_word_model: "hey_jarvis"
+  wake_word_sensitivity: 0.5
+
+  # VAD (voice activity detection) aggressiveness 0-3
+  # 3 = most aggressive filtering (best for noisy workshop)
+  vad_aggressiveness: 3
+
+  # STT model size — medium.en is best balance of speed and accuracy on GPU
+  stt_model: "large-v3-turbo"
+  stt_device: "cuda"
+  stt_compute_type: "float16"
+
+  # TTS engine — piper | kokoro
+  tts_engine: "chatterbox"
+  voice_clone_path: ""
+  piper_model_path: "./models/en_US-lessac-high.onnx"
+  piper_config_path: "./models/en_US-lessac-high.onnx.json"
+
+  # Kokoro settings (when upgrading from Piper)
+  kokoro_voice: "af_jarvis"
+  kokoro_speed: 1.0
+
+  # Push-to-talk fallback hotkey
+  push_to_talk_key: "ctrl+space"
+  dictation_enabled: false
+  dictation_hotkey: "ctrl+shift+space"
+  dictation_type_out: false
+
+  # Audio device indices (-1 = system default)
+  input_device_index: -1
+  output_device_index: -1
+
+# ─── Boot Sequence ───────────────────────────────────────────
+boot:
+  enabled: false
+  music_file: "./assets/audio/boot_intro.wav"
+  music_volume: 0.7
+  animation_delay_ms: 500
+  status_report: true
+  # Status report reads these live at boot time
+  report_items:
+    - "time"
+    - "gpu_temp"
+    - "last_project"
+    - "pending_tasks"
+
+# ─── Server ──────────────────────────────────────────────────
+server:
+  host: "127.0.0.1"
+  port: 8000
+  websocket_path: "/ws"
+  ue5_enabled: false  # set true when UE5 MetaHuman project is running
+  tailscale_hostname: ""   # fill in your Tailscale machine name
+  # Bearer token for all HTTP routes (except /health) and WebSocket connects.
+  # Empty = auth disabled (localhost-only use).
+  # REQUIRED before any Tailscale/remote exposure — tools include shell and file access.
+  # Env override: JARVIS_API_TOKEN
+  api_token: ""
+  remote_access_enabled: false
+  enable_voice_on_startup: false
+  enable_hotkey_listener: false
+  # Phase 2 permits only local browser HUD origins. Remote origins require the
+  # future authenticated multi-device architecture and explicit remote mode.
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://127.0.0.1:3000"
+
+# Resource management controls ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, and WAKING runtime states.
+resource_mode:
+  enabled: false
+  idle_timeout_minutes: 10
+  deep_sleep_timeout_minutes: 60
+  keep_wake_listener_in_light_sleep: true
+  keep_wake_listener_in_deep_sleep: false
+  auto_light_sleep: false
+  auto_deep_sleep: false
+  stop_server_on_auto_deep_sleep: true
+  preload_primary_model_on_wake: false
+  preload_keep_alive: "5m"
+
+# ─── Memory (activate at Phase 4) ────────────────────────────
+memory:
+  mem0_enabled: false
+  mem0_base_url: "http://localhost:8001"
+
+  chromadb_enabled: false
+  chromadb_path: "./data/chroma"
+  chromadb_collection: "jarvis_knowledge"
+
+  # Paths to index for RAG
+  index_paths:
+    - "./projects"
+    - "./docs"
+    - "./datasheets"
+
+  graphiti_enabled: false
+  neo4j_uri: "bolt://localhost:7687"
+  neo4j_user: "neo4j"
+  neo4j_password_env: "NEO4J_PASSWORD"
+
+tools:
+  obsidian_enabled: false
+  obsidian_vault_path: "./jarvis-vault"
+
+routing:
+  embedding_enabled: false
+  embedding_model: "nomic-embed-text"
+  embedding_top_k: 3
+
+# ─── Agent (Hermes activates at Phase 3 on 5090) ─────────────
+agent:
+  hermes_enabled: false
+  hermes_cli_path: "hermes"
+  hermes_workspace: "~/.hermes"
+
+  # Task queue settings
+  max_concurrent_tasks: 3
+  task_timeout_seconds: 3600
+  checkpoint_interval_seconds: 60
+
+# ─── Communications (activate at Phase 5) ────────────────────
+comms:
+  discord_enabled: false
+  discord_token: ""        # paste your Discord bot token here
+  discord_channel_id: ""   # paste your Discord channel ID here
+
+  telegram_enabled: false
+  telegram_token: ""       # paste your Telegram bot token here
+  telegram_chat_id: ""     # paste your Telegram chat ID here
+
+  # Approval gate — await reply before executing Level 2+ actions remotely
+  require_approval_for_remote: true
+
+# ─── Computer Control (activate at Phase 3) ──────────────────
+computer:
+  # Vision-guided automation backend
+  use_open_computer_use: false
+
+  # Screenshot settings
+  screenshot_format: "PNG"
+  screenshot_quality: 85
+
+  # Gesture control
+  gesture_enabled: false
+  gesture_camera_index: 0
+
+# ─── Paths ───────────────────────────────────────────────────
+paths:
+  projects_dir: "D:/Projects"
+  downloads_dir: "D:/Downloads"
+  datasheets_dir: "D:/Datasheets"
+  logs_dir: "./logs"
+  models_dir: "./models"
+  assets_dir: "./assets"
+
+# ─── Logging ─────────────────────────────────────────────────
+logging:
+  audit_log: "./logs/audit.jsonl"
+  level: "INFO"
+  # Log to file as well as console
+  log_to_file: true
+  log_file: "./logs/jarvis.log"
+  # Rotate logs when they exceed this size (MB)
+  max_log_size_mb: 100
+
+# ─── OpenJarvis (Phase 4+ trace optimization) ────────────────
+openjarvis:
+  trace_logging_enabled: false   # Always on — collect data from day one
+  optimization_enabled: false   # Off until 500+ interactions collected
+  traces_dir: "./data/traces"

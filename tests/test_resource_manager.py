@@ -144,6 +144,7 @@ def test_resource_report_sums_loaded_model_vram_and_process_memory(monkeypatch) 
 
 
 def test_classify_jarvis_process_matches_runtime_workers() -> None:
-    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", None) == "fastapi_server"
-    assert classify_jarvis_process("python.exe", "python scripts/sensor_node.py", None) == "sensor_node"
+    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", None) is None
+    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", Mock(cwd=lambda: str(resource_module.PROJECT_ROOT))) == "fastapi_server"
+    assert classify_jarvis_process("python.exe", "python scripts/sensor_node.py", None) is None
     assert classify_jarvis_process("python.exe", "python -m pytest", None) is None

@@ -56,8 +56,7 @@ class _LazyToolCallable:
         self._module_path = module_path
 
     def __call__(self, params: dict[str, Any] | None = None) -> Any:
-        module = importlib.import_module(self._module_path)
-        return module.execute(params or {})
+        raise ToolError("real_execution_disabled_independent_authorization_required")
 
 
 def _discover_tool_modules() -> dict[str, str]:
@@ -89,23 +88,15 @@ class ToolRegistry:
         }
 
     def _load_tool(self, name: str) -> ModuleType:
-        if name in self._tools:
-            return self._tools[name]
-
-        module_path = self._tool_modules.get(name)
-        if module_path is None:
-            raise ToolError(f"Unknown tool: {name!r}")
-
-        try:
-            module = importlib.import_module(module_path)
-        except Exception as exc:  # noqa: BLE001
-            audit.log("tool_load_error", {"tool": name, "error": str(exc)})
-            raise ToolError(f"Unable to load tool {name!r}: {exc}") from exc
-
-        if not hasattr(module, "execute") or not hasattr(module, "SAFETY_LEVEL"):
-            raise ToolError(f"Invalid tool module: {name!r}")
-
-        self._tools[name] = module
+        # Metadata only. Do not import effect-capable modules or return raw
+        # execute functions through compatibility getters.
+        if type(name) is not str or name not in self._tool_modules:
+            raise ToolError("unknown_tool")
+        module=ModuleType(name)
+        module.SAFETY_LEVEL=-1
+        module.DESCRIPTION="Real execution disabled; independent authorized adapter required."
+        module.execute=_LazyToolCallable(self._tool_modules[name])
+        module.EXECUTION_ENABLED=False
         return module
 
     def get_tool(self, name: str) -> ModuleType:
@@ -133,6 +124,7 @@ class ToolRegistry:
                     "name": name,
                     "safety_level": getattr(module, "SAFETY_LEVEL", -1),
                     "description": getattr(module, "DESCRIPTION", ""),
+                    "execution_enabled":False,
                 }
             )
         return tools
@@ -157,71 +149,13 @@ class ToolRegistry:
         *,
         confirmed: bool = False,
     ) -> ToolResult:
-        """Execute a tool after Level 0-3 safety and dry-run checks."""
-        params = params or {}
-        module = self._load_tool(tool_name)
-        safety_level: int = getattr(module, "SAFETY_LEVEL", 0)
-        confirmation_required = self._requires_confirmation(safety_level) and not confirmed
-        capability = _capability_for(tool_name, params)
-        trace_metadata = {
-            "tool": tool_name,
-            "capability": capability,
-            "safety_level": safety_level,
-            "confirmation_required": confirmation_required,
-            "parameter_keys": list(params),
-        }
+        """Legacy confirmation/config flags cannot authorize real effects.
 
-        with trace_span("safety", component="app.tools.registry", metadata=trace_metadata):
-            audit.log(
-                "tool_call",
-                {
-                    "tool": tool_name,
-                    "safety_level": safety_level,
-                    "params": params,
-                    "dry_run": settings.safety.dry_run,
-                    "confirmed": confirmed,
-                },
-            )
-
-        if safety_level >= 3:
-            emit_event(
-                "safety",
-                component="app.tools.registry",
-                status="blocked",
-                metadata=trace_metadata,
-            )
-            raise ToolError(f"Tool '{tool_name}' is Level 3 (blocked). Cannot execute automatically.")
-
-        if confirmation_required:
-            emit_event(
-                "safety",
-                component="app.tools.registry",
-                status="confirmation_required",
-                metadata=trace_metadata,
-            )
-            raise ToolError(f"Tool '{tool_name}' is Level {safety_level}. Requires user confirmation before executing.")
-
-        if settings.safety.dry_run:
-            description = getattr(module, "DESCRIPTION", tool_name)
-            output = f"[DRY RUN] Would execute '{tool_name}': {description} with params {params}"
-            emit_event(
-                "tool",
-                component="app.tools.registry",
-                status="dry_run",
-                metadata=trace_metadata,
-            )
-            audit.log("tool_result", {"tool": tool_name, "dry_run": True, "output": output})
-            return ToolResult(tool=tool_name, output=output, dry_run=True)
-
-        try:
-            with trace_span("tool", component="app.tools.registry", metadata=trace_metadata):
-                output = module.execute(params)
-        except Exception as exc:
-            audit.log("tool_error", {"tool": tool_name, "error": str(exc)})
-            raise ToolError(f"Tool '{tool_name}' raised: {exc}") from exc
-
-        audit.log("tool_result", {"tool": tool_name, "output": str(output)[:500]})
-        return ToolResult(tool=tool_name, output=output)
+        Only the separately authenticated, pure synthetic Authority pipeline is
+        implemented for this milestone. No real adapter can be registered here.
+        Do not log parameter values or import a tool before refusing.
+        """
+        raise ToolError("real_execution_disabled_independent_authorization_required")
 
     def execute(
         self,

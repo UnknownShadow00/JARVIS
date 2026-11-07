@@ -1,0 +1,2927 @@
+...............F.............F...................F...................... [ 23%]
+............FF.......................................................... [ 47%]
+..................................FFFFFF................F.....FFFFFFFFFF [ 71%]
+FFFFFFFFFFFFFFFF.FFFFFF...............FFF....FF.F.........F............. [ 95%]
+.............                                                            [100%]
+=================================== FAILURES ===================================
+____ test_interrupted_rollover_is_not_silently_reset[rollover_link_durable] ____
+
+env = (<app.agent.authority.Authority object at 0x7c325de8d9a0>, <app.agent.ledger.LedgerGuard object at 0x7c325e0687d0>, <a...Path('/work/pytest/test_interrupted_rollover_is_n1/exports'), 'store_id': '80795a02-b3b4-4887-9f14-bac9c3b8e868', ...})
+fault = 'rollover_link_durable'
+
+    @pytest.mark.parametrize('fault',['rollover_intent_durable','rollover_link_durable'])
+    def test_interrupted_rollover_is_not_silently_reset(env,fault):
+        a,g,actions,permits,paths=env
+        a.submit(ACTOR,key(),'one');a.submit(ACTOR,key(),'two')
+        def stop(stage):
+            if stage==fault:raise RuntimeError('power-loss-like injected interruption')
+        g._fault=stop
+        with pytest.raises(RuntimeError):a.submit(ACTOR,key(),'interrupted')
+        a.close()
+        new=LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+        if fault=='rollover_intent_durable':
+            with pytest.raises(AuthorityError,match='checkpoint_rollover_incomplete'):Authority(paths['db'],ledger=new)
+        else:
+>           recovered=Authority(paths['db'],ledger=new)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_audit_disaster.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325de8d8a0>
+path = PosixPath('/work/pytest/test_interrupted_rollover_is_n1/db/state.sqlite')
+approval = None
+head = {'sequence': 4, 'sha256': 'f0ec08de4f7e285c277a4a6181a27d072f9ea18fb1f935bcfcd5a22219237b7d', 'checkpoint_hash': '003c6f081c2a8fec60360e0aa0d580597de3e4938de7bc6ad49cc1c0324db76c'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+>           raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+E           app.agent.authority.AuthorityError: enrollment_or_explicit_legacy_approval_required
+
+/input/source/app/agent/enrollment.py:339: AuthorityError
+__ test_independent_sigkill_disaster_recovery[rollover-rollover_link_durable] __
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_disas2')
+mode = 'rollover', stage = 'rollover_link_durable'
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('rollover','rollover_intent_durable'),('rollover','rollover_directory_created'),('rollover','rollover_link_durable'),('rollover','rollover_committed'),
+        ('restore','restore_intent_durable'),('restore','restore_stage_created'),('restore','restore_schema_created'),('restore','restore_row_inserted'),
+        ('restore','restore_before_database_commit'),('restore','restore_database_committed'),('restore','restore_prepared_durable'),('restore','restore_target_published'),('restore','restore_publication_committed'),
+        ('attestation','export_before_attestation'),('rollover_recovery','rollover_recovery_admitted'),
+    ])
+    def test_independent_sigkill_disaster_recovery(tmp_path,mode,stage):
+        import subprocess,sys,time
+        from app.agent.archive_restore import ArchiveRestorer
+        if not Path('/input/source').is_dir():pytest.skip('guarded runner required')
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        for name in ('exports','targets'):(root/name).mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'anchors':str(root/'protected'),'db':str(root/'db'/'state.sqlite'),
+            'exports':str(root/'exports'),'targets':str(root/'targets'),'ready':str(root/'ready'),'context':str(root/'context.json'),
+            'store_id':key(),'task_id':key(),'extra_id':key(),'request_id':key(),'failed_request_id':key(),'export_id':key()}
+        path=root/'command.json';path.write_text(json.dumps(config))
+        with (root/'stdout').open('w') as out,(root/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('audit_process_actor.py')),str(path)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(root/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        ref=json.loads(Path(config['context']).read_text())
+        def new_guard():return LedgerGuard(config['anchors'],KEY,config['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=ref)
+        if mode=='rollover':
+            if stage in {'rollover_intent_durable','rollover_directory_created'}:
+                with pytest.raises(AuthorityError,match='checkpoint_rollover_incomplete'):Authority(config['db'],ledger=new_guard())
+                g=new_guard();g.acquire(config['db'])
+                try:
+                    body=json.loads((Path(config['anchors'])/'rollover-0001.intent.json').read_text())['body']
+                    issuer=OperatorPermits(OPKEY);now=datetime.now(UTC);request_id=key()
+                    permit=issuer.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command='resume_rollover',payload={'operation_id':body['operation_id']},checkpoint=ref['head'],issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
+                    assert g.resume_rollover(permit,issuer,ACTOR,request_id)['epoch']==1
+                finally:g.close()
+>           a=Authority(config['db'],ledger=new_guard())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_audit_disaster.py:258: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325de8f1f0>
+path = PosixPath('/work/pytest/test_independent_sigkill_disas2/case/db/state.sqlite')
+approval = None
+head = {'sequence': 4, 'sha256': '5ce9af9bcad98f7dcd3fb062551d6081087bbeafd4a4bc3dae40fd470d356961', 'checkpoint_hash': '4dff2fcfc46feca2cfedec25736da7dfccf9de9b6d00a51dca276956deb48746'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+>           raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+E           app.agent.authority.AuthorityError: enrollment_or_explicit_legacy_approval_required
+
+/input/source/app/agent/enrollment.py:339: AuthorityError
+________________ test_guard_cannot_be_shared_by_two_authorities ________________
+
+env = (<app.agent.authority.Authority object at 0x7c325de8fa70>, <app.agent.ledger.LedgerGuard object at 0x7c325e069bd0>, <a...Path('/work/pytest/test_guard_cannot_be_shared_by0/exports'), 'store_id': '4d8bd7cc-1f0f-45a2-9099-3982bbe64e29', ...})
+
+    def test_guard_cannot_be_shared_by_two_authorities(env):
+        a,g,actions,permits,paths=env
+>       with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):Authority(paths['parent']/'other'/'db',ledger=g)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'checkpoint_owner_busy'
+E         Actual message: 'authority_unenrolled_or_missing'
+
+/input/tests/test_audit_disaster.py:365: AssertionError
+__________ test_legacy_guard_and_unsupported_bytes_preserved[absent] ___________
+
+tmp_path = PosixPath('/work/pytest/test_legacy_guard_and_unsuppor0')
+state = 'absent'
+
+    @pytest.mark.parametrize("state", ["absent", "empty", "unsupported"])
+    def test_legacy_guard_and_unsupported_bytes_preserved(tmp_path, state):
+        path = tmp_path / "db"
+        legacy = tmp_path / "legacy.json"
+        legacy.write_text('[{"task_id":"old","goal":"old"}]')
+        if state == "empty": path.touch(mode=0o600)
+        if state == "unsupported":
+            connection = sqlite3.connect(path)
+            connection.execute("CREATE TABLE unrelated(x)")
+            connection.close()
+            path.chmod(0o600)
+        before = path.read_bytes() if path.exists() else None
+>       with pytest.raises(AuthorityError, match="legacy_migration_required|unsupported_schema"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'legacy_migration_required|unsupported_schema'
+E         Actual message: 'authority_unenrolled_or_missing'
+
+/input/tests/test_authority.py:157: AssertionError
+___________ test_legacy_guard_and_unsupported_bytes_preserved[empty] ___________
+
+tmp_path = PosixPath('/work/pytest/test_legacy_guard_and_unsuppor1')
+state = 'empty'
+
+    @pytest.mark.parametrize("state", ["absent", "empty", "unsupported"])
+    def test_legacy_guard_and_unsupported_bytes_preserved(tmp_path, state):
+        path = tmp_path / "db"
+        legacy = tmp_path / "legacy.json"
+        legacy.write_text('[{"task_id":"old","goal":"old"}]')
+        if state == "empty": path.touch(mode=0o600)
+        if state == "unsupported":
+            connection = sqlite3.connect(path)
+            connection.execute("CREATE TABLE unrelated(x)")
+            connection.close()
+            path.chmod(0o600)
+        before = path.read_bytes() if path.exists() else None
+>       with pytest.raises(AuthorityError, match="legacy_migration_required|unsupported_schema"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'legacy_migration_required|unsupported_schema'
+E         Actual message: 'authority_unenrolled_or_missing'
+
+/input/tests/test_authority.py:157: AssertionError
+____________ test_sigkill_independent_process_recovery[after_claim] ____________
+
+tmp_path = PosixPath('/work/pytest/test_sigkill_independent_proce0')
+stage = 'after_claim'
+
+    @pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
+    def test_sigkill_independent_process_recovery(tmp_path, stage):
+        if not Path('/input/source').is_dir():
+            pytest.skip('run with the network-isolated task runner')
+        state = tmp_path/'process-state'
+        state.mkdir(mode=0o700)
+        db, ready = state/'queue.sqlite', state/'ready'
+        op = key()
+        helper = Path(__file__).with_name('execution_process_actor.py')
+        with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
+            child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
+            try:
+                deadline = time.monotonic()+4
+                while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
+                    time.sleep(.01)
+>               assert ready.exists(), (state/'stderr').read_text()
+E               AssertionError: Traceback (most recent call last):
+E                   File "/input/tests/execution_process_actor.py", line 11, in <module>
+E                     from synthetic_authority import fixture_authority as Authority
+E                 ModuleNotFoundError: No module named 'synthetic_authority'
+E                 
+E               assert False
+E                +  where False = exists()
+E                +    where exists = PosixPath('/work/pytest/test_sigkill_independent_proce0/process-state/ready').exists
+
+/input/tests/test_execution_pipeline.py:340: AssertionError
+___________ test_sigkill_independent_process_recovery[after_execute] ___________
+
+tmp_path = PosixPath('/work/pytest/test_sigkill_independent_proce1')
+stage = 'after_execute'
+
+    @pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
+    def test_sigkill_independent_process_recovery(tmp_path, stage):
+        if not Path('/input/source').is_dir():
+            pytest.skip('run with the network-isolated task runner')
+        state = tmp_path/'process-state'
+        state.mkdir(mode=0o700)
+        db, ready = state/'queue.sqlite', state/'ready'
+        op = key()
+        helper = Path(__file__).with_name('execution_process_actor.py')
+        with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
+            child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
+            try:
+                deadline = time.monotonic()+4
+                while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
+                    time.sleep(.01)
+>               assert ready.exists(), (state/'stderr').read_text()
+E               AssertionError: Traceback (most recent call last):
+E                   File "/input/tests/execution_process_actor.py", line 11, in <module>
+E                     from synthetic_authority import fixture_authority as Authority
+E                 ModuleNotFoundError: No module named 'synthetic_authority'
+E                 
+E               assert False
+E                +  where False = exists()
+E                +    where exists = PosixPath('/work/pytest/test_sigkill_independent_proce1/process-state/ready').exists
+
+/input/tests/test_execution_pipeline.py:340: AssertionError
+_______ test_sigkill_independent_process_recovery[record_before_commit] ________
+
+tmp_path = PosixPath('/work/pytest/test_sigkill_independent_proce2')
+stage = 'record_before_commit'
+
+    @pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
+    def test_sigkill_independent_process_recovery(tmp_path, stage):
+        if not Path('/input/source').is_dir():
+            pytest.skip('run with the network-isolated task runner')
+        state = tmp_path/'process-state'
+        state.mkdir(mode=0o700)
+        db, ready = state/'queue.sqlite', state/'ready'
+        op = key()
+        helper = Path(__file__).with_name('execution_process_actor.py')
+        with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
+            child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
+            try:
+                deadline = time.monotonic()+4
+                while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
+                    time.sleep(.01)
+>               assert ready.exists(), (state/'stderr').read_text()
+E               AssertionError: Traceback (most recent call last):
+E                   File "/input/tests/execution_process_actor.py", line 11, in <module>
+E                     from synthetic_authority import fixture_authority as Authority
+E                 ModuleNotFoundError: No module named 'synthetic_authority'
+E                 
+E               assert False
+E                +  where False = exists()
+E                +    where exists = PosixPath('/work/pytest/test_sigkill_independent_proce2/process-state/ready').exists
+
+/input/tests/test_execution_pipeline.py:340: AssertionError
+___________ test_sigkill_independent_process_recovery[after_record] ____________
+
+tmp_path = PosixPath('/work/pytest/test_sigkill_independent_proce3')
+stage = 'after_record'
+
+    @pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
+    def test_sigkill_independent_process_recovery(tmp_path, stage):
+        if not Path('/input/source').is_dir():
+            pytest.skip('run with the network-isolated task runner')
+        state = tmp_path/'process-state'
+        state.mkdir(mode=0o700)
+        db, ready = state/'queue.sqlite', state/'ready'
+        op = key()
+        helper = Path(__file__).with_name('execution_process_actor.py')
+        with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
+            child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
+            try:
+                deadline = time.monotonic()+4
+                while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
+                    time.sleep(.01)
+>               assert ready.exists(), (state/'stderr').read_text()
+E               AssertionError: Traceback (most recent call last):
+E                   File "/input/tests/execution_process_actor.py", line 11, in <module>
+E                     from synthetic_authority import fixture_authority as Authority
+E                 ModuleNotFoundError: No module named 'synthetic_authority'
+E                 
+E               assert False
+E                +  where False = exists()
+E                +    where exists = PosixPath('/work/pytest/test_sigkill_independent_proce3/process-state/ready').exists
+
+/input/tests/test_execution_pipeline.py:340: AssertionError
+_______ test_sigkill_independent_process_recovery[publish_before_commit] _______
+
+tmp_path = PosixPath('/work/pytest/test_sigkill_independent_proce4')
+stage = 'publish_before_commit'
+
+    @pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
+    def test_sigkill_independent_process_recovery(tmp_path, stage):
+        if not Path('/input/source').is_dir():
+            pytest.skip('run with the network-isolated task runner')
+        state = tmp_path/'process-state'
+        state.mkdir(mode=0o700)
+        db, ready = state/'queue.sqlite', state/'ready'
+        op = key()
+        helper = Path(__file__).with_name('execution_process_actor.py')
+        with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
+            child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
+            try:
+                deadline = time.monotonic()+4
+                while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
+                    time.sleep(.01)
+>               assert ready.exists(), (state/'stderr').read_text()
+E               AssertionError: Traceback (most recent call last):
+E                   File "/input/tests/execution_process_actor.py", line 11, in <module>
+E                     from synthetic_authority import fixture_authority as Authority
+E                 ModuleNotFoundError: No module named 'synthetic_authority'
+E                 
+E               assert False
+E                +  where False = exists()
+E                +    where exists = PosixPath('/work/pytest/test_sigkill_independent_proce4/process-state/ready').exists
+
+/input/tests/test_execution_pipeline.py:340: AssertionError
+___________ test_sigkill_independent_process_recovery[after_publish] ___________
+
+tmp_path = PosixPath('/work/pytest/test_sigkill_independent_proce5')
+stage = 'after_publish'
+
+    @pytest.mark.parametrize('stage', ['after_claim', 'after_execute', 'record_before_commit', 'after_record', 'publish_before_commit', 'after_publish'])
+    def test_sigkill_independent_process_recovery(tmp_path, stage):
+        if not Path('/input/source').is_dir():
+            pytest.skip('run with the network-isolated task runner')
+        state = tmp_path/'process-state'
+        state.mkdir(mode=0o700)
+        db, ready = state/'queue.sqlite', state/'ready'
+        op = key()
+        helper = Path(__file__).with_name('execution_process_actor.py')
+        with (state/'stdout').open('w') as out, (state/'stderr').open('w') as err:
+            child = subprocess.Popen([sys.executable, '-I', '-B', '-S', str(helper), str(db), str(ready), op, stage], stdin=subprocess.DEVNULL, stdout=out, stderr=err, close_fds=True, env={'LANG':'C.UTF-8'})
+            try:
+                deadline = time.monotonic()+4
+                while not ready.exists() and child.poll() is None and time.monotonic()<deadline:
+                    time.sleep(.01)
+>               assert ready.exists(), (state/'stderr').read_text()
+E               AssertionError: Traceback (most recent call last):
+E                   File "/input/tests/execution_process_actor.py", line 11, in <module>
+E                     from synthetic_authority import fixture_authority as Authority
+E                 ModuleNotFoundError: No module named 'synthetic_authority'
+E                 
+E               assert False
+E                +  where False = exists()
+E                +    where exists = PosixPath('/work/pytest/test_sigkill_independent_proce5/process-state/ready').exists
+
+/input/tests/test_execution_pipeline.py:340: AssertionError
+____ test_import_preserves_source_hashes_exact_ids_and_returns_core_receipt ____
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf0050>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_import_preserves_source_h0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325d9de660>
+
+    def test_import_preserves_source_hashes_exact_ids_and_returns_core_receipt(authority, actor, tmp_path, monkeypatch):
+        tasks_raw = b' [ { "task_id" : " legacy-task ", "goal" : " preserve goal ", "status" : "pending" } ]\n'
+        jobs_raw = b'[ {"job_id":" legacy-job ","name":"name","cron_expr":"0 8 * * *","goal":"goal","enabled":true,"last_run":"legacy-time"} ]\n'
+        paths = sources(tmp_path, tasks_raw=tasks_raw, jobs_raw=jobs_raw)
+>       original = Authority.import_legacy_snapshot
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'function' object has no attribute 'import_legacy_snapshot'
+
+/input/tests/test_migration.py:74: AttributeError
+__________ test_duplicate_legacy_ids_reject_whole_mixed_import[tasks] __________
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf3020>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_duplicate_legacy_ids_reje0')
+kind = 'tasks'
+
+    @pytest.mark.parametrize("kind", ["tasks", "jobs"])
+    def test_duplicate_legacy_ids_reject_whole_mixed_import(authority, actor, tmp_path, kind):
+        task = {"task_id": "duplicate", "goal": "goal"}
+        job = {"job_id": "duplicate", "name": "name", "cron_expr": "0 * * * *", "goal": "goal"}
+        paths = sources(tmp_path, tasks=[task, dict(task)] if kind == "tasks" else [task],
+                        jobs=[job, dict(job)] if kind == "jobs" else [job])
+>       assert_rejected_before_import(authority, actor, paths, "duplicate_legacy_id")
+
+/input/tests/test_migration.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325e068190>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+__________ test_duplicate_legacy_ids_reject_whole_mixed_import[jobs] ___________
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf27b0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_duplicate_legacy_ids_reje1')
+kind = 'jobs'
+
+    @pytest.mark.parametrize("kind", ["tasks", "jobs"])
+    def test_duplicate_legacy_ids_reject_whole_mixed_import(authority, actor, tmp_path, kind):
+        task = {"task_id": "duplicate", "goal": "goal"}
+        job = {"job_id": "duplicate", "name": "name", "cron_expr": "0 * * * *", "goal": "goal"}
+        paths = sources(tmp_path, tasks=[task, dict(task)] if kind == "tasks" else [task],
+                        jobs=[job, dict(job)] if kind == "jobs" else [job])
+>       assert_rejected_before_import(authority, actor, paths, "duplicate_legacy_id")
+
+/input/tests/test_migration.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325e06bd90>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-None-record_schema] _
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf1d60>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve0')
+kind = 'tasks', invalid = None, code = 'record_schema'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325deb2520>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid1-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8f4d0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve1')
+kind = 'tasks', invalid = {'task_id': 'bad', 'goal': 3}, code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325deb3a80>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid2-record_schema] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8e5d0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve2')
+kind = 'tasks', invalid = {'task_id': 'bad', 'goal': 'goal', 'unexpected': True}
+code = 'record_schema'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325e4727b0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid3-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8d7c0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve3')
+kind = 'tasks', invalid = {'task_id': True, 'goal': 'goal'}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfe9040>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid4-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325e4624e0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve4')
+kind = 'tasks', invalid = {'task_id': 'bad', 'goal': 'goal', 'status': False}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfe9260>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid5-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325e461040>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve5')
+kind = 'tasks', invalid = {'task_id': 'bad', 'goal': 'goal', 'created_at': 1}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325d8f8f50>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid6-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325dee7e30>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve6')
+kind = 'tasks', invalid = {'task_id': 'bad', 'goal': 'goal', 'result': []}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325d8f9750>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid7-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325e460410>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve7')
+kind = 'tasks', invalid = {'task_id': 'bad', 'goal': 'goal', 'error': False}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325e4605f0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid8-record_value] _
+
+authority = <app.agent.authority.Authority object at 0x7c325e461e50>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve8')
+kind = 'tasks', invalid = {'task_id': ' ', 'goal': 'goal'}
+code = 'record_value'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325e462030>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid9-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf3d40>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve9')
+kind = 'jobs'
+invalid = {'job_id': 'bad', 'name': 'name', 'cron_expr': '* * * * *', 'goal': 'goal', ...}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325ddccbb0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid10-record_type] _
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf3c50>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve10')
+kind = 'jobs'
+invalid = {'job_id': 'bad', 'name': 'name', 'cron_expr': '* * * * *', 'goal': 'goal', ...}
+code = 'record_type'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325ddcc130>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid11-record_schema] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8d130>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve11')
+kind = 'jobs'
+invalid = {'job_id': 'bad', 'name': 'name', 'cron_expr': '* * * * *', 'goal': 'goal', ...}
+code = 'record_schema'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325ddcc830>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid12-record_schema] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8d9a0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve12')
+kind = 'jobs', invalid = {'job_id': 'bad', 'name': 'name', 'goal': 'goal'}
+code = 'record_schema'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfca350>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid13-record_value] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8fa70>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_mixed_record_neve13')
+kind = 'jobs'
+invalid = {'job_id': 'bad', 'name': 'name', 'cron_expr': ' ', 'goal': 'goal'}
+code = 'record_value'
+
+    @pytest.mark.parametrize("kind,invalid,code", [
+        ("tasks", None, "record_schema"),
+        ("tasks", {"task_id": "bad", "goal": 3}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "unexpected": True}, "record_schema"),
+        ("tasks", {"task_id": True, "goal": "goal"}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "status": False}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "created_at": 1}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "result": []}, "record_type"),
+        ("tasks", {"task_id": "bad", "goal": "goal", "error": False}, "record_type"),
+        ("tasks", {"task_id": " ", "goal": "goal"}, "record_value"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "enabled": 1}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "last_run": False}, "record_type"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": "* * * * *", "goal": "goal", "unknown": None}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "goal": "goal"}, "record_schema"),
+        ("jobs", {"job_id": "bad", "name": "name", "cron_expr": " ", "goal": "goal"}, "record_value"),
+    ])
+    def test_invalid_mixed_record_never_imports_valid_prefix(authority, actor, tmp_path, kind, invalid, code):
+        tasks = [{"task_id": "valid", "goal": "valid task"}]
+        jobs = [{"job_id": "valid", "name": "name", "cron_expr": "* * * * *", "goal": "goal"}]
+        (tasks if kind == "tasks" else jobs).append(invalid)
+        paths = sources(tmp_path, tasks=tasks, jobs=jobs)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfcb690>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+__ test_strict_json_rejections_precede_import[{"not":"a list"}-root_not_list] __
+
+authority = <app.agent.authority.Authority object at 0x7c325dee6f30>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr0')
+raw = b'{"not":"a list"}', code = 'root_not_list'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfcb230>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_______ test_strict_json_rejections_precede_import[false-root_not_list] ________
+
+authority = <app.agent.authority.Authority object at 0x7c325d8f1f40>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr1')
+raw = b'false', code = 'root_not_list'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325ddcc9f0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_____ test_strict_json_rejections_precede_import[{malformed-invalid_json] ______
+
+authority = <app.agent.authority.Authority object at 0x7c325d8f09b0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr2')
+raw = b'{malformed', code = 'invalid_json'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de05630>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+______ test_strict_json_rejections_precede_import[\xff[]-source_encoding] ______
+
+authority = <app.agent.authority.Authority object at 0x7c325dee7020>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr3')
+raw = b'\xff[]', code = 'source_encoding'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfca510>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_strict_json_rejections_precede_import[[{"task_id":"a","task_id":"b","goal":"goal"}]-duplicate_json_key] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8fa70>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr4')
+raw = b'[{"task_id":"a","task_id":"b","goal":"goal"}]'
+code = 'duplicate_json_key'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfcb690>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]-duplicate_json_key] _
+
+authority = <app.agent.authority.Authority object at 0x7c325dee5c70>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr5')
+raw = b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]'
+code = 'duplicate_json_key'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfca350>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"number":NaN}}]-nonfinite_json] _
+
+authority = <app.agent.authority.Authority object at 0x7c325e462120>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr6')
+raw = b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]'
+code = 'nonfinite_json'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfcaa50>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]-nonfinite_json] _
+
+authority = <app.agent.authority.Authority object at 0x7c325e460c80>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr7')
+raw = b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]'
+code = 'nonfinite_json'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325ddcc9f0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"number":1e999}}]-nonfinite_json] _
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf1e50>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_strict_json_rejections_pr8')
+raw = b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]'
+code = 'nonfinite_json'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"not":"a list"}', "root_not_list"),
+        (b'false', "root_not_list"),
+        (b'{malformed', "invalid_json"),
+        (b'\xff[]', "source_encoding"),
+        (b'[{"task_id":"a","task_id":"b","goal":"goal"}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]', "duplicate_json_key"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":NaN}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]', "nonfinite_json"),
+        (b'[{"task_id":"a","goal":"goal","result":{"number":1e999}}]', "nonfinite_json"),
+    ])
+    def test_strict_json_rejections_precede_import(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325dfc8f30>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_____________ test_explicit_source_byte_cap_rejects_without_import _____________
+
+authority = <app.agent.authority.Authority object at 0x7c325dcf0f50>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_explicit_source_byte_cap_0')
+
+    def test_explicit_source_byte_cap_rejects_without_import(authority, actor, tmp_path):
+        paths = sources(tmp_path, tasks_raw=b" " * (MAX_SOURCE_BYTES + 1))
+>       assert_rejected_before_import(authority, actor, paths, "source_too_large")
+
+/input/tests/test_migration.py:247: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de04750>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+__________________ test_per_file_record_limit_precedes_import __________________
+
+authority = <app.agent.authority.Authority object at 0x7c325de8e990>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_per_file_record_limit_pre0')
+
+    def test_per_file_record_limit_precedes_import(authority, actor, tmp_path):
+        paths = sources(tmp_path, tasks=[{"task_id": str(index), "goal": "goal"} for index in range(MAX_RECORDS + 1)])
+>       assert_rejected_before_import(authority, actor, paths, "record_limit")
+
+/input/tests/test_migration.py:262: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de06890>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+__________________ test_combined_record_limit_precedes_import __________________
+
+authority = <app.agent.authority.Authority object at 0x7c325de8c8c0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_combined_record_limit_pre0')
+
+    def test_combined_record_limit_precedes_import(authority, actor, tmp_path):
+        paths = sources(tmp_path,
+                        tasks=[{"task_id": str(index), "goal": "goal"} for index in range(600)],
+                        jobs=[{"job_id": str(index), "name": "name", "cron_expr": "* * * * *", "goal": "goal"}
+                              for index in range(401)])
+>       assert_rejected_before_import(authority, actor, paths, "record_limit")
+
+/input/tests/test_migration.py:270: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de07e70>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+___________ test_source_file_and_parent_symlinks_are_never_followed ____________
+
+authority = <app.agent.authority.Authority object at 0x7c325d8f1040>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_source_file_and_parent_sy0')
+
+    def test_source_file_and_parent_symlinks_are_never_followed(authority, actor, tmp_path):
+        paths = sources(tmp_path, tasks=[{"task_id": "one", "goal": "goal"}])
+        original = tuple(path.read_bytes() for path in paths)
+        link = tmp_path / "tasks-link.json"
+        link.symlink_to(paths[0])
+        parent_link = tmp_path / "legacy-link"
+        parent_link.symlink_to(paths[0].parent, target_is_directory=True)
+>       with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_migration.py:280: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de05b70>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_jobs_cannot_partially_import_valid_tasks[{"jobs":[]}-root_not_list] _
+
+authority = <app.agent.authority.Authority object at 0x7c325d8f28a0>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_jobs_cannot_parti0')
+raw = b'{"jobs":[]}', code = 'root_not_list'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"jobs":[]}', "root_not_list"),
+        (b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":"g","enabled":true,"enabled":false}]', "duplicate_json_key"),
+        (b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":NaN}]', "nonfinite_json"),
+    ])
+    def test_invalid_jobs_cannot_partially_import_valid_tasks(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks=[{"task_id": "valid", "goal": "goal"}], jobs_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de06b30>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_jobs_cannot_partially_import_valid_tasks[[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":"g","enabled":true,"enabled":false}]-duplicate_json_key] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8cf50>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_jobs_cannot_parti1')
+raw = b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":"g","enabled":true,"enabled":false}]'
+code = 'duplicate_json_key'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"jobs":[]}', "root_not_list"),
+        (b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":"g","enabled":true,"enabled":false}]', "duplicate_json_key"),
+        (b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":NaN}]', "nonfinite_json"),
+    ])
+    def test_invalid_jobs_cannot_partially_import_valid_tasks(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks=[{"task_id": "valid", "goal": "goal"}], jobs_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de05b70>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_invalid_jobs_cannot_partially_import_valid_tasks[[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":NaN}]-nonfinite_json] _
+
+authority = <app.agent.authority.Authority object at 0x7c325de8da90>
+actor = Actor(scope='synthetic-migration')
+tmp_path = PosixPath('/work/pytest/test_invalid_jobs_cannot_parti2')
+raw = b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":NaN}]'
+code = 'nonfinite_json'
+
+    @pytest.mark.parametrize("raw,code", [
+        (b'{"jobs":[]}', "root_not_list"),
+        (b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":"g","enabled":true,"enabled":false}]', "duplicate_json_key"),
+        (b'[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":NaN}]', "nonfinite_json"),
+    ])
+    def test_invalid_jobs_cannot_partially_import_valid_tasks(authority, actor, tmp_path, raw, code):
+        paths = sources(tmp_path, tasks=[{"task_id": "valid", "goal": "goal"}], jobs_raw=raw)
+>       assert_rejected_before_import(authority, actor, paths, code)
+
+/input/tests/test_migration.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_migration.py:60: in assert_rejected_before_import
+    with mock.patch.object(Authority, "import_legacy_snapshot", side_effect=AssertionError("must not import")):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/unittest/mock.py:1510: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c325de07690>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <function fixture_authority at 0x7c325e7e0670> does not have the attribute 'import_legacy_snapshot'
+
+/usr/lib/python3.14/unittest/mock.py:1480: AttributeError
+_ test_independent_process_crashes_preserve_evidence[bootstrap-checkpoint_intent_durable] _
+
+tmp_path = PosixPath('/work/pytest/test_independent_process_crash0')
+mode = 'bootstrap', stage = 'checkpoint_intent_durable'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325dda0b40>
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('bootstrap','checkpoint_intent_durable'),
+        ('mutation','checkpoint_intent_durable'),
+        ('mutation','ledger_database_committed'),
+        ('mutation','checkpoint_published'),
+        ('export','export_row_written'),
+        ('export','export_data_durable'),
+        ('export','export_before_audit_publication'),
+        ('retention','checkpoint_intent_durable'),
+        ('retention','ledger_database_committed'),
+        ('reconcile','before_commit'),
+        ('reconcile','ledger_database_committed'),
+    ])
+    def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
+        import subprocess,sys,time
+        if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
+        state=tmp_path/'case';state.mkdir(mode=0o700)
+        exports=state/'exports';exports.mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
+                'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
+        command=state/'command.json';command.write_text(json.dumps(config))
+        with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(state/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
+>       a=Authority(config['db'],allow_simulation=True,ledger=guard)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325dcf16c0>
+path = PosixPath('/work/pytest/test_independent_process_crash0/case/state/db.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325d9e2f80>, {'body': {'request_id': '9ba12a63-7419-4855-b3c3-816bd...nd': 'open_legacy_authority', ...}, 'hmac_sha256': 'df54dde7739abf43c818481f40c3d9113c55f37cb6f2b3d4cfb216d4d4ec36fc'})
+head = {'sequence': 1, 'sha256': '994bbd9b70cd5b1a5ee4b5d5f8656068361a1b6b9f366902a6b4b44f590cdb13', 'checkpoint_hash': 'cb32302eb61886c41aac21e20e18e0786ed1dc19240de79c49bcd3b13cc2b327'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+_ test_independent_process_crashes_preserve_evidence[mutation-checkpoint_intent_durable] _
+
+tmp_path = PosixPath('/work/pytest/test_independent_process_crash1')
+mode = 'mutation', stage = 'checkpoint_intent_durable'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325e152120>
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('bootstrap','checkpoint_intent_durable'),
+        ('mutation','checkpoint_intent_durable'),
+        ('mutation','ledger_database_committed'),
+        ('mutation','checkpoint_published'),
+        ('export','export_row_written'),
+        ('export','export_data_durable'),
+        ('export','export_before_audit_publication'),
+        ('retention','checkpoint_intent_durable'),
+        ('retention','ledger_database_committed'),
+        ('reconcile','before_commit'),
+        ('reconcile','ledger_database_committed'),
+    ])
+    def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
+        import subprocess,sys,time
+        if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
+        state=tmp_path/'case';state.mkdir(mode=0o700)
+        exports=state/'exports';exports.mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
+                'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
+        command=state/'command.json';command.write_text(json.dumps(config))
+        with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(state/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
+>       a=Authority(config['db'],allow_simulation=True,ledger=guard)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325dcf18a0>
+path = PosixPath('/work/pytest/test_independent_process_crash1/case/state/db.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325da392c0>, {'body': {'request_id': '48b2c815-a56f-48ab-b5ed-13135...nd': 'open_legacy_authority', ...}, 'hmac_sha256': '34a7a4697144de16349609df56b6010fd959e2cd39817bfc2438ae80ef86473f'})
+head = {'sequence': 3, 'sha256': '31791ba51326daff5f1b214429ed1d14afa2329e9ab8db7d731a15a9399a00d2', 'checkpoint_hash': '560e36999eccbd1c78483b44d277f77cad61a9e3aebc350bedacbed0b2a86df7'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+_ test_independent_process_crashes_preserve_evidence[mutation-ledger_database_committed] _
+
+tmp_path = PosixPath('/work/pytest/test_independent_process_crash2')
+mode = 'mutation', stage = 'ledger_database_committed'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325e1aad60>
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('bootstrap','checkpoint_intent_durable'),
+        ('mutation','checkpoint_intent_durable'),
+        ('mutation','ledger_database_committed'),
+        ('mutation','checkpoint_published'),
+        ('export','export_row_written'),
+        ('export','export_data_durable'),
+        ('export','export_before_audit_publication'),
+        ('retention','checkpoint_intent_durable'),
+        ('retention','ledger_database_committed'),
+        ('reconcile','before_commit'),
+        ('reconcile','ledger_database_committed'),
+    ])
+    def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
+        import subprocess,sys,time
+        if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
+        state=tmp_path/'case';state.mkdir(mode=0o700)
+        exports=state/'exports';exports.mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
+                'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
+        command=state/'command.json';command.write_text(json.dumps(config))
+        with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(state/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
+>       a=Authority(config['db'],allow_simulation=True,ledger=guard)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325d8f1990>
+path = PosixPath('/work/pytest/test_independent_process_crash2/case/state/db.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325da01e00>, {'body': {'request_id': '91a5310d-a569-4806-ac31-2d724...nd': 'open_legacy_authority', ...}, 'hmac_sha256': 'bb6bb19eccd05cb6733c423b024ce0732d435ef38a716e76a461f22e95e99737'})
+head = {'sequence': 3, 'sha256': 'd608f03eb96d3ae2cc87ab2a18d4d83ac5600a1c266cfea7963959b5c43145f6', 'checkpoint_hash': 'fbdd518c2d2fa5770320a0937d4e2d9c932a834e39b23c0c8f0426500862ea55'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+_ test_independent_process_crashes_preserve_evidence[retention-checkpoint_intent_durable] _
+
+tmp_path = PosixPath('/work/pytest/test_independent_process_crash7')
+mode = 'retention', stage = 'checkpoint_intent_durable'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325dd8e0b0>
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('bootstrap','checkpoint_intent_durable'),
+        ('mutation','checkpoint_intent_durable'),
+        ('mutation','ledger_database_committed'),
+        ('mutation','checkpoint_published'),
+        ('export','export_row_written'),
+        ('export','export_data_durable'),
+        ('export','export_before_audit_publication'),
+        ('retention','checkpoint_intent_durable'),
+        ('retention','ledger_database_committed'),
+        ('reconcile','before_commit'),
+        ('reconcile','ledger_database_committed'),
+    ])
+    def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
+        import subprocess,sys,time
+        if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
+        state=tmp_path/'case';state.mkdir(mode=0o700)
+        exports=state/'exports';exports.mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
+                'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
+        command=state/'command.json';command.write_text(json.dumps(config))
+        with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(state/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
+>       a=Authority(config['db'],allow_simulation=True,ledger=guard)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325dee72e0>
+path = PosixPath('/work/pytest/test_independent_process_crash7/case/state/db.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325da03e30>, {'body': {'request_id': '731410f2-b36c-4e51-b263-c657f...nd': 'open_legacy_authority', ...}, 'hmac_sha256': '6109683f7509f6c39dab71ccefd0211e930e4d51677143897d074ad658072473'})
+head = {'sequence': 10, 'sha256': 'bfb8c68f42838d263195471b4ed6e49dce7c7272e13a0655627450b2255f98a0', 'checkpoint_hash': '4e0ece393ecf91d5c5adec9c53b6103baae7a9f7185c55f55e1c7db651cfc258'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+_ test_independent_process_crashes_preserve_evidence[retention-ledger_database_committed] _
+
+tmp_path = PosixPath('/work/pytest/test_independent_process_crash8')
+mode = 'retention', stage = 'ledger_database_committed'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325e193e00>
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('bootstrap','checkpoint_intent_durable'),
+        ('mutation','checkpoint_intent_durable'),
+        ('mutation','ledger_database_committed'),
+        ('mutation','checkpoint_published'),
+        ('export','export_row_written'),
+        ('export','export_data_durable'),
+        ('export','export_before_audit_publication'),
+        ('retention','checkpoint_intent_durable'),
+        ('retention','ledger_database_committed'),
+        ('reconcile','before_commit'),
+        ('reconcile','ledger_database_committed'),
+    ])
+    def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
+        import subprocess,sys,time
+        if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
+        state=tmp_path/'case';state.mkdir(mode=0o700)
+        exports=state/'exports';exports.mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
+                'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
+        command=state/'command.json';command.write_text(json.dumps(config))
+        with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(state/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
+>       a=Authority(config['db'],allow_simulation=True,ledger=guard)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325de8d6c0>
+path = PosixPath('/work/pytest/test_independent_process_crash8/case/state/db.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325d9e0730>, {'body': {'request_id': 'f38fbe89-b400-4b88-9b4f-d58aa...nd': 'open_legacy_authority', ...}, 'hmac_sha256': 'b8bf0039f62d4878ea69080e43980a1901b7a33fe46fd0e7442799152098a096'})
+head = {'sequence': 10, 'sha256': '64275efc597ec4ed22522106c92b6c569f9e36039a4f8378bae281e0b0aa723e', 'checkpoint_hash': '8bcd050f433887852d38dbb0c1a494b9720a3ac267549eaee6368b7776c81414'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+_ test_independent_process_crashes_preserve_evidence[reconcile-ledger_database_committed] _
+
+tmp_path = PosixPath('/work/pytest/test_independent_process_crash10')
+mode = 'reconcile', stage = 'ledger_database_committed'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325dfd8de0>
+
+    @pytest.mark.parametrize('mode,stage',[
+        ('bootstrap','checkpoint_intent_durable'),
+        ('mutation','checkpoint_intent_durable'),
+        ('mutation','ledger_database_committed'),
+        ('mutation','checkpoint_published'),
+        ('export','export_row_written'),
+        ('export','export_data_durable'),
+        ('export','export_before_audit_publication'),
+        ('retention','checkpoint_intent_durable'),
+        ('retention','ledger_database_committed'),
+        ('reconcile','before_commit'),
+        ('reconcile','ledger_database_committed'),
+    ])
+    def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
+        import subprocess,sys,time
+        if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
+        state=tmp_path/'case';state.mkdir(mode=0o700)
+        exports=state/'exports';exports.mkdir(mode=0o700)
+        config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
+                'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
+        command=state/'command.json';command.write_text(json.dumps(config))
+        with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
+            try:
+                deadline=time.monotonic()+4
+                while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
+                assert Path(config['ready']).exists(),(state/'stderr').read_text()
+                child.kill();child.wait(timeout=1)
+                assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
+>       a=Authority(config['db'],allow_simulation=True,ledger=guard)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325de8f880>
+path = PosixPath('/work/pytest/test_independent_process_crash10/case/state/db.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325d952df0>, {'body': {'request_id': 'd18e65db-34a7-4b26-8531-eedf3...nd': 'open_legacy_authority', ...}, 'hmac_sha256': '11da3a24ca8e28ef4d551a030fef524a4396d311f58fd10e9dc8d49d7009c24c'})
+head = {'sequence': 8, 'sha256': '79af95a3fe8647ee05dbc2a91ccde6100c89238c03ff712cba73e522b93c58c2', 'checkpoint_hash': '72f09755cbe9e2d57e7a0e332e42a3b70644d3ca134fc478527734abac6d029f'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+________ test_checkpoint_publication_io_failure_and_storage_exhaustion _________
+
+env = (<app.agent.authority.Authority object at 0x7c325dcf3b60>, <app.agent.execution.ExecutionPipeline object at 0x7c325da6...PosixPath('/work/pytest/test_checkpoint_publication_io0/exports'), 'store_id': '8f2dbc81-faac-44c5-94ed-b804c41bfcc3'})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c325e459c50>
+
+    def test_checkpoint_publication_io_failure_and_storage_exhaustion(env,monkeypatch):
+        import app.agent.ledger as module
+        a,p,g,issuer,actions,paths=env
+        original=module.publish_file
+        def exhausted(path,raw):
+            if path.name.endswith('.final.json'):raise OSError(28,'synthetic ENOSPC')
+            return original(path,raw)
+        monkeypatch.setattr(module,'publish_file',exhausted)
+        op=key()
+        with pytest.raises(AuthorityError,match='ledger_commit_reconcile'):submit(p,request_id=op)
+        with pytest.raises(AuthorityError,match='authority_unavailable'):a.readiness()
+        a.close();monkeypatch.setattr(module,'publish_file',original)
+>       recovered=Authority(paths['db'],allow_simulation=True,ledger=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id']))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_operator_ledger.py:319: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/synthetic_authority.py:65: in fixture_authority
+    return RealAuthority(path,**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7c325dcf3970>
+path = PosixPath('/work/pytest/test_checkpoint_publication_io0/state/queue.sqlite')
+approval = (<app.agent.recovery.OperatorPermits object at 0x7c325da4bc50>, {'body': {'request_id': 'ed0b618b-90e3-4ddc-80fa-73c73...nd': 'open_legacy_authority', ...}, 'hmac_sha256': '8ecd2cf909be84c5f4d987f4b9ccfb7d5fedbb256176db9f03cbcbad813a837e'})
+head = {'sequence': 3, 'sha256': '51df345c6cf695695cba846c5e1066c24de6857e6857d127ac201bb28a4986bc', 'checkpoint_hash': 'f19d7759a929b2058db78d6c538bb1b88fc3b93b4f2ab8e4231fd69780d466ae'}
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+            raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+        verifier,permit=approval
+        if type(permit) is not dict or type(permit.get('body')) is not dict:
+            raise AuthorityError('operator_authentication_required')
+        request_id=identifier(permit['body'].get('request_id'))
+        payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
+        auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
+>       if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       app.agent.authority.AuthorityError: enrollment_legacy_approval_mismatch
+
+/input/source/app/agent/enrollment.py:346: AuthorityError
+=========================== short test summary info ============================
+FAILED ../input/tests/test_audit_disaster.py::test_interrupted_rollover_is_not_silently_reset[rollover_link_durable]
+FAILED ../input/tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_link_durable]
+FAILED ../input/tests/test_audit_disaster.py::test_guard_cannot_be_shared_by_two_authorities
+FAILED ../input/tests/test_authority.py::test_legacy_guard_and_unsupported_bytes_preserved[absent]
+FAILED ../input/tests/test_authority.py::test_legacy_guard_and_unsupported_bytes_preserved[empty]
+FAILED ../input/tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_claim]
+FAILED ../input/tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_execute]
+FAILED ../input/tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[record_before_commit]
+FAILED ../input/tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_record]
+FAILED ../input/tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[publish_before_commit]
+FAILED ../input/tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_publish]
+FAILED ../input/tests/test_migration.py::test_import_preserves_source_hashes_exact_ids_and_returns_core_receipt
+FAILED ../input/tests/test_migration.py::test_duplicate_legacy_ids_reject_whole_mixed_import[tasks]
+FAILED ../input/tests/test_migration.py::test_duplicate_legacy_ids_reject_whole_mixed_import[jobs]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-None-record_schema]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid1-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid2-record_schema]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid3-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid4-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid5-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid6-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid7-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid8-record_value]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid9-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid10-record_type]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid11-record_schema]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid12-record_schema]
+FAILED ../input/tests/test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid13-record_value]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[{"not":"a list"}-root_not_list]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[false-root_not_list]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[{malformed-invalid_json]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[\xff[]-source_encoding]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[[{"task_id":"a","task_id":"b","goal":"goal"}]-duplicate_json_key]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"nested":1,"nested":2}}]-duplicate_json_key]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"number":NaN}}]-nonfinite_json]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"number":Infinity}}]-nonfinite_json]
+FAILED ../input/tests/test_migration.py::test_strict_json_rejections_precede_import[[{"task_id":"a","goal":"goal","result":{"number":1e999}}]-nonfinite_json]
+FAILED ../input/tests/test_migration.py::test_explicit_source_byte_cap_rejects_without_import
+FAILED ../input/tests/test_migration.py::test_per_file_record_limit_precedes_import
+FAILED ../input/tests/test_migration.py::test_combined_record_limit_precedes_import
+FAILED ../input/tests/test_migration.py::test_source_file_and_parent_symlinks_are_never_followed
+FAILED ../input/tests/test_migration.py::test_invalid_jobs_cannot_partially_import_valid_tasks[{"jobs":[]}-root_not_list]
+FAILED ../input/tests/test_migration.py::test_invalid_jobs_cannot_partially_import_valid_tasks[[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":"g","enabled":true,"enabled":false}]-duplicate_json_key]
+FAILED ../input/tests/test_migration.py::test_invalid_jobs_cannot_partially_import_valid_tasks[[{"job_id":"a","name":"n","cron_expr":"* * * * *","goal":NaN}]-nonfinite_json]
+FAILED ../input/tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[bootstrap-checkpoint_intent_durable]
+FAILED ../input/tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-checkpoint_intent_durable]
+FAILED ../input/tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-ledger_database_committed]
+FAILED ../input/tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[retention-checkpoint_intent_durable]
+FAILED ../input/tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[retention-ledger_database_committed]
+FAILED ../input/tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[reconcile-ledger_database_committed]
+FAILED ../input/tests/test_operator_ledger.py::test_checkpoint_publication_io_failure_and_storage_exhaustion
+51 failed, 250 passed in 88.95s (0:01:28)
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T05:15:00.105834+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026532961]",
+    "mnt_namespace": "mnt:[4026532402]",
+    "pid_namespace": "pid:[4026532456]",
+    "net_namespace": "net:[4026532459]",
+    "ipc_namespace": "ipc:[4026532407]",
+    "uts_namespace": "uts:[4026532403]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051500009211Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051500009211Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051500009211Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 301,
+    "failed": 51,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T05:16:29.337878+00:00"
+}

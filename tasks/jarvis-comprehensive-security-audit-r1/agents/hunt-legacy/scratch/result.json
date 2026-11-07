@@ -1,0 +1,405 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fserver.py%23chat-and-confirm::app%2Ftools%2Fregistry.py%23call::app%2Fbrain-and-tools::AI-AND-LLM.md%23Action-confirmation%20and%20approval%20binding",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/brain/cancel_token.py",
+        "app/brain/kill_switch.py",
+        "app/computer/safety.py",
+        "app/resource_manager.py",
+        "app/server.py",
+        "app/tools/obsidian.py",
+        "app/tools/registry.py",
+        "app/voice/audio_stream.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/tools/registry.py",
+            "app/brain/kill_switch.py",
+            "app/brain/cancel_token.py",
+            "app/resource_manager.py",
+            "app/computer/safety.py",
+            "app/voice/audio_stream.py"
+          ],
+          "invariant": "Confirmation must bind the exact stored tool and parameters; Level3 remains blocked, Level2 needs confirmation and dry-run prevents real tools.",
+          "method": "source",
+          "result": "Registry checks final selected module safety and current dry-run after stored parameters are retrieved. POST confirmation pops the stored entry once and passes exact tool/params with confirmed=True. The emergency active flag is consulted by normal chat/stream processing but not by confirmation. Bounded dummy-tool check established one confirmation effect after kill while active remained false; no less-privileged approval role exists in the source, so this is a safety hardening concern rather than demonstrated cross-principal authority bypass. Pending entries have no expiry and no kill/sleep invalidation.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/tools/registry.py",
+            "app/brain/kill_switch.py",
+            "app/tools/obsidian.py"
+          ],
+          "invariant": "Bound the actual effect of emergency-state confirmation and response-fallback retries using dummy tools and scratch-local note only.",
+          "method": "local",
+          "result": "Parent-controlled sandbox returned HTTP200 confirmed=true and one dummy tool effect while is_active=false before/after; actual Obsidian append marker count increased1->2 after stream failure and native fallback. Lifespan was skipped, provider errors mocked, no real shell/hardware/provider action. These establish mechanics, not deployment reachability or an additional attacker permission.",
+          "artifact": "agents/hunt-legacy/artifacts/legacy_effects.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fserver.py%23chat-and-confirm::app%2Ftools%2Fregistry.py%23call::app%2Fbrain-and-tools::AI-AND-LLM.md%23Persistent%20memory%20poisoning",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/brain/prompts.py",
+        "app/brain/response_cleaner.py",
+        "app/brain/router.py",
+        "app/brain/tool_params.py",
+        "app/memory/graphiti_client.py",
+        "app/memory/memory_client.py",
+        "app/memory/procedural.py",
+        "app/memory/project_indexer.py",
+        "app/memory/rag_client.py",
+        "app/server.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/brain/prompts.py",
+            "app/brain/router.py",
+            "app/brain/tool_params.py",
+            "app/brain/response_cleaner.py",
+            "app/memory/procedural.py",
+            "app/memory/memory_client.py",
+            "app/memory/rag_client.py",
+            "app/memory/graphiti_client.py",
+            "app/memory/project_indexer.py"
+          ],
+          "invariant": "Stored content must not grant later tool authority or cross an unpromised user boundary.",
+          "method": "source",
+          "result": "Procedural skills become system-prompt content and RAG/Mem0 results become answer context, but the tool router uses the raw current user request rather than these memories; tool parameters are deterministic from that request and final registry gates remain. Main answer action tags are stripped and not dispatched. All API clients share the intended single-operator identity; no separate memory writer/reader role is implemented. Memory poisoning alone did not establish a code-level authority crossing. Project indexer follows file symlinks without root confinement; no attacker-readable disclosure destination was established, retained as hardening.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fserver.py%23chat-and-confirm::app%2Ftools%2Fregistry.py%23call::app%2Fbrain-and-tools::AI-AND-LLM.md%23Sensitive%20context%20extraction",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/brain/prompts.py",
+        "app/comms/audio2face.py",
+        "app/comms/discord_bot.py",
+        "app/comms/telegram_bot.py",
+        "app/comms/ue5_bridge.py",
+        "app/computer/vision.py",
+        "app/logs/audit.py",
+        "app/memory/graphiti_client.py",
+        "app/memory/memory_client.py",
+        "app/memory/project_indexer.py",
+        "app/memory/rag_client.py",
+        "app/observability/tracing.py",
+        "app/server.py",
+        "app/tools/files.py",
+        "app/tools/obsidian.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/brain/prompts.py",
+            "app/memory/project_indexer.py",
+            "app/memory/rag_client.py",
+            "app/memory/memory_client.py",
+            "app/memory/graphiti_client.py",
+            "app/tools/files.py",
+            "app/tools/obsidian.py",
+            "app/logs/audit.py",
+            "app/observability/tracing.py",
+            "app/comms/discord_bot.py",
+            "app/comms/telegram_bot.py",
+            "app/comms/ue5_bridge.py",
+            "app/comms/audio2face.py",
+            "app/computer/vision.py"
+          ],
+          "invariant": "Lower-trust context must not expose a secret or another principal resource through an observable output.",
+          "method": "source",
+          "result": "File and note helpers resolve paths against allowed/vault roots; note search rechecks resolved descendants. Tool output is truncated before answer context, and tracing uses metadata allowlist. Audit logger intentionally records raw user/tool parameters and some tool output; external notifications use configured operator destinations. Telegram URL credentials may appear in caught HTTP error text, but no source-visible inbound caller receives that result. Indexer has no secret-file exclusion and follows symlinks; no cross-principal read/output chain was demonstrated. Screenshot default temp output has a distinct source-grounded file boundary and is returned under uncovered with needs-validation record.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fserver.py%23chat-and-confirm::app%2Ftools%2Fregistry.py%23call::app%2Fbrain-and-tools::AI-AND-LLM.md%23Tool-argument%20injection%20into%20a%20downstream%20sink",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/brain/kill_switch.py",
+        "app/brain/response_cleaner.py",
+        "app/brain/router.py",
+        "app/brain/tool_params.py",
+        "app/computer/mouse_keyboard.py",
+        "app/computer/safety.py",
+        "app/computer/screenshot.py",
+        "app/computer/vision.py",
+        "app/server.py",
+        "app/tools/apps.py",
+        "app/tools/browser.py",
+        "app/tools/browser_use.py",
+        "app/tools/cad.py",
+        "app/tools/calendar.py",
+        "app/tools/computer_use.py",
+        "app/tools/files.py",
+        "app/tools/kasa.py",
+        "app/tools/mcp_client.py",
+        "app/tools/mouse_keyboard.py",
+        "app/tools/obsidian.py",
+        "app/tools/registry.py",
+        "app/tools/shell.py",
+        "app/tools/web_search.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/brain/router.py",
+            "app/brain/tool_params.py",
+            "app/brain/response_cleaner.py",
+            "app/tools/registry.py",
+            "app/tools/shell.py",
+            "app/tools/files.py",
+            "app/tools/obsidian.py",
+            "app/tools/apps.py",
+            "app/tools/browser.py",
+            "app/tools/web_search.py",
+            "app/tools/calendar.py",
+            "app/tools/mcp_client.py",
+            "app/tools/browser_use.py",
+            "app/tools/computer_use.py",
+            "app/tools/mouse_keyboard.py",
+            "app/tools/kasa.py",
+            "app/tools/cad.py",
+            "app/computer/mouse_keyboard.py",
+            "app/computer/safety.py",
+            "app/computer/vision.py",
+            "app/computer/screenshot.py"
+          ],
+          "invariant": "Untrusted tool arguments and model output must not reach a stronger sink without current handler-side validation and safety gates.",
+          "method": "source",
+          "result": "Shell execution is explicitly Level2, always confirmation-gated in balanced mode, and Linux shlex.split uses shell=False. Fixed app launch map does not concatenate model output; browser receives intentionally requested URL and should restrict schemes as hardening. User text maps deterministically to tool arguments; model output is not executed as action tags. Files/notes resolve and check roots, with ancestor race assumptions not established as exploitable. MCP, browser-use, CAD, Kasa and computer-use integrations are inert plans/stubs. Stream fallback can repeat an already completed Level1 note write; bounded actual note test proved marker count1->2, but no additional lower-trust authority or material security impact was established, retained as a concrete reliability defect.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/tools/registry.py",
+            "app/brain/kill_switch.py",
+            "app/tools/obsidian.py"
+          ],
+          "invariant": "Bound the actual effect of emergency-state confirmation and response-fallback retries using dummy tools and scratch-local note only.",
+          "method": "local",
+          "result": "Parent-controlled sandbox returned HTTP200 confirmed=true and one dummy tool effect while is_active=false before/after; actual Obsidian append marker count increased1->2 after stream failure and native fallback. Lifespan was skipped, provider errors mocked, no real shell/hardware/provider action. These establish mechanics, not deployment reachability or an additional attacker permission.",
+          "artifact": "agents/hunt-legacy/artifacts/legacy_effects.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fserver.py%23chat-and-confirm::app%2Ftools%2Fregistry.py%23call::app%2Fbrain-and-tools::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Unbounded%20buffering%20and%20cardinality",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/sensor_store.py",
+        "app/boot.py",
+        "app/brain/llm_client.py",
+        "app/computer/gesture.py",
+        "app/computer/verifier.py",
+        "app/computer/yolo_detector.py",
+        "app/logs/audit.py",
+        "app/memory/procedural.py",
+        "app/memory/project_indexer.py",
+        "app/observability/tracing.py",
+        "app/resource_manager.py",
+        "app/server.py",
+        "app/tools/calendar.py",
+        "app/tools/files.py",
+        "app/tools/obsidian.py",
+        "app/tools/shell.py",
+        "app/tools/web_search.py",
+        "app/voice/audio_stream.py",
+        "app/voice/dictation.py",
+        "app/voice/error_recovery.py",
+        "app/voice/filler_manager.py",
+        "app/voice/phrase_cache.py",
+        "app/voice/push_to_talk.py",
+        "app/voice/sounds.py",
+        "app/voice/stt.py",
+        "app/voice/tts.py",
+        "app/voice/wake_word.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-legacy",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/agent/sensor_store.py",
+            "app/logs/audit.py",
+            "app/observability/tracing.py",
+            "app/memory/project_indexer.py",
+            "app/memory/procedural.py",
+            "app/tools/files.py",
+            "app/tools/obsidian.py",
+            "app/tools/web_search.py",
+            "app/tools/shell.py",
+            "app/tools/calendar.py",
+            "app/brain/llm_client.py",
+            "app/voice/tts.py",
+            "app/voice/stt.py",
+            "app/voice/audio_stream.py",
+            "app/voice/filler_manager.py",
+            "app/voice/sounds.py",
+            "app/voice/wake_word.py",
+            "app/voice/push_to_talk.py",
+            "app/voice/dictation.py",
+            "app/voice/error_recovery.py",
+            "app/voice/phrase_cache.py",
+            "app/computer/yolo_detector.py",
+            "app/computer/gesture.py",
+            "app/computer/verifier.py",
+            "app/boot.py",
+            "app/resource_manager.py"
+          ],
+          "invariant": "Untrusted work must not create unbounded retained shared resources without an effective ownership, size or lifecycle bound.",
+          "method": "source",
+          "result": "Per-node sensor deque is bounded100, but unique node IDs, pending confirmations, audit SimpleQueue, total procedural-memory file and indexer document count have no aggregate cap. Shell stdout and fetched page content are fully buffered before result truncation; directory listings/search and calendar scan lack total input bounds. LLM output token requests and retries are bounded by configured calls, but HTTP timeout is long and stream chunks accumulate. No safely reproduced shared-service denial or lower-trust role independent of the broad operator API was established; missing caps are hardening rather than invented availability findings. Resource process-name ownership inference is returned as distinct uncovered action-binding review.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Invalidate pending confirmations when emergency stop/cancellation or sleep occurs and recheck current active state at the final tool dispatch point. Bind a monotonic stop generation and explicit short expiry to pending approvals; preserve exact stored arguments. Dummy check confirmed execution after kill, but no separate lesser approval role or active deployment was demonstrated.",
+    "Do not rerun a completed tool merely because stream narration is unavailable. Separate tool execution result from response generation, or return an explicit already_executed result that the WS/voice fallback reuses. Actual scratch note append occurred twice after one input and mocked provider failure; Level2 remained confirmation-gated.",
+    "Use private per-user screenshot storage and exclusive0600 descriptor-based creation; encode PNG to bytes and write through the verified descriptor. Fixed shared-temp namespace warrants the separate needs-validation lead.",
+    "Apply aggregate node/session/pending-approval/log-queue/memory-index limits and expiration; 100 sensor readings per node does not cap unique nodes. Stream shell/page content with a hard read limit before allocating it. Missing limits alone did not establish a separate availability violation.",
+    "Constrain project indexing to resolved configured roots, explicitly reject or safely handle file symlinks and exclude secret-bearing config formats/paths where appropriate. Current indexer can ingest out-of-root symlink targets, but no attacker-readable disclosure destination was established.",
+    "Avoid logging complete user/tool parameters that can contain secrets; audit raw command parameters and outbound approval/result notifications require explicit local-log/provider custody assumptions. Tracing metadata itself uses an allowlist.",
+    "Validate approval_mode as a closed enum: unknown strings currently fall through to balanced Level2 semantics. This is operator-controlled misconfiguration, not a demonstrated lower-trust bypass.",
+    "Restrict browser opening to intended schemes before calling the OS URL handler; no exploitable custom-handler chain was established.",
+    "Restrict JARVIS process shutdown to registered child identities or verified project executable/cwd and stable process identity; generic app.main:app matches can include unrelated local services."
+  ],
+  "uncovered": [
+    {
+      "surface": "app/computer/screenshot.py#capture",
+      "boundary": "app/computer/screenshot.py#temporary-output",
+      "subsystem": "app/computer",
+      "attack_class": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+      "starting_paths": [
+        "app/computer/screenshot.py",
+        "app/tools/screenshot.py",
+        "app/computer/vision.py",
+        "requirements-desktop.txt"
+      ],
+      "reason": "A different local filesystem principal can potentially precreate a predictable shared temporary screenshot namespace; this is distinct from chat argument validation and protected-ledger ancestor checks. Complete source-grounded needs-validation proposal is in screenshot_candidate."
+    },
+    {
+      "surface": "app/resource_manager.py#terminate_jarvis_processes",
+      "boundary": "app/resource_manager.py#classify_jarvis_process",
+      "subsystem": "app/resource_manager",
+      "attack_class": "AI-AND-LLM.md#Action-confirmation and approval binding",
+      "starting_paths": [
+        "app/resource_manager.py",
+        "app/server.py",
+        "app/cli.py",
+        "README.md"
+      ],
+      "reason": "Generic app.main:app/python -m app.main cmdline matching precedes project-root checks at resource_manager.py752\u2013758. A JARVIS-only shutdown can consequently select unrelated same-UID services. This needs a focused ownership/action-binding review with a harmless disposable child; no collateral process termination was executed or severity assigned."
+    }
+  ],
+  "screenshot_candidate": {
+    "proposed_verdict": "needs_validation",
+    "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+    "title": "Shared temporary screenshot namespace may redirect private capture output",
+    "description": "Screenshot capture reuses a fixed jarvis_screenshots directory under tempfile.gettempdir(), accepts an existing directory, and passes a second-resolution filename to mss.tools.to_png without an ownership, mode, no-follow or exclusive-create check. In a shared temporary root, a different local OS principal that precreates this namespace or its output entries may direct the victim capture into an attacker-readable file or overwrite a dummy victim-writable file. The parent statically corroborated upstream mss v9.0.1 writer open(output, wb), but the installed desktop dependency, effective temporary root/permissions, cross-UID effect and actual capture runtime were not established. This is not a confirmed disclosure or overwrite.",
+    "claimed_root_cause": "A predictable temporary output namespace is trusted across a local OS-principal boundary without directory ownership validation or descriptor-bound exclusive file creation.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "app/computer/screenshot.py",
+        "line": 24,
+        "scope": "capture",
+        "description": "Capture chooses fixed jarvis_screenshots under the effective temporary directory and accepts existing filesystem state with mkdir(exist_ok=True)."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/computer/screenshot.py",
+        "line": 27,
+        "scope": "capture",
+        "description": "The timestamp-to-second filename is converted to an absolute path without opening or validating directory/leaf identity."
+      },
+      {
+        "kind": "sink",
+        "file": "app/computer/screenshot.py",
+        "line": 32,
+        "scope": "capture",
+        "description": "The chosen path is passed as output to mss.tools.to_png, delegating actual file opening to the installed dependency."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 24,
+        "description": "Default temporary screenshot directory is fixed and no UID/mode checks follow existing-directory acceptance."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 27,
+        "description": "Filename is predictable from the capture second; source adds no unpredictable component or exclusive/no-follow open."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 32,
+        "description": "PNG output is published through a pathname rather than a retained verified file descriptor."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 42,
+        "description": "Global dry-run blocks execute; any runtime impact requires live capture to be enabled."
+      },
+      {
+        "file": "app/voice/audio_stream.py",
+        "line": 96,
+        "description": "Native voice processing invokes chat/tool pipeline directly, so this file boundary is not exclusively dependent on HTTP Authority lifespan."
+      },
+      {
+        "file": "app/computer/vision.py",
+        "line": 44,
+        "description": "Screen vision also calls the same screenshot capture helper."
+      },
+      {
+        "file": "requirements-desktop.txt",
+        "line": 40,
+        "description": "Desktop dependency list includes mss; no exact deployed dependency version is locked."
+      }
+    ],
+    "blockers": [
+      "No installed mss desktop package is available in the approved local toolchain, and no target capture was run. Upstream v9.0.1 source corroborates pathname writing but does not establish the actual installed dependency/runtime.",
+      "The effective service temporary directory and its ancestor ownership/modes, attacker ability to precreate or populate jarvis_screenshots, namespace isolation and OS link protections were not observed. A private per-user temporary root would defeat the different-UID precondition.",
+      "No disposable two-UID capture-output reproduction established attacker-readable screenshot bytes or victim-owned dummy-file overwrite. A same-UID mock alone would not establish that boundary."
+    ],
+    "validation_plan": {
+      "local": "In an OS-isolated disposable desktop fixture with the already-approved mss dependency, two synthetic UIDs and a synthetic shared temporary root, mock only the hardware pixel source and use the real PNG writer. Predeclare one attacker-owned output file and one harmless victim-owned dummy file, invoke capture once, and observe only whether output is redirected or rejected. Repeat with a private0700 temporary root as a preventing control. Do not access a real desktop, host temporary directory, credentials or production files; do not install dependencies during this audit.",
+      "deployment": "Owner may inspect effective TMPDIR/TEMP and directory/ancestor ownership and modes, any private-temp or per-user namespace isolation, capture enablement and installed mss version without displaying capture contents or credentials. No service probing or production capture is requested."
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": "vm164-prearmed-host-fence-requirements-r2",
+  "runtime_driver": null,
+  "qualified": false,
+  "root_boot_go": false,
+  "target": {
+    "node": "pve",
+    "vmid": 164,
+    "uuid": "faeb1db8-0df9-482d-b3e4-f6ccc1602193",
+    "disk": "downloads:164/vm-164-disk-0.raw",
+    "serial": "g6k164-12821f6b54a2",
+    "disk_bytes": 68719476736
+  },
+  "scope": "requirements only; no host service installed",
+  "requirements": {
+    "root_protected_host_custody": true,
+    "clock": "CLOCK_BOOTTIME",
+    "prearm_while_stopped": true,
+    "deadline_from_arm_not_root_prompt": true,
+    "revoke_after_seconds": 540,
+    "hard_stop_after_seconds": 600,
+    "no_extension": true,
+    "no_auto_restart": true,
+    "hard_stop_authority_required": true,
+    "independent_of_guest_and_cleanup_and_console": true,
+    "observed_stop_not_command_ack_required": true,
+    "root_blocked_if_worker_or_identity_unknown": true,
+    "actual_stopped_proof_required_by_seconds": 630
+  },
+  "missing_qualifications": [
+    "installed PVE/QEMU/systemd versions and supported fixed-target API semantics",
+    "reviewed deployable host enforcement backend and protected custody",
+    "real independent deadline/worker verification before start",
+    "non-root supervised timeout, console loss and cleanup-kill qualification",
+    "forced-termination preservation decision and recovery scope",
+    "fresh independently trusted current/status/pending/ISO readbacks"
+  ]
+}

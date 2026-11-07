@@ -6,6 +6,8 @@ import psutil
 
 from app.agent.authority import AuthorityError
 from app.agent.task_queue import task_queue
+from app.agent.runtime import SERVICE_ACTOR, get_authority
+from app.agent.recovery import OperatorRecovery
 from app.comms.discord_bot import discord_bot
 from app.comms.telegram_bot import telegram_bot
 from app.config import settings
@@ -13,6 +15,28 @@ from app.logs.audit import audit
 
 
 class Reporter:
+    def _recovery_summary(self) -> str:
+        try:
+            report = OperatorRecovery(get_authority()).diagnose(SERVICE_ACTOR, limit=1)
+        except AuthorityError:
+            return "Recovery diagnostics unavailable; preserve original receipts."
+        integrity = "verified" if report["ledger_integrity"]["verified"] else "unconfigured"
+        summary = (f"Ledger integrity {integrity}; consistency issues {len(report['issues'])}; "
+                   f"unpublished exports {report['unpublished_exports']}; automatic retry disabled.")
+        disaster = report.get("disaster_recovery", {})
+        decisions = report.get("recovery_decisions", {})
+        if decisions.get("configured"):
+            summary += f" Recovery decisions {decisions['state']}; approvals do not activate tasks. "
+        enrollment = report.get("enrollment", {}).get("state", "UNENROLLED")
+        summary += f"Enrollment {enrollment}; "
+        if "epoch" in disaster:
+            states = {state: sum(item["status"] == state for item in disaster["restores"])
+                      for state in ("committed", "prepared", "incomplete")}
+            summary += (f" Checkpoint epoch {disaster['epoch']}; restore receipts "
+                        f"committed {states['committed']}, prepared {states['prepared']}, "
+                        f"incomplete {states['incomplete']}; artifact verification is separate.")
+        return summary
+
     def _task_snapshot(self) -> list[object]:
         return list(task_queue.tasks)
 
@@ -40,7 +64,7 @@ class Reporter:
 
     async def build_report(self) -> str:
         cpu, ram, tasks = self._stats()
-        return f"JARVIS status: CPU {cpu}% | RAM {ram}% | {tasks}"
+        return f"JARVIS status: CPU {cpu}% | RAM {ram}% | {tasks} {self._recovery_summary()}"
 
     async def send_report(self) -> dict:
         report = await self.build_report()
@@ -73,7 +97,7 @@ class Reporter:
         cpu, ram, tasks = self._stats()
         return (
             f"Good morning, sir. CPU {cpu}%, RAM {ram}%. "
-            f"{tasks}"
+            f"{tasks} {self._recovery_summary()}"
         )
 
 

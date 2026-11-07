@@ -1,0 +1,74 @@
+--- codex1/tests/test_scheduler.py
++++ codex2/tests/test_scheduler.py
+@@ -1,18 +1,56 @@
+-"""Durable schedules replace independent legacy JSON ScheduledJob objects."""
+-import uuid
++from __future__ import annotations
++
+ import pytest
+-from application_fixtures import admitted_app
+-from app.agent.scheduler import Scheduler
+-from app.agent.authority import AuthorityError
+ 
+-def test_schedule_retry_preserves_original_nominal(admitted_app,monkeypatch):
+-    s=Scheduler();key=str(uuid.uuid4());first=s.add_job('daily','0 8 * * *','held',request_id=key)
+-    monkeypatch.setattr('app.agent.scheduler.cron_next',lambda *a: (_ for _ in ()).throw(AssertionError('retry clock')))
+-    assert s.add_job('daily','0 8 * * *','held',request_id=key)['result']==first['result']
+-    assert len(s.list_jobs())==1
++from app.agent.scheduler import ScheduledJob, Scheduler
+ 
+-def test_schedule_removal_retains_receipt(admitted_app):
+-    s=Scheduler();job=s.add_job('daily','0 8 * * *','held',request_id=str(uuid.uuid4()))['result']
+-    key=str(uuid.uuid4());first=s.remove_job(job['job_id'],request_id=key)
+-    assert not s.list_jobs() and s.remove_job(job['job_id'],request_id=key)['replayed']
+-    assert first['result']['job_id']==job['job_id']
++
++def test_add_job() -> None:
++    scheduler = Scheduler()
++
++    job = scheduler.add_job("test", "0 * * * *", "run test")
++
++    assert isinstance(job, ScheduledJob)
++    assert job.name == "test"
++    assert job.cron_expr == "0 * * * *"
++    assert job.goal == "run test"
++    assert job.enabled is True
++    assert job.last_run is None
++
++
++def test_remove_job_exists() -> None:
++    scheduler = Scheduler()
++    job = scheduler.add_job("test", "0 * * * *", "run test")
++
++    removed = scheduler.remove_job(job.job_id)
++
++    assert removed is True
++
++
++def test_remove_job_missing() -> None:
++    scheduler = Scheduler()
++
++    removed = scheduler.remove_job("missing")
++
++    assert removed is False
++
++
++def test_list_jobs() -> None:
++    scheduler = Scheduler()
++    scheduler.add_job("test-1", "0 * * * *", "run test 1")
++    scheduler.add_job("test-2", "30 * * * *", "run test 2")
++
++    jobs = scheduler.list_jobs()
++
++    assert len(jobs) == 2
++
++
++@pytest.mark.asyncio
++async def test_no_apscheduler(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setattr("app.agent.scheduler.APSCHEDULER_AVAILABLE", False)
++    scheduler = Scheduler()
++
++    await scheduler.start()
++
++    assert scheduler._running is True
++    assert scheduler._scheduler is None

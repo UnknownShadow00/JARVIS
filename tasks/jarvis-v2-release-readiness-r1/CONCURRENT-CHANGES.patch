@@ -1,0 +1,552 @@
+--- shared/app/server.py
++++ candidate/app/server.py
+@@ -58,7 +58,7 @@
+ 
+     async def connect(self, ws: WebSocket) -> bool:
+         if len(self.active) + self._accepting >= 32:
+-            await ws.close(code=1008, reason="connection_bound")
++            await self.close(ws, code=1008, reason="connection_bound")
+             return False
+         self._accepting += 1
+         try:
+@@ -72,26 +72,31 @@
+         if ws in self.active:
+             self.active.remove(ws)
+ 
++    send_timeout_seconds = 2.0
++
++    async def send(self, ws, data):
++        await asyncio.wait_for(ws.send_json(data), timeout=self.send_timeout_seconds)
++
++    async def close(self, ws, *, code=1011, reason="send_failed"):
++        try:
++            await asyncio.wait_for(ws.close(code=code, reason=reason), timeout=self.send_timeout_seconds)
++            return True
++        except Exception:
++            return False
++
+     async def broadcast(self, data: dict[str, Any]) -> None:
+-        dead = []
+-        for ws in self.active:
++        for ws in tuple(self.active):
+             try:
+-                await asyncio.wait_for(ws.send_json(data), timeout=2)
++                await self.send(ws, data)
+             except Exception:
+-                dead.append(ws)
+-        for ws in dead:
+-            self.disconnect(ws)
++                # Endpoint finally owns registration. Failed/slow live peers
++                # remain counted until their handler actually exits.
++                await self.close(ws)
+ 
+     async def disconnect_all(self) -> int:
+         closed = 0
+-        for ws in list(self.active):
+-            try:
+-                await ws.close(code=1001, reason="JARVIS entering sleep mode")
+-                closed += 1
+-            except Exception:
+-                pass
+-            finally:
+-                self.disconnect(ws)
++        for ws in tuple(self.active):
++            closed += await self.close(ws, code=1001, reason="JARVIS entering sleep mode")
+         return closed
+ 
+ 
+@@ -238,11 +243,11 @@
+ async def _reject_unauthorized_websocket(websocket: WebSocket, path: str) -> bool:
+     if not _ws_origin_allowed(websocket):
+         audit.log("ws_origin_rejected", {"path": path, "client": str(websocket.client)})
+-        await websocket.close(code=1008, reason="Origin not allowed")
++        await manager.close(websocket, code=1008, reason="Origin not allowed")
+         return True
+     if not _ws_authorized(websocket):
+         audit.log("auth_rejected", {"path": path, "client": str(websocket.client)})
+-        await websocket.close(code=1008, reason="Unauthorized")
++        await manager.close(websocket, code=1008, reason="Unauthorized")
+         return True
+     return False
+ 
+@@ -474,23 +479,23 @@
+                 return
+             raw = frame.get("text")
+             if type(raw) is not str:
+-                await websocket.close(code=1008, reason="text_required")
++                await manager.close(websocket, code=1008, reason="text_required")
+                 return
+             if len(raw)>8192 or len(raw.encode('utf-8'))>8192:
+-                await websocket.close(code=1009,reason="message_bound");return
++                await manager.close(websocket, code=1009,reason="message_bound");return
+             try:
+                 data = json.loads(raw)
+             except json.JSONDecodeError:
+                 message = raw
+             else:
+                 if type(data) is not dict or type(data.get('message')) is not str:
+-                    await websocket.close(code=1008,reason="invalid_message");return
++                    await manager.close(websocket, code=1008,reason="invalid_message");return
+                 message=data['message']
+             if not message.strip():
+-                await websocket.close(code=1008,reason="invalid_message");return
++                await manager.close(websocket, code=1008,reason="invalid_message");return
+ 
+             if not await resource_manager.ensure_awake_for_interaction("websocket"):
+-                await websocket.send_json(
++                await manager.send(websocket,
+                     {
+                         "type": "sleep",
+                         "state": resource_manager.state.value,
+@@ -529,27 +534,18 @@
+                         "dry_run": settings.safety.dry_run,
+                         "active": is_active(),
+                     }
+-                    await websocket.send_json(response)
++                    await manager.send(websocket, response)
+                     await manager.broadcast(response)
+             finally:
+                 current_token.reset()
+                 await manager.broadcast({"type": "listening", "active": False})
+     except WebSocketDisconnect:
+         pass
++    except TimeoutError:
++        await manager.close(websocket)
+     finally:
+         manager.disconnect(websocket)
+         audit.log("ws_disconnect", {"client": str(websocket.client)})
+-
+-
+-_UE5_CLOSE_TIMEOUT = 2.0
+-
+-
+-async def _close_ue5(websocket: WebSocket, *, code: int, reason: str) -> None:
+-    try:
+-        await asyncio.wait_for(websocket.close(code=code, reason=reason), timeout=_UE5_CLOSE_TIMEOUT)
+-    except TimeoutError:
+-        # The endpoint's synchronous finally still releases the registration.
+-        pass
+ 
+ 
+ @app.websocket("/ue5")
+@@ -566,12 +562,15 @@
+             frame = await websocket.receive()
+             if frame["type"] == "websocket.disconnect":
+                 return
++            if frame.get("bytes") is not None:
++                await ue5_manager.close(websocket, code=1003, reason="text_frames_required")
++                return
+             raw = frame.get("text")
+             if type(raw) is not str:
+-                await _close_ue5(websocket, code=1008, reason="text_required")
++                await ue5_manager.close(websocket, code=1008, reason="text_required")
+                 return
+             if len(raw) > 8192 or len(raw.encode("utf-8")) > 8192:
+-                await _close_ue5(websocket, code=1009, reason="message_bound")
++                await ue5_manager.close(websocket, code=1009, reason="message_bound")
+                 return
+     except WebSocketDisconnect:
+         pass
+--- shared/app/agent/api.py
++++ candidate/app/agent/api.py
+@@ -1,4 +1,4 @@
+-"""Authority routes enforce configured identity even when embedded independently."""
++"""Authority routes under the existing server authentication middleware."""
+ from typing import Annotated
+ from fastapi import APIRouter, Depends, HTTPException, Query, Request
+ import secrets
+@@ -8,12 +8,12 @@
+ from app.agent.runtime import SERVICE_ACTOR, get_authority, get_execution_pipeline, execution_readiness
+ from app.agent.scheduler import scheduler
+ 
+-async def require_authority_identity(request: Request):
++def require_authority_identity(request: Request):
+     """Loopback reachability is not operator identity, including embedded routers."""
+     from app.config import settings
+     expected = settings.server.api_token
+     supplied = request.headers.get("authorization", "")
+-    if not expected.strip() or not secrets.compare_digest(supplied.encode(), ("Bearer " + expected).encode()):
++    if not expected or not secrets.compare_digest(supplied.encode(), ("Bearer " + expected).encode()):
+         raise HTTPException(status_code=401, detail="authority_authentication_required")
+ 
+ 
+--- shared/app/agent/storage_paths.py
++++ candidate/app/agent/storage_paths.py
+@@ -17,6 +17,8 @@
+         if '..' in self.path.parts:
+             raise AuthorityError('unsafe_storage_ancestor')
+         self.identities = self._walk(create=create)
++        if create:
++            self.verify()
+ 
+     def _walk(self, *, create=False):
+         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+@@ -31,9 +33,10 @@
+                     except FileNotFoundError:
+                         if not create:
+                             raise
+-                        # The preceding iteration validated this retained parent.
+-                        # Refuse races; never follow an absolute mkdir pathname.
+-                        os.mkdir(part, mode=0o700, dir_fd=fd)
++                        # The retained parent has already passed its permission
++                        # checks. Never resolve mkdir through an unchecked path.
++                        try:os.mkdir(part, mode=0o700, dir_fd=fd)
++                        except FileExistsError:pass
+                         next_fd = os.open(part, flags, dir_fd=fd)
+                     os.close(fd)
+                     fd = next_fd
+--- shared/tests/test_enrollment_app.py
++++ candidate/tests/test_enrollment_app.py
+@@ -49,9 +49,9 @@
+     previous,worker=runtime._authority,runtime._execution_worker
+     runtime._authority=runtime._execution_worker=None
+     monkeypatch.setattr(runtime,'PROJECT_ROOT',tmp_path/'unprovisioned')
+-    monkeypatch.setattr(server.settings.server,'api_token','synthetic-unprovisioned-caller')
++    monkeypatch.setattr(server.settings.server,'api_token','synthetic-missing-store')
+     try:
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-unprovisioned-caller'}) as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-missing-store'}) as client:
+             result=await client.get('/tasks')
+             assert result.status_code==503 and result.json()['error']=='authority_unenrolled_or_missing'
+         assert not (tmp_path/'unprovisioned').exists()
+--- shared/tests/test_execution_pipeline.py
++++ candidate/tests/test_execution_pipeline.py
+@@ -17,15 +17,8 @@
+ from app.agent.execution import (DisabledExecutor, ExecutionPipeline, ExecutionWorker,
+                                  ExecutorRegistry, SimulatedPolicy, SyntheticExecutor, phase_id)
+ from app.agent import runtime
+-from app.config import settings
+ 
+ ACTOR = runtime.SERVICE_ACTOR
+-API_HEADERS = {"Authorization": "Bearer synthetic-execution-api-regression"}
+-
+-
+-@pytest.fixture(autouse=True)
+-def authenticated_api_identity(monkeypatch):
+-    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-execution-api-regression')
+ 
+ 
+ def key():
+@@ -33,7 +26,9 @@
+ 
+ 
+ @pytest.fixture
+-def env(tmp_path):
++def env(tmp_path,monkeypatch):
++    from app.config import settings
++    monkeypatch.setattr(settings.server,"api_token","synthetic-pipeline-client")
+     a = Authority(tmp_path / 'state' / 'queue.sqlite', allow_simulation=True)
+     p = ExecutionPipeline(a, SimulatedPolicy(ACTOR.scope), enabled=True)
+     yield a, p
+@@ -283,7 +278,7 @@
+     app.include_router(router)
+     try:
+         await worker.start()
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
+             op = key()
+             body = dict(request_id=op, goal='API pipeline', capability='synthetic.echo', payload={'value': 'through API'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
+             admitted = await client.post('/execution/tasks', json=body)
+@@ -418,7 +413,7 @@
+     app.include_router(router)
+     try:
+         await worker.start()
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
+             body = dict(request_id=key(), goal='schedule', name='scheduled echo', cron_expr='* * * * *', execution=dict(capability='shell.exec', payload={'value':'no'}))
+             assert (await client.post('/schedule/jobs', json=body)).status_code == 400
+             assert a.list_schedules(ACTOR) == []
+@@ -517,7 +512,7 @@
+     app.include_router(router)
+     app.add_middleware(AdmissionBodyLimit)
+     try:
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
+             response=await client.post('/execution/tasks',content=b'x'*262145)
+             assert response.status_code==413
+             async def chunks():
+@@ -548,7 +543,7 @@
+         await worker.stop()
+         op=submit(p)['request_id']
+         reserved=phase_id(op,'publish')
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
+             assert (await client.post('/tasks',json={'request_id':reserved,'goal':'reserve internal receipt'})).status_code==422
+             assert (await client.delete('/tasks/'+op,params={'request_id':reserved})).status_code==422
+             assert (await client.delete('/schedule/jobs/'+op,params={'request_id':reserved})).status_code==422
+--- shared/tests/test_ue5_security.py
++++ candidate/tests/test_ue5_security.py
+@@ -22,7 +22,7 @@
+     return manager
+ 
+ 
+-async def exercise(frames, *, before_receive=None, on_send=None, endpoint=None, path="/ue5"):
++async def exercise(frames, *, before_receive=None):
+     """Use Starlette's actual protocol state machine, without a listener."""
+     incoming = iter([{"type": "websocket.connect"}, *frames])
+     sent = []
+@@ -37,13 +37,11 @@
+ 
+     async def send(message):
+         sent.append(message)
+-        if on_send is not None:
+-            await on_send(message)
+ 
+     ws = WebSocket(
+         {
+             "type": "websocket",
+-            "path": path,
++            "path": "/ue5",
+             "headers": [(b"authorization", ("Bearer " + TOKEN).encode())],
+             "client": ("127.0.0.1", 12345),
+             "query_string": b"",
+@@ -51,7 +49,7 @@
+         receive,
+         send,
+     )
+-    await (endpoint or server.ue5_endpoint)(ws)
++    await server.ue5_endpoint(ws)
+     return ws, sent
+ 
+ 
+@@ -61,7 +59,7 @@
+         {"type": "websocket.receive", "text": '{"type":"client-ready"}'},
+         {"type": "websocket.disconnect", "code": code},
+     ]))
+-    assert len(sent) == 1 and sent[0]["type"] == "websocket.accept"
++    assert sent == [{"type": "websocket.accept", "subprotocol": None, "headers": []}]
+     assert manager.active == []
+     manager.disconnect(ws)
+     manager.disconnect(ws)
+@@ -72,7 +70,7 @@
+ def test_binary_frames_close_cleanly(manager, payload):
+     _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
+     assert sent[-1]["type"] == "websocket.close"
+-    assert sent[-1]["code"] == 1008
++    assert sent[-1]["code"] == 1003
+     assert manager.active == []
+ 
+ 
+@@ -88,19 +86,9 @@
+     assert manager.active == []
+ 
+ 
+-@pytest.mark.parametrize("text", ["x" * 8193, "é" * 4097])
+-def test_oversized_text_is_bounded(manager, text):
+-    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "text": text}]))
++def test_oversized_text_is_bounded(manager):
++    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "text": "x" * 8193}]))
+     assert sent[-1]["code"] == 1009
+-    assert manager.active == []
+-
+-
+-def test_valid_utf8_frame_at_byte_limit_is_preserved(manager):
+-    _, sent = asyncio.run(exercise([
+-        {"type": "websocket.receive", "text": "é" * 4096},
+-        {"type": "websocket.disconnect", "code": 1000},
+-    ]))
+-    assert len(sent) == 1 and sent[0]["type"] == "websocket.accept"
+     assert manager.active == []
+ 
+ 
+@@ -166,113 +154,7 @@
+             ws.send_bytes(b"x")
+             with pytest.raises(WebSocketDisconnect) as closed:
+                 ws.receive_text()
+-            assert closed.value.code == 1008
++            assert closed.value.code == 1003
+         assert manager.active == []
+     assert TOKEN not in repr(events)
+     assert "authorization" not in repr(events).lower()
+-
+-
+-def test_cancellation_during_accept_releases_pending_capacity(manager):
+-    async def run():
+-        accepting = asyncio.Event()
+-
+-        async def receive():
+-            return {"type": "websocket.connect"}
+-
+-        async def send(message):
+-            accepting.set()
+-            await asyncio.Future()
+-
+-        ws = WebSocket({
+-            "type": "websocket", "path": "/ue5",
+-            "headers": [(b"authorization", ("Bearer " + TOKEN).encode())],
+-            "client": ("127.0.0.1", 12345),
+-        }, receive, send)
+-        task = asyncio.create_task(server.ue5_endpoint(ws))
+-        await asyncio.wait_for(accepting.wait(), timeout=1)
+-        task.cancel()
+-        with pytest.raises(asyncio.CancelledError):
+-            await task
+-        assert manager.active == []
+-        assert manager._accepting == 0
+-
+-    asyncio.run(run())
+-
+-
+-def test_connection_bound_refuses_growth_and_reclaims_capacity(manager):
+-    class Client:
+-        def __init__(self):
+-            self.closed = None
+-
+-        async def accept(self):
+-            pass
+-
+-        async def close(self, **kwargs):
+-            self.closed = kwargs
+-
+-    async def run():
+-        accepted = [Client() for _ in range(32)]
+-        for client in accepted:
+-            assert await manager.connect(client)
+-        refused = Client()
+-        assert await manager.connect(refused) is False
+-        assert refused.closed["code"] == 1008
+-        assert len(manager.active) == 32
+-        for client in accepted:
+-            manager.disconnect(client)
+-            manager.disconnect(client)
+-        assert manager.active == [] and manager._accepting == 0
+-        assert await manager.connect(refused)
+-        manager.disconnect(refused)
+-        assert manager.active == []
+-
+-    asyncio.run(run())
+-
+-
+-def test_slow_close_cannot_retain_registration(manager, monkeypatch):
+-    monkeypatch.setattr(server, "_UE5_CLOSE_TIMEOUT", 0.01)
+-
+-    async def slow(message):
+-        if message["type"] == "websocket.close":
+-            await asyncio.Future()
+-
+-    _, sent = asyncio.run(exercise([
+-        {"type": "websocket.receive", "bytes": b"x"},
+-    ], on_send=slow))
+-    assert sent[-1]["code"] == 1008
+-    assert manager.active == []
+-
+-
+-def test_close_exception_cannot_retain_registration(manager):
+-    async def broken(message):
+-        if message["type"] == "websocket.close":
+-            raise RuntimeError("synthetic close failure")
+-
+-    with pytest.raises(RuntimeError, match="synthetic close failure"):
+-        asyncio.run(exercise([
+-            {"type": "websocket.receive", "bytes": b"x"},
+-        ], on_send=broken))
+-    assert manager.active == []
+-
+-
+-@pytest.mark.parametrize("stage", ["registration", "audit"])
+-def test_sibling_chat_registration_cleanup_uses_same_lifetime_scope(manager, monkeypatch, stage):
+-    chat = server.ConnectionManager()
+-    monkeypatch.setattr(server, "manager", chat)
+-    if stage == "registration":
+-        original = chat.connect
+-
+-        async def interrupted(ws):
+-            await original(ws)
+-            raise RuntimeError("synthetic registration failure")
+-
+-        monkeypatch.setattr(chat, "connect", interrupted)
+-    else:
+-        def audit(event, data):
+-            if event == "ws_connect":
+-                raise RuntimeError("synthetic audit failure")
+-
+-        monkeypatch.setattr(server.audit, "log", audit)
+-    with pytest.raises(RuntimeError, match="synthetic"):
+-        asyncio.run(exercise([], endpoint=server.ws_endpoint, path=settings.server.websocket_path))
+-    assert chat.active == []
+--- shared/tests/test_server_auth.py
++++ candidate/tests/test_server_auth.py
+@@ -27,7 +27,7 @@
+     return token
+ 
+ 
+-def test_blank_token_does_not_grant_task_authority() -> None:
++def test_empty_token_cannot_access_authority() -> None:
+     assert settings.server.api_token == ""
+     response = client.get("/tasks")
+     assert response.status_code == 401
+--- shared/docs/task_api.md
++++ candidate/docs/task_api.md
+@@ -1,17 +1,18 @@
+ # Task and schedule client contract
++
++Release-candidate update: **all authority routes, including /ready, require a
++configured bearer even on loopback and in an embedded router**. Empty-token
++anonymous authority access is retired. The current protected-ancestry, WebSocket,
++default and release contract is [release_candidate.md](release_candidate.md).
++Historical Sprint 6 details below are superseded wherever they describe anonymous
++held-task/readiness access. No deployment or live authorization is granted.
++
+ 
+ For signed synthetic transport submissions, API bearer requirements and the closed
+ legacy host/tool interfaces, see [the current integration contract](end_to_end_readiness.md).
+ The top-level `transport_permit` on `POST /execution/tasks` is optional and only accepted with an explicitly
+ configured exact synthetic transport and matching API credential. It grants no
+ real tool access. Public task metadata includes endpoint and grant digest only.
+-
+-All authority HTTP routes require a configured, matching `Authorization: Bearer`
+-credential, including held-task reads/cancellation, receipts, schedules,
+-execution status and `/ready`. The router enforces this independently of the host
+-middleware. An empty token refuses these requests even after trusted admission;
+-loopback, Host, Origin and query-string tokens do not supply identity. `/health`
+-remains a separate public liveness route. See [the security baseline](security_baseline.md).
+ 
+ 
+ The authority stores decisions, held work, and opt-in synthetic execution results.
+@@ -26,7 +27,7 @@
+ bytes or complete a task. Archive restore remains an explicitly authorized offline
+ CLI operation; no public mutation endpoint is mounted. See
+ [the disaster recovery guide](audit_disaster_recovery.md).
+-This contract grants no additional execution permissions and approves no
++This document changes no authentication policy or permissions and approves no
+ service startup, client rollout, broker connection or privileged action.
+ 
+ The repository CLI also exposes read-only `jarvis tasks`, `--task-id UUID`,
+@@ -57,8 +58,8 @@
+ 2. `POST /tasks` takes exactly request_id and goal. `POST /schedule/jobs` also
+    takes name and cron_expr, with an optional explicit synthetic `execution`
+    template described below. Unknown fields are rejected. The actor scope is
+-   server-owned; a username/header/body field cannot select authority. A configured
+-   matching bearer credential is mandatory before authority access.
++   server-owned; a username/header/body field cannot select authority. Existing
++   optional bearer enforcement still applies where configured.
+ 3. Consume the returned receipt, including operation, request_id, state and
+    result. `state=committed` proves the stored decision, not guest execution,
+    effect completion or a human receiving the response. Ordinary `/tasks` work
+--- shared/docs/end_to_end_readiness.md
++++ candidate/docs/end_to_end_readiness.md
+@@ -1,4 +1,12 @@
+ # Offline application execution and readiness
++
++Release-candidate update: **all authority routes, including /ready, require a
++configured bearer even on loopback and in an embedded router**. Empty-token
++anonymous authority access is retired. The current protected-ancestry, WebSocket,
++default and release contract is [release_candidate.md](release_candidate.md).
++Historical Sprint 6 details below are superseded wherever they describe anonymous
++held-task/readiness access. No deployment or live authorization is granted.
++
+ 
+ Sprint 6 joins the actual FastAPI lifespan, Authority, queue, scheduler, execution
+ worker, receipts, enrollment, recovery registry and protected witness. The evidence
+@@ -99,9 +107,8 @@
+    automatic adoption, restored activation, history deletion or real migration.
+ 4. A nonempty configured API credential even on loopback, a documented caller
+    identity/scope policy and verified ingress/origin protections. Authority routes
+-   require the configured Bearer credential, including held-task reads and
+-   cancellation and independently embedded routers. Empty-token loopback startup
+-   does not grant anonymous task authority. Qualify actual startup/shutdown and
++   require the configured bearer, including held-task reads, cancellation and
++   detailed readiness in independently embedded routers. Qualify startup/shutdown and
+    private data/log handling without invoking production startup now.
+ 5. Physical filesystem/WAL/fsync/rename/quota and actual power-loss qualification
+    on the intended storage. SIGKILL plus disposable SQLite tests are insufficient

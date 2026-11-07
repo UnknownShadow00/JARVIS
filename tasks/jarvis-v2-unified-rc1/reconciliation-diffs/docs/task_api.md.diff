@@ -1,0 +1,48 @@
+--- codex1/docs/task_api.md
++++ codex2/docs/task_api.md
+@@ -1,18 +1,17 @@
+ # Task and schedule client contract
+-
+-Release-candidate update: **all authority routes, including /ready, require a
+-configured bearer even on loopback and in an embedded router**. Empty-token
+-anonymous authority access is retired. The current protected-ancestry, WebSocket,
+-default and release contract is [release_candidate.md](release_candidate.md).
+-Historical Sprint 6 details below are superseded wherever they describe anonymous
+-held-task/readiness access. No deployment or live authorization is granted.
+-
+ 
+ For signed synthetic transport submissions, API bearer requirements and the closed
+ legacy host/tool interfaces, see [the current integration contract](end_to_end_readiness.md).
+ The top-level `transport_permit` on `POST /execution/tasks` is optional and only accepted with an explicitly
+ configured exact synthetic transport and matching API credential. It grants no
+ real tool access. Public task metadata includes endpoint and grant digest only.
++
++All authority HTTP routes require a configured, matching `Authorization: Bearer`
++credential, including held-task reads/cancellation, receipts, schedules,
++execution status and `/ready`. The router enforces this independently of the host
++middleware. An empty token refuses these requests even after trusted admission;
++loopback, Host, Origin and query-string tokens do not supply identity. `/health`
++remains a separate public liveness route. See [the security baseline](security_baseline.md).
+ 
+ 
+ The authority stores decisions, held work, and opt-in synthetic execution results.
+@@ -27,7 +26,7 @@
+ bytes or complete a task. Archive restore remains an explicitly authorized offline
+ CLI operation; no public mutation endpoint is mounted. See
+ [the disaster recovery guide](audit_disaster_recovery.md).
+-This document changes no authentication policy or permissions and approves no
++This contract grants no additional execution permissions and approves no
+ service startup, client rollout, broker connection or privileged action.
+ 
+ The repository CLI also exposes read-only `jarvis tasks`, `--task-id UUID`,
+@@ -58,8 +57,8 @@
+ 2. `POST /tasks` takes exactly request_id and goal. `POST /schedule/jobs` also
+    takes name and cron_expr, with an optional explicit synthetic `execution`
+    template described below. Unknown fields are rejected. The actor scope is
+-   server-owned; a username/header/body field cannot select authority. Existing
+-   optional bearer enforcement still applies where configured.
++   server-owned; a username/header/body field cannot select authority. A configured
++   matching bearer credential is mandatory before authority access.
+ 3. Consume the returned receipt, including operation, request_id, state and
+    result. `state=committed` proves the stored decision, not guest execution,
+    effect completion or a human receiving the response. Ordinary `/tasks` work

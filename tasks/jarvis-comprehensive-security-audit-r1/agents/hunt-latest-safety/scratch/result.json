@@ -1,0 +1,62 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fserver.py%23_process-and-_process_stream::app%2Ftools%2Fregistry.py%23ToolRegistry.call::app%2Flegacy-safety::AI-AND-LLM.md%23Action-confirmation%20and%20approval%20binding",
+      "disposition": "covered",
+      "reviewed_paths": ["app/server.py", "app/tools/registry.py", "app/voice/dictation.py", "app/voice/audio_stream.py", "app/brain/tool_params.py", "app/brain/kill_switch.py", "app/computer/screenshot.py", "app/computer/vision.py", "app/computer/verifier.py", "app/computer/yolo_detector.py", "app/tools/screenshot.py", "app/tools/vision.py", "app/tools/computer_use.py", "tasks/tool_readiness_smoke.py", "app/cli.py", "app/resource_manager.py", "app/voice/vad.py", "tests/test_approval_gates.py", "tests/test_dictation.py", "tests/test_safety_levels.py", "tests/test_server_integration.py", "tests/safety_test.py"],
+      "checks": [
+        {
+          "agent_id": "hunt-latest-safety",
+          "reviewed_paths": ["app/server.py", "app/tools/registry.py", "app/voice/dictation.py", "app/voice/audio_stream.py", "app/brain/tool_params.py", "app/brain/kill_switch.py"],
+          "invariant": "Legacy confirmation, configuration, getter, voice and streaming fallback paths must not invoke an effectful tool or clipboard/typing sink.",
+          "method": "source",
+          "result": "Registry.call145-158 unconditionally refuses before loading or logging tool parameters; execute160-168 delegates to it. Module TOOLS73-76, instance TOOLS85-88 and every get/get_tool/_load_tool path90-111 expose only _LazyToolCallable, whose call58-59 always refuses. Metadata list/descriptions use fabricated ModuleType rather than effectful imports. Mutable legacy _tools is unused by dispatch. _process601-602 denies use_tool, confirm_action and vision; _process_stream670-671 returns None for those intents and its callers' fallback reaches that denial. No /confirm route remains; _pending_confirmations90 is inert. Thus earlier D1 emergency-stop confirmation and D2 duplicate note append effects cannot recur through these retired paths. Dictation.handle_transcript16-19 and direct _write_clipboard21-22/_type_out24-25 always return False; audit contains no transcript and audio_stream89 delegates only to that refusal. Settings, confirmed=True, cached pending items, direct getter compatibility and narration failure do not restore execution.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-latest-safety",
+          "reviewed_paths": ["app/server.py", "app/tools/registry.py", "app/voice/audio_stream.py", "app/computer/screenshot.py", "app/computer/vision.py", "app/computer/verifier.py", "app/computer/yolo_detector.py", "app/tools/screenshot.py", "app/tools/vision.py", "app/tools/computer_use.py", "tasks/tool_readiness_smoke.py"],
+          "invariant": "Do not carry historical native voice/vision screenshot reachability across the new deny-all legacy dispatch boundary.",
+          "method": "source",
+          "result": "Screenshot.capture17-35 is unchanged and still trusts an existing fixed temporary child and predictable timestamp PNG path. Screen vision44, ActionVerifier10 and YOLO47 call capture directly, and tool wrapper modules directly import execute. However no maintained runtime caller invokes those helpers from ordinary chat/native voice once server601-602 and registry158 deny dispatch. Resource-manager vision import only calls unload. The tool_readiness_smoke screenshot helper96-107 forces dry_run=True before direct execute. Tests/direct trusted imports can invoke real helpers outside the retired registry, which is a distinct embedding prerequisite. Prior screenshot needs-validation records must remove their assertion that native voice currently bypasses Authority admission to perform capture; an independently active direct helper/adapter must now be established before any OS-user capture impact can be claimed. No new reachable screenshot bypass was found.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-latest-safety",
+          "reviewed_paths": ["app/cli.py", "app/resource_manager.py", "app/voice/vad.py", "app/server.py"],
+          "invariant": "Revalidate which earlier implementation defects remain present without upgrading operator robustness defects into privilege escalation.",
+          "method": "source",
+          "result": "D3 persists: CLI shutdown186-190 always calls termination; classify_jarvis_process757-766 accepts generic app.main:app, boot, sensor and diagnostic markers before provenance; terminate793-800 signals selected PIDs. D4 persists: VAD speech69-74 continues before the only frame cap85; post-speech queue timeouts61-63 ignore deadline. D6 persists: CLI _post228-236 omits Authorization, catches every failure as None and sleep callers use local fallback. These three source files are hash-identical to snapshot-expanded. D5 persists in changed server: parsed nonobject JSON fails at data.get476; nonstring message reaches unvalidated processing495; cleanup525-527 handles only WebSocketDisconnect. This review establishes current source persistence and shifted D5 lines, not a fresh reproduction, deployment admission, shared-service denial or lower-trust authority gain.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-latest-safety",
+          "reviewed_paths": ["tests/test_approval_gates.py", "tests/test_dictation.py", "tests/test_safety_levels.py", "tests/test_server_integration.py", "tests/safety_test.py"],
+          "invariant": "Safety regression assertions must describe the current retired execution contract and must not be mistaken for executed or passing evidence.",
+          "method": "source",
+          "result": "Updated approval tests assert /confirm unknown and preseeded IDs cannot dispatch (404); dictation tests assert no clipboard/typing/raw-transcript audit even with enabled/live flags; registry tests assert denial across flags and all public compatibility callbacks. Other existing tests remain stale: test_server_integration.py:test_chat_vision_intent_calls_vision_tool expects registry.call to run and tests/safety_test.py58-79 expects successful legacy L0/L1/L2 dispatch and dry-run return. They cannot substantiate current execution. No target test suite or real runtime was executed by this hunter.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Update tests/test_server_integration.py vision/dispatch expectations and the standalone tests/safety_test.py matrix for the retired registry contract; preserve the new negative compatibility-getter and dictation tests.",
+    "Keep screenshot secure-output hardening for any future independently authorized adapter: private owned directory and exclusive descriptor-bound file publication. Current ordinary chat/native voice reachability is denied, so historical helper risk must not be represented as a currently exposed chat path."
+  ],
+  "uncovered": [],
+  "latest_observations": {
+    "source_snapshot": "snapshot-latest",
+    "D1": {"status": "gated", "reason": "Confirmation endpoint removed; registry and every compatibility dispatch refuse unconditionally. Preserve earlier fixture as historical evidence only."},
+    "D2": {"status": "gated", "reason": "Stream use_tool immediately returns None; normal fallback refuses before first effect; registry independently refuses. The streaming fallback structure remains for narration, without an effectful tool path."},
+    "D3": {"status": "persistent-source", "source": "app/cli.py:186-190; app/resource_manager.py:752-800", "scope": "Unrelated same-UID process selection remains an operator implementation defect, without demonstrated privilege gain."},
+    "D4": {"status": "persistent-source", "source": "app/voice/vad.py:57-86", "scope": "Unconditional positive-speech continue and post-speech timeout behavior remain unchanged; no shared outage established."},
+    "D5": {"status": "persistent-source", "source": "app/server.py:475-478,495-497,525-527", "scope": "Nonobject/nonstring parse defects and exception-specific cleanup persist; previous artifact is revision-tagged evidence."},
+    "D6": {"status": "persistent-source", "source": "app/cli.py:228-236", "scope": "POST still omits credential and collapses authentication/transport failures into local fallback."},
+    "screenshot": {"status": "helper-risk-gated-from-ordinary-paths", "fingerprint": "app/computer/screenshot.py:shared-temp-output", "reason": "Fixed temporary output helper remains; ordinary native voice/chat/vision/tool dispatch cannot reach it. An independently invoked active direct helper/adapter is a new unresolved prerequisite in addition to desktop dependency/OS-user/temp-root facts."},
+    "bounded_validation": {"status": "submitted-to-parent-not-yet-observed", "harness": "agents/hunt-latest-safety/scratch/latest_safety.py", "cases": 6, "description": "Dummy-only registry flags/getters, streaming fallback, inactive state, AST route inventory and dictation denial; no imports of real effect modules or runtime startup."}
+  }
+}

@@ -1,0 +1,17 @@
+--- codex1/tests/test_phase3_integration.py
++++ codex2/tests/test_phase3_integration.py
+@@ -1,5 +1,3 @@
+-
+-from application_fixtures import admitted_app
+ from types import SimpleNamespace
+ from unittest.mock import AsyncMock, patch
+ 
+@@ -17,7 +15,7 @@
+     with TestClient(app) as client, patch("app.server.check_voice", return_value=False), patch("app.server.is_active", return_value=True), patch("app.server.intent_router.classify", return_value=_intent("screenshot")), patch("app.server.registry.call", return_value=ToolResult(tool="screenshot", output={"path": "/tmp/test.png", "monitor": 0})), patch("app.server.llm_client.chat", new=AsyncMock(return_value="Screenshot captured, sir.")):
+         response = client.post("/chat", json={"message": "take a screenshot"})
+     assert response.status_code == 200
+-    assert "disabled" in response.json()["reply"].lower()
++    assert "sir" in response.json()["reply"].lower()
+ 
+ 
+ def test_mouse_keyboard_confirmation_gate() -> None:

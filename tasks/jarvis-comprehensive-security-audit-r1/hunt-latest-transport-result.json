@@ -1,0 +1,120 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Fapi.py%23submit_execution::app%2Fagent%2Fexecution.py%23ExecutionPipeline::app%2Fagent%2Ftransport-integration::PROTOCOLS-RPC-AND-MESSAGING.md%23Envelope%20and%20payload%20identity%20mismatch",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/admission.py",
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/execution_transport.py",
+        "app/agent/recovery.py",
+        "app/agent/runtime.py",
+        "app/server.py",
+        "tests/test_execution_pipeline.py",
+        "tests/test_secure_transport.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-latest-transport",
+          "reviewed_paths": [
+            "app/agent/api.py",
+            "app/agent/admission.py",
+            "app/agent/runtime.py",
+            "app/server.py"
+          ],
+          "invariant": "Public inputs cannot select a transport principal, endpoint or real executor, and a non-null transport permit requires configured Bearer authentication.",
+          "method": "source",
+          "result": "API pins SERVICE_ACTOR; extra fields are forbidden; admission enforces byte/chunk/time limits and strict duplicate-key/nonfinite JSON rejection. submit_execution independently requires the configured exact Bearer credential for non-null transport_permit. Trusted local embedding is the only execution/transport opt-in. With no permit the existing separate pure synthetic adapter remains possible only when embedding enables simulation; this is not transport invocation or real execution.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-latest-transport",
+          "reviewed_paths": [
+            "app/agent/execution.py",
+            "app/agent/execution_transport.py",
+            "app/agent/authority.py"
+          ],
+          "invariant": "Admission, claims and dispatch bind one authorized operation and never replay a durable reservation into another computation.",
+          "method": "source",
+          "result": "submit canonicalizes the permit copy and persists grant plus task in one fenced mutation; binding covers ledger store, trusted actor scope, public UUID4, goal digest, fixed endpoint and capability/payload/expiry/timeout. Dispatch rechecks policy, live permit, claim generation, cancellation and deadline. Transport authenticates request, reconstructs its wire identity and reserves via a stable internal UUID5 receipt before pure computation; a replayed reservation is refused. Authority mutex, lifetime ownership fence, transaction receipts and ledger verification cover all durable writes.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-latest-transport",
+          "reviewed_paths": [
+            "app/agent/execution.py",
+            "app/agent/execution_transport.py",
+            "app/agent/recovery.py",
+            "app/agent/authority.py",
+            "tests/test_secure_transport.py",
+            "tests/test_execution_pipeline.py"
+          ],
+          "invariant": "Interrupted dispatch is conservative, and recovery/publication require durable signed output bound to the original task and historical claim.",
+          "method": "source",
+          "result": "A signed report is committed before reply. Verification checks both independent wire MAC domains, store/scope/op/endpoint/spec/nonce/deadline and outbox generation, durable reservation/report equality, authorized report time and recomputed pure result. Dispatch exceptions become UNKNOWN; no automatic claim replay occurs. Restart marks unfinished claims UNKNOWN without altering their original claim generation. Operator reconciliation needs a separate short-lived payload/checkpoint-bound permit and records existing validated evidence without invocation; publication verifies provenance again. Expired queued permits are terminal before invocation. Historical verification authenticates expired permits without treating them as current grants. Existing tests cover lost replies, cancellation handoffs, bad signatures, witness loss, queue expiry and duplicate dispatch; no target code was executed by this hunter.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fexecution_transport.py%23SyntheticTransport::app%2Fagent%2Fexecution_transport.py%23authorize-and-verify_evidence::app%2Fagent%2Fexecution_transport::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/execution_transport.py",
+        "app/agent/ledger.py",
+        "app/agent/recovery.py",
+        "app/agent/runtime.py",
+        "tests/test_secure_transport.py",
+        "tests/transport_fixtures.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-latest-transport",
+          "reviewed_paths": [
+            "app/agent/execution_transport.py",
+            "app/agent/recovery.py",
+            "app/agent/authority.py"
+          ],
+          "invariant": "Permit, request, response and ledger authentication keys are distinct, with no permissive cryptographic fallback.",
+          "method": "source",
+          "result": "Constructor requires exact OperatorPermits and distinct bytes keys of at least 32 bytes for permit/request/response; configure rejects equality with the ledger key and requires verified enrollment, ledger, simulation opt-in and recovery registry. Request and reply MACs use separate keys over canonical JSON, with compare_digest and exact envelope fields. Current permits enforce a positive lifetime at most 300 seconds and exact command/request/scope/payload/checkpoint binding. Historical permits still require the correct MAC and admitted checkpoint lineage. Invalid signatures and custody state cause refusal.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-latest-transport",
+          "reviewed_paths": [
+            "app/agent/execution_transport.py",
+            "app/agent/execution.py",
+            "app/agent/ledger.py",
+            "app/agent/runtime.py",
+            "tests/test_secure_transport.py",
+            "tests/transport_fixtures.py"
+          ],
+          "invariant": "Framing and same-process peer checks cannot be confused with an external authenticated executor or arbitrary transport.",
+          "method": "source",
+          "result": "Transport creates only an unnamed AF_UNIX SOCK_STREAM socketpair; endpoint names are a fixed two-entry synthetic capability map. SO_PEERCRED validates the creating PID/UID and authority ownership is rechecked; this is explicitly same-process scope, not OS isolation. Four-byte network-order frame lengths reject zero and values above 32768; partial input, duplicate JSON and nonfinite JSON fail closed; receive loops apply monotonic and wall-clock deadlines. Exact synthetic executor/transport types exclude arbitrary plugins, paths and provider operations. Test fixtures use declared dummy keys and disposable enrollment/recovery stores only.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Preflight the canonical encoded response size during transport admission: an accepted 8192-character Unicode echo value can exceed the 32768-byte frame after ASCII JSON escaping. Current behavior refuses transmission and retains UNKNOWN plus a durable signed report; no unauthorized effect or publication is established."
+  ],
+  "uncovered": [],
+  "latest_observations": [
+    "Source snapshot is snapshot-latest at 2026-11-06T06:57:07Z. Findings from older live-capable chat paths must not be treated as evidence of transport execution.",
+    "Transport peer authentication is a co-located socketpair consistency check, and execution output is bounded pure synthetic computation. No real external executor or installed infrastructure identity was qualified.",
+    "No target execution, network call, live credential, infrastructure action, or shared source/report modification was performed by this hunter. Ten selected existing tests are proposed separately in scratch/proposed-tests.json for parent-controlled isolation; no local artifact is claimed until parent promotion.",
+    "Parent owns consolidated tasks/loop-log.md completion entry."
+  ]
+}

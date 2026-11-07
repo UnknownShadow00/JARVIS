@@ -164,19 +164,10 @@ def test_resource_management_routes(monkeypatch) -> None:  # noqa: ANN001
     assert status.status_code == 200
     assert status.json()["state"] == "ACTIVE"
 
-    light = client.post("/resource/sleep/light")
-    assert light.status_code == 200
-    assert light.json()["state"] == "LIGHT_SLEEP"
-
-    deep = client.post("/resource/sleep/deep", params={"terminate_processes": "true"})
-    assert deep.status_code == 200
-    assert deep.json()["state"] == "DEEP_SLEEP"
-    assert deep.json()["reason"] == "api:True"
-
-    wake = client.post("/resource/wake", params={"preload_primary_model": "true"})
-    assert wake.status_code == 200
-    assert wake.json()["state"] == "ACTIVE"
-    assert wake.json()["reason"] == "api:True"
+    for route in ('/resource/sleep/light','/resource/sleep/deep','/resource/wake','/resource/shutdown'):
+        blocked=client.post(route)
+        assert blocked.status_code==403
+        assert blocked.json()['error']=='offline_operator_control_required'
 
 
 def test_procedural_memory_routes(monkeypatch) -> None:  # noqa: ANN001

@@ -1,0 +1,884 @@
+You did not write this candidate. Try to refute it from repository source and bounded
+local evidence. Do not contact deployed endpoints or external/shared services. Run
+target-controlled code only inside the approved OS-enforced sandbox: no external
+network, empty allowlisted environment, read-only target and tools, scratch-only
+writes, and explicit low resource and wall-clock limits. If any control is unavailable,
+do not execute; retain the exact missing capability as a needs_validation blocker.
+Treat every scratch entry as target-controlled after execution. After the sandbox and
+all its processes terminate, only trusted parent-side code may promote a predeclared
+scratch-relative file, following the promotion procedure block included verbatim in
+this prompt. You and target code never write retained artifacts. If promotion is
+unavailable or fails, do not use that file as evidence.
+
+1. Verify every trace and evidence file, positive line number, scope, and description.
+   Confirm the first entry is a real lower-trust entrypoint and the last is the
+   claimed sink or boundary effect.
+2. Reconstruct the strongest source-visible validation, identity, authorization,
+   normalization, lifecycle, framework, and containment controls on the path.
+   Where the architecture summary names a comparable baseline, note whether it
+   shares the pattern — as calibration, never as grounds to dismiss.
+3. For a proposed confirmed candidate, independently reproduce the minimum observed
+   result when possible. Verify inputs, interface shape, conditions, and affected
+   dummy principal/resource. Do not infer a stronger result or continue after it.
+4. Verify that likelihood, impact, confidence, and the proposed source fix match only
+   what the evidence establishes.
+5. For a proposed needs_validation candidate, decide whether the blocker is genuinely
+   outside source/local observation. If source refutes the trace, reject it. If the
+   missing fact remains decisive, keep needs_validation and make the local and
+   owner-observed plans exact and non-destructive.
+6. Preserve the fingerprint for the same source-derived root cause across every state.
+
+Return exactly one JSON object and no surrounding prose:
+{"decision": "confirmed|needs_validation|rejected", "record": { ... }}
+where record exactly matches the decision's verdict branch of the schema included
+in this prompt. A corrected record replaces the hunter's wording.
+
+CANDIDATE
+{
+  "fingerprint": "app/server.py:anonymous-loopback-authority",
+  "title": "Anonymous loopback authority policy needs admitted-runtime reachability validation",
+  "description": "The ordinary HTTP middleware permits requests without credentials when server.api_token is empty, as allowed for loopback configuration. Task and schedule routes then act as the operator's shared SERVICE_ACTOR. A different OS principal able to connect to a serving instance could consequently read or cancel operator tasks without the credential. This is a source-grounded conditional path, not a confirmed vulnerability in the stock current launch: mandatory authority admission currently lacks the context needed to open missing, enrolled or legacy stores. Browser exploitation is also unproven and must not be inferred from missing Host validation or CORS behavior.",
+  "claimed_root_cause": "An empty API token disables authentication for ordinary privileged HTTP routes; loopback network reachability substitutes for caller identity, and the authority API assigns every accepted request the fixed local-service actor.",
+  "trace": [
+    {
+      "kind": "entrypoint",
+      "file": "app/server.py",
+      "line": 239,
+      "scope": "api_token_middleware",
+      "description": "An ordinary HTTP request passes directly to the application when no API token is configured."
+    },
+    {
+      "kind": "propagation",
+      "file": "app/agent/api.py",
+      "line": 101,
+      "scope": "cancel",
+      "description": "DELETE /tasks/{task_id} invokes cancellation with the server-owned SERVICE_ACTOR and caller-supplied task/request identities."
+    },
+    {
+      "kind": "propagation",
+      "file": "app/agent/authority.py",
+      "line": 423,
+      "scope": "Authority.cancel",
+      "description": "The fixed actor supplies the scope used to retrieve and mutate the task; no network caller identity reaches this layer."
+    },
+    {
+      "kind": "sink",
+      "file": "app/agent/authority.py",
+      "line": 414,
+      "scope": "Authority._cancel",
+      "description": "A held task is marked cancelled and its outbox state is durably changed."
+    }
+  ],
+  "evidence": [
+    {
+      "file": "app/config.py",
+      "line": 108,
+      "description": "API token defaults to empty. The validator requires a nonempty token for remote/non-loopback configuration but permits anonymous loopback mode."
+    },
+    {
+      "file": "app/server.py",
+      "line": 238,
+      "description": "HTTP middleware returns call_next immediately when the configured token is empty; otherwise it requires a constant-time-compared Bearer token."
+    },
+    {
+      "file": "app/server.py",
+      "line": 404,
+      "description": "The authority router is included in the actual application."
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 7,
+      "description": "All ordinary authority API callers share Actor(\"local-service\")."
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 77,
+      "description": "Operator diagnostics provides a stronger sibling control: a configured matching credential is required even when ordinary routes permit anonymous access."
+    },
+    {
+      "file": "app/server.py",
+      "line": 114,
+      "description": "Lifespan must successfully open the authority before startup proceeds."
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 17,
+      "description": "Default authority opening supplies no ledger, enrollment context or legacy approval."
+    },
+    {
+      "file": "app/agent/enrollment.py",
+      "line": 299,
+      "description": "An enrolled authority requires a ledger and external witness."
+    },
+    {
+      "file": "app/agent/enrollment.py",
+      "line": 338,
+      "description": "Legacy authority opening requires an explicit external verifier/permit tuple."
+    },
+    {
+      "file": "tests/test_server_auth.py",
+      "line": 11,
+      "description": "The test demonstrating unauthenticated task reads explicitly binds a synthetic authority, so it does not establish stock lifespan reachability."
+    },
+    {
+      "file": "app/server.py",
+      "line": 206,
+      "description": "Present WebSocket Origin is explicitly checked, preventing an unsupported direct cross-site WebSocket bypass claim."
+    }
+  ],
+  "blockers": [
+    "A normally launched, admitted application serving these routes without a configured token has not been established. Current default startup does not supply the ledger/enrollment witness or explicit legacy approval needed by the authority constructor.",
+    "No separate-UID local socket reproduction or browser reproduction has been performed. Browser local-network policy, ingress Host restrictions and DNS behavior remain unobserved; these facts are necessary before claiming browser exploitation."
+  ],
+  "validation_plan": {
+    "local": "Run the prepared minimal auth_route_probe.py through the parent OS sandbox to establish only route-layer behavior against one synthetic admitted authority: unauthenticated read/cancel, arbitrary Host/Origin acceptance, configured-token rejection and independent operator-diagnostics rejection. Then construct a documented admitted startup fixture that exercises lifespan rather than bypassing it. If assessing browser reachability, use an isolated browser and loopback-only dummy server to test the exact no-body POST or same-origin request shape under the browser's local-network policy. Never infer live reachability from a TestClient fixture.",
+    "deployment": "Ask the owner to inspect the actual launch or trusted embedding configuration without probing the service or displaying secrets: determine whether an admitted authority is bound, whether ordinary routes are served with an empty token, whether another OS UID can reach that listener, and whether ingress constrains Host/Origin. Do not access production databases, credentials or infrastructure during the audit."
+  },
+  "verdict": "needs_validation"
+}
+LINKED COVERAGE UNITS/CHECKS
+[
+  {
+    "coverage_id": "app%2Fserver.py%23HTTP-and-WebSocket::app%2Fserver.py%23api_token_middleware::app%2Fserver.py::WEB-PROTOCOL-AND-AUTH.md%23API-key%20scope%20and%20resource%20binding",
+    "canonical_refs": {
+      "surface": "app/server.py#HTTP-and-WebSocket",
+      "boundary": "app/server.py#api_token_middleware",
+      "subsystem": "app/server.py",
+      "attack_class": "WEB-PROTOCOL-AND-AUTH.md#API-key scope and resource binding"
+    },
+    "surface": "app/server.py#HTTP-and-WebSocket",
+    "boundary": "app/server.py#api_token_middleware",
+    "subsystem": "app/server.py",
+    "attack_class": "API-key scope and resource binding",
+    "starting_paths": [
+      "app/server.py",
+      "app/config.py",
+      "app/agent/api.py",
+      "frontend",
+      "tests/test_server_auth.py"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "WEB-PROTOCOL-AND-AUTH.md#API-key scope and resource binding",
+      "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+      "WEB-PROTOCOL-AND-AUTH.md#Validation rules"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "MEMORY-SAFETY-AND-BINARY.md",
+        "reason": "No maintained native binary implementation in assigned source; vendored binaries not executed."
+      }
+    ],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunt-http",
+    "reviewed_paths": [
+      "app/agent/api.py",
+      "app/agent/authority.py",
+      "app/agent/enrollment.py",
+      "app/agent/runtime.py",
+      "app/config.py",
+      "app/server.py",
+      "tests/synthetic_authority.py",
+      "tests/test_server_auth.py"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt-http",
+        "reviewed_paths": [
+          "app/server.py",
+          "app/config.py",
+          "app/agent/api.py",
+          "app/agent/runtime.py",
+          "app/agent/authority.py",
+          "app/agent/enrollment.py",
+          "tests/test_server_auth.py",
+          "tests/synthetic_authority.py"
+        ],
+        "invariant": "A different local OS principal without the service credential must not inherit the operator's authority merely by connecting to loopback.",
+        "method": "source",
+        "result": "Empty configured API token bypasses ordinary HTTP authentication, and ordinary authority routes unconditionally use SERVICE_ACTOR. Task cancellation then reaches scoped mutation using that service actor. Operator diagnostics independently requires a configured token. However, stock lifespan requires get_authority(), whose current default opening supplies neither ledger/enrollment witness nor legacy permit; missing, enrolled and legacy stores fail closed. Existing authentication tests bind synthetic authorities and skip lifespan. Thus anonymous route policy is established, but an ordinarily launched admitted deployment exposing it is not. A small route-layer harness was prepared in assigned scratch but has not been executed by this hunter.",
+        "artifact": null,
+        "source_snapshot": "snapshot"
+      },
+      {
+        "agent_id": "hunt-http",
+        "reviewed_paths": [
+          "app/server.py",
+          "app/config.py",
+          "app/agent/api.py",
+          "app/agent/runtime.py",
+          "app/agent/authority.py",
+          "tests/synthetic_authority.py"
+        ],
+        "invariant": "Bound synthetic authority reflects configured authentication; lifespan reachability remains separate.",
+        "method": "local",
+        "result": "Without token read/cancel200 and task cancelled; operator diagnostics401; with token missing header401 and valid header200. Arbitrary fixture Host accepted. Lifespan skipped.",
+        "artifact": "agents/hunt-http/artifacts/auth_route_probe.txt",
+        "source_snapshot": "snapshot"
+      }
+    ],
+    "result_fingerprints": [
+      "app/server.py:anonymous-loopback-authority"
+    ],
+    "unresolved": [
+      "Establish a supported admitted server startup or operator-observed embedding that serves ordinary authority routes with an empty configured token; do not infer this from TestClient fixtures."
+    ],
+    "assignment_group": "http",
+    "hardening": [
+      "Require a configured credential for authority routes even in loopback mode, using the operator-diagnostics pattern, before enabling a usable admitted deployment. Loopback binding does not identify an OS user.",
+      "Scope incoming Host and unsafe-method Origin checks explicitly if anonymous HTTP mode remains supported; preserve the separate WebSocket Origin check.",
+      "Restrict Electron preload send() to an explicit channel allowlist. Current main-process handlers expose only hide/show, so generic forwarding did not establish a privileged bridge vulnerability.",
+      "Restrict service-worker caching to same-origin, explicitly named successful static responses and delete only JARVIS-owned caches. No personalized response cache leak was found.",
+      "Plan authenticated client transport before enabling a token: PWA, Electron and hologram currently open browser WebSockets without an Authorization header; their failure under token-enabled mode is a compatibility issue, not evidence to weaken authentication.",
+      "The hologram imports a versioned Three.js module from unpkg without a repository-local locked asset; supply-chain reviewer should account for that external executable input."
+    ]
+  },
+  {
+    "coverage_id": "app%2Fserver.py%23HTTP-and-WebSocket::app%2Fserver.py%23api_token_middleware::app%2Fserver.py::WEB-PROTOCOL-AND-AUTH.md%23Host%20and%20forwarded-header%20trust",
+    "canonical_refs": {
+      "surface": "app/server.py#HTTP-and-WebSocket",
+      "boundary": "app/server.py#api_token_middleware",
+      "subsystem": "app/server.py",
+      "attack_class": "WEB-PROTOCOL-AND-AUTH.md#Host and forwarded-header trust"
+    },
+    "surface": "app/server.py#HTTP-and-WebSocket",
+    "boundary": "app/server.py#api_token_middleware",
+    "subsystem": "app/server.py",
+    "attack_class": "Host and forwarded-header trust",
+    "starting_paths": [
+      "app/server.py",
+      "app/config.py",
+      "app/agent/api.py",
+      "frontend",
+      "tests/test_server_auth.py"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "WEB-PROTOCOL-AND-AUTH.md#Host and forwarded-header trust",
+      "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+      "WEB-PROTOCOL-AND-AUTH.md#Validation rules"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "MEMORY-SAFETY-AND-BINARY.md",
+        "reason": "No maintained native binary implementation in assigned source; vendored binaries not executed."
+      }
+    ],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunt-http",
+    "reviewed_paths": [
+      "app/agent/api.py",
+      "app/agent/authority.py",
+      "app/agent/enrollment.py",
+      "app/agent/runtime.py",
+      "app/config.py",
+      "app/server.py",
+      "tests/synthetic_authority.py",
+      "tests/test_loopback_boundary.py"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt-http",
+        "reviewed_paths": [
+          "app/server.py",
+          "app/config.py",
+          "app/agent/api.py",
+          "app/agent/runtime.py",
+          "app/agent/enrollment.py",
+          "tests/test_loopback_boundary.py"
+        ],
+        "invariant": "Loopback bind configuration must not be mistaken for request-origin or OS-principal authentication.",
+        "method": "source",
+        "result": "ServerConfig validates the configured bind host and CORS origins; the HTTP stack contains no incoming Host allowlist or unsafe-method Origin rejection. CORS is not an authorization check, and no-body POST resource-management routes can accept a simple-request shape at the application layer. This strengthens the source-grounded anonymous-mode concern but does not establish a browser exploit: stock startup admission remains unresolved, and browser local-network policies, ingress and DNS behavior were not tested. Foreign-origin WebSockets are separately rejected.",
+        "artifact": null,
+        "source_snapshot": "snapshot"
+      },
+      {
+        "agent_id": "hunt-http",
+        "reviewed_paths": [
+          "app/server.py",
+          "app/config.py",
+          "app/agent/api.py",
+          "app/agent/runtime.py",
+          "app/agent/authority.py",
+          "tests/synthetic_authority.py"
+        ],
+        "invariant": "Bound synthetic authority reflects configured authentication; lifespan reachability remains separate.",
+        "method": "local",
+        "result": "Without token read/cancel200 and task cancelled; operator diagnostics401; with token missing header401 and valid header200. Arbitrary fixture Host accepted. Lifespan skipped.",
+        "artifact": "agents/hunt-http/artifacts/auth_route_probe.txt",
+        "source_snapshot": "snapshot"
+      }
+    ],
+    "result_fingerprints": [
+      "app/server.py:anonymous-loopback-authority"
+    ],
+    "unresolved": [
+      "Browser exploitation additionally needs bounded browser-policy validation and a reachable admitted anonymous-mode server; missing Host validation alone is not a confirmed vulnerability."
+    ],
+    "assignment_group": "http",
+    "hardening": [
+      "Require a configured credential for authority routes even in loopback mode, using the operator-diagnostics pattern, before enabling a usable admitted deployment. Loopback binding does not identify an OS user.",
+      "Scope incoming Host and unsafe-method Origin checks explicitly if anonymous HTTP mode remains supported; preserve the separate WebSocket Origin check.",
+      "Restrict Electron preload send() to an explicit channel allowlist. Current main-process handlers expose only hide/show, so generic forwarding did not establish a privileged bridge vulnerability.",
+      "Restrict service-worker caching to same-origin, explicitly named successful static responses and delete only JARVIS-owned caches. No personalized response cache leak was found.",
+      "Plan authenticated client transport before enabling a token: PWA, Electron and hologram currently open browser WebSockets without an Authorization header; their failure under token-enabled mode is a compatibility issue, not evidence to weaken authentication.",
+      "The hologram imports a versioned Three.js module from unpkg without a repository-local locked asset; supply-chain reviewer should account for that external executable input."
+    ]
+  }
+]
+ARCHITECTURE
+# JARVIS V2 audit architecture
+
+The reviewed target is the immutable snapshot listed in source-manifest.json, based on dirty HEAD f4cac30259a7bf4610add2063679ae49138ee637. It includes current uncommitted source, not historical Sprint 3 evidence. No compatible previous Cloudflare findings/coverage ledgers were found. Root runtime config, credentials, databases, logs, models, binary assets and historical sealed evidence are deliberately excluded. Historical task copies are inventory items, not substitute active source. Supplemental evals and task-root utilities were captured before hunting.
+
+JARVIS is a single-operator Python/FastAPI desktop/headless assistant with REST, WebSocket, PWA, Electron and hologram clients, local Ollama inference, file/shell/computer tools, optional memory services and outbound bot notifications. Authority stores task/schedule/receipt/outbox state in SQLite. Privileged resources include local files/tools, task state, HMAC checkpoint anchors, enrollment custody, operator permits and proposed Proxmox serial access. There is no source-grounded comparable security baseline.
+
+HTTP authentication uses one configured Bearer token. Empty token is permitted for loopback configuration and bypasses ordinary HTTP and WS credential checks. Remote configuration requires a token; this validates configured bind host, not incoming Host. CORS is configured; both WS paths separately validate present Origin. Ordinary authority routes use fixed Actor(local-service). Operator diagnostics independently requires a configured token. No multi-user isolation is promised. Browser, local untrusted process, authenticated client, untrusted artifact supplier, separately restricted OS UID and operator are distinct principals.
+
+The ordinary runtime opens data/authority/queue.sqlite without a ledger, enrollment witness or legacy permit. Mandatory startup therefore fails closed for missing/enrolled/legacy stores unless trusted embedding explicitly supplies an admitted authority. TestClient tests bind synthetic authorities and often skip lifespan. Do not equate isolated route reachability to a working stock deployment. Synthetic execution requires trusted opt-in and exact synthetic executor types; no real executor activation is authorized. Legacy chat tools are a distinct live-capable dispatch path gated by safety level, confirmation and dry-run.
+
+Important chains: HTTP/WS chat -> classifier -> deterministic tool parameters -> registry -> files/shell/browser/computer; tool output -> later LLM prompt. HTTP tasks/schedule -> service actor -> durable receipts and transactions -> scheduler/outbox -> synthetic execution. Operator descriptors -> permit/context authentication -> enrollment, checkpoint rollover, archive verification, disposable restore, recovery decisions and branch checks. Archive inputs are directory/JSON/SQLite bundles, not general tar extraction. Inspect recovery_decisions.py, which is present in the capture.
+
+SQLite uses lifetime flock, generation ownership, inode checks and poisoned instances on uncertain writes. Ledger adds HMAC-authenticated append-only checkpoint intents/finals, rollover epochs, state bounds and external trust context. Application file helpers check leaf type/UID/mode/link count and symlinks but use absolute path operations. Distinguish same-UID trusted control from other-UID ancestor replacement, whose filesystem prerequisites need evidence. Proposed infrastructure securefs uses descriptor-relative all-component traversal and ownership checks.
+
+Proxmox phase2 is observation/planning, and phase3 src/g6k_serial is a proposed VM164-only serial broker/worker with fixed inspection catalog, SO_PEERCRED identity, root-controlled activation/grants, durable request/session identities, TLS/VM checks, separate service accounts and seccomp/systemd designs. No actual installed identity/ACL, no-NIC, unit, grant, transport or privileged Gate6K qualification is established or tested. No production actions or provider calls are permitted.
+
+Deployment sources are app/main.py, Dockerfile/Compose, .github workflows, client launchers and infrastructure units. Compose publishes host loopback, but binds backend 0.0.0.0 inside the container. Dependencies float; actual installed versions and deployed controls are unknown. No dependency installation or whole-suite test is allowed.
+
+Selected companion domains follow visible boundaries: WEB-PROTOCOL-AND-AUTH and CLIENT-SIDE for HTTP/WS/clients; AI-AND-LLM for tool/confirmation/memory; PROTOCOLS-RPC-AND-MESSAGING for queues and serial IPC; DATA-ISOLATION-AND-LIFECYCLE for archive/restore/recovery; DESKTOP-MOBILE-AND-LOCAL-IPC for helper identities and filesystem; CLOUD-AND-DEPLOYMENT for container/config/units; SUPPLY-CHAIN-AND-RELEASE for installers/build inputs; RESOURCE-EXHAUSTION-AND-AVAILABILITY for untrusted work/retention/capacity. Native binary exploit classes are excluded: maintained application/automation source here is Python/JS, not native implementation.
+
+All hunting begins as source-only. Parent-controlled bwrap runner isolates namespaces/network, read-only target/toolchain, empty allowlisted environment, 32MiB scratch tmpfs, 512MiB address space, 10 CPU seconds, 64 processes, 96 FDs, 2MiB file size and 25-second wall time. Agents do not run target code directly: submit a small synthetic harness in assigned scratch for sequential parent execution. Source-only evidence has artifact null. Never copy untrusted scratch recursively into retained artifacts. Parent promotes only bounded predeclared stdout files after termination through retained no-follow descriptors. No heavy/concurrent tests or real execution.
+
+A second immutable capture snapshot-current at2026-11-06T06:05:16Z contains342 files. source-delta.json identifies17 changed/added paths from concurrent Sprint5, including complete recovery registry, permit authentication, branch identities, authority/CLI/diagnostic integration and new tests/docs. Original captured bytes remain intact. New delta units must review those current files and compare their strongest controls with snapshot. Original checks remain point-in-time evidence; unchanged files are hash-identical. Final candidate verification and coverage critics use snapshot-current. The early missing-method/proposal-field integration limitations must be reassessed, not carried as unresolved findings.
+
+Final frozen source snapshot-final at2026-11-06T06:13:55Z has342 files. Only recovery_decisions.py, its tests and documentation changed after snapshot-current. A third bounded source pass revalidates the complete registry and these final admission-time and SQLite journal-proof changes. Final source identities come from source-manifest-final.json/source-final.sha256; final candidate verification and critics read this capture. Earlier captures/evidence remain retained with explicit revision tags.
+
+Final-clean source selection check found PROJECT_STATUS89-94 designates tasks/proxmox-automation-phase3-review-r1 as the current broker successor. Snapshot-expanded preserves every snapshot-final file byte-for-byte and adds43 public source/test/unit/doc/manifest files from this successor, totaling385 files. No historical evidence/artifacts/credentials were copied. Two wave4 units review current identity/grant/release chain and protected file/preissuance/journal control; earlier phase3 units are baseline coverage, not current qualification. Final critics and record verification use snapshot-expanded.
+
+EXACT COMPANION VALIDATION
+## Validation rules (apply before reporting ANY finding here)
+
+1. Apply a source-visibility gate. Proxy chains, edge cache keys, IdP policy, certificate trust, browser cookie behavior, secrets, and deployed auth modes may be outside the repository. Record a precise `needs_validation` candidate instead of asserting missing infrastructure behavior.
+2. For framing and cache findings, name both components and the divergent parse/key. Confirm cross-request, cross-user, or private-response impact with bounded local fixtures.
+3. For token, MFA, passkey, account-link, recovery, API-key, and mTLS findings, cite the verification line and missing principal/session/resource/origin/audience/action/assurance binding. Prove the server accepts the invalid transition or credential.
+4. For CSRF, name the ambient credential, state-changing route, accepted cross-site request shape, browser cookie policy, and missing effective check. Read-only actions and routes requiring a non-ambient bearer token do not qualify.
+5. Verify framework and library defaults. If version or configuration is unknown, use `needs_validation`; do not turn an unverified critical claim into a lower-severity confirmed finding.
+6. Return `confirmed` only with a complete source trace and observable unauthorized identity, state, or disclosure. For `needs_validation`, name the missing fact and safe local or owner-observed check that resolves it.
+
+## Validation rules (apply before reporting ANY finding here)
+
+1. Cite the source, sink, browser policy, affected origin/session, and observable mutation or disclosure.
+2. For prototype pollution, prove the recursive write and a security-relevant gadget. For DOM clobbering, prove the markup survives and the shadowed value is used.
+3. For service workers and storage, prove lifecycle reachability: an attacker-controlled write or cache entry must reach a different account, tenant, or later authorization state.
+4. For messaging, CORS, WebSocket, and XS-Leaks, show exact origin/source validation and the protected state or action exposed. Confirm that CSP, COOP/CORP, cookies, and SameSite policy do not already block it.
+5. Return `confirmed` findings only with a complete client path and bounded local evidence. Return `needs_validation` with the precise deployed header, extension permission, browser version, or renderer behavior an owner must verify.
+
+
+Artifact promotion procedure (trusted parent-side code only):
+Reference only for you: the parent performs these steps; you never perform them.
+
+Before execution, the parent opens and retains trusted, non-inheritable directory
+descriptors for the agent's scratch/ and artifacts/ roots, and records an allowlist
+of expected scratch-relative artifact files plus explicit per-file and cumulative
+byte limits. Never pass those descriptors to the agent or sandbox. After the sandbox
+and all its processes terminate, trusted parent-side code promotes each allowlisted
+file separately:
+
+1. Validate the declared relative path: reject absolute, empty, `.`, `..`, or
+   symlinked components.
+2. Walk each parent component from the retained scratch-root descriptor with
+   no-follow directory-relative operations; never reopen by path.
+3. Open the leaf no-follow and nonblocking.
+4. Verify with `fstat` that it is a regular file with link count exactly one and
+   within the recorded per-file and cumulative byte limits.
+5. Enforce those limits again while reading from that descriptor.
+6. Copy exactly the verified size, repeat `fstat`, and reject a changed identity,
+   type, link count, or size.
+7. For the destination, walk every parent component from the retained
+   artifacts-root descriptor with no-follow directory-relative operations; require
+   each existing component to be a real directory, and create any missing directory
+   exclusively before reopening and verifying it no-follow.
+8. Create the leaf exclusively without following links, verify that the opened
+   destination is a regular file with link count exactly one, and copy from the
+   verified source descriptor without reopening either path.
+9. Use equivalent race-safe APIs on non-POSIX systems.
+10. Never recursively copy or glob scratch, extract an archive into artifacts, or
+    open or promote a symlink, FIFO, socket, device, directory, hard-linked file,
+    changing file, or file that exceeds its bound.
+11. If any check is unavailable, cannot be enforced, or fails, discard the scratch
+    entry; if it is decisive evidence, retain `needs_validation` with the exact
+    promotion blocker.
+SCHEMA VERBATIM
+{
+  "$comment": "Top-level contract for findings.json. validate-findings.cjs interprets and checks this schema directly.",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "description": "A source-grounded vulnerability that was independently demonstrated.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "confirmed"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$",
+            "description": "A stable source-derived identifier that does not change between validation states."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "intended_behavior": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["authentication_level", "authorization_role", "user_interaction", "system_configuration", "network_routing", "environmental_dependency", "data_state", "timing_dependency", "third_party_dependency"]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "description"],
+              "additionalProperties": false
+            }
+          },
+          "execution": {
+            "type": "object",
+            "description": "Target-neutral reproduction in the target's native interface.",
+            "properties": {
+              "attacker_perspective": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "payloads": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "instructions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "observed_result": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["attacker_perspective", "payloads", "instructions", "observed_result"],
+            "additionalProperties": false
+          },
+          "remediation": {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "code_changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "file_name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fixed_code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file_name", "fixed_code"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["strategy"],
+            "additionalProperties": false
+          },
+          "severity": {
+            "type": "object",
+            "properties": {
+              "likelihood": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "impact": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "overall_severity": {
+                "type": "string",
+                "enum": ["informational", "low", "medium", "high", "critical"]
+              }
+            },
+            "required": ["likelihood", "impact", "overall_severity"],
+            "additionalProperties": false
+          },
+          "confidence": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["score", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "root_cause", "intended_behavior", "trace", "evidence", "conditions", "execution", "remediation", "severity", "confidence"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate whose decisive validation is blocked.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "needs_validation"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "visibleContent": true
+            }
+          },
+          "validation_plan": {
+            "type": "object",
+            "properties": {
+              "local": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "deployment": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "blockers", "validation_plan"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate refuted during validation.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "rejected"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "reason"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}
+
+No compatible external prior finding record. You did not hunt this candidate; independently challenge it. Final source ONLY /opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-expanded. Prior source/check capture is tagged explicitly and all relevant changed paths must be reread. Root-generated source-stability metadata is not deployment evidence. Agent_id verify-auth. Own scratch only /opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/agents/verify-auth/scratch. Parent owns artifacts; predeclared output allowlist approved harness stem .txt max262144bytes/file/invocation. NO targetexecution yourself; if minimal native fixture useful prepare harness and ask parent for sequential snapshot-final sandbox run. No production/credentials/provider/hardware/registry requests. Unknown OS/browser/deployed facts do not become confirmation.
+Write exact wrapper decision+schema record to scratch/result.json, no extra fields. If making new local/source check, put optional separate checks.json list with agent_id,reviewed_paths,invariant,method,result,artifact; local artifact only after parentpromotion. Final response brief; parent performs project loop-log completion protocol.

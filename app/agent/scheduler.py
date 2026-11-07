@@ -2,7 +2,7 @@
 from datetime import UTC, datetime
 import uuid
 from app.agent.authority import AuthorityError, instant
-from app.agent.runtime import SERVICE_ACTOR, get_authority
+from app.agent.runtime import SERVICE_ACTOR, get_authority, get_execution_pipeline
 
 
 def cron_next(expression, after):
@@ -23,11 +23,21 @@ class Scheduler:
         self._epoch = None
         self._failure = None
 
-    def add_job(self, name, cron_expr, goal, *, request_id):
+    def add_job(self, name, cron_expr, goal, *, request_id, execution=None):
         a = get_authority()
         previous = a.receipt(SERVICE_ACTOR, request_id)
         nominal = previous["result"].get("next_run_at") if previous and previous["operation"] == "add_schedule" else cron_next(cron_expr, datetime.now(UTC).isoformat())
-        result = a.add_schedule(SERVICE_ACTOR, request_id, name, cron_expr, goal, nominal)
+        template = None
+        if execution is not None:
+            pipeline = get_execution_pipeline()
+            # Preserve the first server-derived authorization time on retries.
+            old = previous["result"].get("execution_template") if previous and previous["operation"] == "add_schedule" else None
+            normalized = {"timeout_seconds": 10, "expires_after_seconds": 60, **execution}
+            if old and {k:v for k,v in old.items() if k != "authorization"} == normalized:
+                template = old
+            else:
+                template = pipeline.schedule_template(SERVICE_ACTOR, **execution)
+        result = a.add_schedule(SERVICE_ACTOR, request_id, name, cron_expr, goal, nominal, execution=template)
         if self._backend is not None:
             try:
                 current = next(j for j in a.list_schedules(SERVICE_ACTOR, include_removed=True) if j["job_id"] == result["result"]["job_id"])

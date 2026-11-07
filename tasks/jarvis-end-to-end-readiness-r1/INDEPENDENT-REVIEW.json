@@ -1,0 +1,50 @@
+{
+  "verdict": "PASS within offline trusted-local milestone scope",
+  "reviewer": "/root/sprint6_security_review",
+  "review_type": "independent_read_only_static",
+  "open_critical_high_medium_findings": [],
+  "runtime_tests_executed_by_reviewer": false,
+  "closures": [
+    "fixed pure synthetic endpoints; disabled default",
+    "independent grant and request/response HMACs and history verification",
+    "single fenced Authority writer",
+    "reservation before computation; authentic report is not completion",
+    "two separately authorized offline recovery actions; no auto publication",
+    "no restored activation or uncertain redispatch",
+    "legacy real tool/chat/confirm/dictation paths closed",
+    "host mutation HTTP and CLI fallback closed",
+    "native-child identity leases",
+    "bounded WebSocket/VAD queues and cleanup",
+    "public hashes instead of private grants"
+  ],
+  "limitations": [
+    "same-process synthetic IPC is not OS privilege separation",
+    "only synthetic adapters; real stage requires independent authorization and review",
+    "128 lifetime transported grants; no pruning ceremony",
+    "host controls unavailable",
+    "symmetric HMAC is not public-key nonrepudiation",
+    "external key/time/checkpoint custody and SQLite filesystem assumptions",
+    "blank-token ordinary loopback held-task API conditional trust assumption",
+    "native-child leases do not survive process restart",
+    "no production, provider, infrastructure or live execution qualification"
+  ],
+  "source_sha256": {
+    "app/agent/execution_transport.py": "87f8a519e36f8f5e99bb698a097b276957143182fbe8980fadf7b3a33c915f4c",
+    "app/agent/execution.py": "5015f6fafb9751b7eafe51f5a71f96a4f697875cbee86537ee43ccfb7aeefef2",
+    "app/agent/runtime.py": "043590d1f1a2bf3a9916c66122e492981f35f25b0203cfb1068f4e13ac67d426",
+    "app/agent/recovery.py": "0a18eb17e1f9ab3d91094590cf39b99d122a5761b06d832a55a1a2b2701f730e",
+    "app/agent/api.py": "5f168d0c38b00d2289d1a375ed9e12d0849b1c1e8ab5455bff610197b0283add",
+    "app/agent/admission.py": "25391a687ae050a2fd5050385dec79f70024afa0cbd158b6d450569d188c1430",
+    "app/agent/authority.py": "c9f452c64ca223a3d27fcf1dc13688112f53e0cc90f2fe1143323d81caa40e59",
+    "app/agent/operator_cli.py": "74d0f7f3e67316fd694f7d12c8fe7ff2aedd20aae598b9946fb62c1413d959cf",
+    "app/agent/scheduler.py": "c47bd77f0139750b42d56f1504a2e85de633426b8500460d8e829f3d551d5d95",
+    "app/agent/reporter.py": "b32d09d1f2ca93a3e15b73b1f4f2d5715737e8cd7a14804b97dfc1650f01510d",
+    "app/server.py": "6ea67d7f110563436d5cd5ef51fd3752be31aac57d4af4086876406f2f799ca0",
+    "app/cli.py": "d34dfab21a46ab97fc50849e558c1dc157aeca44714d1b792d24b1e0e0abd83c",
+    "app/resource_manager.py": "8eb9027ddfe9880d05f041c05d52973971092533f6545d09c56439c663e3a77f",
+    "app/tools/registry.py": "9b1645e13d3da85ef151b45365d3cd781bd5a587748b7b1a42c9d6011f7ccb16",
+    "app/voice/dictation.py": "ec749585c83d3cf0b0a486412d2f4057b5a33a3ab29c1b30a9c4cf89f1d88a21",
+    "app/voice/vad.py": "bf925db004fdb0b8d974965f779273fbc3c6e3e7d719ca99b5a9db5a9ac4141c",
+    "app/voice/wake_word.py": "da8459af7ed07437f2c481a58f579f6470fe6d76b09cd6746a7dcbe9d94b30a2"
+  }
+}

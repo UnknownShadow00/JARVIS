@@ -1,0 +1,117 @@
+# JARVIS — Docker Compose
+# Runs: Ollama, FastAPI backend, Mem0 (Phase 4)
+# Start: docker-compose up -d
+# Stop:  docker-compose down
+# Secrets: copy .env.example to .env and fill in values
+
+services:
+
+  # ─── Ollama — Local LLM server ─────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: jarvis_ollama
+    restart: always
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1
+      - OLLAMA_NUM_PARALLEL=2
+      # Phase 2 intentionally leaves OLLAMA_HOST unset and publishes Ollama
+      # only on host loopback. Do not expose it before the private auth design.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── JARVIS FastAPI Backend ─────────────────────────────────
+  jarvis_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jarvis_backend
+    restart: always
+    ports:
+      - "127.0.0.1:8000:8000"
+    # The default config.yaml (host 127.0.0.1, remote_access_enabled false) is
+    # correct here: the command below sets uvicorn's bind inside the container,
+    # and the ports mapping publishes only to loopback on the host.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./assets:/app/assets
+      - ./projects:/app/projects
+    environment:
+      - PYTHONUNBUFFERED=1
+      - JARVIS_OLLAMA_BASE_URL=http://ollama:11434
+      - JARVIS_API_TOKEN=${JARVIS_API_TOKEN:-}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Mem0 Memory Server (Phase 4 — uncomment when ready) ───
+  # mem0:
+  #   image: mem0ai/mem0:latest
+  #   container_name: jarvis_mem0
+  #   restart: always
+  #   ports:
+  #     - "127.0.0.1:8001:8000"
+  #   volumes:
+  #     - mem0_data:/app/data
+  #   environment:
+  #     - OPENAI_API_KEY=ollama
+  #     - OPENAI_API_BASE=http://ollama:11434/v1
+
+  # ─── ChromaDB Vector Store (Phase 4 — uncomment when ready) 
+  # chromadb:
+  #   image: chromadb/chroma:latest
+  #   container_name: jarvis_chroma
+  #   restart: always
+  #   ports:
+  #     - "127.0.0.1:8002:8000"
+  #   volumes:
+  #     - chroma_data:/chroma/chroma
+
+  # Neo4j temporal graph store for Graphiti (enable with memory.graphiti_enabled)
+  neo4j:
+    image: neo4j:5.26
+    container_name: jarvis_neo4j
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - neo4j_data:/data
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+
+volumes:
+  ollama_data:
+    driver: local
+  # mem0_data:
+  #   driver: local
+  # chroma_data:
+  #   driver: local
+  neo4j_data:
+    driver: local
+
+networks:
+  default:
+    name: jarvis_network

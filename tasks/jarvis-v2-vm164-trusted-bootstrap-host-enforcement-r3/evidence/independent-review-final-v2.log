@@ -1,0 +1,36 @@
+Independent reviewer: /root/independent_security_review_r3
+Scope: pure Python source review and mocked tests only. No network, Proxmox,
+systemd, timer, VM, guest, credential, or host subprocess operation was run.
+
+Command:
+python3 -I -B -S -m unittest discover -s tasks/jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3/tests -p 'test_independent_review.py' -v
+
+Final v2 result:
+- Ran: 15 test methods
+- Passed: 15
+- Failed: 0
+- Errors: 0
+- Skipped: 0
+
+New v2 review coverage:
+- the fixture reflects all eight added service constraints: UMask, MemoryMax,
+  TasksMax, SendSIGKILL, StandardInput, StandardOutput, StandardError and
+  TimeoutStartUSec;
+- eight independent mutations weakening those constraints are each rejected by
+  service_resource_or_stdio_contract;
+- CLOSED is absorbing in the authenticated store history;
+- a late deadline callback after CLOSED returns ALREADY_CLOSED_NO_ACTION without
+  a snapshot, event append, graceful shutdown or force attempt.
+
+Prior independent controls remain passing, including target/media/digest
+validation, timer proof negatives, safe setup rollback, bounded retry, strict
+durable pre-action evidence, Policy A no-force behavior, Policy B runtime
+rejection, protected prerequisite/review binding, duplicate cleanup and
+evidence-preserving retirement.
+
+Conclusion:
+PASS_OFFLINE_HOST_ENFORCEMENT_ENGINEERING_ONLY. Offline parsing and policy tests
+do not prove how the actual systemd 257 or Proxmox host reports or enforces these
+properties. Stage2/Stage3 live qualification and separate authorization remain
+mandatory. No expiration, root-bootstrap, forced-stop, installation or Gate 6K
+authorization is established by this review.

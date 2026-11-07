@@ -1,0 +1,73 @@
+{
+  "regression_invocations": [
+    {
+      "source_snapshot": "snapshot",
+      "artifact": "agents/hunt-ledger/artifacts/ledger_controls.txt",
+      "case_count": 10,
+      "artifact_sha256": "334a936299bc4b9e372fed631ba727e9c025776e4d85e8cd89b1475257ab4d01",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot",
+      "artifact": "agents/hunt-recovery/artifacts/recovery-controls.txt",
+      "case_count": 8,
+      "artifact_sha256": "0699f27a57117a61856dac022656af0fc9d7e745c5c8f8af3ea444beaf9036c6",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot",
+      "artifact": "agents/hunt-infra/artifacts/infra-controls.txt",
+      "case_count": 14,
+      "artifact_sha256": "f633ad8e738512bb7562a43fab273ab65cdc5a224925052dd0e38b5bd4931a80",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-current",
+      "artifact": "agents/parent-current/artifacts/current-regressions.txt",
+      "case_count": 7,
+      "artifact_sha256": "5b56d7217913c66c4cb4684868ee35596540bdcfa7e8faffeff04ad10b5173f8",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-current",
+      "artifact": "agents/parent-registry/artifacts/registry-controls.txt",
+      "case_count": 10,
+      "artifact_sha256": "22d5ed0b58c0d8e8a6e5f5cb105b49cba3c66e883213ccbe83c5663b3d6e07ed",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-final",
+      "artifact": "agents/hunt-final-registry/artifacts/proposed-tests.txt",
+      "case_count": 6,
+      "artifact_sha256": "f256f2c5e7cd4ab60ca538c5d39efb2f1b67c27714fc8dcba62479825b8f0567",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-final",
+      "artifact": "agents/parent-final/artifacts/hot-journal-controls.txt",
+      "case_count": 2,
+      "artifact_sha256": "6cc6aaa4ff8a632915934766b8ffae3d2f1aed8736956d7c2984926cc3243e81",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-expanded",
+      "artifact": "agents/hunt-infra-current-chain/artifacts/current_chain_controls.txt",
+      "case_count": 8,
+      "artifact_sha256": "77d39d232626e3e59e6a916819491f0ba13a87739af70ac3ae4468c1f8dea0c8",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-expanded",
+      "artifact": "agents/hunt-infra-current-files/artifacts/current-file-controls.txt",
+      "case_count": 10,
+      "artifact_sha256": "7ada9f6e6f2e49ce5d47796c9c2d5a0ee664b54f48cfb456ce70c3ea2aba1686",
+      "result": "passed"
+    }
+  ],
+  "total_selected_cases_across_recorded_revisions": 75,
+  "interpretation": "Separate bounded checks against recorded source captures; not one full current checkout suite. Additional microfixtures prove or refute specific mechanics.",
+  "target_execution": "Parent-only isolated namespaces/no external network, empty allowlisted environment, read-only source/tools,32MiB scratch tmpfs,512MiB address-space,10CPU seconds,64processes,96FDs,2MiB file size,25s wall,256KiB output bound and descriptor-confined exclusive promotion.",
+  "toolchain": "Preexisting read-only local dependency tree; no installation. Standard-library early fixtures used Python3.11; dependency-backed regressions used Python3.14.4. Actual deployment versions remain unknown.",
+  "toolchain_inventory": "agents/parent-final/artifacts/toolchain-inventory.txt",
+  "runtime_qualification_limits": "No real hardware/provider/production/PVE/guest/privileged Gate6K, power-loss or availability stress qualification."
+}

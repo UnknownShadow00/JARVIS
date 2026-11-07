@@ -1,0 +1,247 @@
+{
+  "units": [
+    {
+      "coverage_id": "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::CLOUD-AND-DEPLOYMENT.md%23Secret%20exposure%20across%20workload%20boundaries",
+      "disposition": "covered",
+      "reviewed_paths": [
+        ".env.example",
+        ".gitignore",
+        "Dockerfile",
+        "app/config.py",
+        "config/restic-excludes.txt",
+        "docker-compose.yml",
+        "scripts/backup_restic.sh",
+        "scripts/verify_restic_backup.sh"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-deploy",
+          "reviewed_paths": [
+            "app/config.py",
+            ".env.example",
+            ".gitignore",
+            "Dockerfile",
+            "docker-compose.yml",
+            "scripts/backup_restic.sh",
+            "scripts/verify_restic_backup.sh",
+            "config/restic-excludes.txt"
+          ],
+          "invariant": "Source releases must not embed runtime credentials or expose secret-bearing backup/config paths to a demonstrated lower-trust reader.",
+          "method": "source",
+          "result": "Public examples contain blank token/password placeholders. app/config.py246\u2013274 uses yaml.safe_load and explicit selected environment overrides; no configuration export route is established here. Dockerfile18\u201321 copies explicit app/assets/frontend/public example, not .env or live data. Compose passes token/password by environment and config bind mount; neither an environment reference nor broad trusted-operator volume proves disclosure. Restic deliberately retains .env/audit/data in encrypted backup workflow; scripts never executed. No real hardcoded credential or lower-trust secret reader was established. Deployment log/backup reader permissions and credential custody remain unobserved.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::CLOUD-AND-DEPLOYMENT.md%23Security-control%20precedence%20drift",
+      "disposition": "covered",
+      "reviewed_paths": [
+        ".env.example",
+        "app/cli.py",
+        "app/config.py",
+        "config.yaml.example",
+        "docker-compose.yml",
+        "evals/adapter.py",
+        "evals/golden.jsonl",
+        "evals/grader.py",
+        "evals/runner.py",
+        "evals/schema.py",
+        "scripts/setup_autostart.py",
+        "scripts/switch_models.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-deploy",
+          "reviewed_paths": [
+            "app/config.py",
+            "config.yaml.example",
+            ".env.example",
+            "docker-compose.yml",
+            "app/cli.py",
+            "scripts/switch_models.py",
+            "scripts/setup_autostart.py",
+            "evals/adapter.py",
+            "evals/runner.py",
+            "evals/schema.py",
+            "evals/grader.py",
+            "evals/golden.jsonl"
+          ],
+          "invariant": "Configuration and recovery paths must preserve intended authentication and execution authority.",
+          "method": "source",
+          "result": "ServerConfig101\u2013136 rejects anonymous nonloopback/remote binding, wildcard CORS and foreign CORS under local mode. Only nonempty JARVIS_API_TOKEN overrides YAML, so blank Compose expansion does not erase a YAML token. CLI GET217\u2013225 includes Bearer, POST228\u2013235 omits it and catches all failure; sleep/wake/shutdown128\u2013197 then take trusted-local fallbacks. This is an operational defect, not cross-UID auth bypass because same-UID local code is trusted. Eval adapter109\u2013218 records decisions without registry.call and marks executed=False; CLI evaluation live mode explicitly makes provider requests, so not run. Model switching/autostart are explicit local operator utilities; no lower-trust writer or privilege transition established.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-deploy",
+          "reviewed_paths": [
+            "app/config.py",
+            "app/cli.py",
+            "config.yaml.example"
+          ],
+          "invariant": "Unsafe config variants fail validation, and the CLI401 fallback mechanics are observed without real effects.",
+          "method": "local",
+          "result": "Parent sandboxed deploy-controls.py exited0: anonymous loopback accepted; anonymous remote, wildcard CORS and foreign local CORS rejected; token remote accepted; blank environment preserves YAML token; nonempty environment overrides it. Mocked CLI POST had no Authorization headers and synthetic401 caused a dummy local fallback. No provider/model/process effects occurred.",
+          "artifact": "agents/hunt-deploy/artifacts/deploy-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::CLOUD-AND-DEPLOYMENT.md%23Unexpected%20service%20or%20management-plane%20reachability",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "Dockerfile",
+        "app/cli.py",
+        "app/config.py",
+        "app/main.py",
+        "docker-compose.yml",
+        "scripts/sensor_node.py",
+        "scripts/setup_autostart.py",
+        "tasks/manual_voice_smoke.py",
+        "tasks/pre_server_readiness.py",
+        "tasks/readiness_report.py",
+        "tasks/task13b3a-analyze.py",
+        "tasks/task13b3a-monitor.py",
+        "tasks/task13b3a.py",
+        "tasks/tool_readiness_smoke.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-deploy",
+          "reviewed_paths": [
+            "Dockerfile",
+            "docker-compose.yml",
+            "app/main.py",
+            "app/config.py",
+            "app/cli.py",
+            "scripts/sensor_node.py",
+            "scripts/setup_autostart.py",
+            "tasks/pre_server_readiness.py",
+            "tasks/readiness_report.py",
+            "tasks/tool_readiness_smoke.py",
+            "tasks/manual_voice_smoke.py",
+            "tasks/task13b3a.py",
+            "tasks/task13b3a-monitor.py",
+            "tasks/task13b3a-analyze.py"
+          ],
+          "invariant": "Manifest reachability must be distinguished from a running deployment and trusted local diagnostic utilities.",
+          "method": "source",
+          "result": "Compose publishes backend/Ollama/Neo4j on host127.0.0.1 while backend command binds0.0.0.0 inside shared jarvis_network. This does not establish public exposure, nor isolate peer containers. Current stock admitted startup limitation is handled by HTTP hypothesisA unit. Native app.main uses settings host. Sensor helper sends no token and therefore fails token-enabled API rather than bypassing it. Setup autostart explicitly requests Windows highest task privilege; ACL/executable ownership are unobserved. Readiness utilities can contact providers/hardware or run package audits; benchmark task13b3a scripts contain old hardcoded endpoints/operator paths and predictable/tmp outputs but no current runtime/CI import. None were run. No further source-grounded network/privilege bypass survives.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::SUPPLY-CHAIN-AND-RELEASE.md%23Build-context%20inclusion",
+      "disposition": "covered",
+      "reviewed_paths": [
+        ".env.example",
+        ".github/workflows/tests.yml",
+        ".gitignore",
+        "Dockerfile",
+        "config.yaml.example",
+        "docker-compose.yml",
+        "scripts/install.py",
+        "scripts/install_piper.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-deploy",
+          "reviewed_paths": [
+            "Dockerfile",
+            "docker-compose.yml",
+            ".gitignore",
+            ".github/workflows/tests.yml",
+            "scripts/install.py",
+            "scripts/install_piper.py",
+            "config.yaml.example",
+            ".env.example"
+          ],
+          "invariant": "Only intended public source/config enters shipped images, and archive download handling must not be assumed to execute arbitrary paths.",
+          "method": "source",
+          "result": "Docker uses repository context without .dockerignore but explicit COPY of requirements/app/assets/frontend/example config; there is no COPY. to prove .env/database inclusion in output. Remote builder identity is unknown and no actual secret was read. Piper extractor87 uses only member basename, defeating ordinary zip path traversal; its unverified downloads, existing-file reuse, no extraction byte bounds and potential local output symlinks remain hardening without a demonstrated lower-trust writer/active malicious artifact. CI installs/testing only; no deployment/publication or pull_request_target privileged path appears. No unauthorized artifact inclusion was demonstrated.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::SUPPLY-CHAIN-AND-RELEASE.md%23Mutable%20and%20unbound%20build%20inputs",
+      "disposition": "blocked",
+      "reviewed_paths": [
+        ".github/workflows/tests.yml",
+        "Dockerfile",
+        "docker-compose.yml",
+        "frontend/electron/package.json",
+        "frontend/hologram/index.html",
+        "requirements-core.txt",
+        "requirements-desktop.txt",
+        "requirements.txt",
+        "scripts/install.py",
+        "scripts/install_piper.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-deploy",
+          "reviewed_paths": [
+            "requirements.txt",
+            "requirements-core.txt",
+            "requirements-desktop.txt",
+            "frontend/electron/package.json",
+            "frontend/hologram/index.html",
+            "Dockerfile",
+            "docker-compose.yml",
+            ".github/workflows/tests.yml",
+            "scripts/install.py",
+            "scripts/install_piper.py"
+          ],
+          "invariant": "Dependency and downloaded executable identity must remain tied to reviewed source rather than assumed from a mutable name.",
+          "method": "source",
+          "result": "Core and desktop requirements use lower bounds and no hashed resolved lock graph is captured. Electron uses^42.10.1; hologram imports versioned Three.js from unpkg. Docker python:3.11-slim, Ollama latest, Neo4j5.26 and GitHub actions tags float. Piper binary uses release URL without pinned digest and voice models use resolve/main; install_piper only verifies file sizes and skips preexisting nonempty files. These are concrete supply-chain/reproducibility risks, not confirmed vulnerabilities absent a lower-trust source writer or consumed compromised artifact. The parent offline test toolchain is not deployed-version evidence. No install/audit/registry/provider action was run.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": [
+        "Resolved deployed Python/transitive and Electron versions, artifact digests/SBOM and package-source policy are absent. Lower-bound/caret requirements and mutable image/action/download names cannot establish deployed CVE exposure or supplier compromise. No registry query, installation, production environment or binary qualification was authorized; audit covers manifest/source provenance only."
+      ]
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Lock and hash resolved core/desktop Python and Electron dependencies; generate an SBOM from the actual built artifact, use image/action digests and controlled package indexes. No deployed CVE verdict follows from lower-bound manifests or the separate audit toolchain.",
+    "Pin independently reviewed Piper/voice artifact digests and reject unverified preexisting downloads; use exclusive private staging, bounded extraction and atomic publication. Basename extraction already prevents ordinary zip-slip.",
+    "Dockerfile has no USER and Compose no memory/CPU hard limits or read_only root. Run an explicit nonroot UID, constrain resources, use read-only config/assets/models where appropriate, and segment backend from untrusted peer containers. No container escape or public reachability was established.",
+    "Add .dockerignore for live secrets/data/logs/git/tasks before any remote builder use; explicit COPY currently avoids proving these enter final image. config.yaml itself is not gitignored though application config can contain comms/API credentials; prefer environment/external secret custody and explicit ignore policy.",
+    "app/cli.py228\u2013235 should send the same Bearer header as GET and distinguish authentication/authorization failures from offline transport failures. Do not silently invoke local sleep/wake/shutdown after401. Parent dummy fixture established this behavior, but same-UID trusted fallbacks are not auth bypass findings.",
+    "Validate safety.approval_mode with an enum and numeric ranges. Arbitrary strings currently fall through to balanced registry policy; invalid operator config is not itself an attacker boundary.",
+    "Keep credential-bearing RESTIC_REPOSITORY URLs out of the printf at backup_restic.sh46; backup deliberately includes.env and sensitive audit/data, so repository/password/log custody needs operator review. No credentials or real backups were accessed.",
+    "setup_autostart.py24\u201325 requests highest Windows privilege for code in the checkout. Qualification needs protected code/interpreter/task ACLs; source does not establish writable-by-other-principal paths or an escalation.",
+    "Retained benchmark helpers task13b3a*.py are disconnected from current runtime and include live provider/operator paths and predictable/tmp files. Do not import/run them as current offline validators; any revival needs private scratch and descriptor-relative/no-follow publication. Their historical presence alone is not current exploitability.",
+    "evals.adapter stops before registry.call and reports executed=False; eval runner returns exit0 for a successfully graded suite even when product cases fail, printing failed IDs. Treat HARNESS PASS as harness execution, not security/product acceptance. No CI promotion currently consumes that exit status as an approval.",
+    "Source lead forwarded to parent/legacy owner: resource_manager.classify_jarvis_process752\u2013758 accepts generic app.main:app without project provenance, and terminate789\u2013805 stops matching PIDs. Assess unrelated-service termination in a focused resource unit; no duplicate finding asserted by deploy hunter."
+  ],
+  "uncovered": [
+    {
+      "surface": "app/cli.py#_shutdown",
+      "boundary": "app/resource_manager.py#classify_jarvis_process",
+      "subsystem": "app/resource_manager.py",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "starting_paths": [
+        "app/cli.py",
+        "app/resource_manager.py",
+        "app/server.py",
+        "README.md",
+        "tests/test_resource_manager.py"
+      ],
+      "reason": "The JARVIS-owned shutdown promise can reach generic app.main:app/python -m app.main cmdline classification before project/provenance checks. A focused fresh review should determine whether a native mocked process table would target unrelated same-UID services through CLI shutdown or API terminate_processes=true. No live/mock process stop was executed in this hunt; deliberate self-kill or broad token authority is not privilege gain."
+    }
+  ]
+}

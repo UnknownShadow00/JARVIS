@@ -1,0 +1,120 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Fauthority.py%23packaged-delta::app%2Fagent%2Fexecution.py%23current-invariants::app%2Fpackaged-transport::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/execution_transport.py",
+        "app/agent/ledger.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/runtime.py",
+        "tests/test_secure_transport.py",
+        "tests/transport_fixtures.py",
+        "tests/transport_process_actor.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-packaged-transport",
+          "reviewed_paths": [
+            "app/agent/execution_transport.py",
+            "app/agent/execution.py",
+            "app/agent/runtime.py",
+            "app/agent/api.py",
+            "tests/transport_process_actor.py",
+            "tests/transport_fixtures.py"
+          ],
+          "invariant": "The changed process fixture does not imply a new executor, privilege-separated service, or externally reachable transport authority.",
+          "method": "source",
+          "result": "Production transport still creates and consumes an unnamed AF_UNIX socketpair synchronously in the same process. SO_PEERCRED must match the creating PID/UID; _custody_ready also rejects process/UID changes. Exact SyntheticTransport/SyntheticExecutor types and the fixed two-entry endpoint map prohibit real plugins, URLs, paths or provider effects. tests/transport_process_actor.py opens another complete disposable Authority/pipeline solely as a crash actor; it does not expose a socket or become an external transport endpoint. Public submission pins SERVICE_ACTOR and non-null transport permits require a configured exact Bearer credential.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-transport",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "app/agent/execution_transport.py",
+            "app/agent/recovery.py",
+            "app/agent/ledger.py"
+          ],
+          "invariant": "Current dispatch authority, wire identity, durable reservation/report, and recovered completion remain bound to one original synthetic operation.",
+          "method": "source",
+          "result": "Distinct >=32-byte operator/request/response keys are required and configure rejects equality with the ledger key. Grant binds store/scope/UUID/goal/fixed endpoint/spec and a current checkpoint. Request MAC, deterministic wire reconstruction, claim/generation/cancellation/deadline checks, stable reservation receipt and reservation replay refusal precede pure computation. The changed report callback now reruns _live within its Authority mutation, so late/expired/cancelled/revoked computation cannot commit a report through that path. Response verification authenticates request and response domains, matches durable reservation/report, historical outbox claim and authorized report time, and recomputes the exact pure result. Handoff ambiguity becomes UNKNOWN; restart preserves original claim provenance and never redispatches it. Frames remain length-prefixed, <=32768 bytes, strict JSON with bounded deadlines.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-transport",
+          "reviewed_paths": [
+            "app/agent/execution.py",
+            "app/agent/recovery.py",
+            "app/agent/authority.py",
+            "tests/test_secure_transport.py"
+          ],
+          "invariant": "Promoting an existing transport report to evidence cannot implicitly authorize its later publication.",
+          "method": "source",
+          "result": "reconcile_synthetic_transport_report verifies existing signed evidence without endpoint invocation, writes publication_authorization_required=True into evidence and the matching execution_record receipt atomically, and requires a command/payload/checkpoint-bound short-lived recovery permit. Pipeline reconcile skips that flag and _publish explicitly rejects it. Explicit publish_synthetic_evidence independently verifies provenance and a fresh publication permit in the same transaction as publication/receipts. RecoveryActions now re-verifies the permit at the end of each authorized effect so expiration during expensive verification rolls the transaction back. Tests cover restart gating and permit expiry but were read, not executed.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-transport",
+          "reviewed_paths": [
+            "app/agent/operator_cli.py",
+            "app/agent/authority.py",
+            "app/agent/execution_transport.py",
+            "app/agent/recovery.py",
+            "app/agent/ledger.py",
+            "tests/test_secure_transport.py"
+          ],
+          "invariant": "Offline transport recovery distinguishes identical audited replay from fresh checkpoint-bound mutation, and a lock handoff cannot silently rebase the permit.",
+          "method": "source",
+          "result": "CLI requires explicit --commit-recovery, complete checkpoint configuration, inherited descriptors for all keys/permit/witness/registry context, exact endpoint, and a verified recovery registry. Readonly journal lock plus mode=ro SQLite, enrollment verification, ledger state verification and verify_history_readonly authenticate existing history before replay or writer takeover. Identical replay matches historical operator_authorization and command/scope/request/payload; it returns the existing receipt without mutation/current-permit renewal. New operation verifies freshness and checkpoint before releasing the readonly lock. Authority expected_open_checkpoint then rejects a changed checkpoint before owner SQL mutation; offline_open permits exactly the transport reconcile/publish commands and exactly one intervening owner acquisition checkpoint with original predecessor. This is explicit operator-authorized local mutation and no executor is started. Authority close changes preserve an original open failure while releasing acquired resources.",
+          "artifact": null
+        }
+        ,{
+          "agent_id": "hunt-packaged-transport",
+          "reviewed_paths": ["app/agent/authority.py", "app/agent/execution.py", "app/agent/execution_transport.py", "app/agent/operator_cli.py", "app/agent/recovery.py", "tests/test_secure_transport.py"],
+          "invariant": "Selected changed-boundary regressions preserve explicit publication, reject expired computation/permits, and recover without endpoint reinvocation.",
+          "method": "local",
+          "result": "Parent executed the eight proposed existing test_secure_transport tests sequentially in the approved OS-enforced sandbox against snapshot-packaged. Output: 8 passed in 2.59s. Covers restart publication gating, late computation refusing durable report, pre-grant transport readiness, authorization expiration rollback, real offline CLI reconcile/publish/identical replay, authenticated same-process IPC, report-only recovery without invocation, and expired queued permits not stalling the next task. The independent process actor and SIGKILL test were not invoked.",
+          "artifact": "agents/hunt-packaged-transport/artifacts/packaged_transport_tests.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Existing frame-size admission mismatch remains: an accepted 8192-character Unicode echo can exceed 32768 encoded frame bytes. _send refuses and UNKNOWN retains a signed durable report; this establishes no unauthorized effect, external executor or publication. Preflight canonical response size at admission would avoid this operational dead end."
+  ],
+  "uncovered": [],
+  "packaged_observations": {
+    "snapshot": "snapshot-packaged 2026-11-06T07:13:57.665340+00:00",
+    "review_basis": "Read complete assigned source and changed hunks against snapshot-latest; prior hunt-latest-transport result used only for comparison.",
+    "changed_controls": [
+      "Report creation now rechecks live grant/claim/cancellation/deadline/custody.",
+      "Operator-promoted evidence has a durable explicit-publication gate respected by normal reconcile and publisher.",
+      "Recovery permit re-verification at authorized effect end prevents expired authorization committing after verification.",
+      "Configured transport is reflected by readiness even before its first grant.",
+      "Offline CLI adds readonly authenticated preflight, historical identical replay, expected-open checkpoint and single-owner-checkpoint mutation rules."
+    ],
+    "auth_source_function_stability": "Transport grant verification still uses OperatorPermits.verify for current admission/dispatch and authenticate for historical evidence. SERVICE_ACTOR remains the API namespace. New process actor does not alter this identity model.",
+    "execution": "Hunter performed source review only. Parent executed eight selected existing tests in the approved OS sandbox and promoted packaged_transport_tests.txt: 8 passed in 2.59s. No process kill tests invoked.",
+    "sandbox_profile": "strict for source review; writes restricted to assigned scratch result/proposed-tests artifacts; parent owns consolidated completion log.",
+    "suggested_tests": [
+      "tests/test_secure_transport.py::test_operator_promoted_evidence_cannot_auto_publish_on_restart",
+      "tests/test_secure_transport.py::test_late_computation_does_not_commit_invalid_report",
+      "tests/test_secure_transport.py::test_configured_transport_readiness_matches_before_first_grant",
+      "tests/test_secure_transport.py::test_recovery_permit_expiring_during_verification_rolls_back",
+      "tests/test_secure_transport.py::test_real_offline_cli_reconciles_and_explicitly_publishes_with_identical_replay",
+      "tests/test_secure_transport.py::test_actual_ipc_signed_evidence_single_writer_and_public_metadata",
+      "tests/test_secure_transport.py::test_authenticated_recovery_records_existing_signed_report_without_invoking",
+      "tests/test_secure_transport.py::test_expired_queued_permit_is_terminal_and_does_not_stall_next_task"
+    ],
+    "excluded_test": "test_independent_process_crash_reconciles_without_duplicate_execution invokes child.kill() and requires SIGKILL; excluded under assignment constraint."
+  }
+}

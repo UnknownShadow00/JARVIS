@@ -1,0 +1,42 @@
+Independent reviewer: /root/independent_security_review_r3
+Scope: pure Python clock-conversion/source review and mocked tests only. No
+network, Proxmox, systemd, timer, suspend, VM, guest, credential, or host
+subprocess operation was run.
+
+Command:
+python3 -I -B -S -m unittest discover -s tasks/jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3/tests -p 'test_independent_review.py' -v
+
+Final v3 result:
+- Ran: 16 test methods
+- Passed: 16
+- Failed: 0
+- Errors: 0
+- Skipped: 0
+
+New v3 review coverage:
+- the independent timer proof fixture includes exact boot-time deadline bounds,
+  CLOCK_BOOTTIME identity, and zero conversion offsets;
+- a CLOCK_MONOTONIC readback with 50 seconds of legitimate historical suspend
+  and 500 microseconds of paired-sample uncertainty normalizes to the expected
+  boot-time interval and passes the core consistency check;
+- an unknown clock domain and a 1001-microsecond paired-sample interval are
+  rejected;
+- core validation continues to require exact configured OnBootUSec, a future
+  deadline within the normalized interval, <=1000 microseconds of uncertainty,
+  and raw/offset/normalized arithmetic consistency.
+
+Review note:
+An initial independent fixture used a 3600-second suspend offset with a
+synthetic boot-time deadline of only 640 seconds. That correctly produced a
+negative raw monotonic timestamp and failed timer_numeric_schema. It was a
+fixture error, not a source finding, and is not counted as a source test result.
+The comparison `-1000 <= low <= high` lower-bounds and orders the offset pair;
+it does not cap a legitimate accumulated offset at 1000 microseconds.
+
+Conclusion:
+PASS_OFFLINE_HOST_ENFORCEMENT_ENGINEERING_ONLY. The arithmetic and fail-closed
+gates are internally consistent for the exercised fixtures. Only separately
+authorized Stage2 evidence from the actual systemd 257 host can establish the
+real readback domain, serialization, paired-clock behavior, suspend handling,
+firing time, and enforcement. No live-host, expiration, bootstrap, forced-stop,
+installation, or Gate 6K claim follows from this result.

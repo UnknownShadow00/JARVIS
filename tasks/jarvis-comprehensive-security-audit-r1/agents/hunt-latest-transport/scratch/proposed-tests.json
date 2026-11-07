@@ -1,0 +1,18 @@
+{
+  "source_snapshot": "snapshot-latest",
+  "execution": "Parent OS-isolated runner only; run each selected node sequentially with existing environment guard and scratch-local tmp_path/cache; do not execute subprocess/SIGKILL tests.",
+  "stdout_stem": "transport-selected-tests.txt",
+  "maximum_stdout_bytes": 262144,
+  "nodes": [
+    "tests/test_secure_transport.py::test_actual_ipc_signed_evidence_single_writer_and_public_metadata",
+    "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[payload]",
+    "tests/test_secure_transport.py::test_disabled_by_default_sealed_types_and_independent_keys",
+    "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[oversized]",
+    "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[response_signature]",
+    "tests/test_secure_transport.py::test_cancel_and_deadline_during_handoff_remain_conservative[transport_reserved]",
+    "tests/test_secure_transport.py::test_duplicate_concurrent_submissions_and_dispatch",
+    "tests/test_secure_transport.py::test_recovery_witness_failure_blocks_each_boundary",
+    "tests/test_secure_transport.py::test_expired_queued_permit_is_terminal_and_does_not_stall_next_task",
+    "tests/test_secure_transport.py::test_authenticated_recovery_records_existing_signed_report_without_invoking"
+  ]
+}

@@ -1,0 +1,2906 @@
+--- before/PROJECT_STATUS.md
++++ source/PROJECT_STATUS.md
+@@ -1,4 +1,12 @@
+ # JARVIS Project Status
++
++Current offline application milestone: [secure execution integration and readiness](tasks/jarvis-end-to-end-readiness-r1/REPORT.md).
++The actual application now integrates signed synthetic IPC, durable receipts and
++explicit offline recovery. Real tools, confirmation dispatch, dictation effects
++and host resource mutation controls are closed. Older live-readiness and tool
++results below describe historical source, not this release's live authorization.
++See [the current execution/operator contract](docs/end_to_end_readiness.md).
++
+ 
+ Latest offline sprint: [durable recovery decisions and protected witness renewal](tasks/jarvis-recovery-decisions-r1/REPORT.md).
+ Separate SQLite/protected journals retain verified proposals, authenticated synthetic
+--- before/README.md
++++ source/README.md
+@@ -1,4 +1,12 @@
+ # JARVIS — Local AI Assistant
++
++Current offline application milestone: [secure execution integration and readiness](tasks/jarvis-end-to-end-readiness-r1/REPORT.md).
++The actual application now integrates signed synthetic IPC, durable receipts and
++explicit offline recovery. Real tools, confirmation dispatch, dictation effects
++and host resource mutation controls are closed. Older live-readiness and tool
++results below describe historical source, not this release's live authorization.
++See [the current execution/operator contract](docs/end_to_end_readiness.md).
++
+ 
+ Tony Stark-style AI running 100% on your hardware. No API costs. No cloud.
+ 
+@@ -216,7 +224,7 @@
+ 
+ ## Current Status
+ 
+-The project is usable as a local FastAPI assistant backend with tested tool routing, health/readiness checks, local HUD/PWA assets, and explicit stubs for deferred hardware-heavy integrations. Phase 4+ capabilities are not production-complete yet and should stay documented as stubs until the dedicated server, Ollama model set, and attended voice validation are ready.
++The current release is an offline, synthetic authority and execution application. Admitted startup requires trusted enrollment and witness provisioning. Real tool dispatch and host mutation controls remain closed; HUD/PWA assets and optional voice/model paths do not establish live readiness.
+ 
+ See `PROJECT_STATUS.md` for the current verified state, run commands, blockers, and next priorities.
+ 
+--- before/app/agent/admission.py
++++ source/app/agent/admission.py
+@@ -39,6 +39,11 @@
+         except TimeoutError:
+             return await JSONResponse({"error": "admission_read_timeout"}, status_code=408)(scope, receive, send)
+         buffered = b"".join(chunks)
++        from app.agent.ledger import strict_json
++        from app.agent.authority import AuthorityError
++        try:strict_json(buffered)
++        except AuthorityError:
++            return await JSONResponse({"error":"invalid_admission_json","automatic_retry":False},status_code=400)(scope,receive,send)
+         delivered = False
+         async def bounded_receive():
+             nonlocal delivered
+--- before/app/agent/api.py
++++ source/app/agent/api.py
+@@ -14,7 +14,7 @@
+     "owner_busy", "owner_fenced", "store_replaced", "authority_unavailable", "storage_unknown_reconcile",
+     "legacy_migration_required", "backend_registration_reconcile", "backend_removal_reconcile", "ledger_inconsistent",
+     "ledger_checkpoint_required", "ledger_checkpoint_mismatch", "checkpoint_missing", "checkpoint_authentication_failed",
+-    "checkpoint_continuity_failed", "checkpoint_gap", "ledger_commit_reconcile", "checkpoint_reconciliation_required"})
++    "checkpoint_continuity_failed", "checkpoint_gap", "ledger_commit_reconcile", "checkpoint_reconciliation_required", "transport_disabled", "transport_verifier_required"})
+ 
+ 
+ class Submission(BaseModel):
+@@ -38,6 +38,7 @@
+ 
+ 
+ class ExecutionSubmission(Submission):
++    transport_permit: dict | None = None
+     capability: StrictStr = Field(max_length=128)
+     payload: dict[str, Annotated[StrictStr, Field(max_length=8192)]] = Field(min_length=1, max_length=1)
+     expires_at: StrictStr = Field(max_length=64)
+@@ -50,6 +51,8 @@
+     except AuthorityError as exc:
+         if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_", "restore_", "archive_attestation_", "enrollment_", "recovery_", "authority_unenrolled")):
+             code = 503
++        elif exc.code.startswith("transport_"):
++            code = 403
+         elif exc.code in {"request_conflict", "stale_occurrence"}:
+             code = 409
+         else:
+@@ -65,7 +68,12 @@
+ 
+ 
+ @router.post("/execution/tasks")
+-async def submit_execution(request: ExecutionSubmission):
++async def submit_execution(request: ExecutionSubmission, http_request: Request):
++    if request.transport_permit is not None:
++        from app.config import settings
++        supplied=http_request.headers.get('authorization','')
++        if not settings.server.api_token or not secrets.compare_digest(supplied.encode(),('Bearer '+settings.server.api_token).encode()):
++            return JSONResponse(status_code=401,content={"error":"transport_client_authentication_required"})
+     return invoke(lambda: get_execution_pipeline().submit(SERVICE_ACTOR, **request.model_dump()))
+ 
+ 
+--- before/app/agent/authority.py
++++ source/app/agent/authority.py
+@@ -79,7 +79,7 @@
+     A lost commit acknowledgement is reconciled with the original request ID.
+     Storage exceptions poison this instance; reopening is an explicit action.
+     """
+-    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None, recovery_registry=None):
++    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None, recovery_registry=None, expected_open_checkpoint=None):
+         self.path = Path(path).absolute()
+         self._closed = False
+         self._poisoned = False
+@@ -169,6 +169,9 @@
+                     probe.close()
+             if legacy_present and not initialized:
+                 raise AuthorityError("legacy_migration_required")
++            self._opening_checkpoint=self._ledger.history()[0] if self._ledger is not None else None
++            if expected_open_checkpoint is not None and self._opening_checkpoint!=expected_open_checkpoint:
++                raise AuthorityError("stale_offline_open_checkpoint")
+             fd = os.open(self.path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
+             try:
+                 self._check_file(fd)
+@@ -207,7 +210,8 @@
+             try: os.fsync(directory)
+             finally: os.close(directory)
+         except BaseException:
+-            self.close()
++            try:self.close()
++            except (AuthorityError,OSError,sqlite3.Error):pass
+             raise
+ 
+     @staticmethod
+@@ -544,10 +548,16 @@
+             consistency = analyze(snapshot(self), "local-service")
+             if not consistency["consistent"]:
+                 raise AuthorityError("ledger_inconsistent")
++            transport_status={"configured":False,"real_execution_enabled":False}
++            if getattr(self,"_transport_verifier",None) is not None or self._conn.execute("SELECT 1 FROM records WHERE kind='execution_transport_grant' LIMIT 1").fetchone():
++                from app.agent.execution_transport import SyntheticTransport
++                verifier=getattr(self,'_transport_verifier',None)
++                if type(verifier) is not SyntheticTransport:raise AuthorityError("transport_verifier_required")
++                transport_status=verifier.ready(self)
+             decisions = self.recovery_decision_status()
+             if decisions.get("configured") and not decisions["verified"]:
+                 raise AuthorityError("recovery_reconciliation_required")
+-            return {"recovery_decisions": decisions, "storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
++            return {"execution_transport": transport_status, "recovery_decisions": decisions, "storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
+                     "ledger_consistent": True, "enrollment": self._enrollment_status, "disaster_recovery": self._ledger.disaster_status() if self._ledger is not None else {"enabled": False}, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
+ 
+     def close(self):
+@@ -557,7 +567,7 @@
+             self._closed = True
+             try:
+                 try:
+-                    if self._recovery_registry is not None:
++                    if self._recovery_registry is not None and self._ledger_acquired and self._conn is not None:
+                         self._shutdown_recovery_status = self._recovery_registry.inspect()
+                 finally:
+                     if self._conn is not None:
+--- before/app/agent/execution.py
++++ source/app/agent/execution.py
+@@ -11,6 +11,7 @@
+ from dataclasses import dataclass
+ from datetime import UTC, datetime, timedelta
+ import hashlib
++import json
+ import threading
+ import time
+ import uuid
+@@ -99,7 +100,7 @@
+ 
+ 
+ class ExecutionPipeline:
+-    def __init__(self, authority, policy, *, enabled=False, max_pending=128, clock=None, fault_hook=None):
++    def __init__(self, authority, policy, *, enabled=False, max_pending=128, clock=None, fault_hook=None, transport=None):
+         if enabled is not True or not authority.allow_simulation:
+             raise AuthorityError("execution_disabled")
+         if type(policy) is not SimulatedPolicy:
+@@ -107,6 +108,12 @@
+         if type(max_pending) is not int or not 1 <= max_pending <= 1000:
+             raise AuthorityError("invalid_pending_limit")
+         self.authority, self.policy = authority, policy
++        self.transport = transport
++        if transport is not None:
++            from app.agent.execution_transport import SyntheticTransport
++            if type(transport) is not SyntheticTransport:
++                raise AuthorityError("real_execution_disabled")
++            transport.configure(authority)
+         self.registry = ExecutorRegistry(enabled=True)
+         self.registry.register(SyntheticExecutor())
+         self.max_pending = max_pending
+@@ -128,14 +135,19 @@
+                     authorization=dict(allowed=True, policy_revision=self.policy.revision,
+                                        capability=capability, scope=scope, at=self._clock().isoformat()))
+ 
+-    def submit(self, actor, request_id, goal, capability, payload, expires_at, timeout_seconds=10):
++    def submit(self, actor, request_id, goal, capability, payload, expires_at, timeout_seconds=10, transport_permit=None):
+         a = self.authority
+         identifier(request_id)
+         if uuid.UUID(request_id).version != 4:
+             raise AuthorityError("invalid_public_request_identifier")
+         text(goal)
+         spec = validate_spec(capability, payload, expires_at, timeout_seconds)
+-        def effect(scope):
++        transport_permit = json.loads(canonical(transport_permit)) if transport_permit is not None else None
++        if transport_permit is not None and self.transport is None:
++            raise AuthorityError("transport_disabled")
++        def effect(scope):
++            self._recovery_boundary()
++            grant = self.transport.authorize(a,actor,request_id,goal,spec,transport_permit) if transport_permit is not None else None
+             now = self._clock()
+             expiry = datetime.fromisoformat(spec["expires_at"])
+             if expiry <= now or expiry > now + timedelta(hours=24):
+@@ -149,12 +161,29 @@
+                             capability=capability, scope=scope, at=now.isoformat())
+             task["execution"] = dict(spec, operation_id=request_id, authorization=decision,
+                                      receipt_ids={phase: phase_id(request_id, phase) for phase in ("claim", "dispatch", "record", "publish", "unknown")})
++            if grant is not None:
++                from app.agent.execution_transport import digest
++                a._create("execution_transport_grant", request_id, scope, grant)
++                task["execution"]["transport"] = {"endpoint_id":self.transport.endpoint_id,"grant_sha256":digest(grant)}
+             if not allowed:
+                 task.update(status="denied", error="policy_denied")
+                 a._conn.execute("UPDATE outbox SET state='denied' WHERE task_id=?", (request_id,))
+             a._put("task", request_id, scope, task)
+             return task
+-        return a._mutate(actor, request_id, "execution_submit", dict(goal=goal, **spec), effect)
++        admission=dict(goal=goal, **spec)
++        if transport_permit is not None:admission['transport_permit']=transport_permit
++        return a._mutate(actor, request_id, "execution_submit", admission, effect)
++
++    def _recovery_boundary(self):
++        status=self.authority.recovery_decision_status()
++        if status.get('configured') and not status.get('verified'):
++            raise AuthorityError('recovery_reconciliation_required')
++
++    def _transport_task(self, actor, task):
++        self._recovery_boundary()
++        if (task.get('execution') or {}).get('transport') is not None:
++            if self.transport is None:raise AuthorityError('transport_disabled')
++            self.transport.check_task(self.authority,actor,task)
+ 
+     def _state(self, task, state, *, result=None, error=None):
+         a = self.authority
+@@ -171,6 +200,10 @@
+                 if not analyze(snapshot(a), scope)["consistent"]:
+                     raise AuthorityError("ledger_inconsistent")
+             task = a._get("task", operation_id, scope)
++            try:self._transport_task(actor,task)
++            except AuthorityError as exc:
++                if exc.code not in {"operator_permit_expired","transport_authorization_expired"}:raise
++                return self._state(task,"timed_out",error="transport_authorization_expired_no_dispatch")
+             spec = task.get("execution")
+             row = a._conn.execute("SELECT state FROM outbox WHERE task_id=?", (operation_id,)).fetchone()
+             if not spec or row[0] != "held" or task["cancel_requested"]:
+@@ -205,6 +238,10 @@
+         a = self.authority
+         def effect(scope):
+             task = self._claimed(scope, operation_id, generation)
++            try:self._transport_task(actor,task)
++            except AuthorityError as exc:
++                if exc.code not in {"operator_permit_expired","transport_authorization_expired"}:raise
++                return self._state(task,"timed_out",error="transport_authorization_expired_no_dispatch")
+             spec = task["execution"]
+             if task["cancel_requested"]:
+                 return self._state(task, "cancelled")
+@@ -215,7 +252,7 @@
+             return task
+         return a._mutate(actor, phase_id(operation_id, "dispatch"), "execution_dispatch", {"operation_id": operation_id, "generation": generation}, effect)
+ 
+-    def _record(self, actor, operation_id, generation, response):
++    def _record(self, actor, operation_id, generation, response, transport_receipt=None):
+         a = self.authority
+         def effect(scope):
+             task = self._claimed(scope, operation_id, generation)
+@@ -224,11 +261,22 @@
+             expected = SyntheticExecutor().execute(operation_id, task["execution"])
+             if canonical(response) != canonical(expected):
+                 raise AuthorityError("untrusted_executor_response")
++            self._recovery_boundary()
++            if task['execution'].get('transport') is not None:
++                if self.transport is None:raise AuthorityError('transport_verifier_required')
++                if self.transport.verify_evidence(a,actor,task,transport_receipt,require_current=True)!=response:
++                    raise AuthorityError('transport_response_binding_invalid')
+             evidence = dict(response=response, generation=generation, operation_id=operation_id,
+                             at=self._clock().isoformat(), source="synthetic_pure_computation")
++            if transport_receipt is not None:
++                evidence.update(source="synthetic_authenticated_transport",transport_receipt=transport_receipt)
+             a._create("execution_evidence", operation_id, scope, evidence)
+             return evidence
+-        return a._mutate(actor, phase_id(operation_id, "record"), "execution_record", {"operation_id": operation_id, "generation": generation, "response": response}, effect)
++        payload={"operation_id":operation_id,"generation":generation,"response":response}
++        if transport_receipt is not None:
++            from app.agent.execution_transport import digest
++            payload['transport_receipt_sha256']=digest(transport_receipt)
++        return a._mutate(actor, phase_id(operation_id, "record"), "execution_record", payload, effect)
+ 
+     def _publish(self, actor, operation_id):
+         a = self.authority
+@@ -238,6 +286,11 @@
+             row = a._conn.execute("SELECT state,claim_id,generation FROM outbox WHERE task_id=?", (operation_id,)).fetchone()
+             if row["state"] not in {"execution_claimed", "unknown"} or row["claim_id"] != operation_id or row["generation"] != evidence["generation"]:
+                 raise AuthorityError("invalid_execution_provenance")
++            self._recovery_boundary()
++            from app.agent.execution_transport import verify_transport_evidence
++            verify_transport_evidence(a,actor,task,evidence)
++            if evidence.get('publication_authorization_required'):
++                raise AuthorityError('operator_publication_authorization_required')
+             response = evidence["response"]
+             expected = SyntheticExecutor().execute(operation_id, task["execution"])
+             if response.get("status") not in {"simulated_completed", "simulated_failed"} or canonical(response) != canonical(expected):
+@@ -275,15 +328,21 @@
+             self._fault("before_execute")
+             dispatch_started = time.monotonic()
+             try:
+-                executor = self.registry.resolve(task["execution"]["capability"])
+-                response = executor.execute(operation_id, task["execution"])
++                transport_receipt=None
++                if dispatch['result']['execution'].get('transport') is not None:
++                    if self.transport is None:raise AuthorityError('transport_disabled')
++                    transport_receipt=self.transport.execute(self.authority,actor,dispatch['result'],generation)
++                    response=transport_receipt['body']['response']
++                else:
++                    executor = self.registry.resolve(task["execution"]["capability"])
++                    response = executor.execute(operation_id, task["execution"])
+                 self._fault("after_execute")
+             except Exception:
+                 return self._unknown(actor, operation_id, generation, "dispatch_outcome_unestablished")
+             if time.monotonic() - dispatch_started >= task["execution"]["timeout_seconds"] or self._clock() >= datetime.fromisoformat(dispatch["result"]["execution"]["deadline"]):
+                 return self._unknown(actor, operation_id, generation, "dispatch_timeout_outcome_unestablished")
+             try:
+-                self._record(actor, operation_id, generation, response)
++                self._record(actor, operation_id, generation, response, **({"transport_receipt":transport_receipt} if transport_receipt is not None else {}))
+             except AuthorityError as exc:
+                 if exc.code in {"untrusted_executor_response", "invalid_payload", "payload_too_large"}:
+                     return self._unknown(actor, operation_id, generation, "untrusted_executor_response")
+@@ -302,7 +361,8 @@
+             with self.authority._mutex:
+                 self.authority._fence()
+                 try:
+-                    self.authority._get("execution_evidence", task["task_id"], self.authority._scope(actor))
++                    evidence=self.authority._get("execution_evidence", task["task_id"], self.authority._scope(actor))
++                    if evidence.get("publication_authorization_required"):continue
+                 except AuthorityError as exc:
+                     if exc.code == "not_found":
+                         continue
+@@ -346,5 +406,13 @@
+                 pass
+ 
+     def readiness(self):
+-        return {"synthetic_execution_enabled": True, "execution_worker_ready": self._task is not None and not self._task.done() and self.failure is None,
+-                "execution_worker_failure": self.failure, "real_execution_enabled": False}
++        transport={"configured":False,"mode":"disabled","real_execution_enabled":False}
++        boundary_failure=None
++        if self.pipeline.transport is not None:
++            try:transport=self.pipeline.transport.ready(self.pipeline.authority)
++            except (AuthorityError,OSError):
++                transport={"configured":True,"mode":"unavailable_reconcile","real_execution_enabled":False}
++                boundary_failure="transport_reconcile_required"
++        return {"synthetic_execution_enabled":True,
++                "execution_worker_ready":self._task is not None and not self._task.done() and self.failure is None and boundary_failure is None,
++                "execution_worker_failure":self.failure or boundary_failure,"real_execution_enabled":False,"transport":transport}
+--- before/app/agent/execution_transport.py
++++ source/app/agent/execution_transport.py
+@@ -0,0 +1,284 @@
++"""Disabled-by-default synthetic AF_UNIX transport integrated with Authority.
++
++Only fixed pure synthetic endpoints exist. No path, URL, subprocess, tool plugin,
++Proxmox action or real executor is accepted. The co-located endpoint uses the SAME
++Authority transaction writer for durable replay protection; this exercises IPC and
++independent operator authorization, not OS privilege separation or live transport.
++"""
++from datetime import UTC, datetime
++import hashlib
++from functools import wraps
++import hmac
++import os
++import socket
++import struct
++import time
++
++from app.agent.authority import Actor, AuthorityError, canonical
++from app.agent.ledger import encode, strict_json
++from app.agent.execution import SyntheticExecutor, phase_id
++from app.agent.recovery import OperatorPermits
++
++ENDPOINTS = {'synthetic.local.echo-v1': frozenset({'synthetic.echo'}),
++             'synthetic.local.hash-v1': frozenset({'synthetic.sha256'})}
++MAX_FRAME = 32768
++
++
++def boundary_errors(method):
++    @wraps(method)
++    def checked(*args,**kwargs):
++        try:return method(*args,**kwargs)
++        except (KeyError,TypeError,ValueError,IndexError,OverflowError,RecursionError) as exc:
++            raise AuthorityError('transport_evidence_invalid') from exc
++    return checked
++
++
++def digest(value):
++    return hashlib.sha256(encode(value)).hexdigest()
++
++
++def _sign(key, body):
++    return {'body':body,'hmac_sha256':hmac.new(key,encode(body),hashlib.sha256).hexdigest()}
++
++
++def _authenticate(key, envelope):
++    if type(envelope) is not dict or set(envelope)!={'body','hmac_sha256'}:
++        raise AuthorityError('transport_signature_invalid')
++    signature=envelope['hmac_sha256']
++    if type(signature) is not str or len(signature)!=64 or not hmac.compare_digest(signature,_sign(key,envelope['body'])['hmac_sha256']):
++        raise AuthorityError('transport_signature_invalid')
++    return envelope['body']
++
++
++def _remaining(deadline):
++    seconds=(datetime.fromisoformat(deadline)-datetime.now(UTC)).total_seconds()
++    if seconds<=0:raise AuthorityError('transport_deadline_expired')
++    return min(seconds,60)
++
++
++def _send(channel, value, deadline):
++    raw=encode(value)
++    if len(raw)>MAX_FRAME:raise AuthorityError('transport_frame_bound')
++    channel.settimeout(_remaining(deadline));channel.sendall(struct.pack('!I',len(raw))+raw)
++
++
++def _receive(channel, deadline):
++    def read(size):
++        result=bytearray();until=time.monotonic()+_remaining(deadline)
++        while len(result)<size:
++            left=min(_remaining(deadline),until-time.monotonic())
++            if left<=0:raise AuthorityError('transport_deadline_expired')
++            channel.settimeout(left);chunk=channel.recv(size-len(result))
++            if not chunk:raise AuthorityError('transport_partial_frame')
++            result.extend(chunk)
++        return bytes(result)
++    size=struct.unpack('!I',read(4))[0]
++    if not 0<size<=MAX_FRAME:raise AuthorityError('transport_frame_bound')
++    return strict_json(read(size))
++
++
++class SyntheticTransport:
++    def __init__(self, endpoint_id, operator_verifier, request_key, response_key, *, enabled=False, fault_hook=None):
++        if enabled is not True:raise AuthorityError('transport_disabled')
++        if type(endpoint_id) is not str or endpoint_id not in ENDPOINTS:
++            raise AuthorityError('transport_endpoint_not_allowlisted')
++        if type(operator_verifier) is not OperatorPermits:
++            raise AuthorityError('transport_operator_verifier_required')
++        keys=(operator_verifier._key,request_key,response_key)
++        if any(type(k) is not bytes or len(k)<32 for k in keys) or len(set(keys))!=3:
++            raise AuthorityError('transport_independent_keys_required')
++        self.endpoint_id,self.permits=endpoint_id,operator_verifier
++        self._request_key,self._response_key=request_key,response_key
++        self._fault=fault_hook or (lambda _:None)
++        self._pid,self._uid=os.getpid(),os.getuid()
++        self.invocations=0
++
++    def configure(self, authority):
++        if (not authority.allow_simulation or authority._ledger is None
++            or authority._enrollment_status.get('state')!='VERIFIED' or authority._recovery_registry is None):
++            raise AuthorityError('transport_verified_authority_and_recovery_required')
++        if any(hmac.compare_digest(authority._ledger._key,k) for k in (self.permits._key,self._request_key,self._response_key)):
++            raise AuthorityError('transport_independent_keys_required')
++        self.ready(authority)
++        if getattr(authority,'_transport_verifier',self) is not self:
++            raise AuthorityError('transport_already_configured')
++        authority._transport_verifier=self
++
++    def _custody_ready(self, authority):
++        authority._fence()
++        if (os.getpid(),os.getuid())!=(self._pid,self._uid):raise AuthorityError('transport_owner_stale')
++        status=authority.recovery_decision_status()
++        if not status.get('configured') or not status.get('verified'):
++            raise AuthorityError('recovery_reconciliation_required')
++        return {'configured':True,'mode':'synthetic_socketpair_only','endpoint_id':self.endpoint_id,
++                'independent_authorization_required':True,'real_execution_enabled':False}
++
++    @boundary_errors
++    def ready(self, authority):
++        with authority._mutex:
++            status=self._custody_ready(authority)
++            rows=authority._conn.execute("SELECT id,scope FROM records WHERE kind='execution_transport_grant' ORDER BY id LIMIT 129").fetchall()
++            if len(rows)>128:raise AuthorityError('transport_history_capacity')
++            for op,scope in rows:
++                actor=Actor(scope);task=authority._get('task',op,scope)
++                self._grant(authority,actor,task,fresh=False)
++                try:reply=authority._get('execution_transport_report',op,scope)
++                except AuthorityError as exc:
++                    if exc.code!='not_found':raise
++                    reply=None
++                if reply is not None:self.verify_evidence(authority,actor,task,reply)
++                if task['status'] in {'simulated_completed','simulated_failed'}:
++                    evidence=authority._get('execution_evidence',op,scope)
++                    if self.verify_evidence(authority,actor,task,evidence['transport_receipt'])!=evidence['response']:
++                        raise AuthorityError('transport_history_evidence_invalid')
++            return {**status,'history_verified':True,'historical_grants':len(rows)}
++
++    def binding(self, authority, actor, request_id, goal, spec):
++        return {'format':'jarvis-synthetic-transport-grant-v1','store_id':authority._ledger.store_id,
++                'scope':authority._scope(actor),'operation_id':request_id,'goal_sha256':digest(goal),
++                'endpoint_id':self.endpoint_id,'spec':{k:spec[k] for k in ('capability','payload','expires_at','timeout_seconds')}}
++
++    @boundary_errors
++    def authorize(self, authority, actor, request_id, goal, spec, permit):
++        self.ready(authority)
++        if authority._conn.execute("SELECT COUNT(*) FROM records WHERE kind='execution_transport_grant'").fetchone()[0]>=128:
++            raise AuthorityError('transport_history_capacity')
++        if spec['capability'] not in ENDPOINTS[self.endpoint_id]:raise AuthorityError('transport_capability_denied')
++        binding=self.binding(authority,actor,request_id,goal,spec)
++        auth=self.permits.verify(permit,actor,request_id,'dispatch_synthetic_transport',binding)
++        if auth['checkpoint']!=authority._ledger._head:raise AuthorityError('transport_stale_authorization')
++        return {'binding':binding,'permit':strict_json(encode(permit)),'authorization':auth}
++
++    @boundary_errors
++    def _grant(self, authority, actor, task, *, fresh):
++        self._custody_ready(authority)
++        op=task['task_id'];spec=task['execution'];meta=spec['transport']
++        grant=authority._get('execution_transport_grant',op,authority._scope(actor))
++        binding=self.binding(authority,actor,op,task['goal'],spec)
++        if (meta!={'endpoint_id':self.endpoint_id,'grant_sha256':digest(grant)}
++            or grant['binding']!=binding or spec['capability'] not in ENDPOINTS[self.endpoint_id]):
++            raise AuthorityError('transport_grant_binding_invalid')
++        auth=self.permits.verify(grant['permit'],actor,op,'dispatch_synthetic_transport',binding) if fresh else self.permits.authenticate(grant['permit'])
++        start=datetime.fromisoformat(auth['issued_at']);end=datetime.fromisoformat(auth['expires_at'])
++        if not 0<(end-start).total_seconds()<=300:raise AuthorityError('transport_authorization_expired')
++        if auth!=grant['authorization'] or (auth['request_id'],auth['scope'],auth['command'],auth['payload_hash'])!=(op,authority._scope(actor),'dispatch_synthetic_transport',digest(binding)):
++            raise AuthorityError('transport_grant_binding_invalid')
++        if auth['checkpoint'] not in authority._ledger.history()[2]:raise AuthorityError('transport_authority_rollback')
++        return grant
++
++    def check_task(self, authority, actor, task):
++        self._grant(authority,actor,task,fresh=True)
++
++    def _wire(self, authority, actor, task, generation):
++        grant=self._grant(authority,actor,task,fresh=True)
++        return {'format':'jarvis-synthetic-request-v1','operation_id':task['task_id'],
++                'endpoint_id':self.endpoint_id,'store_id':authority._ledger.store_id,
++                'scope':authority._scope(actor),'generation':generation,
++                'nonce':phase_id(task['task_id'],'transport_nonce'),'deadline':task['execution']['deadline'],
++                'grant_sha256':digest(grant),'spec_sha256':digest(grant['binding']['spec'])}
++
++    def _live(self, authority, actor, wire):
++        task=authority._get('task',wire['operation_id'],authority._scope(actor))
++        if wire!=self._wire(authority,actor,task,wire['generation']):raise AuthorityError('transport_request_binding_invalid')
++        row=authority._conn.execute('SELECT state,claim_id,generation FROM outbox WHERE task_id=?',(task['task_id'],)).fetchone()
++        if tuple(row)!=('execution_claimed',task['task_id'],authority.generation) or wire['generation']!=authority.generation:
++            raise AuthorityError('transport_stale_claim')
++        if task['cancel_requested']:raise AuthorityError('transport_cancelled_before_dispatch')
++        _remaining(wire['deadline'])
++        return task
++
++    @boundary_errors
++    def _serve(self, authority, actor, channel, deadline):
++        peer=struct.unpack('3i',channel.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))
++        if peer[:2]!=(self._pid,self._uid):raise AuthorityError('transport_peer_identity_invalid')
++        envelope=_receive(channel,deadline);wire=_authenticate(self._request_key,envelope)
++        self._fault('transport_before_reserve')
++        def reserve(scope):
++            task=self._live(authority,actor,wire)
++            if authority._get('execution_transport_grant',task['task_id'],scope)['binding']['endpoint_id']!=self.endpoint_id:
++                raise AuthorityError('transport_endpoint_not_allowlisted')
++            authority._create('execution_transport_reservation',task['task_id'],scope,
++                              {'request_sha256':digest(envelope),'generation':authority.generation,'endpoint_id':self.endpoint_id})
++            return {'operation_id':task['task_id'],'request_sha256':digest(envelope),'endpoint_id':self.endpoint_id,'state':'RESERVED_SYNTHETIC'}
++        reserved=authority._mutate(actor,phase_id(wire['operation_id'],'transport_reserve'),
++                                  'transport_reserve',{'request_sha256':digest(envelope)},reserve)
++        if reserved['replayed']:raise AuthorityError('transport_replay_refused')
++        self._fault('transport_reserved')
++        with authority._mutex:
++            authority._fence();task=self._live(authority,actor,wire)
++        self.invocations+=1
++        response=SyntheticExecutor().execute(task['task_id'],task['execution'])
++        self._fault('transport_computed')
++        reply=_sign(self._response_key,{'format':'jarvis-synthetic-response-v1','request_sha256':digest(envelope),
++                                      'request':wire,'response':response,'reported_at':datetime.now(UTC).isoformat()})
++        def report(scope):
++            self._live(authority,actor,wire)
++            authority._create('execution_transport_report',task['task_id'],scope,reply)
++            return {'operation_id':task['task_id'],'endpoint_id':self.endpoint_id,'response_sha256':digest(reply),
++                    'state':'REPORTED_SYNTHETIC_NOT_PUBLISHED'}
++        authority._mutate(actor,phase_id(task['task_id'],'transport_report'),'transport_report',{'response_sha256':digest(reply)},report)
++        self._fault('transport_reported')
++        _send(channel,reply,deadline)
++
++    @boundary_errors
++    def execute(self, authority, actor, task, generation):
++        wire=self._wire(authority,actor,task,generation)
++        envelope=_sign(self._request_key,wire)
++        left,right=socket.socketpair(socket.AF_UNIX,socket.SOCK_STREAM)
++        try:
++            _send(left,envelope,wire['deadline'])
++            self._serve(authority,actor,right,wire['deadline'])
++            reply=_receive(left,wire['deadline'])
++            self.verify_evidence(authority,actor,task,reply,require_current=True)
++            self._fault('transport_reply_received')
++            return reply
++        finally:left.close();right.close()
++
++    @boundary_errors
++    def verify_evidence(self, authority, actor, task, reply, *, require_current=False):
++        grant=self._grant(authority,actor,task,fresh=require_current)
++        body=_authenticate(self._response_key,reply)
++        if type(body) is not dict or set(body)!={'format','request_sha256','request','response','reported_at'} or body['format']!='jarvis-synthetic-response-v1':
++            raise AuthorityError('transport_response_invalid')
++        wire=body['request'];spec=task['execution'];op=task['task_id']
++        if (set(wire)!={'format','operation_id','endpoint_id','store_id','scope','generation','nonce','deadline','grant_sha256','spec_sha256'}
++            or wire['format']!='jarvis-synthetic-request-v1' or wire['operation_id']!=op
++            or wire['endpoint_id']!=self.endpoint_id or wire['store_id']!=authority._ledger.store_id
++            or wire['scope']!=authority._scope(actor) or wire['nonce']!=phase_id(op,'transport_nonce')
++            or wire['deadline']!=spec['deadline'] or wire['grant_sha256']!=digest(grant)
++            or wire['spec_sha256']!=digest(grant['binding']['spec'])
++            or body['request_sha256']!=digest(_sign(self._request_key,wire))
++            or canonical(body['response'])!=canonical(SyntheticExecutor().execute(op,spec))):
++            raise AuthorityError('transport_response_binding_invalid')
++        row=authority._conn.execute('SELECT claim_id,generation FROM outbox WHERE task_id=?',(op,)).fetchone()
++        if tuple(row)!=(op,wire['generation']):raise AuthorityError('transport_stale_claim')
++        reservation=authority._get('execution_transport_reservation',op,authority._scope(actor))
++        report=authority._get('execution_transport_report',op,authority._scope(actor))
++        if reservation['request_sha256']!=body['request_sha256'] or report!=reply:
++            raise AuthorityError('transport_missing_durable_report')
++        at=datetime.fromisoformat(body['reported_at']);auth=grant['authorization']
++        if not datetime.fromisoformat(auth['issued_at'])<=at<min(datetime.fromisoformat(auth['expires_at']),datetime.fromisoformat(spec['deadline'])):
++            raise AuthorityError('transport_evidence_expired')
++        return body['response']
++
++
++def verify_transport_evidence(authority, actor, task, evidence):
++    if (task.get('execution') or {}).get('transport') is None:return
++    verifier=getattr(authority,'_transport_verifier',None)
++    if type(verifier) is not SyntheticTransport:raise AuthorityError('transport_verifier_required')
++    if verifier.verify_evidence(authority,actor,task,evidence['transport_receipt'])!=evidence['response']:
++        raise AuthorityError('transport_response_binding_invalid')
++
++
++def verify_history_readonly(conn, ledger, registry, verifier):
++    """Key verification on an existing mode=ro connection; no writer facade."""
++    from types import SimpleNamespace
++    from app.agent.authority import Authority
++    def get(kind, ident, scope=None):
++        row=conn.execute('SELECT scope,data FROM records WHERE kind=? AND id=?',(kind,ident)).fetchone()
++        if row is None or scope is not None and row[0]!=scope:raise AuthorityError('not_found')
++        return strict_json(row[1])
++    view=SimpleNamespace(_mutex=ledger._operation_mutex,_conn=conn,_ledger=ledger,_get=get,
++        _scope=Authority._scope,_fence=lambda:ledger.verify(conn),
++        recovery_decision_status=lambda:{'configured':True,**registry.inspect()})
++    return verifier.ready(view)
+--- before/app/agent/operator_cli.py
++++ source/app/agent/operator_cli.py
+@@ -4,12 +4,13 @@
+ no credential paths/environment lookup, runtime startup or executor activation.
+ """
+ import argparse
++import hashlib
+ import json
+ import os
+ import sqlite3
+ from pathlib import Path
+ from app.agent.authority import AuthorityError,identifier
+-from app.agent.ledger import LedgerGuard,strict_json,private_directory
++from app.agent.ledger import LedgerGuard,strict_json,private_directory,encode
+ from app.agent.recovery import inspect_offline,OperatorPermits
+ from app.agent.runtime import SERVICE_ACTOR
+ 
+@@ -52,6 +53,12 @@
+     modes.add_argument('--record-recovery-decision',action='store_true')
+     modes.add_argument('--renew-recovery-witness',action='store_true')
+     modes.add_argument('--reconcile-recovery-operation',action='store_true')
++    modes.add_argument('--reconcile-transport-report')
++    modes.add_argument('--publish-transport-evidence')
++    parser.add_argument('--synthetic-endpoint-id')
++    parser.add_argument('--transport-operator-key-fd',type=int)
++    parser.add_argument('--transport-request-key-fd',type=int)
++    parser.add_argument('--transport-response-key-fd',type=int)
+     parser.add_argument('--registry-config-fd',type=int)
+     parser.add_argument('--registry-reference-fd',type=int)
+     parser.add_argument('--recovery-payload-fd',type=int)
+@@ -68,10 +75,11 @@
+     args=parser.parse_args(argv)
+     registry=bool(args.recovery_registry_status or args.initialize_recovery_registry or args.publish_recovery_proposal or args.record_recovery_decision or args.renew_recovery_witness or args.reconcile_recovery_operation)
+     registry_mutation=registry and not args.recovery_registry_status
+-    mutation=bool(registry_mutation or args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
++    transport_recovery=bool(args.reconcile_transport_report or args.publish_transport_evidence)
++    mutation=bool(transport_recovery or registry_mutation or args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
+     enrollment=bool(args.enrollment_status or args.enroll_store or args.reconcile_enrollment)
+     disaster=bool(registry or args.checkpoint_status or args.verify_archive or args.verify_restored or args.verify_branch or enrollment or mutation)
+-    ledger=None
++    ledger=None;authority=None
+     try:
+         configured=(args.checkpoints is not None,args.store_id is not None,args.key_fd is not None)
+         if any(configured) and not all(configured):raise AuthorityError('complete_checkpoint_configuration_required')
+@@ -84,7 +92,54 @@
+             trust=strict_json(_read_fd(args.trust_fd,16384)) if args.trust_fd is not None else None
+             ledger=LedgerGuard(args.checkpoints,raw,args.store_id,initialize=args.enroll_store or args.reconcile_enrollment,rollover=args.rollover_enabled,
+                                epoch_capacity=args.epoch_capacity,max_epochs=args.max_epochs,recovery=disaster or args.disaster_recovery_enabled or args.rollover_enabled,trust_context=trust)
+-        if not disaster:
++        if transport_recovery:
++            from app.agent.authority import Authority
++            from app.agent.enrollment import verify_authority_enrollment
++            from app.agent.recovery import RecoveryActions
++            from app.agent.recovery_decisions import RecoveryRegistry
++            from app.agent.execution_transport import SyntheticTransport,verify_history_readonly
++            from app.agent.ledger import read_file
++            if not args.database:raise AuthorityError('database_path_required')
++            operation=identifier(args.operation_id)
++            task=identifier(args.reconcile_transport_report or args.publish_transport_evidence)
++            command='reconcile_synthetic_transport_report' if args.reconcile_transport_report else 'publish_synthetic_evidence'
++            payload={'task_id':task}
++            permits=OperatorPermits(_read_fd(args.operator_key_fd,128))
++            permit=strict_json(_read_fd(args.permit_fd,65536))
++            auth=permits.authenticate(permit)
++            witness=strict_json(_read_fd(args.enrollment_witness_fd,16384))
++            config=strict_json(_read_fd(args.registry_config_fd,16384))
++            reference=strict_json(_read_fd(args.registry_reference_fd,16384))
++            transport=SyntheticTransport(args.synthetic_endpoint_id,OperatorPermits(_read_fd(args.transport_operator_key_fd,128)),
++                _read_fd(args.transport_request_key_fd,128),_read_fd(args.transport_response_key_fd,128),enabled=True)
++            database=Path(args.database).absolute();read_file(database,32*1024*1024)
++            ledger.acquire(database,readonly=True)
++            registry_service=RecoveryRegistry(ledger,config,reference,permits)
++            if not registry_service.inspect()['verified']:raise AuthorityError('recovery_reconciliation_required')
++            conn=sqlite3.connect(database.as_uri()+'?mode=ro',uri=True,isolation_level=None)
++            try:
++                ledger.verify(conn);verify_authority_enrollment(conn,database,ledger,witness)
++                verify_history_readonly(conn,ledger,registry_service,transport)
++                row=conn.execute('SELECT data FROM receipts WHERE request_id=?',(operation,)).fetchone()
++                if row:
++                    previous=strict_json(row[0]);expected=previous['result'].get('operator_authorization')
++                    if (previous['operation']!='operator_recovery' or expected!=auth
++                        or auth['request_id']!=operation or auth['scope']!=SERVICE_ACTOR.scope or auth['command']!=command
++                        or auth['payload_hash']!=hashlib.sha256(encode(payload)).hexdigest()):
++                        raise AuthorityError('request_conflict')
++                    print(json.dumps({'receipt':previous,'replayed':True,'executor_invoked':False,'execution_enabled':False}));return 0
++            finally:conn.close()
++            permits.verify(permit,SERVICE_ACTOR,operation,command,payload)
++            opening=ledger.history()[0]
++            if auth['checkpoint']!=opening:raise AuthorityError('stale_operator_permit')
++            ledger.close()
++            registry_service=RecoveryRegistry(ledger,config,reference,permits)
++            authority=Authority(database,ledger=ledger,enrollment_context=witness,recovery_registry=registry_service,
++                                allow_simulation=True,expected_open_checkpoint=opening)
++            transport.configure(authority)
++            result=RecoveryActions(authority,permits).apply(SERVICE_ACTOR,operation,command,payload,permit,offline_open=True)
++            authority.close();authority=None;success=True
++        elif not disaster:
+             if not args.database:raise AuthorityError('database_path_required')
+             witness=strict_json(_read_fd(args.enrollment_witness_fd,16384)) if args.enrollment_witness_fd is not None else None
+             result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,enrollment_context=witness,task_id=args.task_id,limit=args.limit,offset=args.offset)
+@@ -175,6 +230,9 @@
+             'execution_enabled':False}))
+         return 1
+     finally:
++        if authority is not None:
++            try:authority.close()
++            except (AuthorityError,OSError,sqlite3.Error):pass
+         if ledger is not None:ledger.close()
+ 
+ 
+--- before/app/agent/recovery.py
++++ source/app/agent/recovery.py
+@@ -42,7 +42,7 @@
+ 
+ def analyze(values, scope, *, now=None):
+     now=now or datetime.now(UTC)
+-    issues=[];tasks={};occurrences={};schedules={};evidence={};receipts={};events={};origins={}
++    issues=[];tasks={};occurrences={};schedules={};evidence={};receipts={};events={};origins={};transport_grants={};transport_reports={};transport_reservations={}
+     def issue(code, ident=None):
+         issues.append({'code':code,'identity':ident,'unsafe_to_dispatch':True})
+     ownership=values.get('ownership',[])
+@@ -80,6 +80,12 @@
+                 identifier(row['id'])
+                 if data.get('job_id')!=row['id'] or data.get('scope')!=row['scope']:issue('schedule_identity_mismatch',row['id'])
+                 schedules[row['id']]=data
++            elif row['kind']=='execution_transport_grant':
++                if data['binding']['operation_id']!=row['id'] or data['binding']['scope']!=row['scope']:
++                    raise AuthorityError('invalid_transport_grant')
++                transport_grants[row['id']]=data
++            elif row['kind']=='execution_transport_report':transport_reports[row['id']]=data
++            elif row['kind']=='execution_transport_reservation':transport_reservations[row['id']]=data
+             elif row['kind']=='execution_evidence':
+                 identifier(row['id'])
+                 if type(data.get('response')) is not dict:raise AuthorityError('invalid_evidence')
+@@ -97,7 +103,13 @@
+                 origins.setdefault(result['task_id'],[]).append(data)
+                 payload=None
+                 if op=='submit':payload={'goal':result['goal']}
+-                if op=='execution_submit':payload={'goal':result['goal'],**{k:result['execution'][k] for k in ('capability','payload','expires_at','timeout_seconds')}}
++                if op=='execution_submit':
++                    payload={'goal':result['goal'],**{k:result['execution'][k] for k in ('capability','payload','expires_at','timeout_seconds')}}
++                    if result['execution'].get('transport') is not None:
++                        grant=transport_grants.get(result['task_id'])
++                        if grant is None or hashlib.sha256(encode(grant)).hexdigest()!=result['execution']['transport']['grant_sha256']:
++                            issue('transport_grant_missing_or_changed',result['task_id'])
++                        else:payload['transport_permit']=grant['permit']
+                 if payload is not None and hashlib.sha256(canonical([row['scope'],op,payload]).encode()).hexdigest()!=row['payload_hash']:
+                     issue('receipt_payload_binding_mismatch',row['request_id'])
+             elif op=='import_legacy_snapshot':
+@@ -150,6 +162,59 @@
+         receipt=receipts.get(phase_id(task_id,'record'))
+         if task is None or data.get('operation_id')!=task_id or receipt is None or receipt['result']!=data:
+             issue('unbound_execution_evidence',task_id)
++    from app.agent.execution_transport import ENDPOINTS, digest
++    for task_id in set(transport_grants)|set(transport_reservations)|set(transport_reports):
++        try:
++            task=tasks.get(task_id)
++            if task is None or not (task.get('execution') or {}).get('transport'):
++                raise AuthorityError('orphan_transport_history')
++            spec=task['execution'];grant=transport_grants[task_id];binding=grant['binding'];auth=grant['authorization']
++            if (set(grant)!={'binding','permit','authorization'} or grant['permit']['body']!=auth
++                or set(binding)!={'format','store_id','scope','operation_id','goal_sha256','endpoint_id','spec'}
++                or binding['format']!='jarvis-synthetic-transport-grant-v1' or binding['operation_id']!=task_id
++                or binding['scope']!=task['scope'] or binding['goal_sha256']!=digest(task['goal'])
++                or binding['endpoint_id'] not in ENDPOINTS or spec['capability'] not in ENDPOINTS[binding['endpoint_id']]
++                or binding['spec']!={k:spec[k] for k in ('capability','payload','expires_at','timeout_seconds')}
++                or spec['transport']!={'endpoint_id':binding['endpoint_id'],'grant_sha256':digest(grant)}
++                or (auth['request_id'],auth['scope'],auth['command'],auth['payload_hash'])!=(task_id,task['scope'],'dispatch_synthetic_transport',digest(binding))):
++                raise AuthorityError('invalid_transport_grant')
++            reserve=transport_reservations.get(task_id);report=transport_reports.get(task_id)
++            reserve_receipt=receipts.get(phase_id(task_id,'transport_reserve'));report_receipt=receipts.get(phase_id(task_id,'transport_report'))
++            if (reserve is not None)!=(reserve_receipt is not None) or (report is not None)!=(report_receipt is not None):
++                raise AuthorityError('transport_receipt_missing')
++            if reserve is not None:
++                if (set(reserve)!={'request_sha256','generation','endpoint_id'} or type(reserve['generation']) is not int
++                    or reserve['generation']<1 or reserve['endpoint_id']!=binding['endpoint_id']
++                    or reserve_receipt['operation']!='transport_reserve' or reserve_receipt['scope']!=task['scope']
++                    or reserve_receipt['result']!={'operation_id':task_id,'request_sha256':reserve['request_sha256'],'endpoint_id':binding['endpoint_id'],'state':'RESERVED_SYNTHETIC'}
++                    or reserve_receipt['payload_hash']!=hashlib.sha256(canonical([task['scope'],'transport_reserve',{'request_sha256':reserve['request_sha256']}]).encode()).hexdigest()):
++                    raise AuthorityError('invalid_transport_reservation')
++            if report is not None:
++                if reserve is None or set(report)!={'body','hmac_sha256'}:raise AuthorityError('invalid_transport_report')
++                body=report['body'];wire=body['request'];out=outbox.get(task_id)
++                if not re.fullmatch('[0-9a-f]{64}',report['hmac_sha256']) or not re.fullmatch('[0-9a-f]{64}',grant['permit']['hmac_sha256']):
++                    raise AuthorityError('invalid_transport_signature_shape')
++                expected=SyntheticExecutor().execute(task_id,spec)
++                if (set(body)!={'format','request_sha256','request','response','reported_at'} or body['format']!='jarvis-synthetic-response-v1'
++                    or set(wire)!={'format','operation_id','endpoint_id','store_id','scope','generation','nonce','deadline','grant_sha256','spec_sha256'}
++                    or wire['format']!='jarvis-synthetic-request-v1' or wire['operation_id']!=task_id or wire['scope']!=task['scope']
++                    or wire['store_id']!=binding['store_id'] or wire['endpoint_id']!=binding['endpoint_id']
++                    or wire['generation']!=reserve['generation'] or out is None or out['generation']!=wire['generation']
++                    or out['claim_id']!=task_id or wire['nonce']!=phase_id(task_id,'transport_nonce')
++                    or wire['grant_sha256']!=digest(grant) or wire['spec_sha256']!=digest(binding['spec']) or wire['deadline']!=spec['deadline']
++                    or body['request_sha256']!=reserve['request_sha256'] or body['response']!=expected
++                    or report_receipt['operation']!='transport_report' or report_receipt['scope']!=task['scope']
++                    or report_receipt['result']!={'operation_id':task_id,'endpoint_id':binding['endpoint_id'],'response_sha256':digest(report),'state':'REPORTED_SYNTHETIC_NOT_PUBLISHED'}
++                    or report_receipt['payload_hash']!=hashlib.sha256(canonical([task['scope'],'transport_report',{'response_sha256':digest(report)}]).encode()).hexdigest()):
++                    raise AuthorityError('invalid_transport_report')
++                at=datetime.fromisoformat(instant(body['reported_at']))
++                if not datetime.fromisoformat(instant(auth['issued_at']))<=at<min(datetime.fromisoformat(instant(auth['expires_at'])),datetime.fromisoformat(instant(spec['deadline']))):
++                    raise AuthorityError('invalid_transport_report_time')
++            if task_id in evidence and (report is None or evidence[task_id].get('transport_receipt')!=report):
++                raise AuthorityError('transport_evidence_unbound')
++        except (AuthorityError,KeyError,TypeError,ValueError):issue('invalid_transport_history',task_id)
++    for task_id,task in tasks.items():
++        if (task.get('execution') or {}).get('transport') and task_id not in transport_grants:issue('transport_grant_missing',task_id)
+     diagnostics=[]
+     for task_id,task in tasks.items():
+         row=outbox.get(task_id)
+@@ -196,6 +261,10 @@
+             status=status,outbox_state=row['state'] if row else None,cancel_requested=task.get('cancel_requested'),
+             admitted=bool(origin),execution_completed=status in {'simulated_completed','simulated_failed'},
+             real_execution_completed=False,reason=reason,recommendation=recommendation,
++            transport={'configured':bool(execution and execution.get('transport')),
++                       'endpoint_id':execution.get('transport',{}).get('endpoint_id') if execution else None,
++                       'reservation_present':task_id in transport_reservations,'report_present':task_id in transport_reports,
++                       'report_is_completion':False,'real_execution_enabled':False},
+             phase_receipt_ids=execution.get('receipt_ids',{}) if execution else {},
+             recorded_evidence=has_evidence,published_receipt_id=published['request_id'] if published else None,
+             created_at=task.get('created_at'),
+@@ -263,11 +332,19 @@
+             tasks=[t for t in result['tasks'] if task_id is None or t['task_id']==task_id]
+             if task_id is not None and not tasks:raise AuthorityError('not_found')
+             total=len(tasks)
++            transport_status={"configured":False,"history_verified":False,"real_execution_enabled":False}
++            if any(t['transport']['configured'] for t in result['tasks']):
++                verifier=getattr(a,'_transport_verifier',None)
++                if verifier is None:
++                    transport_status['reason']='transport_verifier_required'
++                    for task in tasks:
++                        if task['transport']['configured']:task.update(execution_completed=False,reason='transport_signature_verifier_unavailable')
++                else:transport_status=verifier.ready(a)
+             return {**result,'tasks':tasks[offset:offset+limit],'total_tasks':total,'offset':offset,
+                     'occurrence_summaries':result['occurrence_summaries'][offset:offset+limit],
+                     'schedules':result['schedules'][offset:offset+limit],'exports':result['exports'][offset:offset+limit],
+                     'next_offset':offset+limit if offset+limit<total else None,'ledger_integrity':integrity,
+-                    'enrollment':a._enrollment_status,'recovery_decisions':a.recovery_decision_status(detailed=True),
++                    'execution_transport':transport_status,'enrollment':a._enrollment_status,'recovery_decisions':a.recovery_decision_status(detailed=True),
+                     'recovery_mutations_publicly_enabled':False,'disaster_recovery':a._ledger.disaster_status() if a._ledger is not None else {'enabled':False}}
+ 
+     def retention_plan(self, actor, *, older_than, limit=100):
+@@ -345,23 +422,55 @@
+     """Local, authenticated, audited, checkpoint-bound conservative operations."""
+     def __init__(self, authority, permits):self.authority,self.permits=authority,permits
+ 
+-    def apply(self, actor, request_id, command, payload, permit):
+-        return self._apply(actor,request_id,command,payload,permit)
+-
+-    def _apply(self, actor, request_id, command, payload, permit, *, verified_export=None):
++    def apply(self, actor, request_id, command, payload, permit, *, offline_open=False):
++        return self._apply(actor,request_id,command,payload,permit,offline_open=offline_open)
++
++    def _apply(self, actor, request_id, command, payload, permit, *, verified_export=None, offline_open=False):
+         a=self.authority
+         identifier(request_id)
+         if uuid.UUID(request_id).version!=4:raise AuthorityError('invalid_public_request_identifier')
+-        if command not in {'publish_synthetic_evidence','disable_overdue_schedule','prepare_archive'}:
++        if command not in {'publish_synthetic_evidence','reconcile_synthetic_transport_report','disable_overdue_schedule','prepare_archive'}:
+             raise AuthorityError('unsafe_recovery_action')
+         if a._ledger is None:raise AuthorityError('ledger_checkpoint_required')
+         auth=self.permits.verify(permit,actor,request_id,command,payload)
+         def authorized(result):
++            if self.permits.verify(permit,actor,request_id,command,payload)!=auth:
++                raise AuthorityError('operator_permit_binding_mismatch')
+             return {**result,'operator_authorization':auth,'permit_fingerprint':hashlib.sha256(encode(permit)).hexdigest()}
+         def effect(scope):
+-            if auth['checkpoint']!=a._ledger._head:raise AuthorityError('stale_operator_permit')
++            if offline_open:
++                if command not in {'reconcile_synthetic_transport_report','publish_synthetic_evidence'}:
++                    raise AuthorityError('unsafe_recovery_action')
++                head,pending,history=a._ledger.history()
++                if (auth['checkpoint']!=a._opening_checkpoint or pending or head['sequence']!=a._opening_checkpoint['sequence']+1
++                    or len(history)<2 or history[-2]!=a._opening_checkpoint):raise AuthorityError('stale_operator_permit')
++            elif auth['checkpoint']!=a._ledger._head:raise AuthorityError('stale_operator_permit')
+             report=analyze(snapshot(a),scope)
+             if not report['consistent']:raise AuthorityError('recovery_inconsistent_state')
++            if command=='reconcile_synthetic_transport_report':
++                if type(payload) is not dict or set(payload)!={'task_id'}:raise AuthorityError('invalid_recovery_payload')
++                task_id=identifier(payload['task_id']);task=a._get('task',task_id,scope)
++                row=a._conn.execute('SELECT * FROM outbox WHERE task_id=?',(task_id,)).fetchone()
++                if not a.allow_simulation or task['status']!='unknown' or row['state']!='unknown' or row['claim_id']!=task_id:
++                    raise AuthorityError('unsafe_recovery_action')
++                from app.agent.execution_transport import verify_transport_evidence,digest
++                reply=a._get('execution_transport_report',task_id,scope)
++                evidence={'response':reply['body']['response'],'generation':row['generation'],'operation_id':task_id,
++                          'at':reply['body']['reported_at'],'source':'synthetic_authenticated_transport','transport_receipt':reply,
++                          'publication_authorization_required':True}
++                if not task['execution'].get('transport'):raise AuthorityError('unsafe_recovery_action')
++                verify_transport_evidence(a,actor,task,evidence)
++                a._create('execution_evidence',task_id,scope,evidence)
++                record_id=phase_id(task_id,'record')
++                record_payload={'operation_id':task_id,'generation':row['generation'],'response':evidence['response'],
++                                'transport_receipt_sha256':digest(reply)}
++                record_hash=hashlib.sha256(canonical([scope,'execution_record',record_payload]).encode()).hexdigest()
++                record={'request_id':record_id,'scope':scope,'operation':'execution_record','payload_hash':record_hash,
++                        'state':'committed','result':evidence,'at':datetime.now(UTC).isoformat(),'owner_generation':a.generation}
++                a._conn.execute('INSERT INTO receipts VALUES(?,?,?,?,?)',(record_id,scope,'execution_record',record_hash,canonical(record)))
++                a._conn.execute('INSERT INTO events(request_id,data) VALUES(?,?)',(record_id,canonical(record)))
++                return authorized({'task_id':task_id,'state':'EVIDENCE_RECORDED_NOT_PUBLISHED','execution_record_receipt_id':record_id,
++                                   'executor_invoked':False,'publication_required':True})
+             if command=='publish_synthetic_evidence':
+                 if type(payload) is not dict or set(payload)!={'task_id'}:raise AuthorityError('invalid_recovery_payload')
+                 task_id=identifier(payload['task_id']);task=a._get('task',task_id,scope)
+@@ -371,6 +480,8 @@
+                     raise AuthorityError('unsafe_recovery_action')
+                 # Use the existing publisher under this SAME SQL transaction so
+                 # recovered state and operator authorization receipt are atomic.
++                from app.agent.execution_transport import verify_transport_evidence
++                verify_transport_evidence(a,actor,task,evidence)
+                 result=evidence['response']
+                 expected=SyntheticExecutor().execute(task_id,task['execution'])
+                 if result.get('status') not in {'simulated_completed','simulated_failed'} or canonical(result)!=canonical(expected):
+--- before/app/agent/runtime.py
++++ source/app/agent/runtime.py
+@@ -40,14 +40,14 @@
+                 _authority = None
+ 
+ 
+-def bind_offline_execution(policy, *, max_pending=128):
++def bind_offline_execution(policy, *, max_pending=128, transport=None):
+     """Trusted embedding opt-in only; no environment/HTTP live execution switch."""
+     global _execution_worker
+     from app.agent.execution import ExecutionPipeline, ExecutionWorker
+     with _mutex:
+         if _execution_worker is not None:
+             raise AuthorityError("execution_already_bound")
+-        pipeline = ExecutionPipeline(get_authority(), policy, enabled=True, max_pending=max_pending)
++        pipeline = ExecutionPipeline(get_authority(), policy, enabled=True, max_pending=max_pending, transport=transport)
+         _execution_worker = ExecutionWorker(pipeline, SERVICE_ACTOR)
+         return _execution_worker
+ 
+@@ -60,7 +60,8 @@
+ def execution_readiness():
+     worker = get_execution_worker()
+     return worker.readiness() if worker else {"synthetic_execution_enabled": False, "execution_worker_ready": False,
+-                                           "execution_worker_failure": None, "real_execution_enabled": False}
++                                           "execution_worker_failure": None, "real_execution_enabled": False,
++                                           "transport":{"configured":False,"mode":"disabled","real_execution_enabled":False}}
+ 
+ 
+ def get_execution_pipeline():
+--- before/app/cli.py
++++ source/app/cli.py
+@@ -14,9 +14,11 @@
+ from app.resource_manager import (
+     read_persisted_state,
+     resource_manager,
+-    start_server_process,
+-    terminate_jarvis_processes,
+ )
++
++
++class ClientControlError(RuntimeError):
++    pass
+ 
+ 
+ def main(argv: list[str] | None = None) -> int:
+@@ -35,6 +37,9 @@
+             return _tasks(args)
+         if args.command == "recovery":
+             return _recovery(args)
++    except ClientControlError as exc:
++        print(str(exc),file=sys.stderr)
++        return 1
+     except KeyboardInterrupt:
+         return 130
+     parser.print_help()
+@@ -59,10 +64,14 @@
+     wake.add_argument("--preload", action="store_true", help="Preload the configured primary model during wake.")
+     wake.add_argument("--no-preload", action="store_true", help="Skip primary model preload even if configured.")
+ 
++    for control in (sleep,wake):
++        control.add_argument("--offline",action="store_true",help="Compatibility flag; cannot authorize local host-control effects.")
++
+     status = subparsers.add_parser("status", help="Show runtime state and resource report.")
+     status.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+ 
+     shutdown = subparsers.add_parser("shutdown", help="Unload models and stop JARVIS-owned runtime processes.")
++    shutdown.add_argument("--offline",action="store_true",help="Compatibility flag; cannot authorize local host-control effects.")
+     shutdown.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+     tasks = subparsers.add_parser("tasks", help="Read durable task states from the running API.")
+     tasks.add_argument("--task-id", help="Show one canonical task UUID.")
+@@ -126,41 +135,18 @@
+ 
+ 
+ def _sleep(args: argparse.Namespace) -> int:
+-    if args.light:
+-        payload = _post("/resource/sleep/light")
+-        if payload is None:
+-            payload = asyncio.run(_local_light_sleep())
+-        _print_payload(payload)
+-        return 0
+-
+-    payload = _post("/resource/sleep/deep")
+-    if payload is None:
+-        payload = asyncio.run(_local_deep_sleep(terminate=not args.no_process_stop))
+-    elif not args.no_process_stop:
+-        stopped = terminate_jarvis_processes()
+-        payload.setdefault("actions", []).append(f"terminated_processes:{len(stopped)}")
+-        payload["terminated_processes"] = stopped
++    payload=_post('/resource/sleep/light' if args.light else '/resource/sleep/deep')
++    if payload is None:raise ClientControlError('offline_host_control_disabled_no_local_fallback')
+     _print_payload(payload)
+     return 0
+ 
+ 
+ def _wake(args: argparse.Namespace) -> int:
+-    if not _server_responds():
+-        start_server_process()
+-        _wait_for_server()
+-
+-    preload: bool | None = None
+-    if args.preload:
+-        preload = True
+-    if args.no_preload:
+-        preload = False
+-
+-    params = {}
+-    if preload is not None:
+-        params["preload_primary_model"] = str(preload).lower()
+-    payload = _post("/resource/wake", params=params)
+-    if payload is None:
+-        payload = asyncio.run(resource_manager.wake(reason="cli", preload_primary_model=preload)).__dict__
++    params={}
++    if args.preload:params['preload_primary_model']='true'
++    if args.no_preload:params['preload_primary_model']='false'
++    payload=_post('/resource/wake',params=params)
++    if payload is None:raise ClientControlError('offline_host_control_disabled_no_automatic_start')
+     _print_payload(payload)
+     return 0
+ 
+@@ -184,27 +170,19 @@
+ 
+ 
+ def _shutdown(args: argparse.Namespace) -> int:
+-    payload = _post("/resource/shutdown")
+-    if payload is None:
+-        payload = asyncio.run(_local_deep_sleep(terminate=True))
+-    stopped = terminate_jarvis_processes()
+-    payload.setdefault("actions", []).append(f"terminated_processes:{len(stopped)}")
+-    payload["terminated_processes"] = stopped
+-    if args.json:
+-        print(json.dumps(payload, indent=2))
+-    else:
+-        _print_payload(payload)
+-    return 0
+-
+-
+-async def _local_light_sleep() -> dict[str, Any]:
+-    result = await resource_manager.light_sleep(reason="cli")
+-    return result.__dict__
+-
+-
+-async def _local_deep_sleep(*, terminate: bool) -> dict[str, Any]:
+-    result = await resource_manager.deep_sleep(reason="cli", terminate_processes=terminate)
+-    return result.__dict__
++    payload=_post('/resource/shutdown')
++    if payload is None:raise ClientControlError('offline_host_control_disabled_no_local_fallback')
++    if args.json:print(json.dumps(payload,indent=2))
++    else:_print_payload(payload)
++    return 0
++
++
++async def _local_light_sleep() -> dict[str,Any]:
++    raise ClientControlError('offline_host_control_disabled')
++
++
++async def _local_deep_sleep(*, terminate: bool) -> dict[str,Any]:
++    raise ClientControlError('offline_host_control_disabled')
+ 
+ 
+ def _base_url() -> str:
+@@ -226,13 +204,19 @@
+ 
+ 
+ def _post(path: str, *, params: dict[str, str] | None = None) -> dict[str, Any] | None:
+-    try:
+-        response = httpx.post(f"{_base_url()}{path}", params=params, timeout=120.0)
++    headers={"Authorization":f"Bearer {settings.server.api_token}"} if settings.server.api_token else {}
++    try:
++        response=httpx.post(f"{_base_url()}{path}",params=params,timeout=10.0,headers=headers)
+         response.raise_for_status()
+-        payload = response.json()
+-        return payload if isinstance(payload, dict) else {"result": payload}
+-    except Exception:
++        payload=response.json()
++        if not isinstance(payload,dict):raise ClientControlError("invalid_control_response_no_retry")
++        return payload
++    except httpx.ConnectError:
+         return None
++    except httpx.HTTPStatusError as exc:
++        raise ClientControlError(f"control_api_refused_{exc.response.status_code}_no_local_fallback") from None
++    except (httpx.TransportError,ValueError):
++        raise ClientControlError("control_outcome_unknown_no_retry") from None
+ 
+ 
+ def _server_responds() -> bool:
+--- before/app/resource_manager.py
++++ source/app/resource_manager.py
+@@ -24,6 +24,11 @@
+ 
+ PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ DEFAULT_STATE_PATH = PROJECT_ROOT / "data" / "resource_state.json"
++
++
++# Only children positively captured at launch by THIS process may be signalled.
++# Cross-process adoption requires a future protected persistent lease ceremony.
++_owned_processes: dict[int,dict[str,Any]] = {}
+ 
+ 
+ class RuntimeState(StrEnum):
+@@ -743,10 +748,12 @@
+ 
+ def is_jarvis_pid(pid: int) -> bool:
+     try:
+-        proc = psutil.Process(pid)
+-        return classify_jarvis_process(proc.name(), " ".join(proc.cmdline()), proc) is not None
+-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+-        return False
++        proc=psutil.Process(pid)
++        if pid==os.getpid():return _cwd_under_project(proc)
++        lease=_owned_processes.get(pid)
++        return bool(lease and proc.create_time()==lease['created_at'] and proc.exe()==lease['executable']
++                    and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve() and proc.ppid()==os.getpid())
++    except (psutil.NoSuchProcess,psutil.AccessDenied,OSError):return False
+ 
+ 
+ def classify_jarvis_process(name: str, cmdline: str, proc: psutil.Process | None = None) -> str | None:
+@@ -754,15 +761,15 @@
+     root = str(PROJECT_ROOT).replace("\\", "/").lower()
+     lowered_name = name.lower()
+ 
+-    if "app.main:app" in normalized or "python -m app.main" in normalized:
++    if ("app.main:app" in normalized or "python -m app.main" in normalized) and _cwd_under_project(proc):
+         return "fastapi_server"
+-    if "uvicorn" in normalized and "app.main:app" in normalized:
++    if "uvicorn" in normalized and "app.main:app" in normalized and _cwd_under_project(proc):
+         return "fastapi_server"
+-    if "python -m app.boot" in normalized or "app/boot.py" in normalized:
++    if ("python -m app.boot" in normalized or "app/boot.py" in normalized) and _cwd_under_project(proc):
+         return "boot_orchestrator"
+-    if "scripts/sensor_node.py" in normalized:
++    if "scripts/sensor_node.py" in normalized and _cwd_under_project(proc):
+         return "sensor_node"
+-    if "wake_diag.py" in normalized:
++    if "wake_diag.py" in normalized and _cwd_under_project(proc):
+         return "wake_diagnostics"
+     if (
+         any(keyword in normalized for keyword in ("browser_use", "computer_use", "open-computer-use"))
+@@ -787,23 +794,24 @@
+ 
+ 
+ def terminate_jarvis_processes(exclude_pids: set[int] | None = None, timeout: float = 3.0) -> list[dict[str, Any]]:
+-    stopped: list[dict[str, Any]] = []
+-    for process in discover_jarvis_processes(exclude_pids=exclude_pids):
+-        try:
+-            proc = psutil.Process(process.pid)
++    stopped=[];exclude=exclude_pids or set()
++    for pid,lease in list(_owned_processes.items()):
++        if pid in exclude:continue
++        try:
++            proc=psutil.Process(pid)
++            def matches():
++                return (proc.create_time()==lease['created_at'] and proc.exe()==lease['executable']
++                        and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve() and proc.ppid()==os.getpid())
++            if not matches():continue
+             proc.terminate()
+-            try:
+-                proc.wait(timeout=timeout)
+-                outcome = "terminated"
++            try:proc.wait(timeout=timeout);outcome='terminated'
+             except psutil.TimeoutExpired:
+-                proc.kill()
+-                proc.wait(timeout=timeout)
+-                outcome = "killed"
+-            stopped.append({**asdict(process), "outcome": outcome})
+-            audit.log("resource_process_stopped", {"pid": process.pid, "role": process.role, "outcome": outcome})
+-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired) as exc:
+-            stopped.append({**asdict(process), "outcome": f"error:{exc}"})
+-            audit.log("resource_process_stop_error", {"pid": process.pid, "role": process.role, "error": str(exc)})
++                if not matches():continue
++                proc.kill();proc.wait(timeout=timeout);outcome='killed'
++            stopped.append({'pid':pid,'role':lease['role'],'outcome':outcome})
++            _owned_processes.pop(pid,None)
++        except (psutil.NoSuchProcess,psutil.AccessDenied,psutil.TimeoutExpired,OSError):
++            continue
+     return stopped
+ 
+ 
+@@ -835,13 +843,19 @@
+     creationflags = 0
+     if os.name == "nt":
+         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+-    return subprocess.Popen(
++    child = subprocess.Popen(
+         command,
+         cwd=PROJECT_ROOT,
+         stdout=subprocess.DEVNULL,
+         stderr=subprocess.DEVNULL,
+         creationflags=creationflags,
+     )
++    try:
++        proc=psutil.Process(child.pid)
++        if proc.ppid()==os.getpid() and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve():
++            _owned_processes[child.pid]={'created_at':proc.create_time(),'executable':proc.exe(),'role':'fastapi_server'}
++    except (psutil.NoSuchProcess,psutil.AccessDenied,OSError):pass
++    return child
+ 
+ 
+ resource_manager = ResourceManager()
+--- before/app/server.py
++++ source/app/server.py
+@@ -16,6 +16,7 @@
+ 
+ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+ from fastapi.middleware.cors import CORSMiddleware
++from fastapi.exceptions import RequestValidationError
+ from fastapi.responses import JSONResponse
+ from fastapi.staticfiles import StaticFiles
+ from pydantic import BaseModel
+@@ -119,6 +120,9 @@
+     execution_worker = get_execution_worker()
+     try:
+         authority.readiness()
++        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token:
++            from app.agent.authority import AuthorityError
++            raise AuthorityError("transport_client_authentication_required")
+         await scheduler.start()
+         if execution_worker is not None:
+             await execution_worker.start()
+@@ -160,6 +164,13 @@
+ 
+ 
+ app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
++
++
++@app.exception_handler(RequestValidationError)
++async def bounded_validation_error(request, exc):
++    # Never reflect submitted credentials/authorization evidence into responses.
++    return JSONResponse(status_code=422,content={"error":"invalid_request","automatic_retry":False})
++
+ _pwa_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "pwa")
+ if os.path.isdir(_pwa_dir):
+     app.mount("/pwa", StaticFiles(directory=_pwa_dir, html=True), name="pwa")
+@@ -238,6 +249,8 @@
+ @app.middleware("http")
+ async def api_token_middleware(request: Request, call_next):  # noqa: ANN001, ANN201
+     if not settings.server.api_token:
++        if request.url.path=="/stop":
++            return JSONResponse(status_code=401,content={"error":"operator_authentication_required"})
+         return await call_next(request)
+     path = request.url.path
+     if path in _AUTH_EXEMPT_EXACT or any(path.startswith(prefix) for prefix in _AUTH_EXEMPT_PREFIXES):
+@@ -321,27 +334,12 @@
+ 
+ 
+ @app.post("/resource/sleep/light")
+-async def resource_light_sleep() -> dict[str, Any]:
+-    result = await resource_manager.light_sleep(reason="api")
+-    return asdict(result)
+-
+-
+ @app.post("/resource/sleep/deep")
+-async def resource_deep_sleep(terminate_processes: bool = False) -> dict[str, Any]:
+-    result = await resource_manager.deep_sleep(reason="api", terminate_processes=terminate_processes)
+-    return asdict(result)
+-
+-
+ @app.post("/resource/wake")
+-async def resource_wake(preload_primary_model: bool | None = None) -> dict[str, Any]:
+-    result = await resource_manager.wake(reason="api", preload_primary_model=preload_primary_model)
+-    return asdict(result)
+-
+-
+ @app.post("/resource/shutdown")
+-async def resource_shutdown(terminate_processes: bool = False) -> dict[str, Any]:
+-    result = await resource_manager.deep_sleep(reason="api_shutdown", terminate_processes=terminate_processes)
+-    return asdict(result)
++async def resource_mutation_unavailable() -> Any:
++    # HTTP identity alone is not independent host-control authorization.
++    return JSONResponse(status_code=403,content={"error":"offline_operator_control_required","automatic_retry":False})
+ 
+ 
+ @app.get("/health/tools")
+@@ -463,11 +461,18 @@
+     try:
+         while True:
+             raw = await websocket.receive_text()
++            if len(raw.encode('utf-8'))>8192:
++                await websocket.close(code=1009,reason="message_bound");return
+             try:
+                 data = json.loads(raw)
+-                message = data.get("message", raw)
+             except json.JSONDecodeError:
+                 message = raw
++            else:
++                if type(data) is not dict or type(data.get('message')) is not str:
++                    await websocket.close(code=1008,reason="invalid_message");return
++                message=data['message']
++            if not message.strip():
++                await websocket.close(code=1008,reason="invalid_message");return
+ 
+             if not await resource_manager.ensure_awake_for_interaction("websocket"):
+                 await websocket.send_json(
+@@ -515,6 +520,8 @@
+                 current_token.reset()
+                 await manager.broadcast({"type": "listening", "active": False})
+     except WebSocketDisconnect:
++        pass
++    finally:
+         manager.disconnect(websocket)
+         audit.log("ws_disconnect", {"client": str(websocket.client)})
+ 
+@@ -590,86 +597,8 @@
+ 
+     intent_result: RouterResult = intent_router.classify(message)
+ 
+-    if intent_result.intent == "use_tool" and intent_result.suggested_tool:
+-        tool_name = intent_result.suggested_tool
+-        params = _build_tool_params_traced(tool_name, message)
+-        filler_manager.play_for_tool(tool_name)
+-
+-        try:
+-            result = registry.call(tool_name, params)
+-            if result.dry_run:
+-                return dry_run_narration(tool_name, params), intent_result
+-            context = str(result.output)[:1000]
+-        except ToolError as exc:
+-            if _is_confirmation_required_error(exc):
+-                request_id = str(uuid.uuid4())[:8]
+-                _pending_confirmations[request_id] = {
+-                    "tool": tool_name,
+-                    "params": params,
+-                    "trace_id": current_trace_id(),
+-                }
+-                approval_msg = (
+-                    f"JARVIS approval required [{request_id}]: Run {tool_name} "
+-                    f"with {params}? POST /confirm/{request_id} to approve."
+-                )
+-                try:
+-                    from app.comms.discord_bot import discord_bot
+-                    from app.comms.telegram_bot import telegram_bot
+-
+-                    tasks = []
+-                    if getattr(settings.comms, "discord_channel_id", None):
+-                        tasks.append(discord_bot.send_message(approval_msg))
+-                    if getattr(settings.comms, "telegram_chat_id", None):
+-                        tasks.append(telegram_bot.send_message(approval_msg))
+-                    if tasks:
+-                        await asyncio.gather(*tasks, return_exceptions=True)
+-                except Exception:
+-                    pass
+-                audit.log(
+-                    "approval_gate_triggered",
+-                    {"request_id": request_id, "tool": tool_name, "params": params},
+-                )
+-                emit_event(
+-                    "confirmation",
+-                    component="app.server",
+-                    status="required",
+-                    metadata={
+-                        "request_id": request_id,
+-                        "tool": tool_name,
+-                        "confirmation_required": True,
+-                        "parameter_keys": list(params),
+-                    },
+-                )
+-                context = (
+-                    f"Confirmation request sent to your devices, sir. "
+-                    f"Use /confirm/{request_id} to approve."
+-                )
+-            else:
+-                context = str(exc)
+-
+-        messages = build_prompt(message, context=context)
+-        decision = _plan_traced(message, intent_result.intent)
+-        try:
+-            raw_reply = await llm_client.chat(
+-                messages,
+-                model=decision.model,
+-                think=decision.think,
+-                num_predict=decision.num_predict,
+-            )
+-        except OllamaConnectionError as exc:
+-            raw_reply = f"Unable to reach Ollama, sir. {exc}"
+-
+-        return finalize_reply(str(raw_reply)), intent_result
+-
+-    if intent_result.intent == "confirm_action":
+-        emit_event(
+-            "confirmation",
+-            component="app.server",
+-            status="required",
+-            metadata={"confirmation_required": True},
+-        )
+-        reply = f"That action requires your confirmation, sir. Shall I proceed with: {message}?"
+-        return finalize_reply(reply), intent_result
++    if intent_result.intent in {"use_tool","confirm_action","vision"}:
++        return finalize_reply("Real tool execution is disabled. Synthetic execution requires an independently authorized durable request."),intent_result
+ 
+     if intent_result.intent == "respond":
+         direct_reply = try_direct_reply(message)
+@@ -690,30 +619,6 @@
+             raw_reply = f"Unable to reach Ollama for deep reasoning, sir. {exc}"
+         return finalize_reply(str(raw_reply)), intent_result
+ 
+-    if intent_result.intent == "vision":
+-        params = _build_tool_params_traced("vision", message)
+-        filler_manager.play_for_tool("vision")
+-        try:
+-            result = registry.call("vision", params)
+-            if result.dry_run:
+-                return dry_run_narration("vision", params), intent_result
+-            context = str(result.output)[:1500]
+-        except ToolError as exc:
+-            context = f"Vision tool unavailable: {exc}"
+-
+-        messages = build_prompt(message, context=context)
+-        decision = _plan_traced(message, intent_result.intent)
+-        try:
+-            raw_reply = await llm_client.chat(
+-                messages,
+-                model=decision.model,
+-                think=decision.think,
+-                num_predict=decision.num_predict,
+-            )
+-        except OllamaConnectionError as exc:
+-            raw_reply = f"Unable to reach Ollama for vision reasoning, sir. {exc}"
+-        return finalize_reply(str(raw_reply)), intent_result
+-
+     if intent_result.intent == "retrieve_memory":
+         messages = build_prompt(message, context=_memory_context(message))
+         decision = _plan_traced(message, intent_result.intent)
+@@ -748,55 +653,6 @@
+     return "Requires user confirmation" in message or "confirmation" in message.lower()
+ 
+ 
+-@app.post("/confirm/{request_id}", response_model=None)
+-async def confirm_request(request_id: str) -> Any:
+-    pending = _pending_confirmations.pop(request_id, None)
+-    correlated_trace_id = str(pending.get("trace_id")) if pending and pending.get("trace_id") else None
+-    with start_trace(
+-        origin="user_direct",
+-        component="app.server",
+-        transport="http_confirmation",
+-        trace_id=correlated_trace_id,
+-    ):
+-        if pending is None:
+-            return JSONResponse(status_code=404, content={"error": "Unknown or expired request"})
+-
+-        tool_name = str(pending["tool"])
+-        params = dict(pending["params"])
+-
+-        emit_event(
+-            "confirmation",
+-            component="app.server",
+-            status="confirmed",
+-            metadata={"request_id": request_id, "tool": tool_name, "confirmation_required": False},
+-        )
+-        try:
+-            result = registry.call(tool_name, params, confirmed=True)
+-        except ToolError as exc:
+-            return {"error": str(exc)}
+-
+-        done_msg = f"JARVIS approved [{request_id}]: {tool_name} executed. Result: {str(result.output)[:200]}"
+-        try:
+-            from app.comms.discord_bot import discord_bot
+-            from app.comms.telegram_bot import telegram_bot
+-
+-            tasks = []
+-            if getattr(settings.comms, "discord_channel_id", None):
+-                tasks.append(discord_bot.send_message(done_msg))
+-            if getattr(settings.comms, "telegram_chat_id", None):
+-                tasks.append(telegram_bot.send_message(done_msg))
+-            if tasks:
+-                await asyncio.gather(*tasks, return_exceptions=True)
+-        except Exception:
+-            pass
+-
+-        audit.log(
+-            "approval_gate_confirmed",
+-            {"request_id": request_id, "tool": tool_name, "output": str(result.output)[:500]},
+-        )
+-        return {"confirmed": True, "tool": tool_name, "output": str(result.output)}
+-
+-
+ async def _process_stream(message: str):  # type: ignore[return]
+     from app.brain.router import RouterResult
+ 
+@@ -810,36 +666,7 @@
+ 
+     intent_result: RouterResult = intent_router.classify(message)
+ 
+-    if intent_result.intent == "use_tool" and intent_result.suggested_tool:
+-        tool_name = intent_result.suggested_tool
+-        params = _build_tool_params_traced(tool_name, message)
+-
+-        try:
+-            result = registry.call(tool_name, params)
+-            if result.dry_run:
+-                return None
+-            context = str(result.output)[:1000]
+-        except ToolError:
+-            return None
+-
+-        messages = build_prompt(message, context=context)
+-        decision = _plan_traced(message, intent_result.intent)
+-        try:
+-            raw_reply = await llm_client.chat(
+-                messages,
+-                model=decision.model,
+-                stream=True,
+-                think=decision.think,
+-                num_predict=decision.num_predict,
+-            )
+-        except OllamaConnectionError:
+-            return None
+-
+-        if hasattr(raw_reply, "__aiter__"):
+-            return raw_reply, intent_result
+-        return None
+-
+-    if intent_result.intent == "confirm_action":
++    if intent_result.intent in {"use_tool","confirm_action","vision"}:
+         return None
+ 
+     if intent_result.intent == "respond":
+--- before/app/tools/registry.py
++++ source/app/tools/registry.py
+@@ -56,8 +56,7 @@
+         self._module_path = module_path
+ 
+     def __call__(self, params: dict[str, Any] | None = None) -> Any:
+-        module = importlib.import_module(self._module_path)
+-        return module.execute(params or {})
++        raise ToolError("real_execution_disabled_independent_authorization_required")
+ 
+ 
+ def _discover_tool_modules() -> dict[str, str]:
+@@ -89,23 +88,15 @@
+         }
+ 
+     def _load_tool(self, name: str) -> ModuleType:
+-        if name in self._tools:
+-            return self._tools[name]
+-
+-        module_path = self._tool_modules.get(name)
+-        if module_path is None:
+-            raise ToolError(f"Unknown tool: {name!r}")
+-
+-        try:
+-            module = importlib.import_module(module_path)
+-        except Exception as exc:  # noqa: BLE001
+-            audit.log("tool_load_error", {"tool": name, "error": str(exc)})
+-            raise ToolError(f"Unable to load tool {name!r}: {exc}") from exc
+-
+-        if not hasattr(module, "execute") or not hasattr(module, "SAFETY_LEVEL"):
+-            raise ToolError(f"Invalid tool module: {name!r}")
+-
+-        self._tools[name] = module
++        # Metadata only. Do not import effect-capable modules or return raw
++        # execute functions through compatibility getters.
++        if type(name) is not str or name not in self._tool_modules:
++            raise ToolError("unknown_tool")
++        module=ModuleType(name)
++        module.SAFETY_LEVEL=-1
++        module.DESCRIPTION="Real execution disabled; independent authorized adapter required."
++        module.execute=_LazyToolCallable(self._tool_modules[name])
++        module.EXECUTION_ENABLED=False
+         return module
+ 
+     def get_tool(self, name: str) -> ModuleType:
+@@ -133,6 +124,7 @@
+                     "name": name,
+                     "safety_level": getattr(module, "SAFETY_LEVEL", -1),
+                     "description": getattr(module, "DESCRIPTION", ""),
++                    "execution_enabled":False,
+                 }
+             )
+         return tools
+@@ -157,71 +149,13 @@
+         *,
+         confirmed: bool = False,
+     ) -> ToolResult:
+-        """Execute a tool after Level 0-3 safety and dry-run checks."""
+-        params = params or {}
+-        module = self._load_tool(tool_name)
+-        safety_level: int = getattr(module, "SAFETY_LEVEL", 0)
+-        confirmation_required = self._requires_confirmation(safety_level) and not confirmed
+-        capability = _capability_for(tool_name, params)
+-        trace_metadata = {
+-            "tool": tool_name,
+-            "capability": capability,
+-            "safety_level": safety_level,
+-            "confirmation_required": confirmation_required,
+-            "parameter_keys": list(params),
+-        }
+-
+-        with trace_span("safety", component="app.tools.registry", metadata=trace_metadata):
+-            audit.log(
+-                "tool_call",
+-                {
+-                    "tool": tool_name,
+-                    "safety_level": safety_level,
+-                    "params": params,
+-                    "dry_run": settings.safety.dry_run,
+-                    "confirmed": confirmed,
+-                },
+-            )
+-
+-        if safety_level >= 3:
+-            emit_event(
+-                "safety",
+-                component="app.tools.registry",
+-                status="blocked",
+-                metadata=trace_metadata,
+-            )
+-            raise ToolError(f"Tool '{tool_name}' is Level 3 (blocked). Cannot execute automatically.")
+-
+-        if confirmation_required:
+-            emit_event(
+-                "safety",
+-                component="app.tools.registry",
+-                status="confirmation_required",
+-                metadata=trace_metadata,
+-            )
+-            raise ToolError(f"Tool '{tool_name}' is Level {safety_level}. Requires user confirmation before executing.")
+-
+-        if settings.safety.dry_run:
+-            description = getattr(module, "DESCRIPTION", tool_name)
+-            output = f"[DRY RUN] Would execute '{tool_name}': {description} with params {params}"
+-            emit_event(
+-                "tool",
+-                component="app.tools.registry",
+-                status="dry_run",
+-                metadata=trace_metadata,
+-            )
+-            audit.log("tool_result", {"tool": tool_name, "dry_run": True, "output": output})
+-            return ToolResult(tool=tool_name, output=output, dry_run=True)
+-
+-        try:
+-            with trace_span("tool", component="app.tools.registry", metadata=trace_metadata):
+-                output = module.execute(params)
+-        except Exception as exc:
+-            audit.log("tool_error", {"tool": tool_name, "error": str(exc)})
+-            raise ToolError(f"Tool '{tool_name}' raised: {exc}") from exc
+-
+-        audit.log("tool_result", {"tool": tool_name, "output": str(output)[:500]})
+-        return ToolResult(tool=tool_name, output=output)
++        """Legacy confirmation/config flags cannot authorize real effects.
++
++        Only the separately authenticated, pure synthetic Authority pipeline is
++        implemented for this milestone. No real adapter can be registered here.
++        Do not log parameter values or import a tool before refusing.
++        """
++        raise ToolError("real_execution_disabled_independent_authorization_required")
+ 
+     def execute(
+         self,
+--- before/app/voice/dictation.py
++++ source/app/voice/dictation.py
+@@ -4,67 +4,25 @@
+ from app.config import settings
+ from app.logs.audit import audit
+ 
+-try:
+-    import pyperclip  # type: ignore[import-untyped]
+-except ImportError:
+-    pyperclip = None
+-    PYPERCLIP_AVAILABLE = False
+-else:
+-    PYPERCLIP_AVAILABLE = True
+-
+-try:
+-    import pyautogui  # type: ignore[import-untyped]
+-except Exception:
+-    pyautogui = None
+-    PYAUTOGUI_AVAILABLE = False
+-else:
+-    PYAUTOGUI_AVAILABLE = True
++pyperclip = None
++pyautogui = None
++PYPERCLIP_AVAILABLE = False
++PYAUTOGUI_AVAILABLE = False
+ 
+ 
+ class Dictation:
+     """Send STT transcripts to clipboard and optional type-out."""
+ 
+     def handle_transcript(self, text: str) -> bool:
+-        """Handle a transcript without sending it through the brain pipeline."""
+-        transcript = text.strip()
+-        char_count = len(transcript)
+-        if not settings.voice.dictation_enabled:
+-            audit.log("dictation_skipped", {"chars": char_count, "type_out": False, "reason": "disabled"})
+-            return False
+-        if not transcript:
+-            audit.log("dictation_skipped", {"chars": 0, "type_out": False, "reason": "empty"})
+-            return False
+-
+-        clipboard_written = self._write_clipboard(transcript)
+-        type_out = self._type_out(transcript)
+-        audit.log("dictation_handled", {"chars": char_count, "type_out": type_out})
+-        return clipboard_written or type_out
++        """No clipboard/typing effects without an independently authorized adapter."""
++        audit.log("dictation_blocked", {"reason":"independent_authorization_required","type_out":False})
++        return False
+ 
+     def _write_clipboard(self, transcript: str) -> bool:
+-        if not PYPERCLIP_AVAILABLE or pyperclip is None:
+-            audit.log("dictation_unavailable", {"chars": len(transcript), "dependency": "pyperclip"})
+-            return False
+-
+-        try:
+-            pyperclip.copy(transcript)
+-        except Exception as exc:
+-            audit.log("dictation_clipboard_error", {"chars": len(transcript), "error": str(exc)})
+-            return False
+-        return True
++        return False
+ 
+     def _type_out(self, transcript: str) -> bool:
+-        if not settings.voice.dictation_type_out or settings.safety.dry_run:
+-            return False
+-        if not PYAUTOGUI_AVAILABLE or pyautogui is None:
+-            audit.log("dictation_unavailable", {"chars": len(transcript), "dependency": "pyautogui"})
+-            return False
+-
+-        try:
+-            pyautogui.write(transcript)
+-        except Exception as exc:
+-            audit.log("dictation_type_out_error", {"chars": len(transcript), "error": str(exc)})
+-            return False
+-        return True
++        return False
+ 
+ 
+ dictation = Dictation()
+--- before/app/voice/vad.py
++++ source/app/voice/vad.py
+@@ -2,6 +2,7 @@
+ from __future__ import annotations
+ 
+ import io
++import math
+ import queue
+ import time
+ import wave
+@@ -17,7 +18,7 @@
+     max_record_seconds = 12.0
+     trailing_silence_seconds = 0.5
+ 
+-    def record_until_silence(self, timeout: float | None = None) -> bytes:
++    def record_until_silence(self, timeout: float | None = None, cancelled=None) -> bytes:
+         try:
+             import sounddevice as sd
+             import webrtcvad
+@@ -25,15 +26,21 @@
+             audit.log("vad_unavailable", {"reason": str(exc)})
+             return b""
+ 
+-        vad = webrtcvad.Vad(settings.voice.vad_aggressiveness)
++        return self._record_from_stream(sd.RawInputStream,webrtcvad.Vad(settings.voice.vad_aggressiveness),timeout,cancelled)
++
++    def _record_from_stream(self, stream_factory, vad, timeout=None, cancelled=None):
++        from app.brain.cancel_token import current_token
++        cancelled=cancelled or current_token.is_cancelled
++        if timeout is not None and (type(timeout) not in (int,float) or not math.isfinite(timeout) or timeout<=0):return b""
+         frame_samples = int(self.sample_rate * self.frame_ms / 1000)
+         frame_bytes = frame_samples * 2
+-        audio_queue: queue.Queue[bytes] = queue.Queue()
++        audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=64)
+ 
+         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
+             if status:
+                 audit.log("vad_stream_status", {"status": str(status)})
+-            audio_queue.put(bytes(indata))
++            try:audio_queue.put_nowait(bytes(indata))
++            except queue.Full:pass
+ 
+         recorded: list[bytes] = []
+         speech_started = False
+@@ -46,7 +53,7 @@
+         started_at = time.perf_counter()
+         pre_speech_deadline = started_at + max_record_seconds
+ 
+-        with sd.RawInputStream(
++        with stream_factory(
+             samplerate=self.sample_rate,
+             blocksize=frame_samples,
+             dtype="int16",
+@@ -55,9 +62,10 @@
+             callback=callback,
+         ):
+             while True:
++                if cancelled() or time.perf_counter()>=pre_speech_deadline or len(recorded)>=max_post_speech_frames:break
+                 try:
+                     frame = audio_queue.get(timeout=0.1)
+-                except Exception:
++                except queue.Empty:
+                     if not speech_started and time.perf_counter() > pre_speech_deadline:
+                         break
+                     continue
+--- before/app/voice/wake_word.py
++++ source/app/voice/wake_word.py
+@@ -57,13 +57,14 @@
+         if model is None:
+             return b""
+ 
+-        audio_queue: queue.Queue[bytes] = queue.Queue()
++        audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=64)
+         deadline = time.monotonic() + timeout if timeout is not None else None
+ 
+         def callback(indata, frames, time_info, status):  # noqa: ANN001, ARG001
+             if status:
+                 audit.log("wake_stream_status", {"status": str(status)})
+-            audio_queue.put(bytes(indata))
++            try:audio_queue.put_nowait(bytes(indata))
++            except queue.Full:pass
+ 
+         try:
+             with sd.RawInputStream(
+--- before/docs/end_to_end_readiness.md
++++ source/docs/end_to_end_readiness.md
+@@ -0,0 +1,127 @@
++# Offline application execution and readiness
++
++Sprint 6 joins the actual FastAPI lifespan, Authority, queue, scheduler, execution
++worker, receipts, enrollment, recovery registry and protected witness. The evidence
++packet is [the source-bound readiness report](../tasks/jarvis-end-to-end-readiness-r1/REPORT.md).
++All demonstrations use disposable databases, identities and keys inside a networkless
++sandbox. Stock unprovisioned startup continues to refuse missing authority admission.
++
++## Execution contract
++
++The default worker remains pure synthetic execution. A trusted embedding can supply
++an exact `SyntheticTransport` instance to `bind_offline_execution`; environment
++variables, HTTP flags and real tool metadata cannot construct or enable it.
++Only `synthetic.local.echo-v1` and `synthetic.local.hash-v1` exist. The transport uses
++bounded AF_UNIX socketpair frames and kernel peer credentials. It has no network,
++URL, shell, provider, Proxmox or arbitrary adapter operation.
++
++A transported submission needs both the configured API bearer and an independently
++HMAC-authenticated synthetic operator permit. That permit binds the original UUID,
++actor scope, store, checkpoint, exact goal hash, execution spec, endpoint and validity
++period. Operator, request, response and checkpoint keys must be distinct. Supply
++keys through trusted in-memory configuration or the documented CLI file descriptors;
++never command-line values, public task responses or logs. The symmetric keys and
++endpoint deliberately share one trusted process: this fixture demonstrates protocol
++and durable state correctness, not privilege separation from a compromised owner.
++
++The Authority is the only SQLite writer. Before computation the endpoint commits a
++reservation and receipt. It then commits its signed report and receipt. The worker
++records verified evidence and separately publishes a terminal receipt. Duplicate
++canonical UUIDs with identical payload return the original receipt; conflicts fail.
++Cancellation, expired grants, missing witnesses, wrong history keys or uncertain
++replies cannot silently dispatch again. A signed endpoint report is not completion.
++History verification has a lifetime bound of 128 transported grants per authority;
++reaching the bound refuses new grants without deleting history.
++
++## Recovery and operator interface
++
++`python -m app.agent.operator_cli --help` describes read-only inspection and
++explicit offline mutations. Two new mutually exclusive actions are
++`--reconcile-transport-report TASK_UUID` and
++`--publish-transport-evidence TASK_UUID`. They require an existing database,
++protected ledger, enrollment witness, recovery registry/reference, `--commit`,
++canonical operation UUID and a matching authenticated recovery permit. Supply the
++transport operator/request/response keys using `--transport-operator-key-fd`,
++`--transport-request-key-fd` and `--transport-response-key-fd`, and the exact
++`--synthetic-endpoint-id`. Existing ledger, registry and operator key FD controls
++also apply. The permit binds the verified pre-open checkpoint; writer takeover
++must be exactly the next generation. Validation happens before writer acquisition
++and again at the effect point. Exact committed receipt retries need no new writer.
++
++Report reconciliation authenticates the original durable grant, request and report,
++creates evidence, and marks it as requiring separate publication authorization.
++A restart between these two commands keeps the task UNKNOWN. A second independent
++permit can publish that evidence without calling the endpoint. A reservation with
++no report remains UNKNOWN and cannot use this recovery path. No automatic retry,
++new UUID workaround, endpoint invocation or fabricated success is allowed.
++
++Archive verification and restoration remain inert. A durable proposal and approved
++decision record do not activate restored tasks, executors or schedules. Missing
++external anchors, conflicting ancestry or incomplete renewal block readiness.
++
++## Closed legacy paths
++
++Real `ToolRegistry.call`, `execute`, lazy callables and metadata getters refuse
++execution before importing real tools, regardless of safety/confirmed flags.
++Chat, streaming and native voice processing refuse tool/vision intents. `/confirm`
++is absent. Clipboard/type dictation helpers return false without desktop imports.
++Direct dormant library helpers are not supported execution interfaces; future
++adapters must review them before exposing them.
++
++Host resource mutation HTTP routes return 403 even with a bearer. CLI sleep, wake
++and shutdown require a successful authenticated server response; disconnected,
++denied and uncertain responses never trigger local process/model operations.
++`--offline` is retained as a compatibility flag and grants no host control. Empty
++API-token `/stop` is refused. Actual service process termination is limited to
++in-memory child leases with PID, creation time, executable, cwd and parent checks;
++command-line marker matches grant no ownership. These leases do not survive restart.
++
++WebSocket input is bounded and validated and always disconnects from its manager.
++Validation errors do not reflect rejected secret input. VAD recording and wake-word
++queues are bounded; cancellation and absolute/frame deadlines apply during speech.
++Optional microphone/desktop/model integrations are not qualified by these tests.
++
++## First authorized live read-only stage — prerequisites, not authorization
++
++No real adapter exists in this application. A future stage first requires all of:
++
++1. Explicit operator approval for a separately reviewed, exact release and finite
++   read-only action catalog; implementation and independent review of the narrow
++   real adapter, including cancellation, report provenance and UNKNOWN handling.
++   This packet does not enable real tools or host controls.
++2. Protected independent signing custody, separate restricted OS principals and
++   effective filesystem/socket/process/device/egress isolation. Current co-located
++   HMAC fixtures cannot establish these facts. Validate protected time/expiry and
++   key provisioning without putting secret content in evidence.
++3. An admitted current Authority with verified external witness, checkpoint and
++   recovery registry ancestry; no unresolved reservation, conflicting branch or
++   expired approval. Explicitly decide how overdue schedules remain held. No
++   automatic adoption, restored activation, history deletion or real migration.
++4. A nonempty configured API credential even on loopback, a documented caller
++   identity/scope policy and verified ingress/origin protections. Ordinary pure
++   held-task routes retain the documented anonymous local mode; that mode is not
++   acceptable for the proposed live stage. Qualify actual startup/shutdown and
++   private data/log handling without invoking production startup now.
++5. Physical filesystem/WAL/fsync/rename/quota and actual power-loss qualification
++   on the intended storage. SIGKILL plus disposable SQLite tests are insufficient
++   for hardware power-loss claims. Establish restart-safe service ownership;
++   current in-memory native child leases cannot adopt another process's service.
++6. For any Proxmox serial bridge, satisfy the separately retained broker packet's
++   [preissuance and acceptance order](../tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md).
++   Verify the independent release/CA pins, installed API/schema/filter support,
++   actual restricted caller/broker/worker UIDs, root-controlled expiring grants,
++   preissuance no-transport/canary qualification and effective VM.Audit+VM.Console
++   scope for VM164 only. Nexus administrative group membership is an unresolved
++   boundary until independently separated. Match VM164 UUID
++   `faeb1db8-0df9-482d-b3e4-f6ccc1602193`, disk/serial0/machine/boot identities through
++   trusted observations. VM164 must retain no NIC, only loopback, no guest agent,
++   shared host socket, setup media or root serial console. Verify raw TTY worker
++   ownership and guest role isolation under separate authorization. Do not infer
++   any of these live facts from synthetic tests. VM162, VM163, the AI server and
++   privileged Gate 6K qualification remain excluded.
++7. An independently approved bounded acceptance and stop/revoke plan preserving
++   broker RESERVED/REPORTED/UNKNOWN/ACKED history, with no resend after uncertainty.
++   The existing broker is a reviewed reference, not connected by this milestone.
++
++No production keys were created or rotated, no production service was started,
++and no provider or live infrastructure integration was performed.
+--- before/docs/operator_recovery.md
++++ source/docs/operator_recovery.md
+@@ -1,4 +1,10 @@
+ # Offline operator recovery and ledger protection
++
++Sprint 6 adds authenticated transport-report reconciliation and separately
++permitted evidence publication through the offline CLI. See
++[the current recovery and execution contract](end_to_end_readiness.md). A durable
++endpoint report or approved restored proposal does not authorize activation.
++
+ 
+ Real execution remains disabled. This interface never retries uncertain work,
+ accepts caller completion results or deletes protected history.
+--- before/docs/task_api.md
++++ source/docs/task_api.md
+@@ -1,4 +1,11 @@
+ # Task and schedule client contract
++
++For signed synthetic transport submissions, API bearer requirements and the closed
++legacy host/tool interfaces, see [the current integration contract](end_to_end_readiness.md).
++The top-level `transport_permit` on `POST /execution/tasks` is optional and only accepted with an explicitly
++configured exact synthetic transport and matching API credential. It grants no
++real tool access. Public task metadata includes endpoint and grant digest only.
++
+ 
+ The authority stores decisions, held work, and opt-in synthetic execution results.
+ Real execution is disabled; no real adapter can be registered.
+--- before/tests/test_approval_gates.py
++++ source/tests/test_approval_gates.py
+@@ -1,45 +1,26 @@
++"""The old public confirmation route cannot activate a real tool."""
+ from unittest.mock import patch
+-
+ from fastapi.testclient import TestClient
+-
+-from app.server import _is_confirmation_required_error, _pending_confirmations, app
+-from app.tools.registry import ToolError, ToolResult
++from app.server import _is_confirmation_required_error,_pending_confirmations,app
+ 
+ 
+-def setup_function() -> None:
+-    _pending_confirmations.clear()
++def setup_function():_pending_confirmations.clear()
++def teardown_function():_pending_confirmations.clear()
+ 
+ 
+-def teardown_function() -> None:
+-    _pending_confirmations.clear()
++def test_pending_dict_starts_empty():assert _pending_confirmations=={}
++def test_is_confirmation_error_true():assert _is_confirmation_required_error(Exception('Requires user confirmation'))
++def test_is_confirmation_error_false():assert not _is_confirmation_required_error(Exception('blocked'))
+ 
+ 
+-def test_pending_dict_starts_empty() -> None:
+-    assert _pending_confirmations == {}
++def test_confirm_unknown_request_id():
++    response=TestClient(app).post('/confirm/badid')
++    assert response.status_code==404
+ 
+ 
+-def test_is_confirmation_error_true() -> None:
+-    assert _is_confirmation_required_error(ToolError("Tool requires user confirmation")) is True
+-
+-
+-def test_is_confirmation_error_false() -> None:
+-    assert _is_confirmation_required_error(ToolError("blocked")) is False
+-
+-
+-def test_confirm_unknown_request_id() -> None:
+-    with TestClient(app) as client:
+-        response = client.post("/confirm/badid")
+-    assert response.status_code == 404
+-    assert response.json()["error"] == "Unknown or expired request"
+-
+-
+-def test_confirm_known_request_id() -> None:
+-    _pending_confirmations["abc12345"] = {"tool": "shell", "params": {"command": "echo hi"}}
+-    with patch("app.server.registry.call", return_value=ToolResult(tool="shell", output="hi")) as mock_call:
+-        with TestClient(app) as client:
+-            response = client.post("/confirm/abc12345")
+-    assert response.status_code == 200
+-    assert response.json()["confirmed"] is True
+-    assert response.json()["tool"] == "shell"
+-    assert response.json()["output"] == "hi"
+-    mock_call.assert_called_once_with("shell", {"command": "echo hi"}, confirmed=True)
++def test_confirm_known_request_id_cannot_dispatch():
++    _pending_confirmations['abc12345']={'tool':'shell','params':{'command':'synthetic canary'}}
++    with patch('app.server.registry.call',side_effect=AssertionError('tool dispatch forbidden')) as call:
++        response=TestClient(app).post('/confirm/abc12345')
++    assert response.status_code==404
++    call.assert_not_called()
+--- before/tests/test_audit_integration_fixes.py
++++ source/tests/test_audit_integration_fixes.py
+@@ -0,0 +1,142 @@
++"""Confirmed audit mechanics; all effects confined to the networkless cage."""
++from types import SimpleNamespace
++from unittest.mock import Mock,AsyncMock
++import io
++import os
++from pathlib import Path
++import subprocess
++import sys
++import wave
++import pytest
++from fastapi.testclient import TestClient
++from app.server import app,manager
++from app.config import settings
++import app.resource_manager as resources
++import app.cli as cli
++from app.voice.vad import VoiceActivityDetector
++from app.voice.dictation import Dictation
++
++
++@pytest.mark.parametrize('path',['/resource/sleep/light','/resource/sleep/deep','/resource/wake','/resource/shutdown'])
++def test_effectful_resource_http_is_inert_even_with_bearer(monkeypatch,path):
++    monkeypatch.setattr(settings.server,'api_token','synthetic-control-key')
++    for method in ('light_sleep','deep_sleep','wake'):
++        monkeypatch.setattr(resources.resource_manager,method,AsyncMock(side_effect=AssertionError('host control forbidden')))
++    response=TestClient(app).post(path,headers={'Authorization':'Bearer synthetic-control-key'})
++    assert response.status_code==403 and response.json()['error']=='offline_operator_control_required'
++
++
++def test_stop_requires_configured_identity(monkeypatch):
++    monkeypatch.setattr(settings.server,'api_token','')
++    assert TestClient(app).post('/stop').status_code==401
++
++
++@pytest.mark.parametrize('value',[[],{'message':4},{'message':{}},{'message':'x'*9000}])
++def test_malformed_websocket_closes_and_removes_manager_entry(monkeypatch,value):
++    from starlette.websockets import WebSocketDisconnect
++    monkeypatch.setattr(settings.server,'api_token','synthetic-ws-key')
++    original=len(manager.active)
++    with TestClient(app).websocket_connect('/ws',headers={'Authorization':'Bearer synthetic-ws-key'}) as channel:
++        channel.send_json(value)
++        with pytest.raises(WebSocketDisconnect):channel.receive_json()
++    assert len(manager.active)==original
++
++
++@pytest.mark.parametrize('status',[401,403,500])
++def test_cli_post_auth_and_status_failure_never_falls_back(monkeypatch,status):
++    import httpx
++    captured={}
++    monkeypatch.setattr(settings.server,'api_token','synthetic-cli-key')
++    def denied(url,**kwargs):
++        captured.update(kwargs)
++        return httpx.Response(status,request=httpx.Request('POST',url),json={'error':'synthetic refusal'})
++    monkeypatch.setattr(cli.httpx,'post',denied)
++    monkeypatch.setattr(cli,'_local_light_sleep',AsyncMock(side_effect=AssertionError('fallback forbidden')))
++    assert cli.main(['sleep','--light','--offline'])==1
++    assert captured['headers']=={'Authorization':'Bearer synthetic-cli-key'}
++
++
++def test_cli_timeout_has_unknown_outcome_and_never_falls_back(monkeypatch):
++    import httpx
++    monkeypatch.setattr(cli.httpx,'post',Mock(side_effect=httpx.ReadTimeout('synthetic timeout')))
++    monkeypatch.setattr(cli,'_local_light_sleep',AsyncMock(side_effect=AssertionError('fallback forbidden')))
++    assert cli.main(['sleep','--light','--offline'])==1
++
++
++def test_cli_unreachable_requires_explicit_offline_control(monkeypatch):
++    import httpx
++    monkeypatch.setattr(cli.httpx,'post',Mock(side_effect=httpx.ConnectError('synthetic unavailable')))
++    monkeypatch.setattr(cli,'_local_light_sleep',AsyncMock(side_effect=AssertionError('implicit local fallback forbidden')))
++    assert cli.main(['sleep','--light'])==1
++
++
++def test_untracked_same_entrypoint_child_is_never_terminated(tmp_path,monkeypatch):
++    monkeypatch.setattr(resources,'_owned_processes',{})
++    child=subprocess.Popen([sys.executable,'-I','-S','-c','import time; time.sleep(10)','app.main:app'],cwd=tmp_path)
++    try:
++        assert resources.terminate_jarvis_processes()==[] and child.poll() is None
++    finally:child.kill();child.wait(timeout=5)
++
++
++@pytest.mark.parametrize('stale',[False,True])
++def test_only_positive_native_child_lease_allows_signal(tmp_path,monkeypatch,stale):
++    real_popen=subprocess.Popen
++    monkeypatch.setattr(resources,'_owned_processes',{})
++    def dummy(*args,**kwargs):
++        return real_popen([sys.executable,'-I','-S','-c','import time; time.sleep(10)'],cwd=resources.PROJECT_ROOT)
++    monkeypatch.setattr(resources.subprocess,'Popen',dummy)
++    child=resources.start_server_process()
++    try:
++        assert child.pid in resources._owned_processes
++        if stale:resources._owned_processes[child.pid]['created_at']-=1
++        stopped=resources.terminate_jarvis_processes(timeout=.5)
++        if stale:assert stopped==[] and child.poll() is None
++        else:assert stopped[0]['pid']==child.pid and child.poll() is not None
++    finally:
++        if child.poll() is None:child.kill();child.wait(timeout=5)
++
++
++def test_vad_continuous_speech_respects_frame_and_callback_queue_bounds():
++    v=VoiceActivityDetector();v.min_speech_seconds=.03
++    frame=b'\x00'*(v.sample_rate*v.frame_ms//1000*2)
++    class Input:
++        def __init__(self,**kwargs):self.callback=kwargs['callback']
++        def __enter__(self):
++            for _ in range(200):self.callback(frame,0,None,None)
++        def __exit__(self,*args):pass
++    wav=v._record_from_stream(Input,SimpleNamespace(is_speech=lambda *args:True),timeout=.6,cancelled=lambda:False)
++    with wave.open(io.BytesIO(wav),'rb') as stream:assert stream.getnframes()==v.sample_rate*20*v.frame_ms//1000
++
++
++def test_vad_active_capture_cancellation_is_checked_each_frame():
++    v=VoiceActivityDetector();v.min_speech_seconds=.03;calls=[0]
++    frame=b'\x00'*(v.sample_rate*v.frame_ms//1000*2)
++    class Input:
++        def __init__(self,**kwargs):self.callback=kwargs['callback']
++        def __enter__(self):
++            for _ in range(50):self.callback(frame,0,None,None)
++        def __exit__(self,*args):pass
++    def speech(*args):calls[0]+=1;return True
++    wav=v._record_from_stream(Input,SimpleNamespace(is_speech=speech),timeout=1,cancelled=lambda:calls[0]>=3)
++    with wave.open(io.BytesIO(wav),'rb') as stream:assert stream.getnframes()==v.sample_rate*3*v.frame_ms//1000
++
++
++def test_dictation_never_touches_desktop_or_logs_transcript(monkeypatch):
++    from app.voice import dictation as module
++    events=[];copy=Mock(side_effect=AssertionError('clipboard forbidden'));type_out=Mock(side_effect=AssertionError('typing forbidden'))
++    monkeypatch.setattr(module,'pyperclip',SimpleNamespace(copy=copy));monkeypatch.setattr(module,'pyautogui',SimpleNamespace(write=type_out))
++    monkeypatch.setattr(module.audit,'log',lambda event,data:events.append((event,data)))
++    assert Dictation().handle_transcript('synthetic private transcript') is False
++    copy.assert_not_called();type_out.assert_not_called();assert 'synthetic private transcript' not in repr(events)
++
++
++@pytest.mark.parametrize('args',[['wake','--offline'],['sleep','--deep','--offline'],['shutdown','--offline']])
++def test_no_server_or_offline_flag_can_start_or_mutate_local_resources(monkeypatch,args):
++    import httpx
++    monkeypatch.setattr(cli.httpx,'post',Mock(side_effect=httpx.ConnectError('synthetic unavailable')))
++    for method in ('wake','light_sleep','deep_sleep'):
++        monkeypatch.setattr(resources.resource_manager,method,AsyncMock(side_effect=AssertionError('local host control forbidden')))
++    for module in (resources,cli):
++        monkeypatch.setattr(module,'start_server_process',Mock(side_effect=AssertionError('implicit server start forbidden')),raising=False)
++        monkeypatch.setattr(module,'terminate_jarvis_processes',Mock(side_effect=AssertionError('implicit process stop forbidden')),raising=False)
++    assert cli.main(args)==1
+--- before/tests/test_cancel_token.py
++++ source/tests/test_cancel_token.py
+@@ -44,8 +44,10 @@
+     assert token.is_cancelled() is False
+ 
+ 
+-def test_stop_endpoint() -> None:
++def test_stop_endpoint(monkeypatch) -> None:
++    from app.config import settings
++    monkeypatch.setattr(settings.server,"api_token","synthetic-stop-token")
+     with TestClient(app) as client:
+-        response = client.post("/stop")
++        response = client.post("/stop",headers={"Authorization":"Bearer synthetic-stop-token"})
+     assert response.status_code == 200
+     assert response.json() == {"status": "stopped"}
+--- before/tests/test_dictation.py
++++ source/tests/test_dictation.py
+@@ -25,7 +25,7 @@
+     return False
+ 
+ 
+-def test_dictation_writes_clipboard_without_raw_audit(monkeypatch) -> None:
++def test_dictation_refuses_clipboard_without_raw_audit(monkeypatch) -> None:
+     secret = "private wiring note"
+     copied: list[str] = []
+     events: list[tuple[str, dict]] = []
+@@ -36,10 +36,10 @@
+     monkeypatch.setattr(dictation_module, "pyperclip", SimpleNamespace(copy=copied.append))
+     monkeypatch.setattr(dictation_module.audit, "log", lambda event, data: events.append((event, data)))
+ 
+-    assert Dictation().handle_transcript(f"  {secret}  ") is True
++    assert Dictation().handle_transcript(f"  {secret}  ") is False
+ 
+-    assert copied == [secret]
+-    assert events[-1] == ("dictation_handled", {"chars": len(secret), "type_out": False})
++    assert copied == []
++    assert events[-1] == ("dictation_blocked", {"reason":"independent_authorization_required", "type_out":False})
+     assert not any(_contains_text(data, secret) for _event, data in events)
+ 
+ 
+@@ -55,13 +55,13 @@
+     monkeypatch.setattr(dictation_module, "pyautogui", SimpleNamespace(write=typed.append))
+     monkeypatch.setattr(dictation_module.audit, "log", lambda *_args, **_kwargs: None)
+ 
+-    assert Dictation().handle_transcript("type this") is True
+-    assert typed == ["type this"]
++    assert Dictation().handle_transcript("type this") is False
++    assert typed == []
+ 
+     typed.clear()
+     monkeypatch.setattr(settings.safety, "dry_run", True)
+ 
+-    assert Dictation().handle_transcript("do not type this") is True
++    assert Dictation().handle_transcript("do not type this") is False
+     assert typed == []
+ 
+ 
+@@ -75,7 +75,7 @@
+     monkeypatch.setattr(dictation_module.audit, "log", lambda event, data: events.append((event, data)))
+ 
+     assert Dictation().handle_transcript("clipboard unavailable") is False
+-    assert ("dictation_unavailable", {"chars": 21, "dependency": "pyperclip"}) in events
++    assert ("dictation_blocked", {"reason":"independent_authorization_required", "type_out":False}) in events
+ 
+ 
+ def test_push_to_talk_manager_tracks_dictation_hotkey(monkeypatch) -> None:
+--- before/tests/test_resource_manager.py
++++ source/tests/test_resource_manager.py
+@@ -144,6 +144,7 @@
+ 
+ 
+ def test_classify_jarvis_process_matches_runtime_workers() -> None:
+-    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", None) == "fastapi_server"
+-    assert classify_jarvis_process("python.exe", "python scripts/sensor_node.py", None) == "sensor_node"
++    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", None) is None
++    assert classify_jarvis_process("python.exe", "python -m uvicorn app.main:app", Mock(cwd=lambda: str(resource_module.PROJECT_ROOT))) == "fastapi_server"
++    assert classify_jarvis_process("python.exe", "python scripts/sensor_node.py", None) is None
+     assert classify_jarvis_process("python.exe", "python -m pytest", None) is None
+--- before/tests/test_safety_levels.py
++++ source/tests/test_safety_levels.py
+@@ -1,107 +1,25 @@
+-"""Safety level boundary tests for confidence, confirmation, blocking, and dry-run."""
+-from __future__ import annotations
+-
++"""Legacy confirmation/configuration never authorizes an effect-capable tool."""
+ from types import SimpleNamespace
+ from unittest.mock import Mock
+-
+ import pytest
+-
+-from app.brain.router import RouterResult, router
+-from app.tools.registry import ToolError, ToolRegistry
++from app.tools.registry import ToolRegistry,ToolError,TOOLS
+ 
+ 
+-def _make_registry(*, safety_level: int, execute: Mock) -> ToolRegistry:
+-    registry = ToolRegistry.__new__(ToolRegistry)
+-    module = SimpleNamespace(
+-        SAFETY_LEVEL=safety_level,
+-        DESCRIPTION=f"Level {safety_level} fake tool",
+-        execute=execute,
+-    )
+-    registry._tools = {"fake_tool": module}
+-    registry.TOOLS = {"fake_tool": module.execute}
+-    return registry
++@pytest.mark.parametrize('level',range(4))
++@pytest.mark.parametrize('dry_run',[False,True])
++@pytest.mark.parametrize('confirmed',[False,True])
++def test_legacy_flags_cannot_invoke_real_tools(monkeypatch,level,dry_run,confirmed):
++    from app.config import settings
++    monkeypatch.setattr(settings.safety,'dry_run',dry_run)
++    real=Mock(side_effect=AssertionError('real module execute must not run'))
++    registry=ToolRegistry();registry._tools['shell']=SimpleNamespace(SAFETY_LEVEL=level,execute=real)
++    with pytest.raises(ToolError,match='independent_authorization_required'):
++        registry.call('shell',{'command':'synthetic canary'},confirmed=confirmed)
++    real.assert_not_called()
+ 
+ 
+-def _run_action(
+-    monkeypatch: pytest.MonkeyPatch,
+-    *,
+-    safety_level: int,
+-    confidence: float,
+-    dry_run: bool = False,
+-):
+-    monkeypatch.setattr("app.brain.router.audit.log", lambda *args, **kwargs: None)
+-    monkeypatch.setattr("app.tools.registry.audit.log", lambda *args, **kwargs: None)
+-    monkeypatch.setattr("app.brain.router.settings.safety.confidence_threshold", 0.75)
+-    monkeypatch.setattr("app.tools.registry.settings.safety.approval_mode", "balanced")
+-    monkeypatch.setattr("app.tools.registry.settings.safety.dry_run", dry_run)
+-
+-    execute = Mock(return_value="tool executed")
+-    registry = _make_registry(safety_level=safety_level, execute=execute)
+-    intent = router._finalize(  # noqa: SLF001
+-        RouterResult("use_tool", confidence, "fake_tool", "test"),
+-        "run fake tool",
+-    )
+-
+-    if intent.intent != "use_tool":
+-        return {"intent": intent, "execute": execute, "result": None}
+-
+-    result = registry.call("fake_tool", {"value": 1})
+-    return {"intent": intent, "execute": execute, "result": result}
+-
+-
+-def test_level0_always_executes(monkeypatch: pytest.MonkeyPatch) -> None:
+-    run = _run_action(monkeypatch, safety_level=0, confidence=1.0)
+-
+-    assert run["intent"].intent == "use_tool"
+-    assert run["result"].output == "tool executed"
+-    assert run["result"].dry_run is False
+-    run["execute"].assert_called_once_with({"value": 1})
+-
+-
+-def test_level0_executes_dry_run(monkeypatch: pytest.MonkeyPatch) -> None:
+-    run = _run_action(monkeypatch, safety_level=0, confidence=1.0, dry_run=True)
+-
+-    assert run["intent"].intent == "use_tool"
+-    assert run["result"].dry_run is True
+-    assert "[DRY RUN]" in run["result"].output
+-    run["execute"].assert_not_called()
+-
+-
+-def test_level1_high_confidence_executes(monkeypatch: pytest.MonkeyPatch) -> None:
+-    run = _run_action(monkeypatch, safety_level=1, confidence=0.9)
+-
+-    assert run["intent"].intent == "use_tool"
+-    assert run["result"].output == "tool executed"
+-    run["execute"].assert_called_once_with({"value": 1})
+-
+-
+-def test_level1_low_confidence_requires_confirm(monkeypatch: pytest.MonkeyPatch) -> None:
+-    run = _run_action(monkeypatch, safety_level=1, confidence=0.5)
+-
+-    assert run["intent"].intent == "confirm_action"
+-    assert run["result"] is None
+-    run["execute"].assert_not_called()
+-
+-
+-def test_level2_always_requires_confirm(monkeypatch: pytest.MonkeyPatch) -> None:
+-    with pytest.raises(ToolError, match="Requires user confirmation"):
+-        _run_action(monkeypatch, safety_level=2, confidence=1.0)
+-
+-
+-def test_level3_never_executes(monkeypatch: pytest.MonkeyPatch) -> None:
+-    with pytest.raises(ToolError, match="Level 3"):
+-        _run_action(monkeypatch, safety_level=3, confidence=1.0)
+-
+-
+-def test_level3_dry_run_still_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
+-    with pytest.raises(ToolError, match="Level 3"):
+-        _run_action(monkeypatch, safety_level=3, confidence=1.0, dry_run=True)
+-
+-
+-def test_dry_run_prevents_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+-    run = _run_action(monkeypatch, safety_level=1, confidence=0.95, dry_run=True)
+-
+-    assert run["intent"].intent == "use_tool"
+-    assert run["result"].dry_run is True
+-    assert "[DRY RUN]" in run["result"].output
+-    run["execute"].assert_not_called()
++def test_compatibility_exports_and_getters_are_metadata_only():
++    registry=ToolRegistry()
++    for callback in (TOOLS['shell'],registry.TOOLS['shell'],registry.get_tool('shell').execute,registry.get('shell').execute):
++        with pytest.raises(ToolError,match='independent_authorization_required'):callback({'command':'synthetic only'})
++    assert all(item['execution_enabled'] is False for item in registry.list_tools())
+--- before/tests/test_secure_transport.py
++++ source/tests/test_secure_transport.py
+@@ -0,0 +1,339 @@
++"""Actual Authority/registry/IPC tests, guarded disposable runner only."""
++from datetime import UTC,datetime,timedelta
++import copy
++import hashlib
++import json
++import os
++from pathlib import Path
++import socket
++import struct
++import subprocess
++import sys
++import time
++from concurrent.futures import ThreadPoolExecutor
++import pytest
++from app.agent.authority import AuthorityError,Actor
++from app.agent.execution import ExecutorRegistry,SyntheticExecutor,ExecutionPipeline,SimulatedPolicy,phase_id
++from app.agent.execution_transport import SyntheticTransport,_sign,_authenticate,_receive,_send,digest,MAX_FRAME
++from app.agent.recovery import OperatorRecovery,OperatorPermits
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++from transport_fixtures import provision,opened,request,uid,times,EXEC_KEY,REQUEST_KEY,RESPONSE_KEY
++
++
++@pytest.fixture
++def env(tmp_path):
++    state=provision(tmp_path/'state');a,p,t=opened(state)
++    yield state,a,p,t
++    a.close()
++
++
++def test_actual_ipc_signed_evidence_single_writer_and_public_metadata(env):
++    state,a,p,t=env;r=request(p);submitted=p.submit(ACTOR,**r)
++    assert submitted['result']['status']=='pending' and 'hmac_sha256' not in json.dumps(submitted)
++    done=p.run_once(ACTOR);op=r['request_id']
++    assert done['result']['status']=='simulated_completed' and t.invocations==1
++    assert done['result']['result']['operation_id']==op and done['result']['result']['output']=='synthetic-safe'
++    assert p.run_once(ACTOR) is None
++    evidence=a._get('execution_evidence',op,ACTOR.scope)
++    assert evidence['source']=='synthetic_authenticated_transport'
++    assert t.verify_evidence(a,ACTOR,a.get_task(ACTOR,op),evidence['transport_receipt'])==evidence['response']
++    diag=OperatorRecovery(a).diagnose(ACTOR)
++    assert diag['consistent'] and diag['tasks'][0]['transport']['report_present']
++    assert a.readiness()['recovery_decisions']['verified']
++    assert p.submit(ACTOR,**r)['replayed'] and t.invocations==1
++    assert 'hmac_sha256' not in json.dumps(a.receipt(ACTOR,op))
++    assert a._conn.execute('SELECT count(*) FROM events WHERE request_id=?',(phase_id(op,'transport_reserve'),)).fetchone()[0]==1
++
++
++@pytest.mark.parametrize('attack',['wrong_operator_key','forged','scope','id','payload','capability','goal','checkpoint','expiry','endpoint'])
++def test_invalid_transport_grants_never_admit_or_invoke(env,attack):
++    _,a,p,t=env;r=request(p);permit=r['transport_permit']
++    if attack=='wrong_operator_key':permit['hmac_sha256']='0'*64
++    elif attack=='forged':permit['body']['principal']='forged-operator'
++    elif attack=='scope':permit['body']['scope']='outside'
++    elif attack=='id':r['request_id']=uid()
++    elif attack=='payload':r['payload']['value']='changed'
++    elif attack=='capability':r['capability']='shell.exec'
++    elif attack=='goal':r['goal']='changed'
++    elif attack=='checkpoint':a.submit(ACTOR,uid(),'makes grant stale')
++    elif attack=='expiry':r['expires_at']=(datetime.now(UTC)-timedelta(seconds=1)).isoformat()
++    else:r['transport_permit']['body']['payload_hash']=digest({'endpoint_id':'https://not-allowed'})
++    with pytest.raises(AuthorityError):p.submit(ACTOR,**r)
++    assert a.receipt(ACTOR,r['request_id']) is None and t.invocations==0
++
++
++@pytest.mark.parametrize('endpoint',['https://example.invalid','/run/g6k-pve-broker/request.sock','proxmox.inspect','synthetic.local.echo-v2'])
++def test_no_arbitrary_or_real_destination(endpoint):
++    with pytest.raises(AuthorityError,match='allowlisted'):SyntheticTransport(endpoint,OperatorPermits(EXEC_KEY),REQUEST_KEY,RESPONSE_KEY,enabled=True)
++
++
++def test_disabled_by_default_sealed_types_and_independent_keys(env):
++    _,a,_,_=env
++    with pytest.raises(AuthorityError,match='transport_disabled'):SyntheticTransport('synthetic.local.echo-v1',OperatorPermits(EXEC_KEY),REQUEST_KEY,RESPONSE_KEY)
++    with pytest.raises(AuthorityError,match='independent_keys'):SyntheticTransport('synthetic.local.echo-v1',OperatorPermits(EXEC_KEY),EXEC_KEY,RESPONSE_KEY,enabled=True)
++    class Tool:
++        def execute(self,*args):raise AssertionError('real tool must never be called')
++    with pytest.raises(AuthorityError,match='real_execution_disabled'):ExecutorRegistry(enabled=True).register(Tool())
++    with pytest.raises(AuthorityError,match='real_execution_disabled'):ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True,transport=Tool())
++
++
++@pytest.mark.parametrize('damage',['response_signature','request_signature','response_payload','operation_id','generation','partial_frame','oversized','duplicate_json'])
++def test_protocol_forgery_and_bounded_frames(env,damage,monkeypatch):
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    if damage=='request_signature':
++        import app.agent.execution_transport as module
++        original=module._authenticate
++        def bad(key,envelope):
++            if key==REQUEST_KEY:envelope=copy.deepcopy(envelope);envelope['hmac_sha256']='0'*64
++            return original(key,envelope)
++        monkeypatch.setattr(module,'_authenticate',bad)
++    elif damage in {'partial_frame','oversized','duplicate_json'}:
++        left,right=socket.socketpair()
++        try:
++            end=times()[1]
++            if damage=='partial_frame':left.sendall(struct.pack('!I',5)+b'{}');left.shutdown(socket.SHUT_WR)
++            elif damage=='oversized':left.sendall(struct.pack('!I',MAX_FRAME+1))
++            else:
++                raw=b'{"request_id":1,"request_id":2}';left.sendall(struct.pack('!I',len(raw))+raw)
++            with pytest.raises(AuthorityError):_receive(right,end)
++        finally:left.close();right.close()
++        return
++    else:
++        original=t.verify_evidence
++        def forged(authority,actor,task,reply,**options):
++            reply=copy.deepcopy(reply)
++            if damage=='response_signature':reply['hmac_sha256']='0'*64
++            elif damage=='response_payload':reply['body']['response']['output']='forged'
++            elif damage=='operation_id':reply['body']['response']['operation_id']=uid()
++            else:reply['body']['request']['generation']+=1
++            if damage!='response_signature':reply=_sign(RESPONSE_KEY,reply['body'])
++            return original(authority,actor,task,reply,**options)
++        monkeypatch.setattr(t,'verify_evidence',forged)
++    result=p.run_once(ACTOR)
++    assert result['result']['status']=='unknown'
++    assert a.receipt(ACTOR,phase_id(r['request_id'],'publish')) is None
++
++
++@pytest.mark.parametrize('stage',['transport_before_reserve','transport_reserved','transport_computed','transport_reported','transport_reply_received'])
++def test_cancel_and_deadline_during_handoff_remain_conservative(env,stage):
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    def fault(point):
++        if point==stage:
++            a.cancel(ACTOR,uid(),r['request_id'])
++            raise TimeoutError('synthetic boundary interruption')
++    t._fault=fault
++    result=p.run_once(ACTOR)
++    assert result['result']['status']=='unknown' and result['result']['cancel_requested']
++    assert p.run_once(ACTOR) is None
++    if stage in {'transport_before_reserve','transport_reserved'}:assert t.invocations==0
++
++
++def test_duplicate_concurrent_submissions_and_dispatch(env):
++    _,a,p,t=env;r=request(p)
++    with ThreadPoolExecutor(max_workers=2) as pool:receipts=list(pool.map(lambda _:p.submit(ACTOR,**r),range(2)))
++    assert sum(x['replayed'] for x in receipts)==1
++    def dispatch(_):
++        try:return p.run_once(ACTOR)
++        except AuthorityError as exc:return exc.code
++    with ThreadPoolExecutor(max_workers=2) as pool:list(pool.map(dispatch,range(2)))
++    assert t.invocations==1 and a.get_task(ACTOR,r['request_id'])['status']=='simulated_completed'
++
++
++def test_recovery_witness_failure_blocks_each_boundary(env):
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    def revoke_witness(stage):
++        if stage=='transport_before_reserve':a._recovery_registry._path(1,'final').rename(a._recovery_registry.custody/'missing-final')
++    t._fault=revoke_witness
++    try:
++        assert p.run_once(ACTOR)['result']['status']=='unknown'
++        with pytest.raises(AuthorityError):a.readiness()
++        assert t.invocations==0
++    finally:(a._recovery_registry.custody/'missing-final').rename(a._recovery_registry._path(1,'final'))
++
++
++def test_expired_queued_permit_is_terminal_and_does_not_stall_next_task(env):
++    _,a,p,t=env;r=request(p,seconds=.15);p.submit(ACTOR,**r);time.sleep(.18)
++    second=request(p,value='next-safe');p.submit(ACTOR,**second)
++    assert p.run_once(ACTOR)['result']['status']=='timed_out'
++    assert p.run_once(ACTOR)['result']['status']=='simulated_completed'
++    assert t.invocations==1 and a.get_task(ACTOR,r['request_id'])['error']=='transport_authorization_expired_no_dispatch'
++
++
++@pytest.mark.parametrize('key',['operator','request','response'])
++def test_restart_wrong_independent_key_refuses_historical_completion(env,key):
++    state,a,p,t=env;r=request(p);p.submit(ACTOR,**r);p.run_once(ACTOR)
++    if key=='operator':t.permits=OperatorPermits(b'wrong synthetic operator key'*2)
++    elif key=='request':t._request_key=b'wrong synthetic request key'*2
++    else:t._response_key=b'wrong synthetic response key'*2
++    with pytest.raises(AuthorityError):a.readiness()
++
++
++@pytest.mark.parametrize('kind',['execution_transport_grant','execution_transport_reservation','execution_transport_report'])
++def test_diagnostics_rejects_empty_or_orphan_transport_history(env,kind):
++    from app.agent.recovery import snapshot,analyze
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r);p.run_once(ACTOR)
++    image=snapshot(a)
++    row=next(x for x in image['records'] if x['kind']==kind);row['data']='{}'
++    assert not analyze(image,ACTOR.scope)['consistent']
++
++
++def test_authenticated_recovery_records_existing_signed_report_without_invoking(env):
++    from app.agent.recovery import RecoveryActions
++    from enrollment_fixtures import OPKEY
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    def fault(stage):
++        if stage=='transport_reported':raise OSError('synthetic response lost')
++    t._fault=fault
++    assert p.run_once(ACTOR)['result']['status']=='unknown' and t.invocations==1
++    actions=RecoveryActions(a,OperatorPermits(OPKEY));payload={'task_id':r['request_id']}
++    def grant(op,command):
++        start,end=times()
++        return OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-recovery-operator',scope=ACTOR.scope,
++            command=command,payload=payload,checkpoint=a._ledger.history()[0],issued_at=start,expires_at=end)
++    op=uid()
++    with pytest.raises(AuthorityError):actions.apply(ACTOR,op,'reconcile_synthetic_transport_report',payload,{})
++    result=actions.apply(ACTOR,op,'reconcile_synthetic_transport_report',payload,grant(op,'reconcile_synthetic_transport_report'))
++    assert result['result']['state']=='EVIDENCE_RECORDED_NOT_PUBLISHED' and t.invocations==1
++    assert a.get_task(ACTOR,r['request_id'])['status']=='unknown'
++    op=uid();actions.apply(ACTOR,op,'publish_synthetic_evidence',payload,grant(op,'publish_synthetic_evidence'))
++    assert a.get_task(ACTOR,r['request_id'])['status']=='simulated_completed' and t.invocations==1
++
++
++@pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
++    'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
++    'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
++def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
++    from app.agent.authority import Authority
++    state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
++    case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
++    child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
++    try:
++        end=time.monotonic()+10
++        while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
++        assert (root/'ready').exists(),child.poll()
++        with pytest.raises(AuthorityError,match='busy'):opened(state)
++        child.kill();child.wait(timeout=5);assert child.returncode==-9
++    finally:
++        if child.poll() is None:child.kill();child.wait(timeout=5)
++    recovered,pipeline,transport=opened(state)
++    try:
++        before=recovered.get_task(ACTOR,op)['status'];pipeline.reconcile(ACTOR)
++        after=recovered.get_task(ACTOR,op)['status']
++        if stage in {'after_record','after_publish','record_database_committed','publish_before_commit','publish_database_committed'}:
++            assert after=='simulated_completed'
++        else:assert after=='unknown'
++        original=json.loads((root/'original-request.json').read_text());assert pipeline.submit(ACTOR,**original)['replayed']
++        assert pipeline.run_once(ACTOR) is None and transport.invocations==0
++        observed=(root/'invocations.jsonl').read_text().splitlines() if (root/'invocations.jsonl').exists() else []
++        assert len(observed)<=1
++        assert OperatorRecovery(recovered).diagnose(ACTOR)['consistent']
++        with Path('/work/TRANSPORT-CRASHES.jsonl').open('a') as f:f.write(json.dumps({'stage':stage,'exitcode':child.returncode,
++            'operation_id':op,'restart_before':before,'restart_after':after,'new_endpoint_invocations':transport.invocations,
++            'observed_original_computations':len(observed),'canonical_payload_sha256':digest(original),'real_execution_enabled':False})+'\n')
++    finally:recovered.close()
++
++
++def test_operator_promoted_evidence_cannot_auto_publish_on_restart(env):
++    from app.agent.recovery import RecoveryActions
++    from enrollment_fixtures import OPKEY
++    state,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    def lost(stage):
++        if stage=='transport_reported':raise OSError('synthetic lost response')
++    t._fault=lost;p.run_once(ACTOR)
++    start,end=times();op=uid();payload={'task_id':r['request_id']}
++    permit=OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-recovery-operator',scope=ACTOR.scope,
++        command='reconcile_synthetic_transport_report',payload=payload,checkpoint=a._ledger.history()[0],issued_at=start,expires_at=end)
++    RecoveryActions(a,OperatorPermits(OPKEY)).apply(ACTOR,op,'reconcile_synthetic_transport_report',payload,permit)
++    a.close();fresh,pipeline,transport=opened(state)
++    try:
++        assert pipeline.reconcile(ACTOR)==[] and fresh.get_task(ACTOR,r['request_id'])['status']=='unknown'
++        assert transport.invocations==0
++        with pytest.raises(AuthorityError,match='operator_publication_authorization_required'):pipeline._publish(ACTOR,r['request_id'])
++    finally:fresh.close()
++
++
++def test_late_computation_does_not_commit_invalid_report(env):
++    _,a,p,t=env;r=request(p,timeout_seconds=1);p.submit(ACTOR,**r)
++    t._fault=lambda stage:time.sleep(1.02) if stage=='transport_computed' else None
++    assert p.run_once(ACTOR)['result']['status']=='unknown'
++    with pytest.raises(AuthorityError,match='not_found'):a._get('execution_transport_report',r['request_id'],ACTOR.scope)
++    assert a.readiness()['storage_ready'] and t.invocations==1
++
++
++def test_configured_transport_readiness_matches_before_first_grant(env):
++    _,a,p,t=env
++    assert a.readiness()['execution_transport']['configured'] and t.ready(a)['historical_grants']==0
++
++
++def test_recovery_permit_expiring_during_verification_rolls_back(env,monkeypatch):
++    import app.agent.execution_transport as module
++    from app.agent.recovery import RecoveryActions
++    from enrollment_fixtures import OPKEY
++    _,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    t._fault=lambda stage:(_ for _ in ()).throw(OSError('lost report')) if stage=='transport_reported' else None
++    p.run_once(ACTOR)
++    original=module.verify_transport_evidence
++    def slow(*args,**kwargs):
++        result=original(*args,**kwargs);time.sleep(.35);return result
++    monkeypatch.setattr(module,'verify_transport_evidence',slow)
++    start,end=times(.3);op=uid();payload={'task_id':r['request_id']}
++    permit=OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-recovery-operator',scope=ACTOR.scope,
++        command='reconcile_synthetic_transport_report',payload=payload,checkpoint=a._ledger.history()[0],issued_at=start,expires_at=end)
++    with pytest.raises(AuthorityError,match='operator_permit_expired'):RecoveryActions(a,OperatorPermits(OPKEY)).apply(ACTOR,op,'reconcile_synthetic_transport_report',payload,permit)
++    assert a.receipt(ACTOR,op) is None
++    with pytest.raises(AuthorityError,match='not_found'):a._get('execution_evidence',r['request_id'],ACTOR.scope)
++
++
++def test_real_offline_cli_reconciles_and_explicitly_publishes_with_identical_replay(env):
++    from app.agent.operator_cli import main
++    from enrollment_fixtures import KEY,OPKEY
++    from contextlib import redirect_stdout
++    import io
++    state,a,p,t=env;r=request(p);p.submit(ACTOR,**r)
++    t._fault=lambda stage:(_ for _ in ()).throw(OSError('lost report')) if stage=='transport_reported' else None
++    p.run_once(ACTOR);a.close()
++    def invoke(action,op,permit):
++        args=['--database',state['database'],'--checkpoints',state['config']['checkpoints'],'--store-id',state['config']['store_id'],
++              '--rollover-enabled','--epoch-capacity','64','--synthetic-endpoint-id','synthetic.local.echo-v1',
++              '--operation-id',op,'--commit-recovery',action,r['request_id']]
++        blobs={'--key-fd':KEY,'--operator-key-fd':OPKEY,'--trust-fd':state['trust'],
++            '--enrollment-witness-fd':state['enrollment']['witness'],'--registry-config-fd':state['config'],
++            '--registry-reference-fd':state['reference'],'--transport-operator-key-fd':EXEC_KEY,
++            '--transport-request-key-fd':REQUEST_KEY,'--transport-response-key-fd':RESPONSE_KEY,'--permit-fd':permit}
++        fds=[]
++        try:
++            for flag,value in blobs.items():
++                fd=os.memfd_create('synthetic-cli');fds.append(fd);raw=value if type(value) is bytes else json.dumps(value).encode()
++                os.write(fd,raw);os.lseek(fd,0,0);args.extend([flag,str(fd)])
++            out=io.StringIO()
++            with redirect_stdout(out):code=main(args)
++            return code,json.loads(out.getvalue())
++        finally:
++            for fd in fds:os.close(fd)
++    def grant(op,command):
++        from app.agent.ledger import LedgerGuard
++        g=LedgerGuard(state['config']['checkpoints'],KEY,state['config']['store_id'],rollover=True,epoch_capacity=64,recovery=True,trust_context=state['trust'])
++        g.acquire(state['database'],readonly=True)
++        try:
++            start,end=times()
++            return OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-offline-recovery',scope=ACTOR.scope,
++                command=command,payload={'task_id':r['request_id']},checkpoint=g.history()[0],issued_at=start,expires_at=end)
++        finally:g.close()
++    op=uid();permit=grant(op,'reconcile_synthetic_transport_report')
++    code,recorded=invoke('--reconcile-transport-report',op,permit);assert code==0,recorded
++    assert recorded['result']['state']=='EVIDENCE_RECORDED_NOT_PUBLISHED'
++    code,replayed=invoke('--reconcile-transport-report',op,permit);assert code==0 and replayed['replayed'],replayed
++    op=uid();permit=grant(op,'publish_synthetic_evidence')
++    code,published=invoke('--publish-transport-evidence',op,permit);assert code==0,published
++    fresh,pipeline,transport=opened(state)
++    try:assert fresh.get_task(ACTOR,r['request_id'])['status']=='simulated_completed' and transport.invocations==0
++    finally:fresh.close()
++
++
++def test_second_allowlisted_endpoint_runs_only_pure_hash(tmp_path):
++    state=provision(tmp_path/'hash');a,p,t=opened(state,endpoint_id='synthetic.local.hash-v1')
++    try:
++        r=request(p,value='hash-payload',capability='synthetic.sha256');p.submit(ACTOR,**r)
++        done=p.run_once(ACTOR)
++        assert done['result']['result']['output']==hashlib.sha256(b'hash-payload').hexdigest() and t.invocations==1
++    finally:a.close()
+--- before/tests/test_server_integration.py
++++ source/tests/test_server_integration.py
+@@ -164,19 +164,10 @@
+     assert status.status_code == 200
+     assert status.json()["state"] == "ACTIVE"
+ 
+-    light = client.post("/resource/sleep/light")
+-    assert light.status_code == 200
+-    assert light.json()["state"] == "LIGHT_SLEEP"
+-
+-    deep = client.post("/resource/sleep/deep", params={"terminate_processes": "true"})
+-    assert deep.status_code == 200
+-    assert deep.json()["state"] == "DEEP_SLEEP"
+-    assert deep.json()["reason"] == "api:True"
+-
+-    wake = client.post("/resource/wake", params={"preload_primary_model": "true"})
+-    assert wake.status_code == 200
+-    assert wake.json()["state"] == "ACTIVE"
+-    assert wake.json()["reason"] == "api:True"
++    for route in ('/resource/sleep/light','/resource/sleep/deep','/resource/wake','/resource/shutdown'):
++        blocked=client.post(route)
++        assert blocked.status_code==403
++        assert blocked.json()['error']=='offline_operator_control_required'
+ 
+ 
+ def test_procedural_memory_routes(monkeypatch) -> None:  # noqa: ANN001
+--- before/tests/transport_fixtures.py
++++ source/tests/transport_fixtures.py
+@@ -0,0 +1,65 @@
++"""External synthetic provisioning only; never generates production trust."""
++from datetime import UTC,datetime,timedelta
++from pathlib import Path
++from enrollment_fixtures import build,uid,KEY,OPKEY
++from app.agent.authority import Authority
++from app.agent.enrollment import policy
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import OperatorPermits
++from app.agent.recovery_decisions import RecoveryRegistry
++from app.agent.execution import ExecutionPipeline,SimulatedPolicy,validate_spec
++from app.agent.execution_transport import SyntheticTransport
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++
++EXEC_KEY=b'synthetic-v6-independent-operator-000000000000'
++REQUEST_KEY=b'synthetic-v6-request-signing-key-00000000000'
++RESPONSE_KEY=b'synthetic-v6-response-signing-key-0000000000'
++
++
++def times(seconds=120):
++    now=datetime.now(UTC)
++    return (now-timedelta(seconds=1)).isoformat(),(now+timedelta(seconds=seconds)).isoformat()
++
++
++def provision(root):
++    root=Path(root);s,p=build(root)
++    s.guard.epoch_capacity=64;s.reservation['policy']=policy(s.guard)
++    r=s.reservation
++    p=s.permits.issue(request_id=r['enrollment_id'],principal='synthetic-v6-enroller',scope=ACTOR.scope,
++        command='enroll_authority',payload=s.payload,checkpoint=r['initial_checkpoint'],issued_at=r['issued_at'],expires_at=r['expires_at'])
++    enrolled=s.enroll(ACTOR,p,disposable=True);s.guard.close()
++    g=LedgerGuard(root/'anchors',KEY,r['store_id'],rollover=True,epoch_capacity=64,recovery=True)
++    a=Authority(root/'new-store/state.sqlite',ledger=g,enrollment_context=enrolled['witness'],allow_simulation=True)
++    start,end=times();trust=g.trust_reference(valid_from=start,expires_at=end);g.trust_context=trust
++    for name in ('registry-data','registry-custody'):(root/name).mkdir(mode=0o700)
++    config={'format':'jarvis-recovery-registry-v1','registry_id':uid(),'store_id':g.store_id,'key_id':g.key_id,
++        'database':str(root/'registry-data/registry.sqlite'),'custody':str(root/'registry-custody'),
++        'checkpoints':str(g.directory),'initial_reference':trust,'capacity':128,'disposable_only':True}
++    ref={'registry_id':config['registry_id'],'sequence':0,'event_sha256':'0'*64,
++         'witness':{'renewal_id':None,'checkpoint':trust}}
++    registry=RecoveryRegistry(g,config,ref,OperatorPermits(OPKEY));op=uid()
++    registry.apply(ACTOR,op,'initialize',config,OperatorPermits(OPKEY).issue(request_id=op,principal='synthetic-v6-registry-operator',
++        scope=ACTOR.scope,command='recovery_initialize',payload=config,checkpoint=g.history()[0],issued_at=start,expires_at=end),initialize=True)
++    state={'root':str(root),'database':str(a.path),'enrollment':enrolled,'config':config,'reference':registry.inspect()['reference'],'trust':trust}
++    a.close()
++    return state
++
++
++def opened(state,*,fault_hook=None,endpoint_id="synthetic.local.echo-v1"):
++    g=LedgerGuard(state['config']['checkpoints'],KEY,state['config']['store_id'],rollover=True,epoch_capacity=64,recovery=True,trust_context=state['trust'])
++    registry=RecoveryRegistry(g,state['config'],state['reference'],OperatorPermits(OPKEY))
++    a=Authority(state['database'],ledger=g,enrollment_context=state['enrollment']['witness'],allow_simulation=True,recovery_registry=registry)
++    transport=SyntheticTransport(endpoint_id,OperatorPermits(EXEC_KEY),REQUEST_KEY,RESPONSE_KEY,enabled=True,fault_hook=fault_hook)
++    pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True,transport=transport)
++    return a,pipeline,transport
++
++
++def request(pipeline,*,operation_id=None,value='synthetic-safe',seconds=120,timeout_seconds=10,capability='synthetic.echo'):
++    op=operation_id or uid();start,end=times(seconds)
++    spec=validate_spec(capability,{'value':value},end,timeout_seconds)
++    body={'request_id':op,'goal':'synthetic authenticated transport','capability':spec['capability'],
++          'payload':spec['payload'],'expires_at':spec['expires_at'],'timeout_seconds':timeout_seconds}
++    binding=pipeline.transport.binding(pipeline.authority,ACTOR,op,body['goal'],spec)
++    permit=OperatorPermits(EXEC_KEY).issue(request_id=op,principal='synthetic-v6-independent-execution-operator',scope=ACTOR.scope,
++        command='dispatch_synthetic_transport',payload=binding,checkpoint=pipeline.authority._ledger.history()[0],issued_at=start,expires_at=end)
++    return {**body,'transport_permit':permit}
+--- before/tests/transport_process_actor.py
++++ source/tests/transport_process_actor.py
+@@ -0,0 +1,30 @@
++"""Actual independent crash actor; guarded disposable runner only."""
++import json
++import os
++from pathlib import Path
++import sys
++import time
++sys.path[:0]=['/input/source','/input/tests','/input','/deps']
++from transport_fixtures import opened,request,ACTOR
++from app.agent.execution import phase_id
++c=json.loads(Path(sys.argv[1]).read_text());root=Path(c['state']['root']);target=c['stage']
++a,p,t=opened(c['state'])
++
++def pause(stage):
++    if stage=='transport_computed':
++        with (root/'invocations.jsonl').open('a') as f:f.write(json.dumps({'operation_id':c['operation_id'],'event':'pure_computation_observed'})+'\n')
++    if stage==target:
++        (root/'ready').write_text(stage)
++        while True:time.sleep(.02)
++p._fault=t._fault=pause
++r=request(p,operation_id=c['operation_id']);(root/'original-request.json').write_text(json.dumps(r));(root/'original-request.json').chmod(0o600)
++if target.startswith(('reserve_','record_','publish_')):
++    phase,boundary=target.split('_',1)
++    ident=phase_id(c['operation_id'],'transport_reserve' if phase=='reserve' else phase)
++    def authority_fault(stage):
++        expected='before_commit' if boundary=='before_commit' else 'ledger_database_committed'
++        if stage==expected and a._conn.execute('SELECT 1 FROM receipts WHERE request_id=?',(ident,)).fetchone():pause(target)
++    a._fault=authority_fault
++p.submit(ACTOR,**r)
++p.run_once(ACTOR)
++raise SystemExit('requested crash point not reached')

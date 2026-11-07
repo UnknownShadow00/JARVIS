@@ -1,0 +1,34 @@
+Independent reviewer: /root/independent_security_review_r3
+Scope: pure Python source review/tests only; no network, Proxmox, systemd,
+timer, VM, guest, subprocess, or credential operation.
+
+Command:
+python3 -I -B -S -m unittest discover -s tasks/jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3/tests -p 'test_independent_review.py' -v
+
+Initial result before remediation:
+- Ran: 11 test methods
+- Passed: 6
+- Failed: 3
+- Errors: 1
+- Skipped: 0
+
+Reproduced findings:
+1. FAIL: failed setup did not cancel the already-created grace timer.
+2. FAIL: transient deadline snapshot failure permanently consumed the phase
+   claim, so a retry performed no forced action in the simulated Policy B path.
+3. FAIL: FileStore had no evidence-preserving retirement/rearm path.
+4. ERROR: duplicate cleanup attempted a fresh snapshot before recognizing the
+   authenticated CLOSED state; injected snapshot failure prevented idempotence.
+
+Passing controls:
+- runtime Policy B rejected before backend action;
+- NativeBackend had no qm-stop allowlist or forced-stop runtime path;
+- wrong VMID/UUID/disk/serial/network refused;
+- wrong ISO/agent/boot/pending/digest refused;
+- inactive/late/wrong-deadline/wrong-argv timer proofs refused;
+- Policy A did not force or promise expiration;
+- natural guest-stop race required a fresh stopped snapshot.
+
+An earlier invocation using a Python module name failed to import the non-package
+tasks path and ran no test. It made no state or infrastructure change and is not
+counted above.

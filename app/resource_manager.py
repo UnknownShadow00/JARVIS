@@ -26,6 +26,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STATE_PATH = PROJECT_ROOT / "data" / "resource_state.json"
 
 
+# Only children positively captured at launch by THIS process may be signalled.
+# Cross-process adoption requires a future protected persistent lease ceremony.
+_owned_processes: dict[int,dict[str,Any]] = {}
+
+
 class RuntimeState(StrEnum):
     ACTIVE = "ACTIVE"
     LIGHT_SLEEP = "LIGHT_SLEEP"
@@ -365,8 +370,15 @@ class ResourceManager:
     async def _stop_background_services(self, actions: list[str]) -> None:
         try:
             from app.agent.scheduler import scheduler
+            from app.agent.runtime import get_execution_worker
 
-            await scheduler.stop()
+            worker = get_execution_worker()
+            try:
+                if worker is not None:
+                    await worker.stop()
+                    actions.append("synthetic_execution_worker_stopped")
+            finally:
+                await scheduler.stop()
             actions.append("scheduler_stopped")
         except Exception as exc:  # noqa: BLE001
             actions.append(f"scheduler_stop_error:{exc}")
@@ -383,9 +395,14 @@ class ResourceManager:
 
         try:
             from app.agent.scheduler import scheduler
+            from app.agent.runtime import get_execution_worker
 
             await scheduler.start()
             actions.append("scheduler_started")
+            worker = get_execution_worker()
+            if worker is not None and worker._task is None:
+                await worker.start()
+                actions.append("synthetic_execution_worker_started")
         except Exception as exc:  # noqa: BLE001
             actions.append(f"scheduler_start_error:{exc}")
             audit.log("resource_scheduler_start_error", {"error": str(exc)})
@@ -731,10 +748,12 @@ def discover_jarvis_processes(exclude_pids: set[int] | None = None) -> list[Jarv
 
 def is_jarvis_pid(pid: int) -> bool:
     try:
-        proc = psutil.Process(pid)
-        return classify_jarvis_process(proc.name(), " ".join(proc.cmdline()), proc) is not None
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return False
+        proc=psutil.Process(pid)
+        if pid==os.getpid():return _cwd_under_project(proc)
+        lease=_owned_processes.get(pid)
+        return bool(lease and proc.create_time()==lease['created_at'] and proc.exe()==lease['executable']
+                    and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve() and proc.ppid()==os.getpid())
+    except (psutil.NoSuchProcess,psutil.AccessDenied,OSError):return False
 
 
 def classify_jarvis_process(name: str, cmdline: str, proc: psutil.Process | None = None) -> str | None:
@@ -742,15 +761,15 @@ def classify_jarvis_process(name: str, cmdline: str, proc: psutil.Process | None
     root = str(PROJECT_ROOT).replace("\\", "/").lower()
     lowered_name = name.lower()
 
-    if "app.main:app" in normalized or "python -m app.main" in normalized:
+    if ("app.main:app" in normalized or "python -m app.main" in normalized) and _cwd_under_project(proc):
         return "fastapi_server"
-    if "uvicorn" in normalized and "app.main:app" in normalized:
+    if "uvicorn" in normalized and "app.main:app" in normalized and _cwd_under_project(proc):
         return "fastapi_server"
-    if "python -m app.boot" in normalized or "app/boot.py" in normalized:
+    if ("python -m app.boot" in normalized or "app/boot.py" in normalized) and _cwd_under_project(proc):
         return "boot_orchestrator"
-    if "scripts/sensor_node.py" in normalized:
+    if "scripts/sensor_node.py" in normalized and _cwd_under_project(proc):
         return "sensor_node"
-    if "wake_diag.py" in normalized:
+    if "wake_diag.py" in normalized and _cwd_under_project(proc):
         return "wake_diagnostics"
     if (
         any(keyword in normalized for keyword in ("browser_use", "computer_use", "open-computer-use"))
@@ -775,23 +794,24 @@ def _cwd_under_project(proc: psutil.Process | None, root: Path = PROJECT_ROOT) -
 
 
 def terminate_jarvis_processes(exclude_pids: set[int] | None = None, timeout: float = 3.0) -> list[dict[str, Any]]:
-    stopped: list[dict[str, Any]] = []
-    for process in discover_jarvis_processes(exclude_pids=exclude_pids):
+    stopped=[];exclude=exclude_pids or set()
+    for pid,lease in list(_owned_processes.items()):
+        if pid in exclude:continue
         try:
-            proc = psutil.Process(process.pid)
+            proc=psutil.Process(pid)
+            def matches():
+                return (proc.create_time()==lease['created_at'] and proc.exe()==lease['executable']
+                        and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve() and proc.ppid()==os.getpid())
+            if not matches():continue
             proc.terminate()
-            try:
-                proc.wait(timeout=timeout)
-                outcome = "terminated"
+            try:proc.wait(timeout=timeout);outcome='terminated'
             except psutil.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=timeout)
-                outcome = "killed"
-            stopped.append({**asdict(process), "outcome": outcome})
-            audit.log("resource_process_stopped", {"pid": process.pid, "role": process.role, "outcome": outcome})
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired) as exc:
-            stopped.append({**asdict(process), "outcome": f"error:{exc}"})
-            audit.log("resource_process_stop_error", {"pid": process.pid, "role": process.role, "error": str(exc)})
+                if not matches():continue
+                proc.kill();proc.wait(timeout=timeout);outcome='killed'
+            stopped.append({'pid':pid,'role':lease['role'],'outcome':outcome})
+            _owned_processes.pop(pid,None)
+        except (psutil.NoSuchProcess,psutil.AccessDenied,psutil.TimeoutExpired,OSError):
+            continue
     return stopped
 
 
@@ -823,13 +843,19 @@ def start_server_process() -> subprocess.Popen:
     creationflags = 0
     if os.name == "nt":
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    return subprocess.Popen(
+    child = subprocess.Popen(
         command,
         cwd=PROJECT_ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         creationflags=creationflags,
     )
+    try:
+        proc=psutil.Process(child.pid)
+        if proc.ppid()==os.getpid() and Path(proc.cwd()).resolve()==PROJECT_ROOT.resolve():
+            _owned_processes[child.pid]={'created_at':proc.create_time(),'executable':proc.exe(),'role':'fastapi_server'}
+    except (psutil.NoSuchProcess,psutil.AccessDenied,OSError):pass
+    return child
 
 
 resource_manager = ResourceManager()

@@ -1,0 +1,43 @@
+Independent reviewer: /root/independent_security_review_r3
+Scope: pure Python authorization-lifetime and session-binding review. No network,
+dpkg-query, Proxmox, systemd, timer, VM, guest, credential, or host subprocess
+operation was run.
+
+Final v5 process-wide-tripwire result:
+- Ran: 18 test methods
+- Passed: 18
+- Failed: 0
+- Errors: 0
+- Skipped: 0
+- Popen tripwire activations: 0
+- killpg tripwire activations: 0
+
+New v5 assertions within the existing independent methods:
+- a reviewed 11-minute lease is accepted by Native authorize at minute 9 while
+  it is still unexpired, permitting an already armed callback to run;
+- the same lease at minute 9 is rejected by default/full-window validation, so
+  it cannot arm a new 10.5-minute session;
+- the lease is rejected by Native authorize at its exact expiry boundary;
+- changed source, stale expected worker session, and changed expected approval
+  are each rejected before the fake backend can leave stopped state.
+- a disposable FileStore remains pinned to the authenticated session directory
+  after a synthetic active-pointer replacement, and its worker-idle barrier
+  refuses while a phase lock is held then passes after release.
+
+Review finding fixed during v5:
+CLI originally checked session approval/session identity before the Engine
+reloaded active state, leaving a retire-and-rearm TOCTOU. Engine._plan now checks
+the expected session and expected approval on the exact immutable plan it
+returns. FileStore binds that generation after rechecking active.json, so later
+operations in the callback stay on the authenticated session directory. The
+worker passes its argv session and canonical permit approval hash; start,
+verify, and observe pass the permit approval hash. Cleanup/retire intentionally
+use their separately reviewed stopped-state authority and worker-idle fences.
+
+Conclusion:
+PASS_OFFLINE_HOST_ENFORCEMENT_ENGINEERING_ONLY. The lifetime split prevents a
+nearly expired lease from creating a new arm without preventing an unexpired,
+exact-grant callback for an existing arm. It does not extend the approval,
+accept expiry, guarantee scheduling before expiry, or establish live timer/host
+behavior. Stage2/Stage3 qualification and new bootstrap authorization remain
+required.

@@ -1,0 +1,266 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Foperator_cli.py%23offline-operator::app%2Fagent%2Frecovery.py%23OperatorPermits::app%2Fagent%2Frecovery::ATTACK-CLASSES.md%23Business%20logic",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/archive_restore.py",
+        "app/agent/branch_verification.py",
+        "app/agent/enrollment.py",
+        "app/agent/migration.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "tests/enrollment_fixtures.py",
+        "tests/synthetic_authority.py",
+        "tests/test_audit_disaster.py",
+        "tests/test_authority_enrollment.py",
+        "tests/test_operator_ledger.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/enrollment.py",
+            "app/agent/branch_verification.py",
+            "app/agent/archive_restore.py",
+            "app/agent/operator_cli.py",
+            "app/agent/migration.py"
+          ],
+          "invariant": "Recovery must preserve authenticated admission identity across crashes and never turn proposal, approval, uncertain effect or historical receipt into executable authority.",
+          "method": "source",
+          "result": "Source trace: RecoveryActions.apply permits only publish_synthetic_evidence/disable_overdue_schedule/prepare_archive (recovery.py:345-405), under Authority fenced atomic receipts; synthetic publication recomputes exact SyntheticExecutor result without external execution (359-380). Enrollment retains signed INTENT/PREPARED/FINAL and completes only exact admitted deterministic SQL (enrollment.py:90-117,155-246). BranchVerifier returns PROPOSE_ONLY with activation_authorized=False (branch_verification.py:23-81). RecoveryRegistry applies command/payload/permit-bound replay, append-only HMAC intent/SQL/final sequence, request/branch uniqueness, external prefix reference, bounded state transitions and expiry (recovery_decisions.py:146-222,269-366). Captured Sprint5 module has integration failures, not a fail-open path: verify_receipt calls absent OperatorPermits.authenticate, and propose expects original ID arrays absent in current BranchVerifier. These prevent usable verification/proposal and have no public API/CLI wiring in this snapshot.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "tests/test_authority_enrollment.py",
+            "tests/test_audit_disaster.py",
+            "tests/test_operator_ledger.py",
+            "tests/enrollment_fixtures.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Bounded synthetic fixture regression validates actual current enrollment, permit and inert-restore behavior.",
+          "method": "local",
+          "result": "Parent ran recovery-controls.py under the approved OS sandbox, exit 0: 8 passed in 0.31s. Cases cover genesis/restart, bad permit/scope, required external witness, readonly branch UNKNOWN/cancel preservation, exact disabled restore, explicit grant/external trust, and permit payload/lifetime/MAC binding. No providers, production data, real execution or privileged qualification used.",
+          "artifact": "agents/hunt-recovery/artifacts/recovery-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Foperator_cli.py%23offline-operator::app%2Fagent%2Frecovery.py%23OperatorPermits::app%2Fagent%2Frecovery::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/archive_restore.py",
+        "app/agent/branch_verification.py",
+        "app/agent/enrollment.py",
+        "app/agent/migration.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "tests/enrollment_fixtures.py",
+        "tests/synthetic_authority.py",
+        "tests/test_audit_disaster.py",
+        "tests/test_authority_enrollment.py",
+        "tests/test_operator_ledger.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/enrollment.py",
+            "app/agent/branch_verification.py",
+            "app/agent/archive_restore.py",
+            "app/agent/operator_cli.py",
+            "app/agent/migration.py"
+          ],
+          "invariant": "An unauthenticated, stale, differently scoped or payload-substituted operator request must not admit mutation or create replacement trust.",
+          "method": "source",
+          "result": "OperatorPermits uses >=32-byte external key, HMAC-SHA256, constant-time verification, exact envelope/body fields, request/scope/command/payload binding, and fresh positive <=300s lifetime (recovery.py:307-335). RecoveryActions verifies current checkpoint within the transaction (345-358). Restore/enrollment require separately supplied permits, exact expected manifest/reservation and empty-genesis/current checkpoint respectively (archive_restore.py:124-148; enrollment.py:155-170). CLI reads key/permit/trust/reservation/witness from explicit inherited descriptors and requires --commit-recovery on mutations (operator_cli.py:17-21,60-79,91-134). No source-generated replacement key, automatic trust reset or exposed issuance route was found. A durable signed already-admitted record may finish audit-only after original permit expiry; it does not authorize a new action.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "tests/test_authority_enrollment.py",
+            "tests/test_audit_disaster.py",
+            "tests/test_operator_ledger.py",
+            "tests/enrollment_fixtures.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Bounded synthetic fixture regression validates actual current enrollment, permit and inert-restore behavior.",
+          "method": "local",
+          "result": "Parent ran recovery-controls.py under the approved OS sandbox, exit 0: 8 passed in 0.31s. Cases cover genesis/restart, bad permit/scope, required external witness, readonly branch UNKNOWN/cancel preservation, exact disabled restore, explicit grant/external trust, and permit payload/lifetime/MAC binding. No providers, production data, real execution or privileged qualification used.",
+          "artifact": "agents/hunt-recovery/artifacts/recovery-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Foperator_cli.py%23offline-operator::app%2Fagent%2Frecovery.py%23OperatorPermits::app%2Fagent%2Frecovery::DATA-ISOLATION-AND-LIFECYCLE.md%23Import%20and%20restore%20authority%20expansion",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/archive_restore.py",
+        "app/agent/authority.py",
+        "app/agent/branch_verification.py",
+        "app/agent/enrollment.py",
+        "app/agent/migration.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "tests/enrollment_fixtures.py",
+        "tests/synthetic_authority.py",
+        "tests/test_audit_disaster.py",
+        "tests/test_authority_enrollment.py",
+        "tests/test_operator_ledger.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/enrollment.py",
+            "app/agent/branch_verification.py",
+            "app/agent/archive_restore.py",
+            "app/agent/operator_cli.py",
+            "app/agent/migration.py",
+            "app/agent/authority.py"
+          ],
+          "invariant": "Imported archive content must not supply executable SQL, overwrite existing resources, bypass operator authorization or become a live authority branch.",
+          "method": "source",
+          "result": "ArchiveRestorer verifies exact manifest/HMAC/lineage/attestation/external trust and schema compatibility, requires explicit disposable=True, matching local-service actor and short-lived checkpoint-bound permit, then exclusive no-replace destination publication (archive_restore.py:82-95,124-154,201-247). Reconstruction uses only trusted SCHEMA_SQL/fixed TABLES and bound SQL row values, never archive SQL (155-180). Result is read-only state.sqlite plus authenticated DISPOSABLE/RESTORE markers; Authority rejects DISPOSABLE before writer-lock creation. Branch verification checks parent/current source identities but emits inert proposal only (branch_verification.py:23-81). Migration opens source through descriptor-relative no-follow traversal, caps bytes/record counts, rejects duplicate keys/nonfinite values and imports only through atomic empty-target Authority method (migration.py:41-83,93-192; authority.py:507-521).",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "tests/test_authority_enrollment.py",
+            "tests/test_audit_disaster.py",
+            "tests/test_operator_ledger.py",
+            "tests/enrollment_fixtures.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Bounded synthetic fixture regression validates actual current enrollment, permit and inert-restore behavior.",
+          "method": "local",
+          "result": "Parent ran recovery-controls.py under the approved OS sandbox, exit 0: 8 passed in 0.31s. Cases cover genesis/restart, bad permit/scope, required external witness, readonly branch UNKNOWN/cancel preservation, exact disabled restore, explicit grant/external trust, and permit payload/lifetime/MAC binding. No providers, production data, real execution or privileged qualification used.",
+          "artifact": "agents/hunt-recovery/artifacts/recovery-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Foperator_cli.py%23offline-operator::app%2Fagent%2Frecovery.py%23OperatorPermits::app%2Fagent%2Frecovery::DATA-ISOLATION-AND-LIFECYCLE.md%23Restore%20reintroduces%20invalid%20state",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/archive_restore.py",
+        "app/agent/branch_verification.py",
+        "app/agent/enrollment.py",
+        "app/agent/migration.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "tests/enrollment_fixtures.py",
+        "tests/synthetic_authority.py",
+        "tests/test_audit_disaster.py",
+        "tests/test_authority_enrollment.py",
+        "tests/test_operator_ledger.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/enrollment.py",
+            "app/agent/branch_verification.py",
+            "app/agent/archive_restore.py",
+            "app/agent/operator_cli.py",
+            "app/agent/migration.py"
+          ],
+          "invariant": "Recovery of a historical snapshot must retain original identities, UNKNOWN/cancellation state and disabled execution, while rejecting stale lineage or changed artifact bytes.",
+          "method": "source",
+          "result": "Restore reconstructs exact authenticated logical state and reruns semantic analysis, preserves source identities, writes execution_enabled=False/runtime_activation_allowed=False and validates all signed prepared/final/artifact bindings (archive_restore.py:58-73,153-199,201-271). It does not reset UNKNOWN or re-execute work. BranchVerifier checks current protected source head, expected restored DB digest, generation/key, fresh context, reserved branch IDs, stable read bytes/inode and original request UUID collision (branch_verification.py:23-81). Enrollment verifies retained custody/genesis/witness/marker/receipt before owner takeover and refuses missing final stores rather than recreating them (enrollment.py:253-348). External minimum checkpoint reference and trustworthy clock/custody remain explicit operator assumptions, not locally discovered trust.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "tests/test_authority_enrollment.py",
+            "tests/test_audit_disaster.py",
+            "tests/test_operator_ledger.py",
+            "tests/enrollment_fixtures.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Bounded synthetic fixture regression validates actual current enrollment, permit and inert-restore behavior.",
+          "method": "local",
+          "result": "Parent ran recovery-controls.py under the approved OS sandbox, exit 0: 8 passed in 0.31s. Cases cover genesis/restart, bad permit/scope, required external witness, readonly branch UNKNOWN/cancel preservation, exact disabled restore, explicit grant/external trust, and permit payload/lifetime/MAC binding. No providers, production data, real execution or privileged qualification used.",
+          "artifact": "agents/hunt-recovery/artifacts/recovery-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Foperator_cli.py%23offline-operator::app%2Fagent%2Frecovery.py%23OperatorPermits::app%2Fagent%2Frecovery::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Local%20file%20ownership%20and%20TOCTOU",
+      "disposition": "blocked",
+      "reviewed_paths": [
+        "app/agent/archive_restore.py",
+        "app/agent/branch_verification.py",
+        "app/agent/enrollment.py",
+        "app/agent/ledger.py",
+        "app/agent/migration.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "docs/audit_disaster_recovery.md",
+        "docs/authority_enrollment.md",
+        "docs/operator_recovery.md"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-recovery",
+          "reviewed_paths": [
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/enrollment.py",
+            "app/agent/branch_verification.py",
+            "app/agent/archive_restore.py",
+            "app/agent/operator_cli.py",
+            "app/agent/migration.py",
+            "app/agent/ledger.py",
+            "docs/operator_recovery.md",
+            "docs/audit_disaster_recovery.md",
+            "docs/authority_enrollment.md"
+          ],
+          "invariant": "Different-UID attacker-controlled ancestor replacement must not redirect protected enrollment, restore, custody or SQLite operations.",
+          "method": "source",
+          "result": "Source is mixed: migration._read_source walks every path component descriptor-relatively with O_NOFOLLOW and captures stable metadata/size (migration.py:41-83). Enrollment/restore/registry use private_directory plus leaf O_NOFOLLOW, UID/private-mode/single-link checks, no-replace rename and post-read inode/byte comparisons, but retain absolute path opens/renames and SQLite path connections (archive_restore.py:39-47,101-107,152-154,201-211; enrollment.py:143-151,185-207,231-275; recovery_decisions.py:93-142). These do not pin every ancestor. Documentation explicitly makes independent OS identities/storage/custody/key/reference/clock protection prerequisites; no different-UID writable ancestor or stronger-than-existing-rename impact was established. This is not an exploitable race finding.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": [
+        "Actual ownership, ACLs, mounts and rename permissions of every ancestor are unobserved. No cross-UID qualification was authorized; absolute path race exploitability cannot be established from same-UID fixtures or source alone."
+      ]
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Captured Sprint5 recovery_decisions.py is partial and has no tests or public/CLI wiring here. verify_receipt calls OperatorPermits.authenticate, which is absent in captured recovery.py; propose expects original_request_ids/original_occurrence_ids omitted by captured BranchVerifier. Treat these as fail-closed integration limitations, not exploitable vulnerabilities; re-audit after Sprint5 completes.",
+    "RecoveryRegistry._validate_reference at recovery_decisions.py:262-265 has a permissive fallthrough for some epoch/head mismatches. Current accepted initialization and next references are additionally compared to guard.trust_reference(current=True), and previous witness is derived from those admitted records, so no untrusted boundary bypass is established. Tighten generation membership before exposing any broader reference-import interface.",
+    "Port descriptor-relative all-component ownership/write-permission checks from the infrastructure securefs helper to application enrollment/restore/ledger paths, and pin trusted directory descriptors for publication/SQLite handling. This reduces explicit protected-ancestor assumptions; no other-UID exploit is claimed.",
+    "Keep HMAC keys, latest external minimum references, enrollment witness/reservation and registry reference independently custodied with a trustworthy clock. A genesis witness proves its ancestor, not freshness of all later history; coordinated custody rollback and same-UID/key compromise remain outside the documented local contract.",
+    "Logical size/row and archive/restore count bounds are not physical SQLite/WAL filesystem quotas. Preserve partial artifacts and plan operator-managed storage/capacity policy before live use."
+  ],
+  "uncovered": []
+}

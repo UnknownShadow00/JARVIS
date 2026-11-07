@@ -1,0 +1,757 @@
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+
+usage: /home/nexus/.local/share/jarvis-g6k-vm164-build-r1/iso-tool/root/usr/bin/xorriso [settings|actions]
+
+This program creates, loads, manipulates and writes ISO 9660 filesystem
+images with Rock Ridge extensions. Write targets can be drives with optical
+media or local filesystem objects.
+The program operations are controlled by a sequence of commands, of which
+the initial ones are given as program arguments or as lines in startup
+files. Further commands may get read from files in batch mode or from
+standard input in dialog mode.
+
+  -x             Only in effect if given as program argument:
+                 Execute commands given as program arguments in a sequence
+                 that most likely makes some sense. Default is to execute
+                 program arguments exactly in the sequence as given.
+
+Preparation commands:
+Drive addresses are either /dev/... as listed with command -devices or
+disk files, eventually with prefix "stdio:" if non-CD-drive in /dev tree.
+E.g. /dev/sr0 , /tmp/pseudo_drive , stdio:/dev/sdc
+  -dev address   Set input and output drive and load eventual ISO image.
+                 Set the image expansion method to growing.
+  -indev address  Set input drive and load eventual ISO image. Use expansion
+                 methods modifying or blind growing.
+  -outdev address
+                 Set output drive and use modifying or blind growing.
+  -drive_class "harmless"|"banned"|"risky"|"clear_list" disk_pattern
+                 Add a drive path pattern to one of the safety lists or make
+                 those lists empty. Defaulty entry in "risky" is "/dev".
+  -drive_access "exclusive"|"shared":"unrestricted"|"readonly"
+                 Enable or disable device file locking mechanisms.
+                 Enable or disable status and content changes of drive.
+  -scsi_dev_family "default"|"sr"|"scd"|"sg"
+                 Linux specific: Choose device file type.
+  -read_speed number["k/s"|"[x]CD"|"[x]DVD"|"[x]BD"]|keyword
+                 Set the read speed. Default is "none" = do not set speed
+                 before reading. Prefix "soft_force:" enables slowdown by
+                 software.
+  -grow_blindly "off"|predicted_nwa
+                 Switch between modifying and blind growing.
+  -load "session"|"track"|"lba"|"sbsector"|"volid"|"auto" id
+                 Load a particular (outdated) ISO session from a -dev or
+                 -indev which hosts more than one session.
+  -displacement [-]block_address
+                 When loading ISO tree or reading data files compensate a
+                 displacement versus the start address for which the image
+                 was prepared.
+  -read_fs "any"|"norock"|"nojoliet"|"ecma119"
+                 Specify which kind of filesystem tree to load if present.
+  -rom_toc_scan "on"|"force"|"off"[:"emul_on"|"emul_off"]
+                [:"emul_wide"|"emul_narrow"]
+                 Enable scanning for ISO sessions on read-only drives/media
+                 and on overwritable media with emulated TOC.
+  -calm_drive "in"|"out"|"all"|"on"|"off"
+                 Reduce drive noise until it gets actually used again.
+  -assert_volid pattern severity
+                 Accept input image only if its volume id matches pattern.
+  -charset name  Set the character set name to be used for file name
+                 conversion from and to media.
+  -in_charset name
+                 Like -charset but only for conversion from media.
+  -auto_charset "on"|"off"
+                 Enable writing and reading of character set name in image.
+  -out_charset name
+                 Like -charset but only for conversion to media.
+  -local_charset name
+                 Override system assumption of the local character set name.
+  -hardlinks mode[:mode ...]
+                 Enable or disable recording and restoring of hard links.
+                 Modes are "on", "off", "perform_update",
+                 "without_update", "discard_extract",
+                 "cheap_sorted_extract", "normal_extract"
+  -acl "on"|"off"
+                 Enable or disable reading and writing of ACLs.
+  -xattr "on"|"user"|"any"|"off"
+                 Enable or disable reading and writing of xattr.
+  -md5 "on"|"all"|"off"
+                 Enable or disable processing of MD5 checksums.
+  -for_backup
+                 Shortcut for: -hardlinks on -acl on -xattr any -md5 on
+  -ecma119_map "unmapped"|"stripped"|"uppercase"|"lowercase"
+                 Choose conversion of file names if neither Rock Ridge
+                 nor Joliet is present in the loaded ISO session.
+  -joliet_map "unmapped"|"stripped"
+                 Choose conversion of file names if the Joliet tree is read
+                 when loading the ISO session.
+  -iso_nowtime "dynamic"|timestring
+                 Choose use of current time or a fixed point in time for
+                 timestamps where libisofs would normally use the current
+                 (i.e. dynamic) time.
+  -disk_dev_ino "on"|"ino_only"|"off"
+                 Enable or disable recording of disk file dev_t and ino_t
+                 and their use in file comparison.
+  -scdbackup_tag list_path record_name
+                 Enable production of scdbackup tag with -md5 on
+  -ban_stdio_write
+                 Allow for writing only the usage of optical drives.
+  -early_stdio_test "on"|"appendable_wo"|"off"
+                 Classify stdio drives by effective access permissions.
+  -data_cache_size number_of_tiles blocks_per_tile
+                 Adjust size and granularity of the data read cache.
+  -blank ["force:"]"fast"|"all"|"deformat"|"deformat_quickest"
+                 Blank medium or invalidate ISO image on medium.
+                 Prefix "force:" overrides medium evaluation.
+  -truncate_overwritable entity id adjust
+                 Activate an older session on overwritable medium. Adjust
+                 its size to some value not smaller than original old size.
+  -close_damaged "as_needed"|"force"
+                 Close track and session of damaged medium.
+  -format "as_needed"|"full"|"fast"|"by_index_#"|"by_size_#"
+                 Format BD-RE, BD-R, DVD-RAM, DVD-RW, DVD+RW.
+  -volid volume_id
+                 Specifies the volume ID text. (32 chars out of [A-Z0-9_])
+  -volset_id name
+                 Specifies the volume set id. (128 chars)
+  -publisher name
+                 Specifies the publisher name. (128 chars)
+  -application_id name
+                 Specifies the application id. (128 chars)
+  -system_id name
+                 Specifies the system id for the System Area. (32 chars)
+  -volume_date type timestring
+                 Specifies volume timestamps. ["c","m","x","f","uuid"]
+  -copyright_file name
+                 Specifies the name of the Copyright File. (37 chars)
+  -biblio_file name
+                 Specifies the name of the Bibliographic File. (37 chars)
+  -abstract_file name
+                 Specifies the name of the Abstract File. (37 chars)
+  -application_use character|0xXY|disk_path
+                 Specifies the content of Application Use field. (512 bytes)
+                 A single character or a hex code gets repeated 512 times.
+                 Other text gets opened as data file and 512 bytes are read.
+  -joliet "on"|"off"
+                 Generate Joliet info additional to Rock Ridge info.
+  -hfsplus "on"|"off"
+                 Generate a HFS+ partition and filesystem within ISO image.
+  -rockridge "on"|"off"
+                 Opportunity to omit Rock Ridge info. (Do not do it !)
+  -jigdo "clear"|"template_path"|"jigdo_path"|"md5_path"
+         |"min_size"|"checksum_iso"|"checksum_template"
+         |"checksum_path"|"demand_checksum"|"checksum_algorithm"
+         |"compression"|"exclude"|"demand_md5"|"mapping"
+         |"checksum_iso"|"checksum_template"
+         value
+                 Clear Jigdo Template Extraction parameter list or add a
+                 parameter with its value to that list.
+  -compliance rule[:rule...]
+                 Allow more or less harmless deviations from strict standards
+                 compliance.
+  -rr_reloc_dir name
+                 Specifies name of relocation directory in root directory,
+                 to which deep subtrees will get relocated if -compliance
+                 is set to "deep_paths_off".
+  -boot_image "any"|"isolinux"|"grub"
+              |"discard"|"keep"|"patch"|"replay"
+              |"dir="|"bin_path="
+              |"cat_path="|"cat_hidden=on|iso_rr|joliet|off"
+              |"load_size="|"boot_info_table="
+              |"grub2_boot_info="|"grub2_mbr="|"partition_offset="
+              |"partition_hd_cyl="|"partition_sec_hd="
+              |"partition_cyl_align="|"mbr_force_bootable="
+              |"system_area="|"partition_table=on|off"
+              |"partition_entry="|"appended_part_as="
+              |"part_like_isohybrid="|"iso_mbr_part_type="
+              |"gpt_disk_guid="|"gpt_iso_bootable"|"gpt_iso_not_ro="
+              |"chrp_boot_part=on|off="|"prep_boot_part="
+              |"efi_boot_part="|"efi_boot_part=--efi-boot-image"
+              |"mips_path="|"mipsel_path="|"mips_discard"
+              |"sparc_label="|"grub2_sparc_core="|"sparc_discard"
+              |"hppa_cmdline="|"hppa_bootloader="|"hppa_kernel_32="
+              |"hppa_kernel_64="|"hppa_ramdisk="|"hppa_hdrversion="
+              |"hppa_discard"|"alpha_boot="|"alpha_discard"
+              |"hfsplus_serial="|"hfsplus_block_size="
+              |"apm_block_size="|"show_status"
+                 Whether to discard or keep an exiting El Torito boot image,
+                 or to freshly set up boot equipment. "replay" performs
+                 the commands proposed by -report_system_area "cmd".
+                 ISOLINUX can be made bootable by dir=/ or dir=/isolinux
+                 or dir=/boot/isolinux. Others, like GRUB, by bin_path=...
+                 and cat_path=...
+                 The boot image and its helper files need to be added to the
+                 ISO image by the usual commands like -map or -add.
+                 system_area= and partition_table= are for MBR based booting
+                 from USB stick. The system_area= file needs not to be added.
+                 chrp_boot_part= and prep_boot_part= are for PowerPC.
+                 efi_boot_part= is for booting EFI systems from USB stick.
+                 mips_path= adds Big Endian MIPS boot files. mipsel_path=
+                 sets one Little Endian MIPS boot file. sparc_label=
+                 activates SUN Disk Label. hppa_* is for HP PA-RISC via PALO.
+                 alpha_boot= is for DEC Alpha SRM. MIPS, SUN, HP, and Alpha
+                 are mutually exclusive and exclusive to production
+                 of MBR and to booting via EFI from USB stick.
+  -append_partition partition_number type_code disk_path
+                 Append a prepared filesystem image after the end of the
+                 ISO image. Caution: Will be overwritten by multi-session.
+
+  -uid uid       User id to be used for the whole multi-session ISO image.
+  -gid gid       Group id for the same purpose.
+
+  -devices       Show list of available optical drives and their addresses.
+  -device_links  Like devices, but showing link paths which are hopefully
+                 persistent over reboot on modern Linux systems.
+
+  -toc           Show media specific tables of content (sessions).
+  -toc_of "in"|"out"|"all"[":short"]
+                 Show -toc of either input drive or output drive or both.
+
+  -assess_indev_features "plain"|"cmd"|"as_mkisofs"|"replay"
+                 Inspect the filesystem on -indev for features like ISO level,
+                 Rock Ridge, or file name relaxations.
+
+  -mount_cmd drive entity id path
+                 Print to result channel a command suitable to mount the
+                 depicted entity (see -load) at the given directory path.
+  -mount_opts "exclusive"|"shared"
+                 Set options for -mount and -mount_cmd.
+  -session_string drive entity id "linux:"path|"freebsd:"path|form
+                 Print foreign OS command or custom line.
+
+  -list_formats  Show media specific list of format descriptors.
+
+  -list_speeds   Show media specific list of write speed descriptors.
+
+  -list_profiles "in"|"out"|"all"
+                 Show list of media types supported by indev and/or outdev.
+  -print_size    Print the foreseeable consumption by next -commit.
+
+  -tell_media_space
+                 Print foreseeable available space on output medium
+  -pvd_info      Print various id strings of the loaded ISO image.
+
+  -report_el_torito "plain"|"help"|"cmd"|"as_mkisofs"
+                 "plain" prints information about the El Torito boot catalog
+                 and boot images of the loaded ISO image.
+                 "help" prints an explanation of the output format.
+                 "cmd" and "as_mkisofs" propose commands to reproduce
+                 the boot equipment reported by -report_el_torito "plain"
+                 and -report_system_area "plain"
+  -report_system_area "plain"|"help"|"gpt_crc_of:"disk_path
+                      |"cmd"|"as_mkisofs"
+                 "plain" prints information about recognized data
+                 "help" prints an explanation of the output format.
+                 in the System Area of the loaded ISO image: MBR, GPT, ...
+                 "gpt_crc_of:" prints GPT CRC of file disk_path.
+                 For "cmd" and "as_mkisofs" see -report_el_torito.
+
+Commands with variable length path list [...] need the list delimiter text
+as end mark if they are followed by another command. By default this
+delimiter is "--". In dialog and with commands read from files, the line
+end serves as such a mark. With program arguments this mark can be omitted
+only with the last command in the list of program arguments.
+For brevity the list delimiter is referred as "--" throughout this text.
+
+  -list_delimiter text   Set the list delimiter to be used instead of "--"
+                 It has to be a single word, must not be empty, not longer
+                 than 80 characters, may not contain quotation marks.
+
+Manipulation commands:
+disk_path is a path to an object in the local filesystem tree.
+iso_rr_path is the Rock Ridge name of a file object in the ISO image.
+pathspec is either a disk_path or (if allowed) a pair: iso_rr_path=disk_path
+Commands marked by [***] have variable length parameter lists and perform
+pattern expansion if enabled by -iso_rr_pattern or -disk_pattern.
+
+  -pathspecs "on"|"off"|"as_mkisofs"
+                 Allow or disallow pathspecs of form iso_rr_path=disk_path
+                 Only "off" allows -disk_pattern expansion.
+  -file_name_limit number
+                 Set truncation size for file names [64 ... 255].
+  -file_size_limit value [...]
+                 Set limit for file content size. One or more numbers to add.
+  -add pathspec [...] | disk_path [***]
+                 Insert the given files or directory trees from
+                 filesystem into the ISO image. Much like mkisofs.
+  -add_plainly "none"|"unknown"|"dashed"|"any"
+                 Whether to add lonely arguments as pathspec or disk_path.
+  -path_list disk_path
+                 Like -add but read the pathspecs from file disk_path.
+  -quoted_path_list disk_path
+                 Like -path_list but with line rules as -dialog "on".
+
+  -map disk_path iso_rr_path
+                 Insert disk file object at the given iso_rr_path.
+  -map_single disk_path iso_rr_path
+                 Like -map but with directory do not insert its sub tree.
+  -map_l disk_prefix iso_rr_prefix disk_path [***]
+                 Performs -map with each disk_path.
+  -update disk_path iso_rr_path
+                 Compare both file objects and do what is necessary to make
+                 iso_rr_path a matching copy of disk_path.
+  -update_r disk_path iso_rr_path
+                 Like -update but affecting all files below directories.
+  -update_l disk_prefix iso_rr_prefix disk_path [***]
+                 Performs -update_r with each disk_path.
+  -update_li iso_rr_prefix disk_prefix iso_rr_path [***]
+                 Performs -update_r with each iso_rr_path.
+  -update_lxi disk_prefix iso_rr_prefix disk_or_iso_rr_path [***]
+                 Performs -update_r with each disk_path or corresponding
+                 iso_rr_path after exchange of disk_prefix by iso_rr_prefix.
+  -cut_out disk_path byte_offset byte_count iso_rr_path
+                 Map a byte interval of a regular disk file into a regular
+                 file in the ISO image.
+
+  -cpr disk_path [***] iso_rr_path
+                 Insert the given files or directory trees from filesystem
+                 into the ISO image, according to the rules of cp -r.
+
+  -rm iso_rr_path [***]
+                 Delete the given files from the ISO image.
+  -rm_r iso_rr_path [***]
+                 Delete the given directory trees from ISO image.
+  -move iso_rr_path iso_rr_path
+                 Rename the single file given by the first iso_rr_path to
+                 the second iso_rr_path.
+  -mv iso_rr_path [***] iso_rr_path
+                 Like shell command mv rename the given file objects in the
+                 ISO tree to the last of the iso_rr_path parameters.
+  -chown uid iso_rr_path [***]
+                 Equivalent to chown in the ISO image.
+  -chown_r uid iso_rr_path [***]
+                 Like -chown but affecting all files below directories.
+  -chgrp gid iso_rr_path [***]
+                 Equivalent to chgrp in the ISO image.
+  -chgrp_r gid iso_rr_path [***]
+                 Like -chgrp but affecting all files below directories.
+  -chmod mode iso_rr_path [***]
+                 Equivalent to chmod in the ISO image.
+  -chmod_r mode iso_rr_path [***]
+                 Like -chmod but affecting all files below directories.
+  -setfacl acl_text iso_rr_path [***]
+                 Replace the permissions and eventual ACL of the given files
+                 in the ISO image by the ACL which is defined by acl_text.
+  -setfacl_r acl_text iso_rr_path [***]
+                 Like -setfacl but affecting all files below directories.
+  -setfacl_list disk_path
+                 Read output of getfacl from file disk_path. Set owner,
+                 group and ACL of the iso_rr_path given by line "# file:".
+  -setfattr [-]name value iso_rr_path [***]
+                 Set xattr pair with the given name to the given value, or
+                 delete pair if name is prefixed with "-" and value is
+                 an empty text.
+  -setfattr_r [-]name value iso_rr_path [***]
+                 Like -setfattr but affecting all files below directories.
+  -setfattr_list disk_path
+                 Read output of getfattr from file disk_path. Replace the
+                 xattr of the iso_rr_path given by line "# file:".
+  -alter_date type timestring iso_rr_path [***]
+                 Alter the date entries of a file in the ISO image. type is
+                 one of "a", "m", "b" for:
+                 access time, modification time, both times.
+  -alter_date_r type timestring iso_rr_path [***]
+                 Like -alter_date but affecting all files below directories.
+  -hide on|iso_rr:joliet:hfsplus|off iso_rr_path [***]
+                 Keep names of files out of directory trees, but store their
+                 data content in the image.
+  -find iso_rr_path [test [op] [test ...]] [-exec action [params]]
+                 performs an action on files below the given directory in
+                 the ISO image. Tests:
+                   -name pattern, -wholename pattern, -disk_name pattern,
+                   -type b|c|d|p|f|l|s|e, -pending_data, -hidden,
+                   -lba_range start count, -damaged, -has_acl, -has_xattr,
+                   -has_aaip, -has_filter, -has_md5, -has_any_xattr,
+                   -has_hfs_crtp, -has_hfs_bless, -bad_outname,
+                   -name_limit_blocker, -maxdepth, -mindepth, -size,
+                   -prune, -decision yes|no, -true, -false
+                 Operators: -not, -or, -and, -sub, (, -subend, ),
+                   -if, -then, -elseif, -else, -endif
+                 Action may be one of: echo, chown, chown_r, chgrp, chgrp_r,
+                   chmod, chmod_r, alter_date, alter_date_r, set_to_mtime,
+                   lsdl, compare, rm, rm_r, compare, update, report_damage,
+                   report_lba, report_sections,
+                   getfacl, setfacl, getfattr, setfattr, get_any_xattr,
+                   list_extattr, get_md5, check_md5, make_md5,
+                   set_hfs_crtp, get_hfs_crtp, set_hfs_bless, get_hfs_bless,
+                   set_filter, show_stream, show_stream_id, mkisofs_r,
+                   hide, print_outname, estimate_size, find
+                 params are their parameters except iso_rr_path.
+  -mkdir iso_rr_path [...]
+                 Create empty directories if they do not exist yet.
+  -lns target_text iso_rr_path
+                 Create a symbolic link pointing to target_text
+  -rmdir iso_rr_path [***]
+                 Delete empty directories.
+  -clone iso_rr_path_original iso_rr_path_copy
+                 Create an ISO copy of an ISO file or ISO directory tree.
+  -cp_clone iso_rr_path_original [***] iso_rr_path_dest
+                 Create ISO to ISO copies according to the rules of cp -r.
+
+  --             Default list delimiter marking the end of command parameter
+                 lists. It may be changed by command -list_delimiter.
+
+  -not_paths disk_path [***]
+                 Add the given paths to the list of excluded absolute paths.
+  -not_leaf pattern
+                 Add the given pattern to the list of leafname exclusions.
+  -not_list disk_path
+                 Read lines from disk_path and use as -not_paths (with "/")
+                 or as -not_leaf (without "/").
+  -quoted_not_list disk_path
+                 Like -not_list but with line rules as -dialog "on".
+  -not_mgt "reset"|"on"|"off"|"param_on"|"subtree_on"|"ignore_on"
+                 Control effect of exclusion lists.
+  -follow "on"|"pattern:param:link:concat:mount:limit=#"|"default"|"off"
+                 Follow symbolic links and mount points within disk_path.
+  -overwrite "on"|"nondir"|"off"
+                 Allow or disallow to overwrite existing files in ISO image.
+  -split_size number["k"|"m"]
+                 Set the threshold for automatic splitting of regular files.
+  -reassure "on"|"tree"|"off"
+                 If "on" then ask the user for "y" or "n" with any
+                 file before deleting or overwriting it in the ISO image.
+
+Filter commands:
+External filter processes may produce synthetic file content by reading the
+original content from stdin and writing to stdout whatever they want.
+  -external_filter name option[:option] program_path [arguments] --
+                 Define an external filter. Options are: suffix=...: 
+                 remove_suffix:if_nonempty:if_reduction:if_block_reduction.
+  -unregister_filter name
+                 Undefine an external filter.
+  -close_filter_list
+                 Irrevocably ban -external_filter and -unregister_filter.
+  -set_filter name iso_rr_path [***]
+                 Apply a defined filter to the given data files.
+                 Special name "--remove-all-filters" revokes filtering.
+                 Builtin filters are --gzip , --gunzip, --zisofs .
+  -set_filter_r name iso_rr_path [***]
+                 Like -set_filter but affecting all files below directories.
+
+zisofs is a compression format which is recognized by some Linux kernels.
+xorriso supports it by builtin filter "--zisofs" which is to be applied by
+the user, and by "--zisofs-decode" which is applied automatically when
+compressed content is detected with a file in the ISO image.
+  -zisofs option[:options]
+                 Set global zisofs parameters:
+                   level=0|...|9 , block_size=32k|64k|128k , by_magic=on|off
+                   version_2=off|as_needed|on , block_size_v2=32k|...|1024k
+                   max_bpt=1k...128g , max_bpt_f=1k...128g , bpt_target=num
+                   bpt_free_ratio=-1|[0.0...1.0] , susp_z2=off|on
+Write-to-media commands:
+  -rollback      Discard the manipulated ISO image and reload it.
+
+  -changes_pending "no"|"yes"|"mkisofs_printed"|"show_status"
+                 Override the automatically determined change status of the
+                 loaded image, or show the current status.
+  -commit        Perform the write operation if changes are pending.
+                 Then perform -dev outdrive.
+                 Hint: To perform a final write operation with no new -dev
+                       and no new loading of image, execute command -end.
+  -commit_eject  "in"|"out"|"all"|"none"
+                 Like -commit but rather eject than load image from outdrive.
+                 Give up any unejected drive afterwards.
+  -write_type "auto"|"tao"|"sao/dao"
+                 Set write type for CD-R[W], DVD-R[W], DVD+R, BD-R.
+  -close "on"|"off"|"as_needed"
+                 If "on" then mark the written medium as not appendable.
+  -padding number["k"|"m"]|"included"|"appended"
+                 Append extra bytes to image stream. (Default is 300k)
+  -dummy "on"|"off"
+                 If "on" simulate burning. Refuse if medium cannot simulate.
+  -speed number["k/s"|"m/s"|"[x]CD"|"[x]DVD"|"[x]BD"]
+                 Set the burn speed. Default is "max" = maximum speed.
+  -stream_recording "on"|"off"
+                 Try to circumvent slow checkread on DVD-RAM, BD-RE, BD-R.
+  -modesty_on_drive ["on"|"off"|min_percent_number]
+                    [:"min_percent="number][:"max_percent="number]
+                    [:"min_usec="number][:"max_usec"=number]
+                    [:"timeout_sec="number]
+                 Keep drive buffer hungry to ease concurrent burn run.
+  -dvd_obs "default"|"32k"|"64k"|"obs_pad"|"bdr_obs_exempt"
+                 Set number of bytes per DVD/BD write operation or control
+                 end alignment padding with DAO DVD-R[W] or BD-R.
+  -use_immed_bit "on"|"off"|"default"
+                 Control whether long running SCSI commands shall run
+                 asynchronously with progress messages.
+  -stdio_sync "on"|"off"|"end"|number
+                 Set number of bytes after which to force output to stdio
+                 pseudo drives. "on" is the same as 16m.
+  -fs number["k"|"m"]
+                 Set the size of the fifo buffer. (Default is 4m)
+  -eject "in"|"out"|"all"
+                 Immediately eject the medium in -indev, -outdev, or both.
+
+Navigation commands:
+
+  -cd iso_rr_path  Change working directory in the ISO image. iso_rr_paths
+                 which do not begin with '/' will be inserted beginning at
+                 the path given with -cd. -ls patterns will eventually
+                 looked up at this path.
+  -cdi disk_path   Same as -cd disk_path
+  -cdx disk_path  Change the current working directory in the local
+                 filesystem. disk_paths which do not begin with '/'
+                 will be looked up beginning at the path given with -cdx.
+                 -lsx patterns will eventually be looked up at this path.
+  -pwd           tells the current working directory in the ISO image.
+  -pwdi          same as -pwd.
+  -pwdx          tells the current working directory in the local filesystem.
+
+  -iso_rr_pattern "on"|"ls"|"off"
+                 Enable or disable pattern expansions for ISO image commands
+                 marked by [***]. "ls" restricts it to -ls and -du.
+  -disk_pattern "on"|"ls"|"off"
+                 Enable or disable pattern expansions for local filesystem
+                 commands marked by [***]. "ls" restricts to -ls*x and -du*x.
+
+  -ls pattern [***]  lists files of the ISO image which match one of the
+                 given shell parser patterns. (I.e. wildcards '*' '?').
+                 Directories are listed by their content.
+  -lsd pattern [***]   like -ls but listing directories as single items.
+  -lsl pattern [***]   like -ls but also telling some file attributes.
+  -lsdl pattern [***]  like -lsd but also telling some file attributes.
+
+  -lsx pattern [***]   lists files of the local filesystem which match one
+                 of the patterns. Directories are listed by their content.
+  -lsdx pattern [***]  like -lsx but listing directories as single items.
+  -lslx pattern [***]  like -lsx but also telling some file attributes.
+  -lsdlx pattern [***] like -lsdx but also telling some file attributes.
+  -getfacl pattern [***]     list eventual ACLs of the given files.
+  -getfacl_r pattern [***]   like -getfacl but listing whole file trees.
+  -getfattr pattern [***]    list eventual xattr of the given files.
+  -getfxattr_r pattern [***] like -getfxattr but listing whole file trees.
+
+  -du pattern [***]  recursively lists sizes of files or directories in the
+                 ISO image which match one of the shell parser patterns.
+  -dux pattern [***]  recursively lists sizes of files or directories in the
+                 local filesystem which match one of the shell parser
+                 patterns.
+  -dus pattern [***]  like -du but summing up subdirectories without
+                 listing them explicitly.
+  -dusx pattern [***]  like -dux but summing up subdirectories without
+                 listing them explicitly.
+
+  -findx disk_path [-name pattern] [-type t] [-exec action [params]]
+                 Like -find but operating on local filesystem. Most -exec
+                 actions are defaulted to action echo. Supported actions are:
+                  in_iso, not_in_iso, is_full_in_iso, add_missing,
+                  empty_iso_dir
+
+  -compare disk_path iso_rr_path
+                 compare attributes and in case of regular data files the
+                 content of filesystem object and ISO object.
+  -compare_r disk_path iso_rr_path
+                 Like -compare but affecting all files below directories.
+  -compare_l disk_prefix iso_rr_prefix disk_path [***]
+                 Performs -compare_r with each disk_path.
+
+  -show_stream iso_rr_path [***]
+                 Show content stream chain of data files in the ISO image.
+  -show_stream_r iso_rr_path [***]
+                 Like -show_stream but affecting all files below directories.
+
+Restore commands which copy file objects from ISO image to disk filesystem:
+  -osirrox "on"|"device_files"|"off"|"blocked"|"unblock"|"banned"
+           [:"concat_split_on"|"concat_split_off"]
+           [:"auto_chmod_on"|"auto_chmod_off"]
+           [:"sort_lba_on"|"sort_lba_off"]
+           [:"strict_acl_on"|"strict_acl_off"]
+           [:"check_md5_on"|"check_md5_off"|"check_md5_force"]
+           [:"sparse=off"|"sparse="number]
+                 By default "off" the inverse operation of xorriso from ISO
+                 image to disk filesystem is disabled. "on" allows xorriso
+                 to create, overwrite, delete files in the disk filesystem.
+                 "banned" is irrevocably "off". "blocked" can only be
+                 revoked by "unblock". ("device_files" is dangerous.)
+  -extract iso_rr_path disk_path
+                 Copy tree under iso_rr_path onto disk address disk_path.
+                 This avoids the pitfalls of cp -r addressing rules.
+  -extract_l iso_rr_prefix disk_prefix iso_rr_path [***]
+                 Perform -extract with each iso_rr_path.
+  -extract_single iso_rr_path disk_path
+                 Like -extract but with directory do not restore sub tree.
+  -extract_cut iso_rr_path byte_offset byte_count disk_path
+                 Copy a byte interval from iso_rr_path to disk_path.
+                 This is governed in part by -check_media_defaults.
+  -extract_boot_images disk_path
+                 Copy boot images into files in directory disk_path with
+                 names which tell the role inside the ISO.
+  -cpx iso_rr_path [***] disk_path
+                 Copy leaf file objects from ISO image to disk filesystem.
+  -cpax iso_rr_path [***] disk_path
+                 Like -cpx but trying to restore timestamps and ownership.
+  -cp_rx iso_rr_path [***] disk_path
+                 Copy directory trees from ISO image to disk filesystem.
+  -cp_rax iso_rr_path [***] disk_path
+                 Like -cp_rx but trying to restore timestamps and ownership.
+  -paste_in iso_rr_path disk_path byte_offset byte_count
+                 Copy ISO file content into a byte interval of a disk file.
+  -concat "append"|"overwrite" target iso_rr_path [***]
+                 Write content of iso_rr_paths into disk file target. Target
+                 may be a disk_path or "-" for writing to standard output.
+  -concat "pipe" lim prog [args [...]] lim iso_rr_path [***]
+                 Start prog with given args and write content of iso_rr_paths
+                 into its standard input. prog must at least contain one '/'.
+                 lim may be any word that is not among prog and args.
+  -mount drive entity id path
+                 Like -mount_cmd but actually performing that command if
+                 not setuid or setgid is active.
+
+Evaluation of readability:
+  -check_media [options] --
+                 Try to read data blocks from the medium and report about the
+                 outcome. Several options modify the behavior:
+                  use=indev|outdev , what=track|session ,
+                  min_lba=blockadr , max_lba=blockadr ,
+                  abort_file=path , time_limit=seconds , item_limit=number ,
+                  retry=on|off|default , data_to=filepath ,
+                  sector_map=filepath , map_with_volid=on|off ,
+                  patch_lba0=on|off|force|blockadr[:force] ,
+                  report=blocks|files|blocks_files event=severity ,
+                  bad_limit=quality , slow_limit=seconds , chunk_size=bytes
+  -check_media_defaults [options] --
+                 Preset options for runs of -check_media and -extract_cut.
+
+Compatibility emulation (option list may be ended by list delimiter --):
+  -as mkisofs  [-help|-version|-o|-R|-r|-J|-V|-P|-f|-m|-exclude-list|
+                -no-pad|-M|-C|-graft-points|-path-list|pathspecs|-z|
+                -no-emul-boot|-b|-c|-boot-info-table|-boot-load-size|-G|...]
+              Perform some mkisofs gestures, understand pathspecs as mkisofs
+              does. Commit happens outside emulation at usual occasions.
+              For a list of options see -as mkisofs -help.
+  -read_mkisofsrc
+              Read and interpret the .mkisofsrc configuration file.
+  -as cdrecord [-help|-v|dev=|speed=|blank=|fs=|-eject|-atip|padsize=|-multi]
+               path|-
+              Perform some cdrecord gestures, eventually write at most one
+              data track to blank, appendable or overwritable media.
+  -pacifier "xorriso"|"cdrecord"|"mkisofs"
+              Choose format of UPDATE pacifier during write operations.
+
+General commands:
+  -help       Print this text
+  -abort_on severity   Set the threshold for events to abort the program.
+              Useful severities: NEVER, ABORT, FATAL, FAILURE, SORRY, WARNING
+  -return_with severity exit_value   Set the threshold for events to return
+              at program end the given exit_value even if not aborted.
+              exit_value may be 0 or 32 to 63.
+  -report_about severity   Set the threshold for events to be reported.
+              Use -abort_on severities or: HINT, NOTE, UPDATE, DEBUG, ALL
+  -signal_handling "on"|"off"|"sig_dfl"|"sig_ign"
+              Handling of signals. Default "on" uses libburn handler.
+  -error_behavior "image_loading"|"file_extraction" behavior
+              Behavior "best_effort" is most endurant but may produce
+              results which are correct only on the first glimpse.
+  -dialog "on"|"off"|"single_line"
+              After all program arguments are processed, enter dialog mode.
+              "single_line" does not support newline characters within
+              open quotation marks and no line continuation by trailing \.
+  -page len width  Prompt user after len output lines (0=no prompt).
+              width (default 80) can adjust line number computation
+              to the output terminal's line width.
+  -use_readline "on"|"off"
+              Whether to use libreadline for dialog if available.
+  -history text  Copy text into libreadline history. This command
+              itself is not copied to the history list.
+  -sh_style_result "on"|"off"
+              If "on" do not wrap file addresses in quotation marks with
+                -pwd -pwdx -ls -lsd -lsl -lsdl -lsx -lsdx -lslx -lsdlx
+                -du -dus -dux -dusx -findx -find
+  -backslash_codes "on"|"off"|
+                   "in_double_quotes"|"in_quotes"|"with_quoted_input"
+                   [:"with_program_arguments"][:"encode_output"]
+              Disable or enable interpretation of \a \b \e \f \n \r \t \v
+              \\ \NNN \xNN \cC in input or program arguments.
+  -pkt_output "on"|"off"  Direct output to stdout and prefix each line
+              by a short header which tells channel id and a mode number.
+              Each such output packet is finalized by a newline.
+              Channel ids are 'R:' for result lines, 'I:' for notes
+              and error messages, 'M:' for -mark texts. Bit 0 of the
+              mode number tells whether the newline is also part of the
+              packet payload. Example of a info message with newline:
+                I:1: enter option text :
+              -pkt_output:on is intended for use by frontend programs.
+  -msg_op "start_sieve"|"read_sieve"|"clear_sieve"|"end_sieve"|
+          "parse"|"parse_silently"|"parse_bulk"|"parse_bulk_silently"|
+          "compare_sev"|"list_sev" param_text
+              Enable, use, or disable message sieve. Or parse lines into
+              words. Or compare or list severity names.
+  -named_pipes_loop mode[:mode]
+                    disk_path_stdin disk_path_stdout disk_path_stderr
+              Enter an EOF resistant dialog loop at a named pipe as input
+              and zero, one or two named pipes as output. "-" = no pipe.
+              Mode "cleanup" removes pipes at loop end. "keep" does not.
+              Mode "buffered" reads all lines from input pipe before it
+              opens the output pipes. "direct" opens after first input.
+  -launch_frontend program [args ...] --
+              Start a program, connect its stdin to xorriso stdout and
+              stderr, connect its stdout to xorriso stdin.
+              Use any given parameters as arguments for the started program.
+  -logfile channel fileaddress  Copy output of a channel to the given file.
+              channel may be 'R','I','M' as with -pkt_output or '.'
+              for the consolidated -pkt_output stream.
+  -mark text  If text is not empty it will get put out each time a command
+              is completed.
+  -temp_mem_limit number["k"|"m"]
+              Set the maximum size for pattern expansion. (Default is 16m)
+  -prog text  Use text as this program's name in subsequent messages
+  -prog_help text  Use text as this program's name and perform -help
+  -status mode|filter  Report the current settings of persistent commands.
+              Modes:
+                 short... print only important or altered settings
+                 long ... print settings even if they have default values
+                 long_history  like long plus -history: lines
+              Filters begin with '-' and are compared literally against the
+              output lines of -status long_history. A line is put out only
+              if its start matches the filter.
+  -status_history_max number  Maximum number of history lines to be reported
+              with -status:long_history
+  -options_from_file fileaddress
+              Reads lines from the given file and executes them as commands.
+  -no_rc      Only if used as first program argument, this command
+              prevents reading and interpretation of these startup files:
+               /etc/default/xorriso , /etc/opt/xorriso/rc
+               /etc/xorriso/xorriso.conf , $HOME/.xorrisorc
+  -print text
+              Print a text to result channel.
+  -print_info text
+              Print a text to info channel.
+  -print_mark text
+              Print a text to mark channel.
+  -prompt text
+              Wait for Enter key or for a line of input at stdin.
+  -sleep number
+              Do nothing during the given number of seconds.
+  -errfile_log mode path|channel
+              Log disk paths of files involved in problem events.
+  -session_log path
+              Set path of a file where a log record gets appended after
+              each session. Form: timestamp start_lba size volume-id
+  -scsi_log "on"|"off"
+              Enable or disable logging of SCSI commands to stderr.
+  # any text  Is ignored. In dialog mode the input line will be stored in
+              the eventual readline history, nevertheless.
+  -list_extras code
+              Tell whether certain extra features were enabled at compile
+              time. Code "all" lists all features and a headline. Other
+              codes pick a single feature. "codes" lists the known codes.
+  -list_arg_sorting
+              Print the sorting order of xorriso commands with option -x.
+  -version    Tell program and version number
+  -end        End program. Commit eventual pending changes.
+  -rollback_end
+              End program. Discard pending changes.
+
+
+Command -page causes a user prompt after the given number of result lines.
+Empty input resumes output until the next prompt. Other input may be:
+  @     suppresses paging until the current action is done
+  @@    suppresses further result output but continues the action
+  @@@   aborts the current action
+  other aborts the current action and executes input as new command
+
+Report any bugs to bug-xorriso@gnu.org or in private to scdbackup@gmx.net .
+
+

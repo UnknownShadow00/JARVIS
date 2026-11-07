@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import asyncio
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -23,10 +24,19 @@ _EMOTION_TAG_RE = re.compile(r"\[EMOTION:([a-z_]+)\]", re.IGNORECASE)
 class UE5ConnectionManager:
     def __init__(self) -> None:
         self.active: list[WebSocket] = []
+        self._accepting = 0
 
-    async def connect(self, ws: WebSocket) -> None:
-        await ws.accept()
-        self.active.append(ws)
+    async def connect(self, ws: WebSocket) -> bool:
+        if len(self.active) + self._accepting >= 32:
+            await ws.close(code=1008, reason="connection_bound")
+            return False
+        self._accepting += 1
+        try:
+            await ws.accept()
+            self.active.append(ws)
+            return True
+        finally:
+            self._accepting -= 1
 
     def disconnect(self, ws: WebSocket) -> None:
         if ws in self.active:
@@ -36,7 +46,7 @@ class UE5ConnectionManager:
         dead: list[WebSocket] = []
         for ws in self.active:
             try:
-                await ws.send_json(data)
+                await asyncio.wait_for(ws.send_json(data), timeout=2)
             except Exception:
                 dead.append(ws)
         for ws in dead:

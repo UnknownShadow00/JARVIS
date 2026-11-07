@@ -1,0 +1,139 @@
+{
+  "units": [
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3-review-r1%2Fsrc%2Fentry.py::tasks%2Fproxmox-automation-phase3-review-r1%2Fsrc%2Fg6k_serial%2Fruntime.py::tasks%2Fproxmox-automation-phase3-review-r1::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "PROJECT_STATUS.md",
+        "tasks/proxmox-automation-phase3-review-r1/APPROVAL-PACKET.md",
+        "tasks/proxmox-automation-phase3-review-r1/INSTALLATION.md",
+        "tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md",
+        "tasks/proxmox-automation-phase3-review-r1/PROGRESS.md",
+        "tasks/proxmox-automation-phase3-review-r1/README.md",
+        "tasks/proxmox-automation-phase3-review-r1/RELEASE.json",
+        "tasks/proxmox-automation-phase3-review-r1/STOP-AND-REVOKE.md",
+        "tasks/proxmox-automation-phase3-review-r1/approval.example.json",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.service",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.socket",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-worker.service",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.service",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.socket",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/host.example.json",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/worker.example.json",
+        "tasks/proxmox-automation-phase3-review-r1/src/SOURCE-SHA256SUMS",
+        "tasks/proxmox-automation-phase3-review-r1/src/entry.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/__init__.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/broker.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/hardening.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/policy.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/transport.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/worker.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/support.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/test_boundaries.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/test_review_r1.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/test_transport.py",
+        "tasks/proxmox-automation-phase3-review-r1/tools/build_release.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra-current-chain",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/src/entry.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/worker.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/policy.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py"
+          ],
+          "invariant": "Current successor authenticates kernel channel identity and binds the narrow fixed action, grant, target and response across broker/worker lifecycle.",
+          "method": "source",
+          "result": "runtime.py34-92 checks SO_PEERCRED/SO_PEERGROUPS, exact caller/service UID/GID and restricted account groups, root-controlled unchanged grant/activation/release and monotonic expiry. Broker.conversation20-25 retains the operation lock through runtime.connection118-126 receipt commit. Fresh challenge/hello synchronization precedes durable reserve/send; worker.py99-130 consumes a bound session and preserves UNKNOWN/RESERVED ambiguity. Entry/public_request offer only three fixed inspection actions. Disabled precheck149-153 has neither ledger nor credential/PVE transport; normal and precheck sockets/markers are distinct. Operator issuance remains root/private-TTY only and is not reachable through the public catalog. No surviving chain bypass.",
+          "artifact": null,
+          "source_snapshot": "snapshot-expanded"
+        },
+        {
+          "agent_id": "hunt-infra-current-chain",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/transport.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/worker.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/hardening.py"
+          ],
+          "invariant": "Caller or guest text cannot select arbitrary management routes, terminal commands, executable data or unbounded transport work.",
+          "method": "source",
+          "result": "transport.py236-344 pins CA hash, TLS hostname and endpoint, allows only fixed management GETs and serial0 termproxy POST, bounds/validates HTTP and WebSocket framing, and closes channels on revocation. Serial synchronization accepts only the exact startup/beacon protocol within byte/time budgets. Protocol/worker schemas bound identifiers and report values; reports stay explicitly untrusted data. Worker framing is recreated per exchange and abandoned empty handshakes discard the session. Runtime caps four connection threads; worker installs fail-closed Linux x86_64 seccomp after startup. Effective installed filters/TTY/identity/TLS compatibility are external qualification facts, not established here.",
+          "artifact": null,
+          "source_snapshot": "snapshot-expanded"
+        },
+        {
+          "agent_id": "hunt-infra-current-chain",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/src/SOURCE-SHA256SUMS",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/__init__.py",
+            "tasks/proxmox-automation-phase3-review-r1/tools/build_release.py",
+            "tasks/proxmox-automation-phase3-review-r1/RELEASE.json",
+            "tasks/proxmox-automation-phase3-review-r1/README.md",
+            "tasks/proxmox-automation-phase3-review-r1/PROGRESS.md",
+            "tasks/proxmox-automation-phase3-review-r1/APPROVAL-PACKET.md",
+            "tasks/proxmox-automation-phase3-review-r1/INSTALLATION.md",
+            "tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md",
+            "tasks/proxmox-automation-phase3-review-r1/STOP-AND-REVOKE.md",
+            "tasks/proxmox-automation-phase3-review-r1/approval.example.json",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.service",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.service",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-worker.service",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.socket",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.socket",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/host.example.json",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/worker.example.json",
+            "PROJECT_STATUS.md"
+          ],
+          "invariant": "Review the documented current successor and its source/release/unit boundaries rather than assuming older source equivalence or live authorization.",
+          "method": "source",
+          "result": "PROJECT_STATUS89-94 selects this successor; PROGRESS/README and approval packet state candidate-only, no activation or live qualification. Independently hashed all13 current source entries: each matches SOURCE-SHA256SUMS and its SHA2569e5bdd0ea59fa36021f462f4388597fefd4b65f9cee32024e86ba5d33d700301 matches RELEASE.json. Build tool uses fixed public inputs and exclusive archive creation but was not run; the archive itself was not opened or executed. Source verifier walks protected files with no-follow owner checks; unit templates use dedicated non-root identities, empty capabilities, filesystem restrictions and finite resources; precheck has AF_UNIX-only/no egress. Example configs remain disabled with unbound values, and approval fields are explicitly pending. No installed enforcement or authorization is inferred from hashes/templates.",
+          "artifact": null,
+          "source_snapshot": "snapshot-expanded"
+        },
+        {
+          "agent_id": "hunt-infra-current-chain",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_boundaries.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_review_r1.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_transport.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/support.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/policy.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/transport.py"
+          ],
+          "invariant": "Current-source synthetic cases enforce caller/target scope, revocation, receipt locking, fresh synchronization, precheck separation and bounded transport parsing.",
+          "method": "local",
+          "result": "Trusted parent executed current_chain_controls.py sequentially against snapshot-expanded in its isolated OS sandbox and promoted output: exit0,8 tests OK in0.020s. Cases cover no caller authority/arguments, PVE-state/device/permission drift rejection, source/activation revocation, operation lock through authenticated receipt despite a contender, stale readiness rejection, structurally disabled precheck, and HTTP/WebSocket parser refusals. A tiny synthetic test certificate was generated only inside scratch with OPENSSL_CONF=/dev/null; no external service, real PVE/token/credential/activation operation occurred. Reviewer executed no target code.",
+          "artifact": "agents/hunt-infra-current-chain/artifacts/current_chain_controls.txt",
+          "source_snapshot": "snapshot-expanded"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Current successor source review and eight bounded checks do not qualify actual restricted UIDs/groups/capabilities/FDs, effective unit drop-ins and filesystem ownership, PVE token rights/TLS schema, guest identity/no-NIC/TTY exclusivity, seccomp or systemd filters. Those remain explicitly external operator observations; no production/Gate6K operation was performed.",
+    "The source manifest matches the current13-file candidate, but neither an unsigned local digest nor RELEASE.json is approval or independent deployment provenance. The release archive was not inspected, built, installed or executed during this pass.",
+    "Host receipt omission deliberately halts this single-caller grant and retains evidence. No privilege gain or separately substantiated shared-service denial follows from that documented fail-closed behavior. Guest reports are deliberately untrusted and cannot authorize actions."
+  ],
+  "uncovered": []
+}

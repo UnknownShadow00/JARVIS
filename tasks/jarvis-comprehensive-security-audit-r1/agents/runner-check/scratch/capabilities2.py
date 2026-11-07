@@ -1,0 +1,2 @@
+import sys,os,importlib.util,resource,json
+print(json.dumps({'python':sys.version.split()[0],'environment':dict(os.environ),'limits':{str(k):resource.getrlimit(k) for k in (resource.RLIMIT_CPU,resource.RLIMIT_AS,resource.RLIMIT_NPROC,resource.RLIMIT_NOFILE,resource.RLIMIT_FSIZE)},'dependencies':{n:bool(importlib.util.find_spec(n)) for n in ('fastapi','httpx','pydantic','pydantic_settings','yaml','pytest','psutil','apscheduler','numpy')},'scratch_bytes':os.statvfs('/scratch').f_blocks*os.statvfs('/scratch').f_frsize}))

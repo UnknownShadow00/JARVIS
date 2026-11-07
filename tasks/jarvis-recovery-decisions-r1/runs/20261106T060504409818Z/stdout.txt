@@ -1,0 +1,203 @@
+......................................FFF............................    [100%]
+=================================== FAILURES ===================================
+_ test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-propose] _
+
+registry = (<app.agent.recovery_decisions.RecoveryRegistry object at 0x76b5b3c97540>, <app.agent.authority.Authority object at 0x...66208841676238121cc9d70d118e7d0c216'}}, 'replayed': False, 'execution_enabled': False, 'activation_authorized': False})
+command = 'propose', stage = 'recovery_before_sql_commit'
+
+    @pytest.mark.parametrize('command',['propose','decide','renew'])
+    @pytest.mark.parametrize('stage',['recovery_intent_durable','recovery_before_sql_commit','recovery_sql_committed','recovery_receipt_durable'])
+    def test_independent_sigkill_registry_reconciliation(registry,command,stage):
+>       child_case(registry,command,stage)
+
+/input/tests/test_recovery_decisions.py:292: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_recovery_decisions.py:279: in child_case
+    result=restarted.apply(ACTOR,op,command,body,p)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:29: in checked
+    try:return method(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:476: in apply
+    self._recover_sqlite_journal(request_id,command,payload,permit)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.recovery_decisions.RecoveryRegistry object at 0x76b5b3c96990>
+request_id = 'f63864ce-254d-491d-a179-f75e63de0c61', command = 'propose'
+payload = {'directory': '/work/pytest/test_independent_sigkill_regis3/case/targets/772852c6-cc61-4ee5-81f8-7558d1fc48b9', 'verif...6dfb8765c013023ae837', ...}, 'verification_sha256': '39d73a8ea83dcb860e95cdccfa3d1bbeb6a382fe7f0e489a0b72fb33b447b01d'}
+permit = {'body': {'checkpoint': {'checkpoint_hash': 'ccfe9d5760d9d64a3e65a1fa893441d7253ddc971affc70a23682e03c1e52bad', 'seque...-11-06T06:05:36.464985+00:00', ...}, 'hmac_sha256': 'd41962d9c139d0466bed41a1964e5d869d33ba3c6f6bce0e48074005beb5cf77'}
+
+    def _recover_sqlite_journal(self, request_id, command, payload, permit):
+        journal=self.database.with_name(self.database.name+'-journal')
+        if not journal.exists():return
+        # SQLite may need a writable open to roll back spilled, uncommitted
+        # pages. Admit that open only for the exact independently authenticated
+        # last intent. Read-only inspection never invokes this path.
+        events,commits,history_state=self._protected_history()
+        if not events or commits[-1] is not None:
+            raise AuthorityError('recovery_sqlite_reconciliation_required')
+        self._derive(events,len(events)-1,history_state)
+        event,_=events[-1]
+        if (event['registry_id']!=self.config['registry_id'] or event['config_sha256']!=fingerprint(self.config)
+            or event['request_id']!=request_id or event['command']!=command
+            or event['payload']!=payload or event['permit']!=permit
+            or self._path(event['sequence'],'final').exists()):
+            raise AuthorityError('recovery_sqlite_reconciliation_binding_mismatch')
+        read_file(journal,32*1024*1024)
+        self._fence();self.guard._writable()
+        conn=self._connect(write=True)
+        try:
+            if conn.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:
+                raise AuthorityError('recovery_registry_corrupt')
+        finally:conn.close()
+        if journal.exists():
+>           raise AuthorityError('recovery_sqlite_journal_unresolved')
+E           app.agent.authority.AuthorityError: recovery_sqlite_journal_unresolved
+
+/input/source/app/agent/recovery_decisions.py:461: AuthorityError
+_ test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-decide] _
+
+registry = (<app.agent.recovery_decisions.RecoveryRegistry object at 0x76b5b4000050>, <app.agent.authority.Authority object at 0x...111cdff32a4fe9339d4457e16982a2dd0c1'}}, 'replayed': False, 'execution_enabled': False, 'activation_authorized': False})
+command = 'decide', stage = 'recovery_before_sql_commit'
+
+    @pytest.mark.parametrize('command',['propose','decide','renew'])
+    @pytest.mark.parametrize('stage',['recovery_intent_durable','recovery_before_sql_commit','recovery_sql_committed','recovery_receipt_durable'])
+    def test_independent_sigkill_registry_reconciliation(registry,command,stage):
+>       child_case(registry,command,stage)
+
+/input/tests/test_recovery_decisions.py:292: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_recovery_decisions.py:279: in child_case
+    result=restarted.apply(ACTOR,op,command,body,p)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:29: in checked
+    try:return method(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:476: in apply
+    self._recover_sqlite_journal(request_id,command,payload,permit)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.recovery_decisions.RecoveryRegistry object at 0x76b5b40001b0>
+request_id = '7ea59169-c866-4062-ad78-cef72e3a2f0e', command = 'decide'
+payload = {'expires_at': '2026-11-06T06:06:38.363675+00:00', 'previous_decision_id': None, 'proposal_id': '8dd7069e-d950-430e-8e58-5d450eaacc9f', 'proposal_sha256': '861c32f7f54c059b8bf6fb06460eeeaa67ad6a240c5e0561556da174d5314df6', ...}
+permit = {'body': {'checkpoint': {'checkpoint_hash': '421ea3d24e1f6251d514c383b06a5ced764f7261f82962618a164eb7721533e4', 'seque...-11-06T06:05:37.366129+00:00', ...}, 'hmac_sha256': '4f14c1387e683ea6bc3b21a78ac895056f0e6bfe3e98cf72895b8cb2c97a7948'}
+
+    def _recover_sqlite_journal(self, request_id, command, payload, permit):
+        journal=self.database.with_name(self.database.name+'-journal')
+        if not journal.exists():return
+        # SQLite may need a writable open to roll back spilled, uncommitted
+        # pages. Admit that open only for the exact independently authenticated
+        # last intent. Read-only inspection never invokes this path.
+        events,commits,history_state=self._protected_history()
+        if not events or commits[-1] is not None:
+            raise AuthorityError('recovery_sqlite_reconciliation_required')
+        self._derive(events,len(events)-1,history_state)
+        event,_=events[-1]
+        if (event['registry_id']!=self.config['registry_id'] or event['config_sha256']!=fingerprint(self.config)
+            or event['request_id']!=request_id or event['command']!=command
+            or event['payload']!=payload or event['permit']!=permit
+            or self._path(event['sequence'],'final').exists()):
+            raise AuthorityError('recovery_sqlite_reconciliation_binding_mismatch')
+        read_file(journal,32*1024*1024)
+        self._fence();self.guard._writable()
+        conn=self._connect(write=True)
+        try:
+            if conn.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:
+                raise AuthorityError('recovery_registry_corrupt')
+        finally:conn.close()
+        if journal.exists():
+>           raise AuthorityError('recovery_sqlite_journal_unresolved')
+E           app.agent.authority.AuthorityError: recovery_sqlite_journal_unresolved
+
+/input/source/app/agent/recovery_decisions.py:461: AuthorityError
+_ test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-renew] _
+
+registry = (<app.agent.recovery_decisions.RecoveryRegistry object at 0x76b5b40003c0>, <app.agent.authority.Authority object at 0x...752c58a8b8b15fce5c949d2ef57807364b0'}}, 'replayed': False, 'execution_enabled': False, 'activation_authorized': False})
+command = 'renew', stage = 'recovery_before_sql_commit'
+
+    @pytest.mark.parametrize('command',['propose','decide','renew'])
+    @pytest.mark.parametrize('stage',['recovery_intent_durable','recovery_before_sql_commit','recovery_sql_committed','recovery_receipt_durable'])
+    def test_independent_sigkill_registry_reconciliation(registry,command,stage):
+>       child_case(registry,command,stage)
+
+/input/tests/test_recovery_decisions.py:292: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/tests/test_recovery_decisions.py:279: in child_case
+    result=restarted.apply(ACTOR,op,command,body,p)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:29: in checked
+    try:return method(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/recovery_decisions.py:476: in apply
+    self._recover_sqlite_journal(request_id,command,payload,permit)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.recovery_decisions.RecoveryRegistry object at 0x76b5b4000c00>
+request_id = '33ea5891-c1f3-4a66-8c79-c2005f581f23', command = 'renew'
+payload = {'next_reference': {'epoch': 2, 'expires_at': '2026-11-06T06:07:39.248949+00:00', 'head': {'checkpoint_hash': 'bc5dd09...4e0f0cc359a'}, 'key_id': 'ab6ea51346482b0affbdcd9baee4ee58aa33b42073cf6dfb8765c013023ae837', ...}, 'renewal_id': None}}
+permit = {'body': {'checkpoint': {'checkpoint_hash': 'bc5dd09e19bc7ca19a6fbec4d5accb506cd777ad15df8f95b93dcb572b766996', 'seque...-11-06T06:05:38.250334+00:00', ...}, 'hmac_sha256': '541fd006b556794997fe53a1585c1cc62f7f18d4c1091c0fa95a39514dc478b8'}
+
+    def _recover_sqlite_journal(self, request_id, command, payload, permit):
+        journal=self.database.with_name(self.database.name+'-journal')
+        if not journal.exists():return
+        # SQLite may need a writable open to roll back spilled, uncommitted
+        # pages. Admit that open only for the exact independently authenticated
+        # last intent. Read-only inspection never invokes this path.
+        events,commits,history_state=self._protected_history()
+        if not events or commits[-1] is not None:
+            raise AuthorityError('recovery_sqlite_reconciliation_required')
+        self._derive(events,len(events)-1,history_state)
+        event,_=events[-1]
+        if (event['registry_id']!=self.config['registry_id'] or event['config_sha256']!=fingerprint(self.config)
+            or event['request_id']!=request_id or event['command']!=command
+            or event['payload']!=payload or event['permit']!=permit
+            or self._path(event['sequence'],'final').exists()):
+            raise AuthorityError('recovery_sqlite_reconciliation_binding_mismatch')
+        read_file(journal,32*1024*1024)
+        self._fence();self.guard._writable()
+        conn=self._connect(write=True)
+        try:
+            if conn.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:
+                raise AuthorityError('recovery_registry_corrupt')
+        finally:conn.close()
+        if journal.exists():
+>           raise AuthorityError('recovery_sqlite_journal_unresolved')
+E           app.agent.authority.AuthorityError: recovery_sqlite_journal_unresolved
+
+/input/source/app/agent/recovery_decisions.py:461: AuthorityError
+=========================== short test summary info ============================
+FAILED ../input/tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-propose]
+FAILED ../input/tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-decide]
+FAILED ../input/tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-renew]
+3 failed, 66 passed in 60.18s (0:01:00)
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T06:05:04.503626+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533029]",
+    "mnt_namespace": "mnt:[4026532971]",
+    "pid_namespace": "pid:[4026532974]",
+    "net_namespace": "net:[4026532976]",
+    "ipc_namespace": "ipc:[4026532973]",
+    "uts_namespace": "uts:[4026532972]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-recovery-decisions-r1/runs/20261106T060504409818Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-recovery-decisions-r1/runs/20261106T060504409818Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-recovery-decisions-r1/runs/20261106T060504409818Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 69,
+    "failed": 3,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T06:06:04.953352+00:00"
+}

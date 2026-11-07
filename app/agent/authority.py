@@ -1,4 +1,4 @@
-"""Single-writer transactional task authority. There is deliberately no executor.
+"""Single-writer transactional task authority. Real execution is disabled.
 
 Local code controlling this process/database is trusted. Actor is a server-owned
 namespace, not a replacement for the application's authentication policy.
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import fcntl
 import hashlib
 import json
@@ -55,6 +55,10 @@ def identifier(value):
 def text(value, limit=8192):
     if type(value) is not str or not value.strip() or len(value) > limit or "\x00" in value:
         raise AuthorityError("invalid_text")
+    try:
+        value.encode("utf-8")
+    except UnicodeError as exc:
+        raise AuthorityError("invalid_text") from exc
     return value
 
 
@@ -75,7 +79,7 @@ class Authority:
     A lost commit acknowledgement is reconciled with the original request ID.
     Storage exceptions poison this instance; reopening is an explicit action.
     """
-    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=()):
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None, recovery_registry=None, expected_open_checkpoint=None):
         self.path = Path(path).absolute()
         self._closed = False
         self._poisoned = False
@@ -85,14 +89,31 @@ class Authority:
         self._pid = os.getpid()
         self._conn = None
         self._lockfd = None
+        self._ledger = ledger
+        self._recovery_registry = recovery_registry
+        if recovery_registry is not None and (ledger is None or recovery_registry.guard is not ledger):
+            raise AuthorityError("recovery_registry_guard_mismatch")
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
         if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
             raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+            raise AuthorityError("authority_unenrolled_or_missing")
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         for parent in [self.path.parent, *self.path.parent.parents]:
             if parent.is_symlink():
                 raise AuthorityError("unsafe_store_path")
         if self.path.parent.stat().st_mode & 0o077:
             raise AuthorityError("store_directory_not_private")
+        from app.agent.storage_paths import StorageAncestry
+        self._ancestry = StorageAncestry(self.path.parent)
         # Existing legacy state requires explicit migration; never silently start
         # an empty authority beside a populated JSON store.
         legacy_present = any(Path(p).exists() or Path(p).is_symlink() for p in legacy_paths)
@@ -106,6 +127,14 @@ class Authority:
                 raise AuthorityError("owner_busy") from exc
             self._lock_identity = self._identity(os.fstat(self._lockfd))
             self._lockpath = lockpath
+            if self._ledger is not None:
+                from app.agent.ledger import LedgerGuard
+                if type(self._ledger) is not LedgerGuard:
+                    self._ledger = None
+                    raise AuthorityError("invalid_ledger_guard")
+                self._mutex = self._ledger._operation_mutex
+                self._ledger.acquire(self.path)
+                self._ledger_acquired = True
             initialized = False
             if self.path.exists() and self.path.stat().st_size:
                 # Inspect existing evidence read-only BEFORE journal/DDL changes.
@@ -115,13 +144,25 @@ class Authority:
                 probe = sqlite3.connect(self.path.as_uri() + "?mode=ro", uri=True, isolation_level=None)
                 try:
                     versions = probe.execute("SELECT version FROM meta").fetchall()
-                    if versions != [(1,)]:
-                        raise AuthorityError("unsupported_schema")
                     expected = {"meta", "ownership", "control", "records", "receipts", "events", "outbox", "simulation_effects", "sqlite_sequence"}
                     actual = {r[0] for r in probe.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                    if actual != expected or not probe.execute("SELECT 1 FROM ownership WHERE id=1").fetchone():
+                    if actual != expected or versions != [(1,)] or not probe.execute("SELECT 1 FROM ownership WHERE id=1").fetchone():
                         raise AuthorityError("unsupported_schema")
                     initialized = True
+                    markers = probe.execute("SELECT id FROM records WHERE kind='ledger_config'").fetchall()
+                    if markers:
+                        if self._ledger is None:
+                            raise AuthorityError("ledger_checkpoint_required")
+                        if markers != [(self._ledger.store_id,)]:
+                            raise AuthorityError("ledger_store_mismatch")
+                        self._ledger.verify(probe, recover=True)
+                    elif self._ledger is not None:
+                        raise AuthorityError("ledger_enrollment_required")
+                    from app.agent.enrollment import verify_authority_enrollment
+                    self._enrollment_status = verify_authority_enrollment(probe, self.path, self._ledger, enrollment_context)
+                    if not self._enrollment_status['verified']:
+                        from app.agent.enrollment import verify_legacy_open
+                        self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
                     if legacy_present and not probe.execute("SELECT 1 FROM receipts WHERE operation='import_legacy_snapshot' LIMIT 1").fetchone():
                         raise AuthorityError("legacy_migration_required")
                 except sqlite3.Error as exc:
@@ -130,32 +171,26 @@ class Authority:
                     probe.close()
             if legacy_present and not initialized:
                 raise AuthorityError("legacy_migration_required")
-            fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+            self._opening_checkpoint=self._ledger.history()[0] if self._ledger is not None else None
+            if expected_open_checkpoint is not None and self._opening_checkpoint!=expected_open_checkpoint:
+                raise AuthorityError("stale_offline_open_checkpoint")
+            fd = os.open(self.path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
             try:
                 self._check_file(fd)
                 self._db_identity = self._identity(os.fstat(fd))
             finally:
                 os.close(fd)
             self._conn = sqlite3.connect(self.path, timeout=busy_ms / 1000, isolation_level=None, check_same_thread=False)
+            self._ancestry.verify()
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA foreign_keys=ON")
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA synchronous=FULL")
             self._conn.execute(f"PRAGMA busy_timeout={busy_ms}")
-            self._conn.executescript("""
-                CREATE TABLE IF NOT EXISTS meta(version INTEGER NOT NULL);
-                CREATE TABLE IF NOT EXISTS ownership(id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL, owner TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS control(id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL, epoch INTEGER NOT NULL);
-                CREATE TABLE IF NOT EXISTS records(kind TEXT NOT NULL, id TEXT NOT NULL, scope TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(kind,id));
-                CREATE TABLE IF NOT EXISTS receipts(request_id TEXT PRIMARY KEY, scope TEXT NOT NULL, operation TEXT NOT NULL, payload_hash TEXT NOT NULL, data TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT NOT NULL, data TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS outbox(task_id TEXT PRIMARY KEY, state TEXT NOT NULL, claim_id TEXT, generation INTEGER);
-                CREATE TABLE IF NOT EXISTS simulation_effects(task_id TEXT PRIMARY KEY, claim_id TEXT NOT NULL);
-            """)
             self._conn.execute("BEGIN IMMEDIATE")
             versions = self._conn.execute("SELECT version FROM meta").fetchall()
             if not versions:
-                self._conn.execute("INSERT INTO meta VALUES(1)")
+                raise AuthorityError("unsupported_schema")
             elif len(versions) != 1 or versions[0][0] != 1:
                 raise AuthorityError("unsupported_schema")
             row = self._conn.execute("SELECT generation FROM ownership WHERE id=1").fetchone()
@@ -166,19 +201,20 @@ class Authority:
             self._conn.execute("UPDATE control SET enabled=0,epoch=epoch+1")
             # Admission never implies execution. A killed simulator may have
             # applied its synthetic effect; retain ambiguity across takeover.
-            abandoned = self._conn.execute("SELECT task_id FROM outbox WHERE state='simulating'").fetchall()
+            abandoned = self._conn.execute("SELECT task_id FROM outbox WHERE state IN ('simulating','execution_claimed')").fetchall()
             for row in abandoned:
                 task = self._get("task", row[0])
                 task["status"] = "unknown"
                 self._put("task", task["task_id"], task["scope"], task)
-            self._conn.execute("UPDATE outbox SET state='unknown' WHERE state='simulating'")
-            self._conn.execute("INSERT INTO events(request_id,data) VALUES(?,?)", (self.owner_id, canonical({"operation": "owner_acquired", "generation": self.generation, "recovered_unknown_count": len(abandoned), "at": datetime.now(UTC).isoformat()})))
-            self._conn.execute("COMMIT")
+            self._conn.execute("UPDATE outbox SET state='unknown' WHERE state IN ('simulating','execution_claimed')")
+            self._conn.execute("INSERT INTO events(request_id,data) VALUES(?,?)", (self.owner_id, canonical({"operation": "owner_acquired", "generation": self.generation, "recovered_unknown_count": len(abandoned), "at": datetime.now(UTC).isoformat(), "enrollment":self._enrollment_status})))
+            self._commit()
             directory = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
             try: os.fsync(directory)
             finally: os.close(directory)
         except BaseException:
-            self.close()
+            try:self.close()
+            except (AuthorityError,OSError,sqlite3.Error):pass
             raise
 
     @staticmethod
@@ -195,16 +231,33 @@ class Authority:
         if self._closed or self._poisoned or os.getpid() != self._pid:
             raise AuthorityError("authority_unavailable")
         try:
+            self._ancestry.verify()
             matched = self._identity(self.path.stat(follow_symlinks=False)) == self._db_identity and self._identity(self._lockpath.stat(follow_symlinks=False)) == self._lock_identity
+        except AuthorityError:
+            self._poisoned = True
+            raise
         except OSError:
             matched = False
         if not matched:
             self._poisoned = True
             raise AuthorityError("store_replaced")
-        row = self._conn.execute("SELECT generation,owner FROM ownership WHERE id=1").fetchone()
-        if tuple(row) != (self.generation, self.owner_id):
+        try:
+            row = self._conn.execute("SELECT generation,owner FROM ownership WHERE id=1").fetchone()
+        except sqlite3.Error as exc:
+            self._poisoned = True
+            raise AuthorityError("storage_unknown_reconcile") from exc
+        if row is None or tuple(row) != (self.generation, self.owner_id):
             self._poisoned = True
             raise AuthorityError("owner_fenced")
+        if self._ledger is not None and not self._conn.in_transaction:
+            try:
+                self._ledger.verify(self._conn)
+                if self._enrollment_context is not None:
+                    from app.agent.enrollment import verify_authority_enrollment
+                    self._enrollment_status = verify_authority_enrollment(self._conn,self.path,self._ledger,self._enrollment_context)
+            except BaseException:
+                self._poisoned = True
+                raise
 
     @contextmanager
     def _transaction(self):
@@ -213,9 +266,19 @@ class Authority:
             try:
                 self._conn.execute("BEGIN IMMEDIATE")
                 self._fence()
+                if self._ledger is not None:
+                    try:
+                        self._ledger.verify(self._conn)
+                    except BaseException:
+                        self._poisoned = True
+                        raise
+                before = self._conn.total_changes
                 yield
                 self._fault("before_commit")
-                self._conn.execute("COMMIT")
+                if self._ledger is not None and self._conn.total_changes != before:
+                    self._commit()
+                else:
+                    self._conn.execute("COMMIT")
             except BaseException as exc:
                 try:
                     if self._conn.in_transaction:
@@ -226,6 +289,21 @@ class Authority:
                     self._poisoned = True
                     raise AuthorityError("storage_unknown_reconcile") from exc
                 raise
+
+    def _commit(self):
+        if self._ledger is None:
+            self._conn.execute("COMMIT")
+            return
+        try:
+            intent = self._ledger.prepare(self._conn)
+            self._conn.execute("COMMIT")
+            self._fault("ledger_database_committed")
+            self._ledger.finish(intent)
+        except BaseException as exc:
+            self._poisoned = True
+            if isinstance(exc, (OSError, sqlite3.Error)):
+                raise AuthorityError("ledger_commit_reconcile") from exc
+            raise
 
     @staticmethod
     def _scope(actor):
@@ -270,6 +348,8 @@ class Authority:
         self._put(kind, ident, scope, value)
 
     def _new_task(self, scope, task_id, goal, *, status="pending", metadata=None, occurrence_id=None):
+        if self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state IN ('held','execution_claimed','simulating','unknown')").fetchone()[0] >= 1000:
+            raise AuthorityError("queue_capacity_exceeded")
         task = {"task_id": task_id, "scope": scope, "goal": goal, "status": status, "created_at": datetime.now(UTC).isoformat(), "result": None, "error": None, "cancel_requested": False, "metadata": metadata or {}, "occurrence_id": occurrence_id}
         self._create("task", task_id, scope, task)
         self._conn.execute("INSERT INTO outbox(task_id,state) VALUES(?,?)", (task_id, "held" if status == "pending" else "unknown"))
@@ -277,7 +357,7 @@ class Authority:
 
     def submit(self, actor, request_id, goal):
         text(goal)
-        return self._mutate(actor, request_id, "submit", {"goal": goal}, lambda scope: self._new_task(scope, str(uuid.uuid4()), goal))
+        return self._mutate(actor, request_id, "submit", {"goal": goal}, lambda scope: self._new_task(scope, request_id, goal))
 
     def receipt(self, actor, request_id):
         scope = self._scope(actor)
@@ -303,6 +383,48 @@ class Authority:
     def list_schedules(self, actor, include_removed=False):
         return [j for j in self._list("schedule", actor) if include_removed or not j["removed"]]
 
+    def get_task(self, actor, task_id):
+        identifier(task_id)
+        with self._mutex:
+            self._fence()
+            task = self._get("task", task_id, self._scope(actor))
+            task["outbox_state"] = self._conn.execute("SELECT state FROM outbox WHERE task_id=?", (task_id,)).fetchone()[0]
+            return task
+
+    def task_page(self, actor, *, status=None, limit=100, offset=0):
+        if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or not 0 <= offset <= 1000000:
+            raise AuthorityError("invalid_pagination")
+        scope = self._scope(actor)
+        states = {"pending": "held", "executing_synthetic": "execution_claimed"}
+        state = states.get(status, status)
+        if status is not None:
+            text(status, 64)
+        query = "FROM records r JOIN outbox o ON r.id=o.task_id WHERE r.kind='task' AND r.scope=?"
+        params = [scope]
+        if state is not None:
+            query += " AND o.state=?"
+            params.append(state)
+        with self._mutex:
+            self._fence()
+            total = self._conn.execute("SELECT COUNT(*) " + query, params).fetchone()[0]
+            rows = self._conn.execute("SELECT r.data,o.state " + query + " ORDER BY r.rowid LIMIT ? OFFSET ?", [*params, limit, offset]).fetchall()
+            tasks = [{**json.loads(row[0]), "outbox_state": row[1]} for row in rows]
+            return {"tasks": tasks, "count": len(tasks), "total": total, "offset": offset,
+                    "next_offset": offset + len(tasks) if offset + len(tasks) < total else None}
+
+    def execution_tasks(self, actor, state):
+        """Read only active outbox rows; completed history is not a polling cost."""
+        scope = self._scope(actor)
+        with self._mutex:
+            self._fence()
+            rows = self._conn.execute("SELECT r.data FROM records r JOIN outbox o ON o.task_id=r.id WHERE r.kind='task' AND r.scope=? AND o.state=? ORDER BY r.rowid", (scope, state))
+            result = []
+            for row in rows:
+                task = json.loads(row[0])
+                if task.get("execution"):
+                    result.append({**task, "outbox_state": state})
+            return result
+
     def _cancel(self, task):
         state = self._conn.execute("SELECT state FROM outbox WHERE task_id=?", (task["task_id"],)).fetchone()[0]
         task["cancel_requested"] = True
@@ -316,15 +438,24 @@ class Authority:
         identifier(task_id)
         return self._mutate(actor, request_id, "cancel", {"task_id": task_id}, lambda scope: self._cancel(self._get("task", task_id, scope)))
 
-    def add_schedule(self, actor, request_id, name, cron_expr, goal, next_run_at):
+    def add_schedule(self, actor, request_id, name, cron_expr, goal, next_run_at, *, execution=None):
         text(name, 256); text(cron_expr, 256); text(goal)
         next_run_at = instant(next_run_at)
         def effect(scope):
             job_id = str(uuid.uuid4())
             job = dict(job_id=job_id, scope=scope, name=name, cron_expr=cron_expr, goal=goal, enabled=True, removed=False, revision=1, last_run=None, next_run_at=next_run_at, metadata={})
+            if execution is not None:
+                if not self.allow_simulation:
+                    raise AuthorityError("execution_disabled")
+                # This trusted-local template is issued by ExecutionPipeline;
+                # callers cannot supply it through the ordinary schedule route.
+                job["execution_template"] = json.loads(canonical(execution))
             self._create("schedule", job_id, scope, job)
             return job
-        return self._mutate(actor, request_id, "add_schedule", dict(name=name, cron_expr=cron_expr, goal=goal, next_run_at=next_run_at), effect)
+        payload = dict(name=name, cron_expr=cron_expr, goal=goal, next_run_at=next_run_at)
+        if execution is not None:
+            payload["execution"] = execution
+        return self._mutate(actor, request_id, "add_schedule", payload, effect)
 
     def set_schedule(self, actor, request_id, job_id, *, enabled=False, removed=False):
         identifier(job_id)
@@ -339,7 +470,7 @@ class Authority:
             job.update(enabled=False, removed=removed, revision=job["revision"] + 1)
             self._put("schedule", job_id, scope, job)
             for task in self._list("task", actor):
-                if task["metadata"].get("job_id") == job_id:
+                if task["metadata"].get("job_id") == job_id and task["status"] in {"pending", "simulating", "executing_synthetic", "unknown", "in_progress"}:
                     self._cancel(task)
             return job
         return self._mutate(actor, request_id, "set_schedule", dict(job_id=job_id, enabled=enabled, removed=removed), effect)
@@ -354,7 +485,7 @@ class Authority:
                 # every pending scheduled occurrence across its namespaces.
                 for row in self._conn.execute("SELECT data FROM records WHERE kind='task'").fetchall():
                     task = json.loads(row[0])
-                    if task["occurrence_id"]:
+                    if task["occurrence_id"] and task["status"] in {"pending", "simulating", "executing_synthetic", "unknown", "in_progress"}:
                         self._cancel(task)
             return dict(self._conn.execute("SELECT enabled,epoch FROM control").fetchone())
         return self._mutate(actor, request_id, "scheduler_control", {"enabled": enabled}, effect)
@@ -370,7 +501,17 @@ class Authority:
             control = self._conn.execute("SELECT enabled,epoch FROM control").fetchone()
             if not control["enabled"] or control["epoch"] != epoch or not job["enabled"] or job["removed"] or job["revision"] != revision or job["next_run_at"] != nominal:
                 raise AuthorityError("stale_occurrence")
-            task = self._new_task(scope, str(uuid.uuid5(uuid.UUID(occurrence_id), "task")), job["goal"], metadata={"job_id": job_id, "revision": revision, "nominal": nominal}, occurrence_id=occurrence_id)
+            task = self._new_task(scope, occurrence_id, job["goal"], metadata={"job_id": job_id, "revision": revision, "nominal": nominal}, occurrence_id=occurrence_id)
+            if job.get("execution_template") is not None:
+                if not self.allow_simulation:
+                    raise AuthorityError("execution_disabled")
+                template = job["execution_template"]
+                from app.agent.execution import phase_id
+                task["execution"] = {k: v for k, v in template.items() if k != "expires_after_seconds"}
+                task["execution"].update(operation_id=occurrence_id,
+                    receipt_ids={phase: phase_id(occurrence_id, phase) for phase in ("claim", "dispatch", "record", "publish", "unknown")},
+                    expires_at=(datetime.fromisoformat(nominal)+timedelta(seconds=template["expires_after_seconds"])).isoformat())
+                self._put("task", occurrence_id, scope, task)
             self._put("occurrence", occurrence_id, scope, {"occurrence_id": occurrence_id, "task_id": task["task_id"], "nominal": nominal})
             job.update(last_run=nominal, next_run_at=next_run_at)
             self._put("schedule", job_id, scope, job)
@@ -393,10 +534,38 @@ class Authority:
             return mapping
         return self._mutate(actor, request_id, "import_legacy_snapshot", dict(tasks=tasks, schedules=schedules, evidence=evidence), effect)
 
+    def recovery_decision_status(self, *, detailed=False):
+        if self._recovery_registry is None:
+            return {"configured": False, "execution_enabled": False, "activation_authorized": False}
+        result = self._recovery_registry.inspect()
+        if detailed:
+            return {"configured": True, **result}
+        return {"configured": True, "state": result["state"], "verified": result["verified"],
+                "proposal_counts": {state: sum(p["state"] == state for p in result["proposals"])
+                                    for state in ("PENDING", "APPROVED", "REJECTED", "EXPIRED", "REVOKED")},
+                "incomplete_witness_renewal": result["incomplete_witness_renewal"],
+                "witness_state": result["witness_state"],
+                "execution_enabled": False, "activation_authorized": False}
+
     def readiness(self):
         with self._mutex:
             self._fence()
-            return {"storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0]}
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+                raise AuthorityError("ledger_inconsistent")
+            transport_status={"configured":False,"real_execution_enabled":False}
+            if getattr(self,"_transport_verifier",None) is not None or self._conn.execute("SELECT 1 FROM records WHERE kind='execution_transport_grant' LIMIT 1").fetchone():
+                from app.agent.execution_transport import SyntheticTransport
+                verifier=getattr(self,'_transport_verifier',None)
+                if type(verifier) is not SyntheticTransport:raise AuthorityError("transport_verifier_required")
+                transport_status=verifier.ready(self)
+            decisions = self.recovery_decision_status()
+            if decisions.get("configured") and not decisions["verified"]:
+                raise AuthorityError("recovery_reconciliation_required")
+            return {"execution_transport": transport_status, "recovery_decisions": decisions, "storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
+                    "ledger_consistent": True, "enrollment": self._enrollment_status, "disaster_recovery": self._ledger.disaster_status() if self._ledger is not None else {"enabled": False}, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
 
     def close(self):
         with self._mutex:
@@ -404,8 +573,14 @@ class Authority:
                 return
             self._closed = True
             try:
-                if self._conn is not None:
-                    self._conn.close()
+                try:
+                    if self._recovery_registry is not None and self._ledger_acquired and self._conn is not None:
+                        self._shutdown_recovery_status = self._recovery_registry.inspect()
+                finally:
+                    if self._conn is not None:
+                        self._conn.close()
             finally:
                 if self._lockfd is not None:
                     os.close(self._lockfd)
+                if self._ledger is not None and self._ledger_acquired:
+                    self._ledger.close()

@@ -1,0 +1,1502 @@
+{
+  "at": "20261106T140848830865Z",
+  "mode": "core",
+  "runner_sha256": "94b8cf6befb9a0e7c16dabfe82e1bc46065dd65273d03293644e02e0abba21b8",
+  "input_manifest_sha256": "186725cf9c6fb3b02d96a013396d259925cdba35cd001eb2232f87c1066e162f",
+  "exitcode": 0,
+  "elapsed_seconds": 96.867159828078,
+  "guard_stop": null,
+  "limits": {
+    "per_process_AS": 1073741824,
+    "aggregate_RSS": 805306368,
+    "CPU": [
+      120,
+      121
+    ],
+    "FSIZE": 67108864,
+    "NOFILE": 64,
+    "CORE": 0,
+    "wall_seconds": 120,
+    "controlled_files": 20000,
+    "controlled_bytes": 268435456,
+    "maximum_payload_processes": 2
+  },
+  "peak_observed_rss": 124571648,
+  "peak_observed_files": 2750,
+  "peak_observed_bytes": 22070173,
+  "peak_owned_processes_including_bwrap": 4,
+  "argv": [
+    "/usr/bin/bwrap",
+    "--unshare-all",
+    "--die-with-parent",
+    "--new-session",
+    "--clearenv",
+    "--setenv",
+    "PATH",
+    "/usr/bin:/bin",
+    "--setenv",
+    "LANG",
+    "C.UTF-8",
+    "--setenv",
+    "TZ",
+    "UTC",
+    "--cap-drop",
+    "ALL",
+    "--dir",
+    "/usr",
+    "--ro-bind",
+    "/usr/bin",
+    "/usr/bin",
+    "--ro-bind",
+    "/usr/lib",
+    "/usr/lib",
+    "--dir",
+    "/usr/share",
+    "--ro-bind",
+    "/usr/share/zoneinfo",
+    "/usr/share/zoneinfo",
+    "--ro-bind",
+    "/lib",
+    "/lib",
+    "--ro-bind",
+    "/lib64",
+    "/lib64",
+    "--proc",
+    "/proc",
+    "--dev",
+    "/dev",
+    "--dir",
+    "/run",
+    "--ro-bind",
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140848830865Z/input",
+    "/input",
+    "--ro-bind",
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-readiness-r1/runs/20261031T090522534346Z/output/site-packages",
+    "/deps",
+    "--bind",
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140848830865Z/output",
+    "/work",
+    "--symlink",
+    "/work/tmp",
+    "/tmp",
+    "--chdir",
+    "/work",
+    "--remount-ro",
+    "/",
+    "--",
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/input/child.py"
+  ],
+  "source_sha256": {
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/agent/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/agent/admission.py": "25391a687ae050a2fd5050385dec79f70024afa0cbd158b6d450569d188c1430",
+    "app/agent/api.py": "0542b611e3d71d18910641aff6ef04334fe9b51651a53e627c763dd0b3ca636a",
+    "app/agent/archive_restore.py": "44273eea23aff0203c49480c804c35673af21578c1ce81c711a91c9569173e31",
+    "app/agent/audit_attestations.py": "e4227787e2be87355b2f5e77aa6390bbb558b4f0b22b5c9e867777668f205bb3",
+    "app/agent/authority.py": "ef6277075896f9b69c4469ab126fafacaaee072ca94ea85a9d3660c46c83f787",
+    "app/agent/branch_verification.py": "c9435361a9a7151501dd96f6343091726b5c79018ec2c630fbb318e7c50b8a62",
+    "app/agent/checkpoint_epochs.py": "e430d933bc257e5c12461ff2c5de1b4c41f5386d4a87c510055108cb483e752b",
+    "app/agent/enrollment.py": "f701594ad8053fe8532864203ce3ae4d0bbebf29ec3b36586af8dd77bc0846ef",
+    "app/agent/execution.py": "5015f6fafb9751b7eafe51f5a71f96a4f697875cbee86537ee43ccfb7aeefef2",
+    "app/agent/execution_transport.py": "87f8a519e36f8f5e99bb698a097b276957143182fbe8980fadf7b3a33c915f4c",
+    "app/agent/ledger.py": "5b5e449949c7297b3f39872c83ad1d32e58bb5efc2b5ab1ea943a03de7ed2982",
+    "app/agent/ledger_schema.py": "460ef2e5b7e61e846d32254db94d235110bfd497f8855e11662cf5e5a64c54a5",
+    "app/agent/migration.py": "84b5723466072e147277229a0e4dd589540686d3525f885f6d7319a78cff732a",
+    "app/agent/operator_cli.py": "74d0f7f3e67316fd694f7d12c8fe7ff2aedd20aae598b9946fb62c1413d959cf",
+    "app/agent/recovery.py": "0a18eb17e1f9ab3d91094590cf39b99d122a5761b06d832a55a1a2b2701f730e",
+    "app/agent/recovery_decisions.py": "8924ea342968c6beb950324ebfb46ffc3c50e4b9de5899612d6ba9cffce96d7f",
+    "app/agent/reporter.py": "b32d09d1f2ca93a3e15b73b1f4f2d5715737e8cd7a14804b97dfc1650f01510d",
+    "app/agent/runtime.py": "043590d1f1a2bf3a9916c66122e492981f35f25b0203cfb1068f4e13ac67d426",
+    "app/agent/scheduler.py": "c47bd77f0139750b42d56f1504a2e85de633426b8500460d8e829f3d551d5d95",
+    "app/agent/sensor_store.py": "b0bf333c037dfd86becabeb24c643e9ab45e237a007c725ac94e2cdfea2075a5",
+    "app/agent/simulation.py": "20d2684f20e80d7d18cef3fe16a1652daf4fabfbdb2905ef392008290b04b89e",
+    "app/agent/storage_paths.py": "b7d1fc2f190eab476b276b5b2cdc7313508df1b4110ad669f752ddbacb9d5392",
+    "app/agent/task_queue.py": "b2f17be0c97a3dfbbf9cf00ba7ac9491bed4de9dba04b016a488747684210ac4",
+    "app/boot.py": "46a54b70338e2dd1b3a408dcda020fc0cbc080c4f33bc5acfe1d6869d6e12b9e",
+    "app/brain/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/brain/cancel_token.py": "e5c449c4320b47749d5f4a2f9577237de0a5f3db5a7f749762be0b1310c10e1b",
+    "app/brain/complexity_router.py": "f3f3f7531bc0a54bd1292403f3affbfcc568540d6e6c239819cc52a5a732d9e6",
+    "app/brain/direct_responder.py": "efe89f2762318c87436372f96d7ac027abc12ccd2b308a9d340de5552a28fae9",
+    "app/brain/kill_switch.py": "7e8e82a45e108d24e7dd0a930542b1ea4091702e78cd6d32e7ddf71ad3d439a7",
+    "app/brain/llm_client.py": "f3ac97c4d3d2d079446b1da117d24410c6fa1a1ca448b7b7566f526999cf79bf",
+    "app/brain/morning_report.py": "fe14da5b011e0f5663c946b21c42f78f56fc51503425e855319ec39f79d24cd2",
+    "app/brain/planner.py": "1a6bb736c0d7b5ff9705a41af68e0b9f7d5e524d4481f0e7bb8b7f1ce0879fa2",
+    "app/brain/prompts.py": "c750a776f0403a6d1380c714ce272493aee2a87b75d199acfa859667ed82c521",
+    "app/brain/response_cleaner.py": "882d7d211bbfe4788b0080da7461879a6621c50175146ea870825fd8a391ff4e",
+    "app/brain/router.py": "d44ebf3eedda8456d6ea606897dadb83a433b448dd6e2260912cc87d05a3ace3",
+    "app/brain/tool_embeddings.py": "e471be6b38e2073f64c9fbe5b64098389a4b4d8e9b5e40876bb9d618a7a204da",
+    "app/brain/tool_params.py": "a0664a15c3e6fa1810feb1bbaf6ac6785649cc796065ef63fd94ace885170ffd",
+    "app/cli.py": "a97e9394c99892a374a81586bcb176332a18d7c6d552be23457f611baf815d0b",
+    "app/comms/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/comms/audio2face.py": "56a241581fea4885b6b6f502b63e4665475053620732075984d3765fe6331fce",
+    "app/comms/discord_bot.py": "1dc25e2cf3c1dbe3ac78a6f70e3655366fa46b2c19ef658403072380920b6cd4",
+    "app/comms/telegram_bot.py": "86ffe412319a50a27f0978a42e87e1f015293cd7a92554d9fdc0bc540e3000d1",
+    "app/comms/ue5_bridge.py": "c0db92b0e6921b5c3b95903f68ca2ab4271a3fd15487e6c00a27ab130b2fd61d",
+    "app/computer/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/computer/gesture.py": "052de73f2983b7a852a46198a32a0dbae231fb2427c5ecbf75e8526573bfd22d",
+    "app/computer/mouse_keyboard.py": "64b207fcfbe645968be289bd14f60a1b53bc9797973f54be237effdd8719de8b",
+    "app/computer/safety.py": "a41127209add60d196ffacf9db655953108e31e1d69f6a7159ef9baf97c4c887",
+    "app/computer/screenshot.py": "7fd47396d8fc78616866392979a7bfa2e0a234869437604fd054d163fa7d6135",
+    "app/computer/verifier.py": "6e11592eceee87fb518de96176ff384fbf1f1ed7e78ea8001f6769e3522b7eba",
+    "app/computer/vision.py": "2fee8b05962fc1fec91f04fedbd8b041f6225cac46402393dde337347586c3b9",
+    "app/computer/yolo_detector.py": "23ea32ac22ab1f05aa1a732e0708f6c87d3e2bbe1a3ca14abb5f98baba29c674",
+    "app/config.py": "5cc6c228ed9edec5b5ef3436130961718aa5373d8a98df1a526891b239758963",
+    "app/config_check.py": "8f5866872775599d8a9dece0ccbf13cf663ce02f0445917479be237ea93e9c86",
+    "app/logs/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/logs/audit.py": "835fb246a4e28d02e2f4436e091b6591d490714797620981ef0a3e8447c588e1",
+    "app/main.py": "93788adfac34fc5a4e4d6caa58e1ee4a034ffbbbd97906d3ff900f50e8ce48b8",
+    "app/memory/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/memory/graphiti_client.py": "1e9422e405c8a49e567e4833206290ff38e507233c6f71b33496d2afb55f2743",
+    "app/memory/memory_client.py": "9c6a87c6c051e6d2556c31583b99076f84919a7d0b37e35ec4cb5e8b2187fbd7",
+    "app/memory/procedural.py": "2e66b8a66076449c6e77aadf3b480a91fee7fb04bb1bc65d2f64322f00f30b6c",
+    "app/memory/project_indexer.py": "715d6376e3dc1b7bdb21cd36ab49ead53e4c6772ebb2249bf86eeb1def9f8c52",
+    "app/memory/rag_client.py": "b5e5babb9f32f47e61c13eaa12d74baccc02f2161bdd7f18796cd712c083b7bd",
+    "app/network/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "app/network/tailscale.py": "3379b4e8b9ba24adf5fd0b85c0caf8f48787be4e4578dcbc78f47e4ecdaa59ee",
+    "app/observability/__init__.py": "15ff29a8ae523f3a85031f929065cbbffb4aa8eb4ed2f2d0efe6bfb2642df0d1",
+    "app/observability/tracing.py": "e6defa78dbf9b1fe76cf1cb29ef051075f2b7ea2d36bb105fee116bca1cc38ec",
+    "app/resource_manager.py": "8eb9027ddfe9880d05f041c05d52973971092533f6545d09c56439c663e3a77f",
+    "app/server.py": "07559fbeff11f63b85b8676701a4201e26bf1a29543b253acf34f5a5e12e0b31",
+    "app/tools/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/tools/apps.py": "faafc0f7712552a5392ed4c952560abd64fe098306fd01f89a9ab90d38f94407",
+    "app/tools/browser.py": "7f1974d32a17ec0f88548b9c15c840786295c718b220cc065eea7b8bbe051d5a",
+    "app/tools/browser_use.py": "0bd2183ed7e5cb9b8c85188b9f61cae86ef80be4898d7dffe328426136dc8aea",
+    "app/tools/cad.py": "0243cd876c36fec303cc91133e28e195f0c7925880896f77a3be1f5cea11fed2",
+    "app/tools/calendar.py": "b204c87d11d1ca5d7876d2524fe392543389c861239fa2b5c6a9e258cf7fae0b",
+    "app/tools/cli/__init__.py": "40ee4dddb2826d17cd647c7846c8bb6bc3d5e2e7383d9a75a29b1e203f7d7711",
+    "app/tools/computer_use.py": "fe6862dfed2152cf45915dd54d5bd8fbd9e9b0bda86cc7e53e2fb6d1cf76e04a",
+    "app/tools/files.py": "6589d296557b86d5f02a1e29f64381523137a5b5a4ad6ee9012a34e2e02c3587",
+    "app/tools/health_check.py": "8ce87e7a64a86dcb4b01c1ba527bb710fd986ddf6a8208176040ff33f356474b",
+    "app/tools/kasa.py": "c043a654add667fc6a4b8a7a117800688eea7c15d1600534ca70fb2fd660111d",
+    "app/tools/mcp_client.py": "5f872d2dfdddc8b10f6afed963fe1111842590d453fa63555f2cf80ee7eac780",
+    "app/tools/mouse_keyboard.py": "59c753b35ee3528b94040d57d48b7dce5a47e6c1a9756e4a47118c261e47e088",
+    "app/tools/obsidian.py": "934eb17b3efc7f3b86791a523fa5bf0ee6cc7eed8105b003a7b50b1fb2a08202",
+    "app/tools/registry.py": "9b1645e13d3da85ef151b45365d3cd781bd5a587748b7b1a42c9d6011f7ccb16",
+    "app/tools/screenshot.py": "6e10a57e0500afb47a4c3ce19a0709b1190ae4a1fa542d57e2686bd2acfeb4d1",
+    "app/tools/shell.py": "2f7dacba5fefb0de876cacbbf56b3e3f57df968b2da9799b52fd6893be7ef616",
+    "app/tools/system_stats.py": "359c1bdf865454bdd58f97f08e21d844a8dc34bf36c9154d789886b866f51737",
+    "app/tools/vision.py": "c5d28ec33a8897c51ba598d2273729b8c4047bf0d65cc02c1dbc0779ccbf4de8",
+    "app/tools/web_search.py": "b15133f040c9c3749af154995a418a678ca7f39e5d712f73aa4cd47cb1e4d45c",
+    "app/voice/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/voice/audio_stream.py": "60a3026396b204ffc1e905d2f58c34b3f26c9f7bd7b20d39f0d65577ccdc34c8",
+    "app/voice/dictation.py": "ec749585c83d3cf0b0a486412d2f4057b5a33a3ab29c1b30a9c4cf89f1d88a21",
+    "app/voice/error_recovery.py": "c4fd2b175c5631bd1e6e126b6483b81bd1ca9ea69f0b0c7e4e2f270efa853439",
+    "app/voice/filler_manager.py": "55d60ff84c8cbb66ecbd6d127372ebbd8cc0a70049b03a4d4025da2abc080bce",
+    "app/voice/phrase_cache.py": "d799b910233bca624db25757a244be00162a2aad04f741dc8b8eb5f993ef1c40",
+    "app/voice/push_to_talk.py": "7bcd915561ef549b582b1f30dc04977d757cfb276c157d7bc137217de651bc9f",
+    "app/voice/sounds.py": "4229e87b0887358fc7e5b2635ba93ca2662274ebab3beb83cc1bc8508ceb336f",
+    "app/voice/stt.py": "0103b0a6c8260314d037ffff0fe28b35c4eb675c2a03a5d630d596ca05417df2",
+    "app/voice/tts.py": "f34046a50d732e5d1bdf092da01cd5bc86469b8d50826708cf4886e96ed425ad",
+    "app/voice/vad.py": "bf925db004fdb0b8d974965f779273fbc3c6e3e7d719ca99b5a9db5a9ac4141c",
+    "app/voice/wake_word.py": "da8459af7ed07437f2c481a58f579f6470fe6d76b09cd6746a7dcbe9d94b30a2"
+  },
+  "child": {
+    "status": "CORE_PASS",
+    "started_at": "2026-11-06T14:08:48.932039+00:00",
+    "boundaries": {
+      "user_namespace": "user:[4026533081]",
+      "mnt_namespace": "mnt:[4026533024]",
+      "pid_namespace": "pid:[4026533027]",
+      "net_namespace": "net:[4026533029]",
+      "ipc_namespace": "ipc:[4026533026]",
+      "uts_namespace": "uts:[4026533025]",
+      "cap_eff": "0000000000000000",
+      "no_new_privs": "1",
+      "/input/readonly-canary.txt": 30,
+      "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140848830865Z/outside-canary.txt": 2,
+      "fds": {
+        "0": "/dev/null",
+        "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140848830865Z/stdout.txt",
+        "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-unified-rc1/runs/20261106T140848830865Z/stderr.txt"
+      },
+      "network_family_2": 101,
+      "network_family_10": 101
+    },
+    "node_outcomes": [
+      {
+        "nodeid": "test_api_scheduler.py::test_actual_router_idempotency_client_scope_not_authority",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_facade_same_writer_no_completion_or_legacy_store",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_real_cron_scheduler_lifecycle_and_clock_changed_replay",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_callback_admits_once_stop_cancels_and_retained_callback_denied",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_admission_order_survives_mutation",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_removed_callback_does_not_stop_other_schedule",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_committed_occurrence_registration_failure_marks_not_ready",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_durable_stop_failure_still_shuts_owned_backend",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_api_scheduler.py::test_backend_removal_failure_keeps_receipt_and_truthful_result",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_rollover_retains_checkpoint_identities",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_export_attestation_survives_source_database_loss",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_legacy_export_is_inspectable_but_cannot_be_restored",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_wrong_key_and_expired_reference_refused",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_total_generation_capacity_is_conservative",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_interrupted_rollover_is_not_silently_reset[rollover_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_interrupted_rollover_is_not_silently_reset[rollover_link_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_reconstructs_exact_disabled_artifact",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_default_restore_requires_external_reference_and_explicit_grant",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[missing]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[duplicate]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[modified]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[reordered]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restored_unknown_and_cancellation_are_preserved",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_row_inserted]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_prepared_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_target_published]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_directory_created]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_link_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_committed]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_stage_created]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_schema_created]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_row_inserted]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_before_database_commit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_database_committed]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_prepared_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_target_published]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_publication_committed]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[attestation-export_before_attestation]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover_recovery-rollover_recovery_admitted]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_missing_restore_receipt_phase_is_not_reported_committed[intent]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_missing_restore_receipt_phase_is_not_reported_committed[prepared]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_missing_restore_receipt_phase_is_not_reported_committed[final]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_wrong_rollover_policy_and_unexpected_generation_refused",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_cached_checkpoint_bytes_are_still_hash_verified",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_shared_guard_restore_serializes_source_mutations",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_does_not_require_source_database_or_archive_after_preparation",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_guard_cannot_be_shared_by_two_authorities",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_incompatible_signed_schema_is_never_executed",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_inconsistent_restored_receipt_and_corrupt_pages_refused",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_publication_storage_failures_preserve_prepared_evidence[disk_full]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_publication_storage_failures_preserve_prepared_evidence[permission]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_trust_reference_rejects_rolled_back_checkpoint_generation",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_trust_reference_cannot_claim_a_different_epoch",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_missing_export_attestation_invalidates_restore_history",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_offline_cli_verifies_and_commits_only_explicit_authorized_restore",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_actual_restored_page_bit_flip_is_detected",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[traversal]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[overlap]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[symlink]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[existing]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_no_replace_publication_preserves_a_racing_target",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_attestation_removal_is_detected_even_before_any_restore",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_recovery_receipt_is_bound_to_committed_rollover",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_restore_succeeds_with_source_database_unavailable",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_expired_external_context_never_creates_an_anchor_directory",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_audit_disaster.py::test_missing_owner_row_fails_closed_with_explicit_code",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_durable_replay_conflict_scope_detached_reads",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_invalid_ids[True]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_invalid_ids[123]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_invalid_ids[abc]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_invalid_ids[00000000-0000-0000-0000-000000000000]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_invalid_ids[72CB255D-0F1A-4400-9FAE-2DD7A801A4B1]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_concurrent_same_id_one_transaction",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_occurrence_atomic_replay_and_changed_next_conflict",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_cancellation_before_and_after_admission[stop]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_cancellation_before_and_after_admission[remove]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_cancellation_before_and_after_admission[disable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_effect_then_cancel_never_false_cancelled",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_legacy_unknown_is_not_synthetic_reconciliation",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_simulation_disabled_by_default",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_close_waits_for_active_transaction",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_legacy_guard_and_unsupported_bytes_preserved[absent]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_legacy_guard_and_unsupported_bytes_preserved[empty]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_legacy_guard_and_unsupported_bytes_preserved[unsupported]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_store_replaced_and_fork_fence",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_sql_metacharacters_are_data",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_pending_cancel_keeps_evidence",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_schedule_identifier_collision_never_overwrites_other_scope",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_stop_admission_thread_race_is_serialized[stop]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_authority.py::test_stop_admission_thread_race_is_serialized[admit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_complete_pipeline_and_stable_operation_identity",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_policy_denies_without_dispatch[shell.exec]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_policy_denies_without_dispatch[synthetic.fail]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_policy_denies_without_dispatch[proxmox.console]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_policy_denies_without_dispatch[synthetic.echo; id]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_scope_boundary",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes0-invalid_identifier]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes1-invalid_identifier]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes2-invalid_execution_payload]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes3-invalid_text]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes4-invalid_text]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes5-invalid_execution_timeout]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes6-invalid_execution_timeout]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes7-invalid_execution_timeout]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes8-stale_execution_request]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes9-stale_execution_request]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_admission_is_atomic[changes10-invalid_time]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_replay_conflict_and_expired_replay",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_disabled_and_real_registration",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_revoked_policy_checked_at_dispatch",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_cancellation_before_dispatch",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_cancellation_after_claim_before_dispatch",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_cancellation_after_result_preserves_completion",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_expiry_before_claim",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_timeout_after_dispatch_stays_unknown",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_failed_dispatch_stays_unknown",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_untrusted_response_fails_closed[None]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_untrusted_response_fails_closed[bad1]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_untrusted_response_fails_closed[bad2]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_untrusted_response_fails_closed[bad3]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_untrusted_response_fails_closed[bad4]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_synthetic_failure_and_hash",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_capacity_replay_and_release",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_audit_failure_prevents_dispatch",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_lock_contention_poison_and_reopen",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_stale_owner_fenced",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_real_api_worker_receipts_and_restart",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_worker_failure_is_visible_and_stops",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_claim]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_execute]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_sigkill_independent_process_recovery[record_before_commit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_record]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_sigkill_independent_process_recovery[publish_before_commit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_publish]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_scheduler_callback_creates_authorized_execution",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_scheduled_cancellation_policy_and_stopped_admission",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_precommit_result_rollback_and_lost_publication_ack",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_polling_does_not_read_completed_history",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change0]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change1]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change2]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change3]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_concurrent_same_operation_admits_once",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_pagination_and_direct_lookup",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_admission_body_stream_bound_precedes_json",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_public_mutations_cannot_reserve_internal_phase_receipts",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_unicode_rejected_before_commit[changes0]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_invalid_unicode_rejected_before_commit[changes1]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_admission_empty_chunk_and_read_deadline[too_many_chunks]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_execution_pipeline.py::test_admission_empty_chunk_and_read_deadline[slow_body]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_import_preserves_source_hashes_exact_ids_and_returns_core_receipt",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_same_request_replays_before_empty_target_check",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_uuid5_mappings_are_deterministic_across_fresh_authorities",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_pending_is_held_nonpending_is_unknown_and_all_schedules_are_disabled",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_new_request_cannot_import_into_existing_target",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_replay_binds_source_bytes_even_if_parsed_records_are_unchanged",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_duplicate_legacy_ids_reject_whole_mixed_import[tasks]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_duplicate_legacy_ids_reject_whole_mixed_import[jobs]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-None-record_schema]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid1-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid2-record_schema]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid3-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid4-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid5-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid6-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid7-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[tasks-invalid8-record_value]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid9-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid10-record_type]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid11-record_schema]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid12-record_schema]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_mixed_record_never_imports_valid_prefix[jobs-invalid13-record_value]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[{\"not\":\"a list\"}-root_not_list]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[false-root_not_list]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[{malformed-invalid_json]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[\\xff[]-source_encoding]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[[{\"task_id\":\"a\",\"task_id\":\"b\",\"goal\":\"goal\"}]-duplicate_json_key]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[[{\"task_id\":\"a\",\"goal\":\"goal\",\"result\":{\"nested\":1,\"nested\":2}}]-duplicate_json_key]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[[{\"task_id\":\"a\",\"goal\":\"goal\",\"result\":{\"number\":NaN}}]-nonfinite_json]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[[{\"task_id\":\"a\",\"goal\":\"goal\",\"result\":{\"number\":Infinity}}]-nonfinite_json]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_strict_json_rejections_precede_import[[{\"task_id\":\"a\",\"goal\":\"goal\",\"result\":{\"number\":1e999}}]-nonfinite_json]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_explicit_source_byte_cap_rejects_without_import",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_exact_byte_cap_can_import_a_single_record",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_per_file_record_limit_precedes_import",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_combined_record_limit_precedes_import",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_source_file_and_parent_symlinks_are_never_followed",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_jobs_cannot_partially_import_valid_tasks[{\"jobs\":[]}-root_not_list]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_jobs_cannot_partially_import_valid_tasks[[{\"job_id\":\"a\",\"name\":\"n\",\"cron_expr\":\"* * * * *\",\"goal\":\"g\",\"enabled\":true,\"enabled\":false}]-duplicate_json_key]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_migration.py::test_invalid_jobs_cannot_partially_import_valid_tasks[[{\"job_id\":\"a\",\"name\":\"n\",\"cron_expr\":\"* * * * *\",\"goal\":NaN}]-nonfinite_json]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_guarded_pipeline_readiness_and_read_only_diagnostics",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_guard_cannot_be_omitted_or_enroll_existing_store",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_state_tamper_rejected_before_dispatch",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_rollback_against_external_checkpoint_rejected",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_damage_fails_closed[missing]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_damage_fails_closed[hmac]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_damage_fails_closed[gap]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_damage_fails_closed[truncated]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_duplicate_does_not_advance_checkpoint",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_export_requires_admission_and_immutable_manifest",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_archive_preparation_preserves_unknown_held_and_receipts",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_bad_permits_cannot_mutate[changes0]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_bad_permits_cannot_mutate[changes1]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_bad_permits_cannot_mutate[changes2]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_stale_permit_and_unsafe_action_refused",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[bootstrap-checkpoint_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-checkpoint_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-ledger_database_committed]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-checkpoint_published]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[export-export_row_written]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[export-export_data_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[export-export_before_audit_publication]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[retention-checkpoint_intent_durable]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[retention-ledger_database_committed]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[reconcile-before_commit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[reconcile-ledger_database_committed]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_archive_mutation_has_verified_export_and_preserves_all_rows",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_readonly_offline_diagnosis_does_not_take_ownership",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[receipt]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[event]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[outbox]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[invalid_identity]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[nested_execution]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[owner_order]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[created_at]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_publication_io_failure_and_storage_exhaustion",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_authenticated_synthetic_publication_preserves_identity_and_replays",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_authenticated_schedule_disable_preserves_completed_history",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_schedule_bulk_stop_does_not_rewrite_terminal_records",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_unknown_without_evidence_cannot_be_recovered_as_success",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_export_storage_bounds_fail_closed_without_deletion[quota]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_export_storage_bounds_fail_closed_without_deletion[free_space]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_export_storage_bounds_fail_closed_without_deletion[manifest_enospc]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_archive_refuses_a_snapshot_that_does_not_cover_new_completed_task",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_ledger_bound_and_checkpoint_staging_bounds_fail_closed",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_cross_scope_diagnostics_refused",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_staging_inventory_has_a_hard_bound",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_authenticated_but_malformed_export_metadata_refused[files-value0]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_authenticated_but_malformed_export_metadata_refused[checkpoint-value1]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_authenticated_but_malformed_export_metadata_refused[events-value2]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_operator_permit_payload_and_lifetime_are_strict",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_export_path_alias_cannot_reach_checkpoints",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_checkpoint_initialization_rejects_symlink_before_creating_children",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_operator_ledger.py::test_physical_database_corruption_is_rejected_before_startup",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_live_independent_owner_excludes_parent_and_kill_releases_lock",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_parent_held_owner_refuses_fresh_probe_without_inherited_descriptors",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_killed_submit_recovers_same_request_and_exactly_one_task_receipt[before_commit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_killed_submit_recovers_same_request_and_exactly_one_task_receipt[after_commit_before_ack]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_killed_simulation_becomes_unknown_and_reconciles_without_resubmission[after_claim]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_killed_simulation_becomes_unknown_and_reconciles_without_resubmission[after_effect]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_killed_occurrence_keeps_task_last_run_and_receipt_atomic[before_commit]",
+        "when": "call",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "test_processes.py::test_killed_occurrence_keeps_task_last_run_and_receipt_atomic[after_commit_before_ack]",
+        "when": "call",
+        "outcome": "passed"
+      }
+    ],
+    "pytest_warnings": [],
+    "tests": {
+      "collected": 254,
+      "failed": 0,
+      "skipped": 0,
+      "exitstatus": 0
+    },
+    "full_app_import_attempts": {},
+    "finished_at": "2026-11-06T14:10:25.684659+00:00"
+  },
+  "status": "PASS"
+}

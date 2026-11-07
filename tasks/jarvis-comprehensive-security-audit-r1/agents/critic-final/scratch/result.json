@@ -1,0 +1,64 @@
+{
+  "missing_units": [
+    {
+      "surface": "tasks/proxmox-automation-phase3-review-r1/src/entry.py",
+      "boundary": "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+      "subsystem": "tasks/proxmox-automation-phase3-review-r1",
+      "attack_class": "ATTACK-CLASSES.md#Chained vulnerabilities and trust boundaries",
+      "starting_paths": [
+        "tasks/proxmox-automation-phase3-review-r1/src",
+        "tasks/proxmox-automation-phase3-review-r1/deploy",
+        "tasks/proxmox-automation-phase3-review-r1/README.md",
+        "tasks/proxmox-automation-phase3-review-r1/PROGRESS.md",
+        "tasks/proxmox-automation-phase3-review-r1/APPROVAL-PACKET.md",
+        "tasks/proxmox-automation-phase3-review-r1/RELEASE.json",
+        "tasks/proxmox-automation-phase3-review-r1/tools/build_release.py"
+      ],
+      "selected_companion_blocks": [
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Claimed principal versus channel identity",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Privileged helper as confused deputy",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+      ],
+      "excluded_blocks": [
+        {
+          "block": "MEMORY-SAFETY-AND-BINARY.md",
+          "reason": "The visible successor tree is Python and deployment policy; no new native implementation is established by the inventory. Real OS/guest qualification remains outside this source-only pass."
+        }
+      ],
+      "reason": "Final PROJECT_STATUS.md89-94 explicitly identifies tasks/proxmox-automation-phase3-review-r1 as the current independently reviewed serial-broker revision and describes earlier results as historical. The repository inventory contains its separate source/release/deployment tree and a new src/g6k_serial/preissuance.py absent from the audited baseline. All five current infra ledger units and final snapshot cover tasks/proxmox-automation-phase3 only. Freeze this public successor source and compare/review its full request, peer/grant/preissuance/release and broker-worker lifecycle controls before claiming complete current infrastructure coverage. Exact source equality must be checked, not inferred from the review-r1 directory name. No vulnerability or live deployment is inferred."
+    },
+    {
+      "surface": "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+      "boundary": "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+      "subsystem": "tasks/proxmox-automation-phase3-review-r1",
+      "attack_class": "ATTACK-CLASSES.md#Resource and file handling",
+      "starting_paths": [
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3-review-r1/INSTALLATION.md",
+        "tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md"
+      ],
+      "selected_companion_blocks": [
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+      ],
+      "excluded_blocks": [
+        {
+          "block": "CLIENT-SIDE.md",
+          "reason": "This missing unit concerns the source-visible protected local configuration/provisioning/journal boundary of the documented successor broker, not browser rendering."
+        }
+      ],
+      "reason": "The documented current broker successor includes separate securefs, journal, provision and preissuance source files, while existing filesystem/identity conclusions cite only the older phase3 tree. The new preissuance component is a material potential path to the same protected credentials/grants and needs a source/control comparison, including descriptor-relative ownership assumptions and refusal behavior. The final snapshot omits that tree, so this critic cannot settle its code from allowed source. Capture only public source/examples and never read actual installed credentials, run provisioning, change identities, touch Proxmox/VMs or perform privileged qualification."
+    }
+  ],
+  "reassign_ids": [],
+  "resolved_prior_leads": [],
+  "stop": false
+}

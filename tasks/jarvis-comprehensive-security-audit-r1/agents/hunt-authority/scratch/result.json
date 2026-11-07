@@ -1,0 +1,224 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Fapi.py%23tasks-schedules-execution::app%2Fagent%2Fauthority.py%23transaction-and-scope::app%2Fagent::AI-AND-LLM.md%23Excessive%20agency%20and%20confused-deputy%20authority",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/runtime.py",
+        "app/agent/simulation.py",
+        "tests/synthetic_authority.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/execution.py",
+            "app/agent/runtime.py",
+            "app/agent/api.py",
+            "app/agent/simulation.py"
+          ],
+          "invariant": "Untrusted request text/payload cannot activate real execution or broaden a synthetic capability.",
+          "method": "source",
+          "result": "Source review: runtime.py:41-50 permits trusted embedding opt-in only, with no HTTP/environment activation. execution.py:30-54 validates one bounded value and exact capability policy; :78-98 accepts only exact SyntheticExecutor type, rejects subclasses/arbitrary adapters and unknown capabilities. :166-216 rechecks stored scope/capability authorization and current policy before pure computation. SyntheticExecutor never imports tools or interprets goal text. Simulator similarly requires explicit allow_simulation and has only SQLite effects. Ordinary API routes supply fixed SERVICE_ACTOR; no claimed multiuser boundary was inferred.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Exact synthetic executor registration rejects a subclass.",
+          "method": "local",
+          "result": "Parent-run bounded offline fixture returned real_or_subclass_registration=real_execution_disabled; no real executor ran. Command: parent sandbox-runner.py hunt-authority agents/hunt-authority/scratch/authority-invariants.py; exit0. Sandbox: namespaces/network isolated, read-only source/toolchain, empty allowlisted environment,32MiB scratch,512MiB address space,10CPU seconds,64processes,96FDs,2MiB files,25second wall cap. Synthetic state only.",
+          "artifact": "agents/hunt-authority/artifacts/authority-invariants.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fapi.py%23tasks-schedules-execution::app%2Fagent%2Fauthority.py%23transaction-and-scope::app%2Fagent::ATTACK-CLASSES.md%23Business%20logic",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/scheduler.py",
+        "app/agent/task_queue.py",
+        "tests/synthetic_authority.py",
+        "tests/test_execution_pipeline.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/scheduler.py",
+            "app/agent/execution.py",
+            "app/agent/task_queue.py",
+            "tests/test_execution_pipeline.py"
+          ],
+          "invariant": "Transactions, ownership generations, schedule revisions/epochs and uncertain outcomes preserve lifecycle state across failures.",
+          "method": "source",
+          "result": "Source review: authority.py:117-132 holds lifetime writer/ledger flock; :169-202 checks database identity, adopts fresh durable generation, disables scheduler control and converts abandoned claimed/simulating state to UNKNOWN. :220-292 fences PID/inodes/generation and poisons uncertain SQLite/checkpoint writes. :479-505 binds schedule revision, exact nominal instant, epoch and occurrence UUID before one transactional admission/last_run update. scheduler.py:63-105 rejects overdue automatic startup, invalidates local callback epoch before stop and surfaces durable-stop uncertainty. execution.py:264-267 refuses replay into adapter invocation; :298-310 publishes only existing evidence on recovery. task_queue.py:39-40 rejects public status completion. No source-grounded state bypass found.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Repeated request has one task and writer lifetime lock excludes a second authority.",
+          "method": "local",
+          "result": "Parent-run fixture returned same_request_replay_once=1 and second_writer=owner_busy. Command: parent sandbox-runner.py hunt-authority agents/hunt-authority/scratch/authority-invariants.py; exit0. Sandbox: namespaces/network isolated, read-only source/toolchain, empty allowlisted environment,32MiB scratch,512MiB address space,10CPU seconds,64processes,96FDs,2MiB files,25second wall cap. Synthetic state only.",
+          "artifact": "agents/hunt-authority/artifacts/authority-invariants.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fapi.py%23tasks-schedules-execution::app%2Fagent%2Fauthority.py%23transaction-and-scope::app%2Fagent::PROTOCOLS-RPC-AND-MESSAGING.md%23Envelope%20and%20payload%20identity%20mismatch",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/scheduler.py",
+        "tests/synthetic_authority.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/api.py",
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "app/agent/scheduler.py"
+          ],
+          "invariant": "A logical request identity binds scope, operation and normalized payload, and cannot preempt internal execution/occurrence receipt identities through the public API.",
+          "method": "source",
+          "result": "Source review: api.py:12,20-44,101-103,127-129 constrains public mutation request IDs to canonical UUIDv4 and forbids extra submission fields. authority.py:294-320 keys durable receipts by request ID and compares scope/operation/SHA256 canonical payload before replay; :322-326,348-354 scope reads. execution.py:25-27 derives UUIDv5 internal phase receipts and :131-157 binds execution spec into admission payload. authority.py:484-505 derives UUIDv5 occurrence identity from job/revision/nominal and checks exact durable job/control. scheduler.py:28-40 preserves the original nominal/authorization time on retries so otherwise identical retries retain identity. HTTP authentication is peer-owned coverage; Actor is explicitly trusted-process namespace, not a caller credential.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Scope/payload changes cannot replay a committed identity and cross-scope task reads are rejected.",
+          "method": "local",
+          "result": "Parent-run fixture returned payload_conflict=request_conflict, scope_conflict=request_conflict and scope_read_denied=not_found. Command: parent sandbox-runner.py hunt-authority agents/hunt-authority/scratch/authority-invariants.py; exit0. Sandbox: namespaces/network isolated, read-only source/toolchain, empty allowlisted environment,32MiB scratch,512MiB address space,10CPU seconds,64processes,96FDs,2MiB files,25second wall cap. Synthetic state only.",
+          "artifact": "agents/hunt-authority/artifacts/authority-invariants.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fapi.py%23tasks-schedules-execution::app%2Fagent%2Fauthority.py%23transaction-and-scope::app%2Fagent::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Detached%20work%20after%20cancellation",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/scheduler.py",
+        "app/agent/simulation.py",
+        "app/resource_manager.py",
+        "tests/synthetic_authority.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "app/agent/simulation.py",
+            "app/agent/scheduler.py",
+            "app/resource_manager.py"
+          ],
+          "invariant": "Cancellation/stop prevents unstarted synthetic effects while preserving honest uncertainty and existing result evidence.",
+          "method": "source",
+          "result": "Source review: authority.py:414-425 marks cancellation and removes held admission; :446-477 cancels active occurrences on schedule removal/global stop. execution.py:203-216 checks cancel/policy/deadline after claim and immediately before pure computation; :278-289 records UNKNOWN on dispatch uncertainty/deadline rather than rerunning. :218-246 recomputes bounded pure response and binds result evidence to claim/generation before publication. Simulator.apply checks cancellation before inserting its sole SQLite effect. resource_manager.py:365-380 awaits worker stop and then scheduler stop even if the first fails. Worker performs only bounded synchronous pure computation, catches background failure once and exposes reconcile-required readiness; cancellation is awaited in :339-346. A future real executor would need independent OS/process cancellation guarantees and is not implemented here.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Post-claim cancellation and pre-dispatch policy revocation stop synthetic dispatch.",
+          "method": "local",
+          "result": "Parent-run fixture returned cancel_after_claim=cancelled and revocation_at_dispatch=denied. Command: parent sandbox-runner.py hunt-authority agents/hunt-authority/scratch/authority-invariants.py; exit0. Sandbox: namespaces/network isolated, read-only source/toolchain, empty allowlisted environment,32MiB scratch,512MiB address space,10CPU seconds,64processes,96FDs,2MiB files,25second wall cap. Synthetic state only.",
+          "artifact": "agents/hunt-authority/artifacts/authority-invariants.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fapi.py%23tasks-schedules-execution::app%2Fagent%2Fauthority.py%23transaction-and-scope::app%2Fagent::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Quota-accounting%20scope%20and%20reset%20gaps",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/admission.py",
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/agent/execution.py",
+        "app/agent/recovery.py",
+        "app/agent/reporter.py",
+        "app/agent/scheduler.py",
+        "app/agent/task_queue.py",
+        "tests/synthetic_authority.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/admission.py",
+            "app/agent/api.py",
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "app/agent/scheduler.py",
+            "app/agent/reporter.py",
+            "app/agent/task_queue.py",
+            "app/agent/recovery.py"
+          ],
+          "invariant": "Admission and active-work limits apply before bounded synthetic dispatch; distinguish active quota from lifetime retention.",
+          "method": "source",
+          "result": "Source review: admission.py:10-49 caps designated POST bodies at262144 bytes,1024 chunks and5seconds before JSON; api.py caps fields and pages. authority.py:336-341 caps active held/claimed/simulating/unknown outbox rows at1000, execution.py:107-108,143-145 enforces configurable1..1000 pending count, :30-38 bounds payload/timeout, :139-142 bounds future expiry to24hours. authority.py:380-412 paginates public tasks and polls active execution rows rather than completed history. Terminal receipts/events/tasks and schedules have no independent lifetime/aggregate admission quota; list_schedules, compatibility tasks and reporter snapshots materialize all corresponding rows. recovery.snapshot caps diagnostic rows/bytes even without ledger. This warrants retention/capacity hardening, but source alone establishes no separate lower-trust principal plus concrete availability violation beyond the separately audited HTTP identity policy. No generic missing-rate-limit finding was invented.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-authority",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/execution.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "The active pipeline pending quota rejects another admission at max_pending=1.",
+          "method": "local",
+          "result": "Parent-run fixture returned capacity_denied=queue_capacity_exceeded; no stress or availability test performed. Command: parent sandbox-runner.py hunt-authority agents/hunt-authority/scratch/authority-invariants.py; exit0. Sandbox: namespaces/network isolated, read-only source/toolchain, empty allowlisted environment,32MiB scratch,512MiB address space,10CPU seconds,64processes,96FDs,2MiB files,25second wall cap. Synthetic state only.",
+          "artifact": "agents/hunt-authority/artifacts/authority-invariants.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Add an explicit aggregate schedule quota and preflight retention/capacity policy for completed tasks, receipts and events. Current active-outbox caps do not limit historical rows, and schedule/report compatibility paths read full lists. Preserve append-only security evidence instead of silently deleting it.",
+    "Keep real-executor interfaces disabled until an independent OS isolation, cancellation, deadline, identity and outcome-evidence design exists. Current pure synthetic recomputation guarantees cannot be transferred to shell/provider/VM adapters.",
+    "Several legacy test files are stale against the current facades: tests/test_scheduler_reliability.py and tests/test_task_queue_persistence.py construct JSON-era storage_path implementations and removed methods. Do not count them as current transactional authority verification; use real Authority tests such as tests/test_execution_pipeline.py and tests/test_operator_ledger.py."
+  ],
+  "uncovered": []
+}

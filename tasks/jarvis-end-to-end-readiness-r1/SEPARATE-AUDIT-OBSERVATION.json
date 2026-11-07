@@ -1,0 +1,557 @@
+{
+  "observed_at": "2026-11-06T07:22:06.795637+00:00",
+  "audit_root": "tasks/jarvis-comprehensive-security-audit-r1",
+  "audit_files_modified": false,
+  "audit_in_progress": true,
+  "files_sha256": {
+    "REPORT.md": "415b44b6cf9db19a24aa4232633ad0e882e0e46a10c1f7f750f970eae5dafe39",
+    "findings.json": "682cd35ae18fa7238ef929a806ba1d2fb97ee35be7fa819bae6d6e1a6968f48b",
+    "IMPLEMENTATION-DEFECTS.md": "3e57827ea81b63dc51292c1a031b9cc5ef69bebf0d106ff1063e16ff856fead1",
+    "run-metadata.json": "65607919e191e75121890d3d9db1dc991bf1d966adce609ff3881e343693e1ab",
+    "source-stability-packaged.json": "66fc5b31cc75872ba4ad839c660b56374020fd7f0a317167399d11ac7db56cbb",
+    "record-verification.json": "d220b6c8bbbf474f0456ce1742c0e4482cba5b800c26332a996d28a4245dce52"
+  },
+  "observed_files": {
+    "findings.json": [
+      {
+        "verdict": "rejected",
+        "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+        "title": "Shared temporary screenshot output is unreachable through current application dispatch",
+        "description": "The unchanged capture helper still accepts a preexisting temporary directory and passes a predictable PNG pathname to mss. However, snapshot-packaged unconditionally refuses real screenshot and vision execution in both chat processing and every registry compatibility interface. Native voice enters those same blocked processing helpers. Source review found no independently active application caller of screenshot capture, screen analysis, YOLO screen detection or ActionVerifier. The readiness utility's direct screenshot call explicitly forces dry-run mode. The earlier claim of a victim capture reachable through current application/native dispatch is therefore rejected; no screenshot, cross-UID disclosure or file overwrite was executed or observed.",
+        "claimed_root_cause": "Generated screenshot storage accepts preexisting directory and leaf path state without ownership or mode validation or descriptor-bound exclusive publication. This remains a dormant helper pattern, but the current application does not expose an active victim capture path to the proposed lower-trust principal.",
+        "trace": [
+          {
+            "kind": "entrypoint",
+            "file": "app/server.py",
+            "line": 368,
+            "scope": "chat",
+            "description": "The HTTP chat handler accepts a client message and, after the awake check, passes req.message to _process at line 380. This source route is not evidence that stock authority startup succeeds."
+          },
+          {
+            "kind": "propagation",
+            "file": "app/server.py",
+            "line": 600,
+            "scope": "_process",
+            "description": "The attempted path stops here: use_tool, confirm_action and vision intents return the real-execution-disabled response at line 601 before importing or invoking a screenshot tool."
+          },
+          {
+            "kind": "sink",
+            "file": "app/computer/screenshot.py",
+            "line": 32,
+            "scope": "capture",
+            "description": "The retained helper delegates PNG publication to mss.tools.to_png using an absolute pathname. This is the historical claimed sink, disconnected from the current application dispatch trace by the unconditional refusal."
+          }
+        ],
+        "evidence": [
+          {
+            "file": "app/computer/screenshot.py",
+            "line": 24,
+            "description": "The helper selects tempfile.gettempdir()/jarvis_screenshots by default and accepts preexisting directory state through mkdir(exist_ok=True) at line 25. These bytes establish a storage pattern, not an active call."
+          },
+          {
+            "file": "app/computer/screenshot.py",
+            "line": 27,
+            "description": "The basename uses second-resolution time; line 28 makes it absolute and line 32 passes it to the PNG writer without an application-created exclusive descriptor."
+          },
+          {
+            "file": "app/computer/screenshot.py",
+            "line": 19,
+            "description": "A direct trusted helper call additionally requires mss; an unavailable import raises before directory selection or pixel capture."
+          },
+          {
+            "file": "app/tools/registry.py",
+            "line": 158,
+            "description": "ToolRegistry.call unconditionally raises real_execution_disabled_independent_authorization_required. execute delegates to it at line 168; confirmed flags and dry-run configuration cannot activate an effect."
+          },
+          {
+            "file": "app/tools/registry.py",
+            "line": 59,
+            "description": "Module-level and instance TOOLS entries use a callable that unconditionally refuses execution."
+          },
+          {
+            "file": "app/tools/registry.py",
+            "line": 90,
+            "description": "Compatibility getters return metadata-only ModuleType objects whose execute is the disabled callable at line 98, rather than importing and returning a raw effect-capable tool."
+          },
+          {
+            "file": "app/server.py",
+            "line": 669,
+            "description": "Streaming chat returns None for use_tool, confirm_action and vision intents; the fallback _process then refuses them at lines 600-601."
+          },
+          {
+            "file": "app/voice/audio_stream.py",
+            "line": 96,
+            "description": "Native voice calls _process_stream and, on its None result, _process at line 112. Avoiding HTTP lifespan therefore does not avoid the current screenshot execution refusal."
+          },
+          {
+            "file": "app/computer/vision.py",
+            "line": 44,
+            "description": "Screen analysis retains a direct capture call after its dry-run check at line 38; the only application wrapper aliases vision.execute, and registry/chat dispatch to it is disabled. No independently active analyze caller was found in the reviewed source."
+          },
+          {
+            "file": "app/computer/yolo_detector.py",
+            "line": 47,
+            "description": "YOLO retains a conditional direct capture call after dry-run and optional-dependency checks, but repository source provides no active application call to detect. Test calls do not establish a running boundary."
+          },
+          {
+            "file": "app/computer/verifier.py",
+            "line": 10,
+            "description": "ActionVerifier retains a capture call, but source review found no application call to this verifier; merely constructing the module singleton at line 26 does not invoke capture."
+          },
+          {
+            "file": "tasks/tool_readiness_smoke.py",
+            "line": 101,
+            "description": "The extra direct screenshot utility call runs under temporary_attr(settings.safety, dry_run, True), so screenshot.execute returns before capture."
+          },
+          {
+            "file": "app/agent/execution.py",
+            "line": 88,
+            "description": "The durable execution registry accepts only the exact SyntheticExecutor type. Its execute method at lines 67-76 performs bounded echo/hash/failure computation, providing no replacement screenshot adapter."
+          },
+          {
+            "file": "app/agent/runtime.py",
+            "line": 17,
+            "description": "Stock lazy runtime constructs an authority without supplied ledger/enrollment or legacy authorization; a route-only test must not be treated as proof of an admitted stock deployment. The screenshot refusal also applies when a trusted embedding admits an authority."
+          },
+          {
+            "file": "tests/test_screenshot.py",
+            "line": 52,
+            "description": "The existing capture test substitutes a PNG writer and hardware context; it establishes neither installed-writer behavior nor a reachable application effect or a separate-UID filesystem result."
+          }
+        ],
+        "reason": "The decisive missing link is refuted by current source, not merely unobserved deployment configuration: normal HTTP, WebSocket and native voice tool/vision processing refuses real effects, and registry call, execute, TOOLS and getter interfaces also refuse them without importing a tool. Full-source call-site searches found only dormant library helper chains and a forced-dry-run readiness call outside those gates. Calling capture manually from newly written trusted Python would introduce the missing execution path rather than reproduce a current lower-trust application boundary. Consequently the old source-derived storage concern is not retained as a current needs_validation application finding. This rejection does not assert that capture is hardened or that a future independently authorized adapter could safely reuse its storage. Cross-UID temporary-directory control, actual installed PNG-writer behavior and an operational display were never observed, and no target code or external service was executed."
+      },
+      {
+        "verdict": "needs_validation",
+        "fingerprint": "app/server.py:anonymous-loopback-authority",
+        "title": "Anonymous task access depends on an admitted loopback deployment and an excluded local principal",
+        "description": "Packaged source still permits ordinary task HTTP requests without credentials when the API token is empty and supplies the shared local-service actor. Fresh parent-isolated verification against snapshot-packaged observed genuine stock lifespan refusing its missing synthetic database before creation. Only after explicit synthetic authority binding, native in-memory requests read and cancelled one dummy task without credentials; diagnostics rejected empty-token access and configured-token task reads rejected missing credentials. These results establish conditional task-state route behavior, not an operating anonymous deployment or a cross-UID/browser exploit. Current /stop requires credentials even in empty-token mode, host resource mutation routes deny403, and a configured transport requires a token at lifespan. Those controls narrow other paths but do not wrap ordinary task reads/cancellation. Admission and local-client trust facts remain unresolved.",
+        "claimed_root_cause": "Ordinary task HTTP routes accept anonymous requests in the explicitly configured empty-token loopback mode and operate in a fixed server-owned actor namespace. This could cross a principal boundary only if an admitted serving deployment exists and a locally reachable client is excluded from its intended trust boundary.",
+        "trace": [
+          {
+            "kind": "entrypoint",
+            "file": "app/server.py",
+            "line": 251,
+            "scope": "api_token_middleware",
+            "description": "A received ordinary task HTTP request proceeds without credential verification when server.api_token is empty (251-254); /stop is independently refused at252-253. Lower-trust entrypoint status remains conditional on the unresolved serving/principal facts."
+          },
+          {
+            "kind": "propagation",
+            "file": "app/agent/api.py",
+            "line": 111,
+            "scope": "cancel",
+            "description": "DELETE /tasks/{task_id} passes the fixed SERVICE_ACTOR and caller-selected task/request identifiers to Authority.cancel; the request ID query is constrained to canonical UUID4 form."
+          },
+          {
+            "kind": "propagation",
+            "file": "app/agent/authority.py",
+            "line": 432,
+            "scope": "Authority.cancel",
+            "description": "After task identifier validation, the actor scope selects the task for the cancellation effect inside the fenced mutation and request-receipt transaction."
+          },
+          {
+            "kind": "sink",
+            "file": "app/agent/authority.py",
+            "line": 425,
+            "scope": "Authority._cancel",
+            "description": "For a held task, task status and outbox state become cancelled; _put at427 persists task data in the surrounding transaction. This is a task-state effect, not proof of real executor access."
+          }
+        ],
+        "evidence": [
+          {
+            "file": "app/config.py",
+            "line": 108,
+            "description": "The API token defaults to empty. The validator at114-136 requires configured loopback host/origins in local mode and a nonempty token for remote/nonloopback mode."
+          },
+          {
+            "file": "config.yaml.example",
+            "line": 103,
+            "description": "The public example selects127.0.0.1, explicitly describes empty-token authentication being disabled for localhost-only use at109, and sets api_token empty and remote_access_enabled false at112-113."
+          },
+          {
+            "file": "app/server.py",
+            "line": 251,
+            "description": "Empty token bypasses ordinary task HTTP authentication at251-254, with a separate /stop refusal. A configured token is checked at258 using _api_token_ok and constant-time byte comparison at201."
+          },
+          {
+            "file": "app/server.py",
+            "line": 402,
+            "description": "The actual FastAPI app includes the authority router."
+          },
+          {
+            "file": "app/agent/runtime.py",
+            "line": 7,
+            "description": "Ordinary authority HTTP routes use the fixed Actor(local-service), rather than assigning a caller-specific namespace."
+          },
+          {
+            "file": "app/agent/api.py",
+            "line": 94,
+            "description": "Operator diagnostics independently requires a configured matching Bearer credential, including when ordinary routes permit anonymous access."
+          },
+          {
+            "file": "app/main.py",
+            "line": 11,
+            "description": "The stock entrypoint serves the reviewed FastAPI app at the configured host and port."
+          },
+          {
+            "file": "app/server.py",
+            "line": 115,
+            "description": "Mandatory lifespan obtains the authority before readiness, scheduler, listeners and background startup work. A failing get_authority prevents startup."
+          },
+          {
+            "file": "app/agent/runtime.py",
+            "line": 17,
+            "description": "The stock opener supplies only the authority database and legacy JSON paths, without ledger, enrollment witness or legacy approval."
+          },
+          {
+            "file": "app/agent/authority.py",
+            "line": 107,
+            "description": "Missing, empty or symlinked databases are refused before directory or writer-lock creation. Existing databases additionally require enrollment or explicit legacy admission at159-163."
+          },
+          {
+            "file": "app/agent/enrollment.py",
+            "line": 299,
+            "description": "An enrolled store requires the ledger guard and external witness, neither supplied by the stock opener."
+          },
+          {
+            "file": "app/agent/enrollment.py",
+            "line": 338,
+            "description": "Legacy admission requires an explicit OperatorPermits verifier/permit tuple; its verified payload binds database path, logical state and execution_disabled at343-346."
+          },
+          {
+            "file": "app/agent/runtime.py",
+            "line": 21,
+            "description": "The documented trusted embedding/test hook can bind an admitted authority; it is not exposed as an HTTP activation endpoint."
+          },
+          {
+            "file": "tests/test_server_auth.py",
+            "line": 17,
+            "description": "The anonymous-task test at30-33 binds an explicit synthetic authority. The module TestClient at8 skips lifespan for ordinary route requests."
+          },
+          {
+            "file": "app/server.py",
+            "line": 217,
+            "description": "Present WebSocket Origin is checked against local/configured origins before either WebSocket accepts (229-237,456,533). Native HTTP Host/Origin results do not establish browser or WebSocket exploitation."
+          },
+          {
+            "file": "app/agent/authority.py",
+            "line": 307,
+            "description": "Mutations bind actor scope, operation and canonical payload to durable request receipts and detect conflicting reuse. Reads and cancellation select records within that actor scope; these controls do not assign network-client identity."
+          },
+          {
+            "file": "app/agent/api.py",
+            "line": 72,
+            "description": "A non-null transport_permit execution submission independently requires a configured matching Bearer token at75-76. This separate check does not wrap /tasks read/cancel at99-111."
+          },
+          {
+            "file": "app/agent/api.py",
+            "line": 106,
+            "description": "Task reads use SERVICE_ACTOR; get_task validates the canonical task UUID and checks actor scope through _get at authority.py:379-384."
+          },
+          {
+            "file": "app/agent/authority.py",
+            "line": 3,
+            "description": "The contract trusts local code controlling the process/database and describes Actor as a server-owned namespace rather than application authentication. No multi-user isolation baseline is promised."
+          },
+          {
+            "file": "docs/authority_enrollment.md",
+            "line": 18,
+            "description": "Documentation explicitly requires trusted embedding to bind an already verified authority and says unprovisioned default startup fails closed. This is a supported conditional embedding mechanism, not evidence of an actual serving instance."
+          },
+          {
+            "file": "docs/TARGET_HOST_READINESS.md",
+            "line": 54,
+            "description": "Loopback is explicitly the Phase2 containment boundary; future remote access requires additional identity/session/scoping controls. An excluded local principal must therefore be established rather than inferred from a generic multi-user threat model."
+          },
+          {
+            "file": "tasks/jarvis-comprehensive-security-audit-r1/agents/verify-latest-auth/artifacts/verify_auth_packaged.txt",
+            "line": 3,
+            "description": "Parent-promoted fresh snapshot-packaged sandbox output records stock_lifespan_error authority_unenrolled_or_missing, stock_database_created false, synthetic-bound native read/cancel200 and cancelled dummy task, empty-token diagnostics401, configured-token missing401/valid200, and no real socket/browser/otherUID test. The native requests use arbitrary Host and Origin; the route fixture explicitly skips lifespan."
+          },
+          {
+            "file": "app/server.py",
+            "line": 123,
+            "description": "Actual lifespan rejects a configured execution transport when the API token is empty; this additional preventing control does not require a token for an admitted authority without a configured transport."
+          },
+          {
+            "file": "app/server.py",
+            "line": 252,
+            "description": "Empty-token requests to /stop receive401 rather than reaching the worker cancellation path."
+          },
+          {
+            "file": "app/server.py",
+            "line": 340,
+            "description": "All four host resource mutation HTTP routes unconditionally return403/offline_operator_control_required."
+          }
+        ],
+        "blockers": [
+          "No actual serving deployment with an admitted authority and an empty configured token has been established. The stock opener lacks the admission context required for missing, enrolled or legacy stores; explicit synthetic binding does not demonstrate ordinary deployed startup.",
+          "No separately restricted local OS principal, excluded by the application's intended loopback trust boundary but able to reach its listener, has been established. The fresh native in-memory fixture measures neither UIDs nor listener/network namespace/ingress controls; trusted local process/database control is outside this claim.",
+          "Any browser-specific claim additionally requires a concrete permitted request shape, browser local-network/SOP behavior and actual Host/DNS/ingress facts. No browser test occurred, and present-Origin WebSocket rejection remains an independent preventing control."
+        ],
+        "validation_plan": {
+          "local": "Fresh parent-isolated snapshot-packaged evidence already verifies genuine stock startup refusal and, separately, native dummy-task read/cancel after explicit synthetic authority binding, with credentialed/diagnostics controls. Do not expand this result to working stock startup or real execution. If a supported admitted serving mode is identified, exercise its genuine lifespan with synthetic admission context, then use a disposable isolated two-UID loopback fixture to attempt exactly one unauthenticated dummy held-task read/cancel and verify missing/valid configured-token controls. Browser testing is a separate concrete request/policy experiment only if that claim remains relevant; no deployed endpoints or real stores are needed.",
+          "deployment": "The owner can inspect launch/embedding code and configuration presence without revealing secrets, opening production databases or sending service traffic: establish whether any admitted authority is actually served with an empty token, which local principals and network namespaces can reach it, whether any such principal is outside the intended trust boundary, and applicable Host/Origin/ingress restrictions. If no admitted anonymous serving mode or excluded reachable principal exists, reject the deployed access claim. Do not create credentials, provision authority, enable an executor or change deployed access merely to validate it."
+        }
+      }
+    ],
+    "run-metadata.json": {
+      "run_id": "jarvis-comprehensive-security-audit-r1",
+      "repo": "JARVIS",
+      "target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-packaged",
+      "original_target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS",
+      "source_ref": "f4cac30259a7bf4610add2063679ae49138ee637",
+      "dirty": true,
+      "capture_utc": "2026-11-06T05:42:44.864013+00:00",
+      "capture_changed_paths": [],
+      "profile": "standard",
+      "sandbox_profile_mapping": "strict",
+      "scope_paths": [
+        "app",
+        "frontend",
+        "scripts",
+        "config",
+        ".github",
+        "tests",
+        "docs",
+        "tools",
+        "tasks/proxmox-automation-phase2",
+        "tasks/proxmox-automation-phase3",
+        "root manifests and examples",
+        "evals",
+        "assets text",
+        "tasks/*.py",
+        "tasks/proxmox-automation-phase3-review-r1"
+      ],
+      "budget": null,
+      "execution_policy": "sandboxed-source-and-local-only",
+      "selected_companion_files": [
+        "AI-AND-LLM.md",
+        "WEB-PROTOCOL-AND-AUTH.md",
+        "CLIENT-SIDE.md",
+        "SUPPLY-CHAIN-AND-RELEASE.md",
+        "CLOUD-AND-DEPLOYMENT.md",
+        "PROTOCOLS-RPC-AND-MESSAGING.md",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+        "DATA-ISOLATION-AND-LIFECYCLE.md",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md"
+      ],
+      "prior_run_paths": [],
+      "shared_file_owners": "parent only",
+      "run_status": "in_progress",
+      "output_path_policy": "Explicit user output path overrides skill ignore requirement; source remains untouched. Only audit directory and append-only completion log writes.",
+      "snapshot_files": 390,
+      "snapshot_bytes": 2021462,
+      "excluded_sensitive_runtime_paths": [
+        "config.yaml",
+        ".env",
+        "data/",
+        "logs/",
+        "jarvis-vault/",
+        "models/",
+        "piper/"
+      ],
+      "snapshot_consistency": "Per-file stable reads and immediate rehash; not an atomic filesystem snapshot.",
+      "supplemental_capture_utc": "2026-11-06T05:45:09.705227+00:00",
+      "supplemental_paths": [
+        "evals/schema.py",
+        "evals/runner.py",
+        "evals/__init__.py",
+        "evals/grader.py",
+        "evals/adapter.py",
+        "evals/fixtures/current_deterministic.json",
+        "assets/audio/README.md",
+        "tasks/tool_readiness_smoke.py",
+        "tasks/task13b3a-analyze.py",
+        "tasks/task13b3a.py",
+        "tasks/manual_voice_smoke.py",
+        "tasks/readiness_report.py",
+        "tasks/pre_server_readiness.py",
+        "tasks/task13b3a-monitor.py"
+      ],
+      "fixture_supplement": {
+        "paths": [
+          "evals/golden.jsonl"
+        ],
+        "utc": "2026-11-06T05:54:31.883770+00:00"
+      },
+      "reconnaissance_agents": [
+        "recon_product",
+        "recon_authority",
+        "recon_surfaces",
+        "recon_execution"
+      ],
+      "execution_toolchain": "read-only preexisting gate6l mixed-env-r2 site-packages under /toolchain; Python3.14.4; not evidence of deployed versions",
+      "source_manifest_sha256": "e20fe0c97a670b1ad6b6655334ca117b488011c8a27b95078893d90897e7f910",
+      "source_revision_id": "f4cac30259a7bf4610add2063679ae49138ee637+dirty-snapshot:bcede6f9a58602f78d9dd97af754b43ed3484cd45173ec5d7626e74ab20045d6",
+      "current_source": {
+        "target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-current",
+        "capture_utc": "2026-11-06T06:05:16.628282+00:00",
+        "base_head": "f4cac30259a7bf4610add2063679ae49138ee637",
+        "source_manifest_sha256": "a80bb5d1d23fcd691c08e4be2075801e059b86302d421eb47c15533675c6f7cb",
+        "changed_or_added_paths": [
+          "PROJECT_STATUS.md",
+          "README.md",
+          "app/agent/api.py",
+          "app/agent/authority.py",
+          "app/agent/branch_verification.py",
+          "app/agent/checkpoint_epochs.py",
+          "app/agent/operator_cli.py",
+          "app/agent/recovery.py",
+          "app/agent/recovery_decisions.py",
+          "app/agent/reporter.py",
+          "app/agent/runtime.py",
+          "docs/audit_disaster_recovery.md",
+          "docs/authority_enrollment.md",
+          "docs/operator_recovery.md",
+          "docs/recovery_decisions.md",
+          "tests/recovery_process_actor.py",
+          "tests/test_recovery_decisions.py"
+        ],
+        "removed_paths": [],
+        "unstable_paths": [],
+        "files": 342,
+        "consistency": "Per-file stable reads plus immediate rehash; not atomic cross-file capture; original immutable snapshot preserved."
+      },
+      "coverage_source_policy": "Whole current source plus six bounded hunting waves and concurrent deltas; hash-identical paths share revision-tagged prior evidence. Primary source snapshot-packaged. Later drift explicitly excluded from frozen review.",
+      "delegation_limitations": [
+        "hunt_delta_registry initial and rephrased delegated attempts blocked by automated worker content filter; parent-registry completed source and10 safe tests; separate runtime review/coverage critics retained."
+      ],
+      "final_source": {
+        "target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-final",
+        "capture_utc": "2026-11-06T06:13:55.977946+00:00",
+        "base_head": "f4cac30259a7bf4610add2063679ae49138ee637",
+        "source_manifest_sha256": "825c9acd541236321b990f44c1b04393b831f7ef578dc33d8d8ef2c9b1af152b",
+        "changed_or_added_paths": [
+          "app/agent/recovery_decisions.py",
+          "docs/recovery_decisions.md",
+          "tests/test_recovery_decisions.py"
+        ],
+        "removed_paths": [],
+        "unstable_paths": [],
+        "files": 342,
+        "consistency": "Per-file stable reads plus immediate rehash; not atomic cross-file capture; original immutable snapshot preserved."
+      },
+      "final_source_revision_id": "f4cac30259a7bf4610add2063679ae49138ee637+dirty-snapshot:e20fe0c97a670b1ad6b6655334ca117b488011c8a27b95078893d90897e7f910",
+      "expanded_source": {
+        "target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-expanded",
+        "capture_utc": "2026-11-06T06:24:12.109272+00:00",
+        "source_manifest_sha256": "ac7ab490e6e3fa3900f26cfc8e8ab50e86e3e14482a8d2ec1f3024e33252581b",
+        "files": 385,
+        "added_source_files": 43,
+        "added_paths": [
+          "tasks/proxmox-automation-phase3-review-r1/INDEPENDENT-REVIEW.md",
+          "tasks/proxmox-automation-phase3-review-r1/PROGRESS.md",
+          "tasks/proxmox-automation-phase3-review-r1/README.md",
+          "tasks/proxmox-automation-phase3-review-r1/RELEASE.json",
+          "tasks/proxmox-automation-phase3-review-r1/STOP-AND-REVOKE.md",
+          "tasks/proxmox-automation-phase3-review-r1/SECURITY-REVIEW.md",
+          "tasks/proxmox-automation-phase3-review-r1/APPROVAL-PACKET.md",
+          "tasks/proxmox-automation-phase3-review-r1/SHA256SUMS",
+          "tasks/proxmox-automation-phase3-review-r1/approval.example.json",
+          "tasks/proxmox-automation-phase3-review-r1/INSTALLATION.md",
+          "tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.socket",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.socket",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/host.example.json",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-worker.service",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.service",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.service",
+          "tasks/proxmox-automation-phase3-review-r1/deploy/worker.example.json",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_review_r1.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/run_offline.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_hardening.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_ipc.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/support.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_boundaries.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_storage.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_preissuance.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_transport.py",
+          "tasks/proxmox-automation-phase3-review-r1/tests/test_worker_runtime.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/SOURCE-SHA256SUMS",
+          "tasks/proxmox-automation-phase3-review-r1/src/entry.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/worker.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/hardening.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/policy.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/transport.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/__init__.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+          "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/broker.py",
+          "tasks/proxmox-automation-phase3-review-r1/tools/build_release.py"
+        ],
+        "base_app_capture": "snapshot-final (byte-identical copies)",
+        "reason": "Final coverage critic traced PROJECT_STATUS.md current broker successor pointer; earlier phase3 tree is not sufficient current-source coverage. No evidence/artifacts/credentials copied."
+      },
+      "coverage_final_clean": "agents/critic-final4/scratch/result.json",
+      "coverage_hunting_waves": 6,
+      "coverage_units": 51,
+      "run_phase": "final_report_packaging",
+      "initial_target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot",
+      "initial_source_revision_id": "f4cac30259a7bf4610add2063679ae49138ee637+dirty-snapshot:83fbcc3671184c506d383a4d9f6e14a686e78f69dac3d33752b88b31ade75481",
+      "final_record_verification": "record-verification.json",
+      "network_observation": "Target processes had no external network. Parent read one public upstream MSS source file through GitHub; no registries/production/provider calls.",
+      "latest_source": {
+        "target": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-latest",
+        "capture_utc": "2026-11-06T06:57:07.216421+00:00",
+        "files": 388,
+        "changed_or_added_paths": [
+          "app/agent/admission.py",
+          "app/agent/api.py",
+          "app/agent/authority.py",
+          "app/agent/execution.py",
+          "app/agent/execution_transport.py",
+          "app/agent/recovery.py",
+          "app/agent/runtime.py",
+          "app/server.py",
+          "app/tools/registry.py",
+          "app/voice/dictation.py",
+          "tests/test_approval_gates.py",
+          "tests/test_dictation.py",
+          "tests/test_safety_levels.py",
+          "tests/test_secure_transport.py",
+          "tests/transport_fixtures.py"
+        ],
+        "removed_paths": [],
+        "source_manifest_sha256": "bcede6f9a58602f78d9dd97af754b43ed3484cd45173ec5d7626e74ab20045d6",
+        "unstable_paths": []
+      },
+      "source_json_manifest_sha256": "d5e6d6de931ab745c128a639fdb2747cee0ae243b20b618cd7bd1714108a2dcd",
+      "source_stability": "source-stability-packaged.json",
+      "packaged_source": {
+        "capture_utc": "2026-11-06T07:13:57.665340+00:00",
+        "files": 390,
+        "source_manifest_sha256": "e20fe0c97a670b1ad6b6655334ca117b488011c8a27b95078893d90897e7f910",
+        "changed_or_added_paths": [
+          "app/agent/authority.py",
+          "app/agent/execution.py",
+          "app/agent/execution_transport.py",
+          "app/agent/operator_cli.py",
+          "app/agent/recovery.py",
+          "app/cli.py",
+          "app/resource_manager.py",
+          "app/server.py",
+          "app/voice/vad.py",
+          "app/voice/wake_word.py",
+          "tests/test_audit_integration_fixes.py",
+          "tests/test_cancel_token.py",
+          "tests/test_resource_manager.py",
+          "tests/test_secure_transport.py",
+          "tests/test_server_integration.py",
+          "tests/transport_process_actor.py"
+        ],
+        "unstable_paths": [],
+        "reason": "Final bounded concurrent-source pass; source bytes frozen and earlier evidence preserved."
+      }
+    }
+  },
+  "note": "Read-only observation of independently maintained audit; metadata still in_progress. This is a point-in-time snapshot, not a claim of finalized audit status.",
+  "verdict_counts": {
+    "needs_validation": 1,
+    "rejected": 1
+  }
+}

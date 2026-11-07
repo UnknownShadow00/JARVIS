@@ -1,0 +1,115 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Frecovery_decisions.py%23RecoveryRegistry.apply::app%2Fagent%2Frecovery_decisions.py%23operator-permit-and-reference::app%2Fagent%2Frecovery_decisions::DATA-ISOLATION-AND-LIFECYCLE.md%23Restore%20reintroduces%20invalid%20state",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/recovery_decisions.py",
+        "app/agent/recovery.py",
+        "app/agent/branch_verification.py",
+        "app/agent/checkpoint_epochs.py",
+        "app/agent/ledger.py",
+        "app/agent/authority.py",
+        "tests/test_recovery_decisions.py",
+        "tests/recovery_process_actor.py",
+        "docs/recovery_decisions.md"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-final-registry",
+          "reviewed_paths": [
+            "app/agent/recovery_decisions.py",
+            "app/agent/recovery.py",
+            "app/agent/branch_verification.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/ledger.py",
+            "app/agent/authority.py",
+            "tests/test_recovery_decisions.py",
+            "docs/recovery_decisions.md"
+          ],
+          "invariant": "Each new disposable registry admission binds the exact request, command, payload, independent operator permit, source checkpoint and protected reference; replay cannot refresh authorization or permit an invalid proposal transition.",
+          "method": "source",
+          "result": "Independently reviewed complete snapshot-final RecoveryRegistry and its relevant permit, branch, checkpoint, canonicalization and filesystem dependencies. Fresh admissions require local-service scope, canonical nonzero v4 request UUID, exact payload-bound operator HMAC and current source checkpoint. Proposal publication re-verifies restored evidence, binds the complete proposal/summary digest and original identities, and rejects duplicate branch/restore identities. Decisions bind proposal digest and previous decision UUID, enforce the explicit transition table, project predecessor expiry at each historical admission, and cannot outlive their permit. Renewals require the exact retained predecessor witness, current authenticated checkpoint lineage, forward progress and at most one epoch advance. Protected inventory, signed chain, independent historical permit authentication, SQL equality and external sequence/digest/witness anchors gate reconstruction. Final admission time is chosen after expensive derive, then permit, witness, proposal context or decision/predecessor expiry is checked again before publication. Historical witness and proposal context validity is also checked during reconstruction. Reviewed the complete final three-file diff and its three new expiry regression tests. No source-grounded authorization or lifecycle bypass survived the preventing controls; no target code was executed.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-final-registry",
+          "reviewed_paths": [
+            "app/agent/recovery_decisions.py",
+            "app/agent/ledger.py",
+            "tests/test_recovery_decisions.py",
+            "tests/recovery_process_actor.py",
+            "docs/recovery_decisions.md"
+          ],
+          "invariant": "An incomplete registry operation only resumes its exact authenticated local bookkeeping; hot-journal recovery never precedes protected-history validation, and approval metadata never enables execution.",
+          "method": "source",
+          "result": "Publication order is signed durable intent, SQLite FULL transaction, then signed durable final receipt. An incomplete tail blocks fresh requests, while identical request/command/payload/permit resumes the original event without re-running branch verification or external work. Before any recovery writable open, _recover_sqlite_journal validates the complete DB-independent protected chain/state/reference prefix and exact unfinalized tail identity. Its read-only _load proof either establishes the committed SQL prefix or specifically reports SQLite rollback/recovery-required; only the latter with the hot-journal magic authorizes SQLite recovery. A validated empty/zero-header non-hot journal returns to normal original-transaction COMMIT, and no manual unlink occurs. Recovery rechecks SQL/history after SQLite rollback. Foreign history, mismatched permit, missing predecessor or external-ahead reference refuses before the recovery writable open. Capacity is 4-256 immutable admissions, custody inventory is bounded, SQL/journal files are bounded to 32 MiB, and event evidence is bounded. All event/commit/inspection/receipt outputs preserve execution_enabled and activation_authorized false; this module imports no executor and writes only its separate registry bookkeeping. Read the crash actor and existing tests as source only; no crash or application execution was performed.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-final-registry",
+          "reviewed_paths": [
+            "app/agent/recovery_decisions.py",
+            "app/agent/recovery.py",
+            "tests/test_recovery_decisions.py"
+          ],
+          "invariant": "Final-snapshot proposal/decision replay remains inert, separate operator authentication rejects tampering, and expiry reached during expensive derive prevents durable admission.",
+          "method": "local",
+          "result": "Trusted parent executed the six existing cases in proposed-tests.py against snapshot-final in the approved isolated runner and promoted the bounded output after termination: exit 0; 6 passed in 1.73s. Cases cover restore/proposal/decision/receipt restart without source-task mutation, wrong operator key for receipts, checkpoint-key-only forged operator rejection, and witness/proposal-context/predecessor expiry during expensive derive without intent publication. Reviewer did not execute target code. This is synthetic local evidence only.",
+          "artifact": "agents/hunt-final-registry/artifacts/proposed-tests.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Frecovery_decisions.py%23verify_receipt::app%2Fagent%2Frecovery.py%23OperatorPermits.authenticate::app%2Fagent%2Frecovery_decisions::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/recovery_decisions.py",
+        "app/agent/recovery.py",
+        "app/agent/ledger.py",
+        "app/agent/authority.py",
+        "tests/test_recovery_decisions.py",
+        "docs/recovery_decisions.md"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-final-registry",
+          "reviewed_paths": [
+            "app/agent/recovery_decisions.py",
+            "app/agent/recovery.py",
+            "app/agent/ledger.py",
+            "app/agent/authority.py",
+            "tests/test_recovery_decisions.py",
+            "docs/recovery_decisions.md"
+          ],
+          "invariant": "A receipt is independent historical HMAC evidence only when its event and commit match caller-retained expected identities/digests and its separate operator permit matches the event authorization; receipt verification grants no capability.",
+          "method": "source",
+          "result": "verify_receipt requires exactly event/commit envelopes, authenticates both with the supplied checkpoint verifier, and binds the event digest, registry UUID, request UUID, canonical payload digest and exact derived commit. It independently authenticates the operator permit and compares request, recovery command, payload hash, checkpoint and local-service scope; historical permit intervals remain bounded to 300 seconds without requiring present freshness. Both HMAC implementations use SHA-256 and compare_digest with explicit envelope/MAC shape checks; canonical encoding rejects nonfinite values and duplicate JSON keys are refused at evidence parsing. No fallback key or authentication bypass is visible. Full registry replay additionally checks the permit at event admitted_at and validates state/reference history; the standalone receipt helper explicitly returns historical_evidence_only with execution_enabled and activation_authorized false. Expected event digest and keys are external trusted inputs, so the helper is not an independent source of registry freshness or a substitute for complete chain validation. Reviewed wrong-key, event/commit/request/digest tampering and checkpoint-key-only forged-operator tests as source; no local tests executed and no surviving candidate.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-final-registry",
+          "reviewed_paths": [
+            "app/agent/recovery_decisions.py",
+            "app/agent/recovery.py",
+            "tests/test_recovery_decisions.py"
+          ],
+          "invariant": "Authentic independently verified receipt evidence survives restart while wrong operator keys and forged operator permits are refused.",
+          "method": "local",
+          "result": "Trusted parent executed and promoted the snapshot-final six-case harness: exit 0; 6 passed in 1.73s. Relevant cases are test_restore_proposal_decision_receipt_restart, test_forged_receipts[wrong_key], and test_checkpoint_key_cannot_forge_operator_authorization_on_restart. The same bounded promoted file contains the complete six-case result. Reviewer did not execute target code.",
+          "artifact": "agents/hunt-final-registry/artifacts/proposed-tests.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Continue external retention of the latest complete registry reference and witness, distinct checkpoint/operator key custody, and trustworthy time. Same-UID/key compromise and coordinated rollback of all trusted custody are documented assumptions, not established findings or production qualification.",
+    "Standalone receipt verification authenticates caller-expected historical evidence; retain complete-chain inspection for freshness, admission-time and state-machine conclusions. Review targets snapshot-final; local evidence was executed and promoted only by the trusted parent."
+  ],
+  "uncovered": []
+}

@@ -1,0 +1,679 @@
+Fresh independent final-record verification. You did not hunt or validate this record. Current source ONLY tasks/jarvis-comprehensive-security-audit-r1/snapshot-latest. Own only tasks/jarvis-comprehensive-security-audit-r1/agents/record-latest-auth/scratch. No targetexecution/network/deployment/credentials/realDB/provider/PVE/VM/hardware/privileged actions. Parent owns all shared files and completion log.
+### Phase 5: Verify the final records with fresh eyes
+
+Launch one fresh `research` verifier per final `confirmed` and `needs_validation` record, in parallel. This verifier checks the structured record, not the hunter write-up, and remains inside source/local boundaries.
+
+In a `quick` run, Phase 3 and Phase 5 merge: the Phase 3 verifier also performs these record checks and returns the final schema-shaped record, so each candidate gets one fresh independent reviewer instead of two. Every other profile keeps the two passes separate. Never skip independent review of a `confirmed` record in any profile.
+
+For `confirmed`, require it to check:
+
+1. Every repository-relative trace/evidence path, line, scope, and described operation.
+2. Real entry interface and exact local input shape.
+3. Every condition, parser/policy step, source-visible preventing layer, and observed local result.
+4. Affected principal/resource and demonstrated impact.
+5. Severity separation: realistic likelihood, demonstrated impact, overall no greater than impact.
+6. Remediation strategy and any `code_changes`, including whether the fix enforces the invariant without merely moving trust.
+
+For `needs_validation`, require it to check:
+
+1. The source path is real and supports only the `claimed_root_cause` stated.
+2. Every listed blocker is decisive and not already answerable locally.
+3. The candidate names a boundary and a possible concrete result rather than a generic concern.
+4. At least one validation-plan field is present and exact. `local` uses a bounded fixture; `deployment` asks an owner to observe a configuration, identity, route, policy, or runtime fact. Do not invent a plan for an inapplicable context, and never send audit traffic to a deployment.
+5. The fingerprint matches prior/current records for the same root cause.
+
+Each verifier returns exactly one JSON object: `{"decision":"verified","fingerprint":"..."}` or `{"decision":"replace","reason":"...","record":{...}}`, with no surrounding prose. A replacement record must match its `confirmed`, `needs_validation`, or `rejected` schema branch. Treat a malformed or prose-wrapped Phase 5 result the same way as in Phase 3: discard it without repairing it and re-run with a fresh verifier when the budget permits.
+
+Do not apply a Phase 5 replacement as final when it promotes a record to a stronger verdict, including any promotion to `confirmed`, or materially changes the root cause, trace, execution input or observed result, demonstrated impact, or severity. Give that complete replacement to a new independent verifier that did not hunt, perform Phase 3 validation, or propose the Phase 5 replacement. The new verifier rechecks the current source and independently reproduces any decisive local result under the execution boundary, then returns `verified` or another replacement. Apply a material replacement only after this fresh verification. If another material replacement results, repeat with a fresh verifier. If budget or independence is unavailable, remove the disputed record from `findings.json`, keep its ledger unit as an unresolved candidate, and set `run_status: "incomplete"` with an exact `incomplete_reason`. Non-material wording or repository-line corrections may be applied directly when they do not change meaning or evidence.
+
+After every applied replacement, rerun both validators and update linked ledger decisions. If a final verifier identifies a separate root cause, assign a new fingerprint and send it through independent candidate validation before inclusion. Set `run_status: "complete"` only when every ledger candidate has an independent final disposition and every retained record passes Phase 5.
+
+Do not verify only `confirmed` records. A misleading `needs_validation` handoff wastes owner time and can preserve a false premise.
+
+
+FINAL RECORD
+{
+  "verdict": "needs_validation",
+  "fingerprint": "app/server.py:anonymous-loopback-authority",
+  "title": "Anonymous task access depends on an admitted loopback deployment and an excluded local principal",
+  "description": "Latest source still permits ordinary HTTP requests without credentials when the API token is empty and supplies the shared local-service actor to task read/cancel routes. Fresh parent-isolated verification against snapshot-latest observed genuine stock lifespan refusing its missing synthetic database before creation. Only after explicit synthetic authority binding, native in-memory requests read and cancelled one dummy task without credentials; diagnostics rejected empty-token access and configured-token task reads rejected missing credentials. This establishes conditional route behavior, not an operating anonymous deployment or a cross-UID/browser exploit. The newly credentialed transport-permit execution route does not protect ordinary task reads/cancellation; retired real tool dispatch paths do not change those task-state routes. Admission and local-client trust facts remain unresolved.",
+  "claimed_root_cause": "Ordinary task HTTP routes accept anonymous requests in the explicitly configured empty-token loopback mode and operate in a fixed server-owned actor namespace. This could cross a principal boundary only if an admitted serving deployment exists and a locally reachable client is excluded from its intended trust boundary.",
+  "trace": [
+    {
+      "kind": "entrypoint",
+      "file": "app/server.py",
+      "line": 248,
+      "scope": "api_token_middleware",
+      "description": "A received ordinary HTTP request proceeds without credential verification when server.api_token is empty; this becomes a lower-trust entrypoint only under the unresolved deployment/principal conditions."
+    },
+    {
+      "kind": "propagation",
+      "file": "app/agent/api.py",
+      "line": 111,
+      "scope": "cancel",
+      "description": "DELETE /tasks/{task_id} passes the fixed SERVICE_ACTOR and caller-selected task/request identifiers to Authority.cancel; the request ID query is constrained to canonical UUID4 form."
+    },
+    {
+      "kind": "propagation",
+      "file": "app/agent/authority.py",
+      "line": 428,
+      "scope": "Authority.cancel",
+      "description": "After task identifier validation, the actor scope selects the task for the cancellation effect inside the fenced mutation and request-receipt transaction."
+    },
+    {
+      "kind": "sink",
+      "file": "app/agent/authority.py",
+      "line": 421,
+      "scope": "Authority._cancel",
+      "description": "For a held task, task status and outbox state become cancelled; _put at423 persists task data in the surrounding transaction. This is a task-state effect, not proof of real executor access."
+    }
+  ],
+  "evidence": [
+    {
+      "file": "app/config.py",
+      "line": 108,
+      "description": "The API token defaults to empty. The validator at114-136 requires configured loopback host/origins in local mode and a nonempty token for remote/nonloopback mode."
+    },
+    {
+      "file": "config.yaml.example",
+      "line": 103,
+      "description": "The public example selects127.0.0.1, explicitly describes empty-token authentication being disabled for localhost-only use at109, and sets api_token empty and remote_access_enabled false at112-113."
+    },
+    {
+      "file": "app/server.py",
+      "line": 248,
+      "description": "Empty token bypasses ordinary HTTP authentication; a configured token is checked at253 using _api_token_ok and constant-time byte comparison at198."
+    },
+    {
+      "file": "app/server.py",
+      "line": 412,
+      "description": "The actual FastAPI app includes the authority router."
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 7,
+      "description": "Ordinary authority HTTP routes use the fixed Actor(local-service), rather than assigning a caller-specific namespace."
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 94,
+      "description": "Operator diagnostics independently requires a configured matching Bearer credential, including when ordinary routes permit anonymous access."
+    },
+    {
+      "file": "app/main.py",
+      "line": 11,
+      "description": "The stock entrypoint serves the reviewed FastAPI app at the configured host and port."
+    },
+    {
+      "file": "app/server.py",
+      "line": 115,
+      "description": "Mandatory lifespan obtains the authority before readiness, scheduler, listeners and background startup work. A failing get_authority prevents startup."
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 17,
+      "description": "The stock opener supplies only the authority database and legacy JSON paths, without ledger, enrollment witness or legacy approval."
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 107,
+      "description": "Missing, empty or symlinked databases are refused before directory or writer-lock creation. Existing databases additionally require enrollment or explicit legacy admission at159-163."
+    },
+    {
+      "file": "app/agent/enrollment.py",
+      "line": 299,
+      "description": "An enrolled store requires the ledger guard and external witness, neither supplied by the stock opener."
+    },
+    {
+      "file": "app/agent/enrollment.py",
+      "line": 338,
+      "description": "Legacy admission requires an explicit OperatorPermits verifier/permit tuple; its verified payload binds database path, logical state and execution_disabled at343-346."
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 21,
+      "description": "The documented trusted embedding/test hook can bind an admitted authority; it is not exposed as an HTTP activation endpoint."
+    },
+    {
+      "file": "tests/test_server_auth.py",
+      "line": 17,
+      "description": "The anonymous-task test at30-33 binds an explicit synthetic authority. The module TestClient at8 skips lifespan for ordinary route requests."
+    },
+    {
+      "file": "app/server.py",
+      "line": 214,
+      "description": "Present WebSocket Origin is checked against local/configured origins before either WebSocket accepts (226-234,466,534). Native HTTP Host/Origin results do not establish browser or WebSocket exploitation."
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 303,
+      "description": "Mutations bind actor scope, operation and canonical payload to durable request receipts and detect conflicting reuse. Reads and cancellation select records within that actor scope; these controls do not assign network-client identity."
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 72,
+      "description": "A non-null transport_permit execution submission independently requires a configured matching Bearer token at75-76. This separate check does not wrap /tasks read/cancel at99-111."
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 106,
+      "description": "Task reads use SERVICE_ACTOR; get_task validates the canonical task UUID and checks actor scope through _get at authority.py:375-380."
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 3,
+      "description": "The contract trusts local code controlling the process/database and describes Actor as a server-owned namespace rather than application authentication. No multi-user isolation baseline is promised."
+    },
+    {
+      "file": "docs/authority_enrollment.md",
+      "line": 18,
+      "description": "Documentation explicitly requires trusted embedding to bind an already verified authority and says unprovisioned default startup fails closed. This is a supported conditional embedding mechanism, not evidence of an actual serving instance."
+    },
+    {
+      "file": "docs/TARGET_HOST_READINESS.md",
+      "line": 54,
+      "description": "Loopback is explicitly the Phase2 containment boundary; future remote access requires additional identity/session/scoping controls. An excluded local principal must therefore be established rather than inferred from a generic multi-user threat model."
+    },
+    {
+      "file": "tasks/jarvis-comprehensive-security-audit-r1/agents/verify-latest-auth/artifacts/verify_auth_latest.txt",
+      "line": 3,
+      "description": "Parent-promoted fresh snapshot-latest sandbox output records stock_lifespan_error authority_unenrolled_or_missing, stock_database_created false, synthetic-bound native read/cancel200 and cancelled dummy task, empty-token diagnostics401, configured-token missing401/valid200, and no real socket/browser/otherUID test. The native requests use arbitrary Host and Origin; the route fixture explicitly skips lifespan."
+    }
+  ],
+  "blockers": [
+    "No actual serving deployment with an admitted authority and an empty configured token has been established. The stock opener lacks the admission context required for missing, enrolled or legacy stores; explicit synthetic binding does not demonstrate ordinary deployed startup.",
+    "No separately restricted local OS principal, excluded by the application's intended loopback trust boundary but able to reach its listener, has been established. The fresh native in-memory fixture measures neither UIDs nor listener/network namespace/ingress controls; trusted local process/database control is outside this claim.",
+    "Any browser-specific claim additionally requires a concrete permitted request shape, browser local-network/SOP behavior and actual Host/DNS/ingress facts. No browser test occurred, and present-Origin WebSocket rejection remains an independent preventing control."
+  ],
+  "validation_plan": {
+    "local": "Fresh parent-isolated snapshot-latest evidence already verifies genuine stock startup refusal and, separately, native dummy-task read/cancel after explicit synthetic authority binding, with credentialed/diagnostics controls. Do not expand this result to working stock startup or real execution. If a supported admitted serving mode is identified, exercise its genuine lifespan with synthetic admission context, then use a disposable isolated two-UID loopback fixture to attempt exactly one unauthenticated dummy held-task read/cancel and verify missing/valid configured-token controls. Browser testing is a separate concrete request/policy experiment only if that claim remains relevant; no deployed endpoints or real stores are needed.",
+    "deployment": "The owner can inspect launch/embedding code and configuration presence without revealing secrets, opening production databases or sending service traffic: establish whether any admitted authority is actually served with an empty token, which local principals and network namespaces can reach it, whether any such principal is outside the intended trust boundary, and applicable Host/Origin/ingress restrictions. If no admitted anonymous serving mode or excluded reachable principal exists, reject the deployed access claim. Do not create credentials, provision authority, enable an executor or change deployed access merely to validate it."
+  }
+}
+SCHEMA VERBATIM
+{
+  "$comment": "Top-level contract for findings.json. validate-findings.cjs interprets and checks this schema directly.",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "description": "A source-grounded vulnerability that was independently demonstrated.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "confirmed"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$",
+            "description": "A stable source-derived identifier that does not change between validation states."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "intended_behavior": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["authentication_level", "authorization_role", "user_interaction", "system_configuration", "network_routing", "environmental_dependency", "data_state", "timing_dependency", "third_party_dependency"]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "description"],
+              "additionalProperties": false
+            }
+          },
+          "execution": {
+            "type": "object",
+            "description": "Target-neutral reproduction in the target's native interface.",
+            "properties": {
+              "attacker_perspective": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "payloads": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "instructions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "observed_result": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["attacker_perspective", "payloads", "instructions", "observed_result"],
+            "additionalProperties": false
+          },
+          "remediation": {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "code_changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "file_name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fixed_code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file_name", "fixed_code"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["strategy"],
+            "additionalProperties": false
+          },
+          "severity": {
+            "type": "object",
+            "properties": {
+              "likelihood": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "impact": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "overall_severity": {
+                "type": "string",
+                "enum": ["informational", "low", "medium", "high", "critical"]
+              }
+            },
+            "required": ["likelihood", "impact", "overall_severity"],
+            "additionalProperties": false
+          },
+          "confidence": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["score", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "root_cause", "intended_behavior", "trace", "evidence", "conditions", "execution", "remediation", "severity", "confidence"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate whose decisive validation is blocked.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "needs_validation"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "visibleContent": true
+            }
+          },
+          "validation_plan": {
+            "type": "object",
+            "properties": {
+              "local": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "deployment": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "blockers", "validation_plan"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate refuted during validation.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "rejected"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "reason"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}
+
+ARCHITECTURE FACTS
+# JARVIS V2 audit architecture
+
+The review target is snapshot-latest: 388 public source, manifest, test and documentation files captured at 2026-11-06T06:57:07Z from dirty HEAD f4cac30259a7bf4610add2063679ae49138ee637. Exact per-file identity is in source-manifest-latest.json/source-latest.sha256; captures are not atomic across files. Earlier immutable captures and all revision-tagged checks remain retained. No compatible previous external Cloudflare ledger/findings was found. Public source from the current broker successor tasks/proxmox-automation-phase3-review-r1 is included because PROJECT_STATUS89-94 designates it current. Historical sealed evidence, runtime configuration, credentials, databases, logs, models and binaries are excluded from active-code conclusions.
+
+JARVIS is a single-operator Python/FastAPI assistant with REST, WebSocket, PWA, Electron and hologram clients, optional local inference/memory/voice and outbound notifications. Sensitive resources include task/schedule state, host processes, local desktop/files, HMAC checkpoints, enrollment custody, operator permits and proposed Proxmox serial access. Lower-trust principals include foreign browser origins, separately restricted local UIDs and untrusted artifact/model inputs. Same-UID control of the process, keys and database is trusted. Root/kernel compromise and coordinated rollback of all independent custody are outside the local integrity guarantee. No comparable baseline is established.
+
+Ordinary HTTP and WebSocket authentication uses a configured Bearer token. Empty-token loopback configuration deliberately bypasses ordinary credential checks; nonloopback configuration requires a token. Configuration validates bind host, not incoming Host. Both WebSocket paths separately validate present Origin. Ordinary authority routes assign fixed Actor(local-service); operator diagnostics and transport-permit submission independently require configured matching credentials. A browser/local UID access claim must establish its actual reachable serving mode, ingress and trust policy.
+
+Stock lifespan opens data/authority/queue.sqlite without supplying ledger/witness or explicit legacy approval. Mandatory admission therefore fails closed before serving missing/enrolled/legacy stores unless trusted embedding supplies an admitted authority. TestClient fixtures explicitly bind disposable authorities and often skip lifespan; their route results are not deployment reachability proof.
+
+Authority transactions bind scope, UUID, operation and canonical payload to durable receipts; scheduler occurrences/outbox preserve cancellation, deadlines, generation ownership and UNKNOWN state. SQLite uses lifetime flock, PID/generation/inode fencing, FULL transactions and poisoned uncertain writers. HMAC ledger/checkpoint rollover adds fresh-byte verification, authenticated continuity, external minimum references and explicit custody. Application helpers validate leaf type/UID/mode/link count and symlinks but use absolute path operations; different-UID ancestor replacement needs actual filesystem authority evidence. Current broker securefs instead uses descriptor-relative component ownership checks.
+
+Operator inherited descriptors and short-lived authenticated permits govern enrollment/genesis, checkpoint rollover, fixed-schema archive/branch verification, inert disposable restore, recovery proposals/decisions, CAS reconciliation and witness renewal. Approval never activates execution. Independent key/reference custody, latest reference retention, protected directories and time remain assumptions.
+
+Execution requires trusted simulation opt-in and exact synthetic types. New SyntheticTransport uses two fixed pure-computation endpoints through an unnamed AF_UNIX socketpair within the same process. SO_PEERCRED checks are co-location consistency, not OS privilege separation. Independent permit/request/response keys bind store, scope, UUID, goal, endpoint/capability, expiry, deadline and claim. Durable reservation precedes computation; signed report precedes reply; ambiguous delivery remains UNKNOWN. Recovery reconciles existing authenticated evidence without rerunning effects. No external real executor/provider/path/plugin is admitted.
+
+Latest legacy server dispatch denies use_tool/confirm_action/vision, confirmation route is removed, and every registry invocation/getter callback refuses before importing effect modules. Dictation clipboard/typing also always refuses without raw transcript logging. Historical confirmation and duplicate-note fixture effects are gated in this capture. Native file/shell/screenshot modules still exist for direct trusted imports/tests; no ordinary maintained chat/voice path around the current denial was found. Process-selection, VAD-cap, malformed-WS cleanup and CLI POST/fallback defects persist and were minimally reproduced against latest source; no lower-trust privilege gain or shared outage was established.
+
+The current proposed VM164-only broker/worker uses fixed catalog, AF_UNIX peer credentials, protected activation/grants, preissuance evidence, release binding, durable request/session identity, receipt serialization, pinned TLS/VM checks, separate service accounts and proposed systemd/seccomp policy. Installed role/ACL/unit/TTY/guest/API enforcement is not qualified. No production/credential/PVE/guest/real-execution/privileged Gate6K operation is authorized.
+
+Deployment includes Docker/Compose, CI, installers, backups and client launchers. Electron has an exact integrity-bearing source lock; Python/deployed graph and advisory status are unknown. Compose host loopback publication does not establish all bridge/ingress controls. Parent-only target execution uses namespace-isolated bwrap, no external network, readonly source/toolchain, empty allowlisted environment, scratch32MiB, AS512MiB, CPU10s, processes64, FDs96, file2MiB, wall25s and output256KiB. Only bounded nofollow descriptor-confined exclusive promotion retains results. No packages, heavy suites or concurrent target tests were used.
+
+Independently re-read every cited current source line and source-visible preventing control. Evidence paths beginning tasks/jarvis-comprehensive-security-audit-r1/ resolve from original project root, not the snapshot. Parent-promoted local artifacts are readable; no further execution is needed unless decisive fact can only be checked by a tiny sandbox fixture, in which case request parent. Return exact {"decision":"verified","fingerprint":"..."} or replacement wrapper specified above. Save exactJSON scratch/result.json. For screenshot this is an additional independent check of the rejected record and dormant-helper/current-call-graph distinction, beyond mandatory final verification; do not invent reachability.

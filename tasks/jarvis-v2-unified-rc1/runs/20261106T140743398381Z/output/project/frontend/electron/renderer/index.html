@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JARVIS HUD</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel-bg: rgba(0, 0, 0, 0.85);
+        --panel-border: rgba(120, 220, 255, 0.35);
+        --accent: #7ee7ff;
+        --text: #ffffff;
+        --muted: #98b8c7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--text);
+        font-family: "Consolas", "Courier New", monospace;
+      }
+
+      .hud {
+        width: min(360px, calc(100vw - 24px));
+        min-height: 220px;
+        padding: 20px;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        box-shadow:
+          0 0 24px rgba(64, 196, 255, 0.25),
+          inset 0 0 18px rgba(126, 231, 255, 0.08);
+        backdrop-filter: blur(10px);
+      }
+
+      .hud-main {
+        display: block;
+      }
+
+      .hud-main.hidden {
+        display: none;
+      }
+
+      .boot-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        border-radius: 12px;
+        background:
+          radial-gradient(circle at center, rgba(126, 231, 255, 0.12), rgba(0, 0, 0, 0.94)),
+          rgba(0, 0, 0, 0.88);
+        opacity: 1;
+        transition: opacity 240ms ease;
+      }
+
+      .boot-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .boot-panel {
+        width: 100%;
+        text-align: center;
+      }
+
+      #logo {
+        margin: 0 0 18px;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        opacity: 0.2;
+        transform: scale(0.96);
+        transition:
+          opacity 220ms ease,
+          transform 220ms ease,
+          text-shadow 220ms ease,
+          color 220ms ease;
+      }
+
+      #logo.active {
+        color: var(--accent);
+        opacity: 1;
+        transform: scale(1);
+        text-shadow: 0 0 16px rgba(126, 231, 255, 0.8);
+      }
+
+      #boot-status {
+        min-height: 88px;
+        padding: 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      .label {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      #status {
+        margin-bottom: 18px;
+        font-size: 20px;
+        font-weight: 700;
+        text-shadow: 0 0 12px rgba(126, 231, 255, 0.55);
+      }
+
+      #message {
+        min-height: 88px;
+        padding: 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      #listening {
+        display: none;
+        margin-top: 14px;
+        color: var(--accent);
+        font-size: 13px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      #listening.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="hud">
+      <section id="boot-overlay" class="boot-overlay">
+        <div class="boot-panel">
+          <div id="logo">Stark Industries</div>
+          <div id="boot-status">Awaiting boot sequence...</div>
+        </div>
+      </section>
+
+      <section id="main-hud" class="hud-main hidden">
+        <p class="label">Stark Industries Tactical Interface</p>
+        <div id="status">JARVIS ONLINE</div>
+        <div id="message">Awaiting response...</div>
+        <div id="listening">Listening...</div>
+      </section>
+    </main>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const bootOverlay = document.getElementById("boot-overlay");
+        const bootStatus = document.getElementById("boot-status");
+        const logo = document.getElementById("logo");
+        const mainHud = document.getElementById("main-hud");
+        const status = document.getElementById("status");
+        const message = document.getElementById("message");
+        const listening = document.getElementById("listening");
+
+        window.jarvis.onMessage((payload) => {
+          if (!payload || typeof payload !== "object") {
+            return;
+          }
+
+          if (payload.type === "boot") {
+            if (payload.phase === "logo" && logo) {
+              logo.classList.add("active");
+            }
+
+            if ((payload.phase === "logo" || payload.phase === "music" || payload.phase === "status") && bootStatus) {
+              bootStatus.textContent = payload.message || "";
+            }
+
+            if (payload.phase === "status") {
+              message.textContent = payload.message || "";
+            }
+
+            if (payload.phase === "ready") {
+              if (bootOverlay) {
+                bootOverlay.classList.add("hidden");
+              }
+              if (mainHud) {
+                mainHud.classList.remove("hidden");
+              }
+              status.textContent = payload.message || "JARVIS ONLINE";
+            }
+
+            return;
+          }
+
+          if (payload.type === "reply") {
+            status.textContent = "JARVIS ONLINE";
+            message.textContent = payload.reply || payload.text || "";
+          }
+
+          if (payload.type === "listening") {
+            listening.classList.toggle("active", Boolean(payload.active));
+            status.textContent = payload.active ? "JARVIS LISTENING" : "JARVIS ONLINE";
+          }
+        });
+
+        window.jarvis.connectWS();
+      });
+    </script>
+  </body>
+</html>

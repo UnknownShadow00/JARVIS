@@ -1,0 +1,178 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fcomputer%2Fscreenshot.py%23capture::app%2Fcomputer%2Fscreenshot.py%23temporary-output::app%2Fcomputer::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Local%20file%20ownership%20and%20TOCTOU",
+      "disposition": "candidate",
+      "reviewed_paths": [
+        "Dockerfile",
+        "app/brain/tool_params.py",
+        "app/computer/screenshot.py",
+        "app/computer/verifier.py",
+        "app/computer/vision.py",
+        "app/computer/yolo_detector.py",
+        "app/config.py",
+        "app/server.py",
+        "app/tools/registry.py",
+        "app/tools/screenshot.py",
+        "app/voice/audio_stream.py",
+        "config.yaml.example",
+        "docker-compose.yml",
+        "requirements-desktop.txt",
+        "tests/test_screenshot.py",
+        "tests/test_screenshot_tool.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-screenshot",
+          "reviewed_paths": [
+            "app/computer/screenshot.py",
+            "app/computer/vision.py",
+            "app/computer/yolo_detector.py",
+            "app/computer/verifier.py",
+            "tests/test_screenshot.py"
+          ],
+          "invariant": "Generated capture output must remain bound to victim-owned private storage when a different local OS principal can influence shared temporary-directory state.",
+          "method": "source",
+          "result": "capture chooses fixed tempfile.gettempdir()/jarvis_screenshots, accepts an existing directory at screenshot.py24-25, builds a second-resolution basename at27-28 and delegates pathname opening to mss.tools.to_png at32. There is no owner/mode/symlink/exclusive-create check or retained directory/file descriptor. VisionClient subsequently reopens the returned path for read_bytes at vision.py104-105. The existing capture test52-58 replaces both the hardware and PNG writer and does not test another UID or protected paths. Parent-supplied static upstream MSS9.0.1 writer observation corroborates ordinary pathname opening, but no installed dependency or capture behavior was executed here.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-screenshot",
+          "reviewed_paths": [
+            "app/tools/screenshot.py",
+            "app/tools/registry.py",
+            "app/brain/tool_params.py",
+            "app/voice/audio_stream.py",
+            "app/server.py",
+            "app/computer/screenshot.py",
+            "app/computer/vision.py",
+            "app/computer/yolo_detector.py",
+            "app/computer/verifier.py",
+            "requirements-desktop.txt",
+            "Dockerfile",
+            "docker-compose.yml",
+            "app/config.py",
+            "config.yaml.example",
+            "tests/test_screenshot_tool.py"
+          ],
+          "invariant": "Establish actual native callers and the strongest source-visible dependency, dry-run, approval and deployment controls without treating shared-temp or desktop support as observed facts.",
+          "method": "source",
+          "result": "The public screenshot wrapper aliases the real execute helper and has Level0. Normal registry invocation enforces configured confirmation and dry-run; strict mode confirms Level0. Screenshot execute and screen vision check dry-run, and missing mss raises before any directory/capture operation. Direct capture callers are screen vision, optional YOLO and action verifier. Native voice invokes _process_stream/_process directly, so this file boundary does not depend exclusively on Authority HTTP lifespan. Chat screenshot parameter construction supplies only monitor, not output_dir; no network path-injection claim is supported. Desktop requirements declare mss>=9.0.0; the headless image installs only core dependencies. Neither inspected desktop source nor container definitions establishes the effective user temporary root, umask, private-temp isolation or another UID ability to precreate/populate the namespace. A private per-user temp root or existing victim-owned0700 directory can defeat that precondition.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [
+        "app/computer/screenshot.py:shared-temp-output"
+      ],
+      "unresolved": [
+        "The effective desktop temporary root, its ancestor permissions and namespace isolation, and a different OS principal ability to precreate/populate jarvis_screenshots have not been observed. A private per-user temporary root or victim-owned0700 existing directory can defeat this prerequisite.",
+        "The approved local toolchain has no mss desktop dependency. Parent-only static review of upstream MSSv9.0.1 tools.py (blob de3a1afb87cfbdda3e88b7421a66bbba4f2f0b1b, ordinary open(output, wb)) corroborates one version, but does not establish a deployed version, live capture enablement or desktop permission.",
+        "No approved disposable two-UID fixture with the real PNG writer established unauthorized screen-byte read or victim-owned dummy-file overwrite. A same-UID fake-writer demonstration would not resolve that OS-principal boundary."
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "proposed_verdict": "needs_validation",
+      "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+      "title": "Shared temporary screenshot namespace may redirect capture output across OS users",
+      "description": "Capture trusts an existing fixed jarvis_screenshots directory under the effective temporary root and uses a predictable second-resolution PNG name. If a different OS principal can precreate or populate that namespace and the installed PNG writer follows existing paths, one later victim capture may disclose synthetic screen bytes through an attacker-controlled output or overwrite a victim-writable dummy file. Source establishes the path trust gap, but private temporary roots, dependency availability and OS permissions can prevent this result. No capture, separate-UID effect, disclosure or overwrite was demonstrated. Native voice and vision callers make the boundary independent of the separate stock HTTP Authority admission limitation.",
+      "claimed_root_cause": "Generated screenshot storage trusts attacker-influenceable directory and leaf path state without owner/mode validation or descriptor-bound exclusive publication.",
+      "trace": [
+        {
+          "kind": "entrypoint",
+          "file": "app/computer/screenshot.py",
+          "line": 24,
+          "scope": "capture",
+          "description": "The default fixed temporary namespace is selected; mkdir(exist_ok=True) accepts preexisting filesystem state without determining which OS principal owns it."
+        },
+        {
+          "kind": "propagation",
+          "file": "app/computer/screenshot.py",
+          "line": 27,
+          "scope": "capture",
+          "description": "The output basename depends on the capture second, and an absolute pathname is constructed without opening or pinning its directory or leaf."
+        },
+        {
+          "kind": "sink",
+          "file": "app/computer/screenshot.py",
+          "line": 32,
+          "scope": "capture",
+          "description": "Synthetic or real captured RGB bytes are passed to the installed mss.tools.to_png writer with that pathname as output; the application adds no no-follow or exclusive-create control."
+        }
+      ],
+      "evidence": [
+        {
+          "file": "app/computer/screenshot.py",
+          "line": 19,
+          "description": "mss is imported before directory selection or hardware capture; absence prevents this path from executing."
+        },
+        {
+          "file": "app/computer/screenshot.py",
+          "line": 24,
+          "description": "Temporary root selection is runtime-dependent, and the fixed child directory receives no ownership, permissions or symlink validation."
+        },
+        {
+          "file": "app/computer/screenshot.py",
+          "line": 27,
+          "description": "The second-resolution output name is predictable and no verified output descriptor is created by the application."
+        },
+        {
+          "file": "app/computer/screenshot.py",
+          "line": 32,
+          "description": "The installed PNG writer receives a pathname rather than a retained verified descriptor."
+        },
+        {
+          "file": "app/computer/screenshot.py",
+          "line": 42,
+          "description": "The normal execute wrapper refuses real capture in global dry-run mode."
+        },
+        {
+          "file": "app/tools/registry.py",
+          "line": 236,
+          "description": "Strict approval mode requires confirmation even for the Level0 screenshot tool; normal registry dry-run also gates execution."
+        },
+        {
+          "file": "app/brain/tool_params.py",
+          "line": 69,
+          "description": "Ordinary screenshot chat requests construct only monitor parameters; they do not expose arbitrary output_dir input."
+        },
+        {
+          "file": "app/voice/audio_stream.py",
+          "line": 96,
+          "description": "Native voice routes transcripts through the tool-processing helpers directly, without depending exclusively on HTTP application lifespan."
+        },
+        {
+          "file": "app/computer/vision.py",
+          "line": 44,
+          "description": "Screen analysis calls the same capture helper; its later file read at104-105 is pathname-based."
+        },
+        {
+          "file": "requirements-desktop.txt",
+          "line": 40,
+          "description": "Desktop installation declares mss>=9.0.0, which does not establish the exact installed writer implementation or an operational desktop."
+        },
+        {
+          "file": "tests/test_screenshot.py",
+          "line": 52,
+          "description": "The existing capture test replaces the PNG writer with a mock; it cannot establish real writer behavior, cross-UID permissions or shared-temp effects."
+        }
+      ],
+      "blockers": [
+        "The effective desktop temporary root, its ancestor permissions and namespace isolation, and a different OS principal ability to precreate/populate jarvis_screenshots have not been observed. A private per-user temporary root or victim-owned0700 existing directory can defeat this prerequisite.",
+        "The approved local toolchain has no mss desktop dependency. Parent-only static review of upstream MSSv9.0.1 tools.py (blob de3a1afb87cfbdda3e88b7421a66bbba4f2f0b1b, ordinary open(output, wb)) corroborates one version, but does not establish a deployed version, live capture enablement or desktop permission.",
+        "No approved disposable two-UID fixture with the real PNG writer established unauthorized screen-byte read or victim-owned dummy-file overwrite. A same-UID fake-writer demonstration would not resolve that OS-principal boundary."
+      ],
+      "validation_plan": {
+        "local": "Use a separately approved OS-isolated disposable fixture with two dummy UIDs, a synthetic shared temporary root, and an already available approved mss dependency. Mock only pixel acquisition and use the real PNG writer. Predeclare one harmless output and one victim-owned dummy file; allow the lower-trust UID to set up only the synthetic namespace, then invoke one capture as the victim and stop after observing rejection, redirected synthetic bytes or dummy-file overwrite. Compare a victim-owned0700 private-root control. Record effective directory/file modes, applicable OS link protections and writer version. Never access a real desktop, host temporary root, production file or credential, and do not fetch/install dependencies during this audit.",
+        "deployment": "Ask the owner to inspect capture enablement, installed mss version, effective TMPDIR/TEMP or per-user temp directory, directory/ancestor ownership and ACLs, umask and private-temp isolation without displaying screenshots or credentials. Determine whether a different local UID can precreate/populate the generated namespace. No production capture or service probing is requested."
+      }
+    }
+  ],
+  "hardening": [
+    "For screenshot.py17-35, create unpredictable victim-owned0700 per-capture storage under a verified private root and create the PNG file exclusively with0600/O_NOFOLLOW using a pinned directory descriptor. Obtain PNG bytes from mss.tools.to_png(output=None) and write through that descriptor rather than letting the dependency reopen an absolute path; consume the same verified bytes/descriptor in vision and verifier paths.",
+    "Add regression coverage for preexisting foreign-owned directories, directory and leaf symlinks, timestamp collisions and private-root preventing controls. Existing mocked writer tests do not qualify different-UID filesystem isolation.",
+    "Do not classify the trusted explicit output_dir library parameter as an unauthenticated HTTP write primitive: ordinary chat construction supplies only monitor. No installed/deployed screenshot exploit or severity is asserted."
+  ],
+  "uncovered": []
+}

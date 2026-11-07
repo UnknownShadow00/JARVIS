@@ -1,0 +1,96 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+______________________ test_binary_frames_close_cleanly[] ______________________
+/target/tests/test_ue5_security.py:71: in test_binary_frames_close_cleanly
+    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/target/tests/test_ue5_security.py:52: in exercise
+    await server.ue5_endpoint(ws)
+/target/app/server.py:540: in ue5_endpoint
+    await websocket.receive_text()
+/toolchain/starlette/websockets.py:121: in receive_text
+    return cast(str, message["text"])
+                     ^^^^^^^^^^^^^^^
+E   KeyError: 'text'
+_____________________ test_binary_frames_close_cleanly[x] ______________________
+/target/tests/test_ue5_security.py:71: in test_binary_frames_close_cleanly
+    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/target/tests/test_ue5_security.py:52: in exercise
+    await server.ue5_endpoint(ws)
+/target/app/server.py:540: in ue5_endpoint
+    await websocket.receive_text()
+/toolchain/starlette/websockets.py:121: in receive_text
+    return cast(str, message["text"])
+                     ^^^^^^^^^^^^^^^
+E   KeyError: 'text'
+__________________ test_binary_frames_close_cleanly[\xff\x00] __________________
+/target/tests/test_ue5_security.py:71: in test_binary_frames_close_cleanly
+    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/target/tests/test_ue5_security.py:52: in exercise
+    await server.ue5_endpoint(ws)
+/target/app/server.py:540: in ue5_endpoint
+    await websocket.receive_text()
+/toolchain/starlette/websockets.py:121: in receive_text
+    return cast(str, message["text"])
+                     ^^^^^^^^^^^^^^^
+E   KeyError: 'text'
+____ test_cancellation_and_receive_exception_always_cleanup[CancelledError] ____
+/target/tests/test_ue5_security.py:99: in test_cancellation_and_receive_exception_always_cleanup
+    assert manager.active == []
+E   assert [<starlette.w...72ed61960180>] == []
+E     
+E     Left contains one more item: <starlette.websockets.WebSocket object at 0x72ed61960180>
+E     Use -v to get more diff
+_____ test_cancellation_and_receive_exception_always_cleanup[RuntimeError] _____
+/target/tests/test_ue5_security.py:99: in test_cancellation_and_receive_exception_always_cleanup
+    assert manager.active == []
+E   assert [<starlette.w...72ed61960fc0>] == []
+E     
+E     Left contains one more item: <starlette.websockets.WebSocket object at 0x72ed61960fc0>
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+../toolchain/fastapi/testclient.py:1
+  /toolchain/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../toolchain/starlette/testclient.py:53
+  /toolchain/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../target/tests/test_ue5_security.py::test_binary_frames_close_cleanly[]
+FAILED ../target/tests/test_ue5_security.py::test_binary_frames_close_cleanly[x]
+FAILED ../target/tests/test_ue5_security.py::test_binary_frames_close_cleanly[\xff\x00]
+FAILED ../target/tests/test_ue5_security.py::test_cancellation_and_receive_exception_always_cleanup[CancelledError]
+FAILED ../target/tests/test_ue5_security.py::test_cancellation_and_receive_exception_always_cleanup[RuntimeError]
+5 failed, 11 deselected, 2 warnings in 0.23s

@@ -1,0 +1,95 @@
+--- codex1/tests/test_release_security.py
++++ codex2/tests/test_release_security.py
+@@ -39,7 +39,7 @@
+     ('/tasks/'+str(uuid.uuid4())+'?request_id='+str(uuid.uuid4()),'DELETE'),
+     ('/requests/'+str(uuid.uuid4()),'GET'),('/schedule/jobs','GET'),('/schedule/jobs','POST'),
+     ('/schedule/jobs/'+str(uuid.uuid4())+'?request_id='+str(uuid.uuid4()),'DELETE'),
+-    ('/ready','GET'),('/execution/tasks','POST'),('/execution/status','GET'),('/operator/diagnostics','GET')])
++    ('/execution/tasks','POST'),('/execution/status','GET'),('/operator/diagnostics','GET')])
+ def test_empty_token_authority_access_refused_even_embedded(admitted,monkeypatch,path,method):
+     monkeypatch.setattr(settings.server,'api_token','')
+     app=FastAPI();app.include_router(router)
+@@ -83,7 +83,7 @@
+         if isinstance(payload,bytes):c.send_bytes(payload)
+         else:c.send_text(payload)
+         with pytest.raises(WebSocketDisconnect) as e:c.receive_json()
+-        assert e.value.code in (1003,1008,1009)
++        assert e.value.code in (1008,1009)
+     assert len(manager.active)==before
+ 
+ 
+@@ -139,74 +139,3 @@
+         with pytest.raises(AuthorityError,match='storage_ancestor_replaced'):a.submit(runtime.SERVICE_ACTOR,str(uuid.uuid4()),'must not write')
+         assert a._poisoned
+     finally:a.close()
+-
+-
+-@pytest.mark.asyncio
+-@pytest.mark.parametrize('manager_type',[server.ConnectionManager,UE5ConnectionManager])
+-async def test_slow_send_cannot_free_connection_capacity(manager_type):
+-    m=manager_type();m.send_timeout_seconds=.01
+-    peer=SimpleNamespace(send_json=AsyncMock(side_effect=lambda data: None))
+-    async def blocked(*args,**kwargs):await asyncio.Event().wait()
+-    peer.send_json=blocked;peer.close=blocked
+-    m.active=[peer]+[SimpleNamespace(send_json=AsyncMock(),close=AsyncMock()) for _ in range(31)]
+-    await m.broadcast({'synthetic':'bounded'})
+-    assert len(m.active)==32 and peer in m.active
+-    newcomer=SimpleNamespace(close=AsyncMock(),accept=AsyncMock())
+-    assert await m.connect(newcomer) is False
+-    newcomer.accept.assert_not_awaited()
+-    with pytest.raises(TimeoutError):await m.send(peer,{})
+-    m.disconnect(peer)
+-    assert await m.connect(newcomer) is True
+-
+-
+-@pytest.mark.asyncio
+-async def test_main_websocket_audit_failure_cleans_registration(admitted,monkeypatch):
+-    monkeypatch.setattr(server,'_reject_unauthorized_websocket',AsyncMock(return_value=False))
+-    peer=SimpleNamespace(accept=AsyncMock(),client='synthetic')
+-    def sink(event,data):
+-        if event=='ws_connect':raise RuntimeError('synthetic audit failure')
+-    monkeypatch.setattr(server.audit,'log',sink)
+-    before=len(server.manager.active)
+-    with pytest.raises(RuntimeError,match='synthetic audit'):await server.ws_endpoint(peer)
+-    assert len(server.manager.active)==before
+-
+-
+-def test_genesis_refuses_untrusted_ancestry_before_creating_any_child(tmp_path):
+-    parent=tmp_path/'writable';parent.mkdir(mode=0o700);parent.chmod(0o777)
+-    destination=parent/'not-created'/'custody'
+-    with pytest.raises(AuthorityError,match='unsafe_storage_ancestor'):private_directory(destination,create=True)
+-    assert not destination.parent.exists()
+-
+-
+-@pytest.mark.asyncio
+-async def test_actual_admitted_lifespan_refuses_anonymous_read_cancel(admitted,monkeypatch):
+-    key=str(uuid.uuid4());admitted.submit(runtime.SERVICE_ACTOR,key,'held')
+-    monkeypatch.setattr(settings.server,'api_token','')
+-    async with server.app.router.lifespan_context(server.app):
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic') as c:
+-            assert (await c.get('/health')).status_code==200
+-            assert (await c.get('/tasks/'+key)).status_code==401
+-            assert (await c.delete('/tasks/'+key,params={'request_id':str(uuid.uuid4())})).status_code==401
+-            assert admitted.get_task(runtime.SERVICE_ACTOR,key)['status']=='pending'
+-
+-
+-def test_original_ancestor_sqlite_swap_chain_is_refused(tmp_path,capsys):
+-    import json
+-    path=Path('/input/ancestor_hypothesis.py')
+-    if not path.exists():pytest.skip('retained audit harness supplied by release cage')
+-    original=path.read_text()
+-    code=original.replace("Path('/scratch/ancestor-mechanics')",repr(tmp_path/'ancestor-mechanics'))
+-    # Only the disposable root literal is changed; every target definition and
+-    # original fault sequence remains real. This measures same-UID mechanics.
+-    code=original.replace("'/scratch/ancestor-mechanics'",repr(str(tmp_path/'ancestor-mechanics')))
+-    exec(compile(code,str(path),'exec'),{'__name__':'__main__'})
+-    observation=json.loads(capsys.readouterr().out.strip())
+-    assert observation['swapped'] and observation['constructor_result']!='accepted'
+-    assert observation['same_uid_mechanics_only']
+-    Path('/work/ANCESTOR-HYPOTHESIS.json').write_text(json.dumps(observation,indent=2)+'\n')
+-
+-
+-def test_omitted_resource_options_do_not_enable_automatic_host_controls():
+-    from app.config import ResourceModeConfig
+-    minimal=ResourceModeConfig.model_validate({})
+-    assert not minimal.enabled and not minimal.auto_light_sleep and not minimal.auto_deep_sleep

@@ -1,0 +1,111 @@
+{
+  "decision": "rejected",
+  "record": {
+    "verdict": "rejected",
+    "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+    "title": "Shared temporary screenshot output is unreachable through current application dispatch",
+    "description": "The unchanged capture helper still accepts a preexisting temporary directory and passes a predictable PNG pathname to mss. However, snapshot-latest unconditionally refuses real screenshot and vision execution in both chat processing and every registry compatibility interface. Native voice enters those same blocked processing helpers. Source review found no independently active application caller of screenshot capture, screen analysis, YOLO screen detection or ActionVerifier. The readiness utility's direct screenshot call explicitly forces dry-run mode. The earlier claim of a victim capture reachable through current application/native dispatch is therefore rejected; no screenshot, cross-UID disclosure or file overwrite was executed or observed.",
+    "claimed_root_cause": "Generated screenshot storage accepts preexisting directory and leaf path state without ownership or mode validation or descriptor-bound exclusive publication. This remains a dormant helper pattern, but the current application does not expose an active victim capture path to the proposed lower-trust principal.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "app/server.py",
+        "line": 378,
+        "scope": "chat",
+        "description": "The HTTP chat handler accepts a client message and, after the awake check, passes req.message to _process at line 390. This source route is not evidence that stock authority startup succeeds."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/server.py",
+        "line": 601,
+        "scope": "_process",
+        "description": "The attempted path stops here: use_tool, confirm_action and vision intents return the real-execution-disabled response at line 602 before importing or invoking a screenshot tool."
+      },
+      {
+        "kind": "sink",
+        "file": "app/computer/screenshot.py",
+        "line": 32,
+        "scope": "capture",
+        "description": "The retained helper delegates PNG publication to mss.tools.to_png using an absolute pathname. This is the historical claimed sink, disconnected from the current application dispatch trace by the unconditional refusal."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 24,
+        "description": "The helper selects tempfile.gettempdir()/jarvis_screenshots by default and accepts preexisting directory state through mkdir(exist_ok=True) at line 25. These bytes establish a storage pattern, not an active call."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 27,
+        "description": "The basename uses second-resolution time; line 28 makes it absolute and line 32 passes it to the PNG writer without an application-created exclusive descriptor."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 19,
+        "description": "A direct trusted helper call additionally requires mss; an unavailable import raises before directory selection or pixel capture."
+      },
+      {
+        "file": "app/tools/registry.py",
+        "line": 158,
+        "description": "ToolRegistry.call unconditionally raises real_execution_disabled_independent_authorization_required. execute delegates to it at line 168; confirmed flags and dry-run configuration cannot activate an effect."
+      },
+      {
+        "file": "app/tools/registry.py",
+        "line": 59,
+        "description": "Module-level and instance TOOLS entries use a callable that unconditionally refuses execution."
+      },
+      {
+        "file": "app/tools/registry.py",
+        "line": 90,
+        "description": "Compatibility getters return metadata-only ModuleType objects whose execute is the disabled callable at line 98, rather than importing and returning a raw effect-capable tool."
+      },
+      {
+        "file": "app/server.py",
+        "line": 670,
+        "description": "Streaming chat returns None for use_tool, confirm_action and vision intents; the fallback _process then refuses them at lines 601-602."
+      },
+      {
+        "file": "app/voice/audio_stream.py",
+        "line": 96,
+        "description": "Native voice calls _process_stream and, on its None result, _process at line 112. Avoiding HTTP lifespan therefore does not avoid the current screenshot execution refusal."
+      },
+      {
+        "file": "app/computer/vision.py",
+        "line": 44,
+        "description": "Screen analysis retains a direct capture call after its dry-run check at line 38; the only application wrapper aliases vision.execute, and registry/chat dispatch to it is disabled. No independently active analyze caller was found in the reviewed source."
+      },
+      {
+        "file": "app/computer/yolo_detector.py",
+        "line": 47,
+        "description": "YOLO retains a conditional direct capture call after dry-run and optional-dependency checks, but repository source provides no active application call to detect. Test calls do not establish a running boundary."
+      },
+      {
+        "file": "app/computer/verifier.py",
+        "line": 10,
+        "description": "ActionVerifier retains a capture call, but source review found no application call to this verifier; merely constructing the module singleton at line 26 does not invoke capture."
+      },
+      {
+        "file": "tasks/tool_readiness_smoke.py",
+        "line": 101,
+        "description": "The extra direct screenshot utility call runs under temporary_attr(settings.safety, dry_run, True), so screenshot.execute returns before capture."
+      },
+      {
+        "file": "app/agent/execution.py",
+        "line": 88,
+        "description": "The durable execution registry accepts only the exact SyntheticExecutor type. Its execute method at lines 67-76 performs bounded echo/hash/failure computation, providing no replacement screenshot adapter."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 17,
+        "description": "Stock lazy runtime constructs an authority without supplied ledger/enrollment or legacy authorization; a route-only test must not be treated as proof of an admitted stock deployment. The screenshot refusal also applies when a trusted embedding admits an authority."
+      },
+      {
+        "file": "tests/test_screenshot.py",
+        "line": 52,
+        "description": "The existing capture test substitutes a PNG writer and hardware context; it establishes neither installed-writer behavior nor a reachable application effect or a separate-UID filesystem result."
+      }
+    ],
+    "reason": "The decisive missing link is refuted by current source, not merely unobserved deployment configuration: normal HTTP, WebSocket and native voice tool/vision processing refuses real effects, and registry call, execute, TOOLS and getter interfaces also refuse them without importing a tool. Full-source call-site searches found only dormant library helper chains and a forced-dry-run readiness call outside those gates. Calling capture manually from newly written trusted Python would introduce the missing execution path rather than reproduce a current lower-trust application boundary. Consequently the old source-derived storage concern is not retained as a current needs_validation application finding. This rejection does not assert that capture is hardened or that a future independently authorized adapter could safely reuse its storage. Cross-UID temporary-directory control, actual installed PNG-writer behavior and an operational display were never observed, and no target code or external service was executed."
+  }
+}

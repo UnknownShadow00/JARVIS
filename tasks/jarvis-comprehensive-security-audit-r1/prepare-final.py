@@ -1,0 +1,23 @@
+from pathlib import Path
+import json,re,difflib
+O=Path(__file__).resolve().parent;S=Path('/home/nexus/.claude/skills/security-audit');p=O/'coverage-ledger.json';a=json.loads(p.read_text());d=json.loads((O/'source-delta-final.json').read_text())
+for u in a:
+ if u.get('assignment_group')=='delta-registry':
+  u['attempts'].append({**{k:u[k] for k in ('wave','status','agent_id','reviewed_paths','local_checks','result_fingerprints','unresolved')},'reassignment_reason':'RecoveryRegistry source changed again after current capture; final immutable342-file capture has3 changed files. Fresh reviewer must revalidate full registry plus final admission-time/journal proof changes.'})
+  u.update(wave=3,status='planned',agent_id=None,reviewed_paths=[],local_checks=[],result_fingerprints=[],unresolved=[],assignment_group='final-registry',source_snapshot='snapshot-final')
+p.write_text(json.dumps(a,indent=2)+'\n')
+patch=''
+for file in d['changed_or_added_paths']:
+ patch+=''.join(difflib.unified_diff((O/'snapshot-current'/file).read_text().splitlines(True),(O/'snapshot-final'/file).read_text().splitlines(True),fromfile='snapshot-current/'+file,tofile='snapshot-final/'+file))
+(O/'source-final-diff.patch').write_text(patch)
+arch=O/'architecture.md';arch.write_text(arch.read_text()+'''\nFinal frozen source snapshot-final at2026-11-06T06:13:55Z has342 files. Only recovery_decisions.py, its tests and documentation changed after snapshot-current. A third bounded source pass revalidates the complete registry and these final admission-time and SQLite journal-proof changes. Final source identities come from source-manifest-final.json/source-final.sha256; final candidate verification and critics read this capture. Earlier captures/evidence remain retained with explicit revision tags.\n''')
+def blocks(f):
+ t=(S/f).read_text();z=list(re.finditer(r'(?m)^(?:\*\*([^\n]+?)\*\*|## ([^\n]+))',t));return {(m.group(1) or m.group(2)).split(' (')[0]:t[m.start():z[i+1].start() if i+1<len(z) else len(t)] for i,m in enumerate(z)}
+units=[u for u in a if u.get('assignment_group')=='final-registry'];names=set(u['ordinary_attack_class_block'] for u in units)|set(b for u in units for b in u['selected_companion_blocks']);exact='\n'.join(blocks(f)[n] for f,n in (x.split('#',1) for x in sorted(names)))
+h=(S/'HUNTING.md').read_text();method=h[h.index('#### Core hunting method'):h.index('## Local validation boundaries')];contract=h[h.index('## Structured hunter result'):h.index('## Parent consolidation')]
+root=O/'agents/hunt-final-registry'
+for x in ['scratch','artifacts']:(root/x).mkdir(parents=True,exist_ok=True)
+text='Find source-grounded data-consistency and authorization-invariant failures in assigned recovery bookkeeping units. Return exactly one JSON object matching the structured contract.\n'+arch.read_text()+'\nUNITS\n'+json.dumps(units,indent=2)+'\nEXACT SELECTED BLOCKS\n'+exact+'\nEXCLUSIONS\n'+json.dumps([x for u in units for x in u['excluded_blocks']],indent=2)+'\n'+method+'\nNo carried confirmed exclusions; peers own unrelated boundaries. Agent_id hunt-final-registry. Read source ONLY '+str(O/'snapshot-final')+'; comparator snapshot-current and source-final-diff.patch are read-only. Write only '+str(root/'scratch')+'. Do not modify originals/snapshots/shared reports. No network, credentials, live services, model/hardware/infrastructure calls or target execution. Parent may run <=6 small existing synthetic tests sequentially with approved OS sandbox and final snapshot. Submit harness; predeclared output stem .txt <=262144bytes/file/invocation parent-promoted only.\nFocus on complete current RecoveryRegistry and the three final changed files: admission timestamp after expensive validation, historical witness/proposal validity, SQLite hot/nonhot journal classification and committed-prefix validation. Confirm request/permit/reference bindings, valid state transitions, retained evidence, bounded capacity and non-activation of approved metadata. Read strongest preventing controls; do not invent a finding. Prior review on earlier source did not identify a candidate; independently assess final source.\n'+contract+'\nSCHEMA VERBATIM\n'+(S/'report-schema.json').read_text()+'\nSave exact structured result scratch/result.json.'
+(root/'assignment.txt').write_text(text)
+meta=json.loads((O/'run-metadata.json').read_text());meta['final_source']={'target':str(O/'snapshot-final'),**d};meta['final_source_revision_id']=d['base_head']+'+dirty-snapshot:'+d['source_manifest_sha256'];(O/'run-metadata.json').write_text(json.dumps(meta,indent=2)+'\n')
+print({'final_changed_paths':d['changed_or_added_paths'],'reopened_units':len(units)})

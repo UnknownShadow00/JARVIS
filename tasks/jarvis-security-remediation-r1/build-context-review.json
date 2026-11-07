@@ -1,0 +1,12 @@
+{
+  "copy_inputs": [
+    "requirements-core.txt",
+    "app",
+    "assets",
+    "frontend",
+    "config.yaml.example"
+  ],
+  "review": "Static review against Docker documented last-match/negation semantics. Only COPY roots included; runtime/config/secrets/evidence outside them excluded; nested env/key/database/cache/node_modules denied.",
+  "qualification": "No Docker daemon, image build, remote context upload or container deployment invoked.",
+  "reference": "https://docs.docker.com/build/concepts/context/#dockerignore-files"
+}

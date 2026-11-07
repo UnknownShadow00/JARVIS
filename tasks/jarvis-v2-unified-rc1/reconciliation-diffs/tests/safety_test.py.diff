@@ -1,0 +1,29 @@
+--- codex1/tests/safety_test.py
++++ codex2/tests/safety_test.py
+@@ -61,11 +61,22 @@
+         settings.safety.dry_run = False
+         settings.safety.approval_mode = "balanced"
+ 
+-        for level in range(4):
+-            for confirmed in (False, True):
+-                failures += not _expect_error("legacy effect refused", lambda: registry.call(f"dummy_l{level}", confirmed=confirmed))
++        failures += not _expect("L0 executes in balanced mode", registry.call("dummy_l0").output["ok"])
++        failures += not _expect("L1 executes in balanced mode", registry.call("dummy_l1").output["ok"])
++        failures += not _expect_error("L2 blocks without confirmation", lambda: registry.call("dummy_l2"))
++        failures += not _expect("L2 executes with confirmation", registry.call("dummy_l2", confirmed=True).output["ok"])
++        failures += not _expect_error("L3 always blocks", lambda: registry.call("dummy_l3", confirmed=True))
++
++        settings.safety.approval_mode = "safe"
++        failures += not _expect_error("Safe mode gates L1", lambda: registry.call("dummy_l1"))
++
++        settings.safety.approval_mode = "strict"
++        failures += not _expect_error("Strict mode gates L0", lambda: registry.call("dummy_l0"))
++
++        settings.safety.approval_mode = "balanced"
+         settings.safety.dry_run = True
+-        failures += not _expect_error("dry run cannot authorize legacy effect", lambda: registry.call("dummy_l0"))
++        dry = registry.call("dummy_l0")
++        failures += not _expect("Dry run returns a dry result", dry.dry_run and "DRY RUN" in str(dry.output))
+ 
+         low_conf = router._finalize(RouterResult("use_tool", 0.1, "system_stats", "low confidence"), "maybe do a thing")  # noqa: SLF001
+         failures += not _expect("Low confidence falls back to confirmation", low_conf.intent == "confirm_action")

@@ -1,0 +1,1159 @@
+F.................FF..FFFFFFF...EEEEEEEEEEEEEEF                          [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_branch_continuity_proposal_is_readonly_and_preserves_unknown _
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc3e5ed0>, {'body': {'request_id': 'be883b8d-cb6c-4c45-9a08-4...command': 'enroll_authority', ...}, 'hmac_sha256': '80bd1164b67795ade81ffd451e152df6216e731db76be4e5a4ca6b10668f3c5f'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+____ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[head] _____
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc407c50>, {'body': {'request_id': '5493681f-6550-4d3d-9b4f-e...command': 'enroll_authority', ...}, 'hmac_sha256': '3fb34c7cedcefee14ad9be46184b6beaaa6255747c1c42bf6c9b67a177e5eba4'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+___ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[restore] ___
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc404150>, {'body': {'request_id': 'ea3cfbee-b82b-40b2-b27d-2...command': 'enroll_authority', ...}, 'hmac_sha256': 'bc57df1546ec663a65a74588cff4f693fbd5e419b92699f4841b97237ede4669'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+___ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[digest] ____
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc3a8650>, {'body': {'request_id': 'f6acba19-0621-4eb5-8cd7-2...command': 'enroll_authority', ...}, 'hmac_sha256': 'fe401847ab807da374fb67bcf69f9978e06f5c80f5dbaf58ff48e207cdbe0a2e'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+_ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[generation] __
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc405e50>, {'body': {'request_id': '240aa7d0-f7f7-46f6-b938-0...command': 'enroll_authority', ...}, 'hmac_sha256': 'b52981baf89e6792b34b2cc6464fa576cac28d8e7d7d9ee2302f79c1d32d9a72'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+_____ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[key] _____
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc4882d0>, {'body': {'request_id': '90893481-243a-49f1-93b5-d...command': 'enroll_authority', ...}, 'hmac_sha256': '903847e0a53fe22ed623423187b255c141626815fec4309fe0aea1dec06e74fa'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+___ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[expired] ___
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc41b050>, {'body': {'request_id': 'c7eb6b01-de81-429d-9aa0-4...command': 'enroll_authority', ...}, 'hmac_sha256': '3779e43d9672bd1f9ac255d5d38fd241aa6b5e603ca93a18c539ff711f683641'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+__ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[duplicate] __
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc4cff50>, {'body': {'request_id': '764e863f-c4b3-48a5-a766-9...command': 'enroll_authority', ...}, 'hmac_sha256': 'b01ca1ad0ca4a854cc6bf3be40c848e73f77dd762e802c16315bda9a5a875961'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+__ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[activate] ___
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc4079d0>, {'body': {'request_id': 'bb1a6c53-cc05-481f-8d72-3...command': 'enroll_authority', ...}, 'hmac_sha256': '323a8bef2cfa51065271cb12cd30eb78da0a1e03d059426420b741fc4ff2e4c5'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+__ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[registry] ___
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc407250>, {'body': {'request_id': '48e2907d-f5fd-495d-b31d-3...command': 'enroll_authority', ...}, 'hmac_sha256': '9f910b198fcff02af5d122d6565d7960c94ede787dbadd944f25ab95d528db73'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+___ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[marker] ____
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc3e6fd0>, {'body': {'request_id': '8f06b54e-bf8d-4c3d-ac14-4...command': 'enroll_authority', ...}, 'hmac_sha256': '7a89120b808c124b3825d1c6a13d63e8975c63845e4b68531440cf38d29fc35b'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+__ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[database] ___
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc7bc9d0>, {'body': {'request_id': 'ee2dac5d-c0f1-42d1-9aeb-e...command': 'enroll_authority', ...}, 'hmac_sha256': '85e83313067cf5170a753f069307fe64d525c973d6895d9301671f9834a86fc0'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+____ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[phase] ____
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc8108d0>, {'body': {'request_id': '8f74343f-1bea-4d65-8630-a...command': 'enroll_authority', ...}, 'hmac_sha256': 'dd9a7c452d973f2a830a3086dc1174a3433175a07e92431f9f1e64c0eb4f0de1'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+____ ERROR at setup of test_branch_invalid_or_stale_state_is_refused[copy] _____
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc3e6050>, {'body': {'request_id': 'a6122701-9d43-4879-bace-1...command': 'enroll_authority', ...}, 'hmac_sha256': '6f3eeea9ad7131e6c18f8cb63378f3b705fdc3adefb414a45a10294c82c5aa58'})
+
+    @pytest.fixture
+    def branch(env):
+        from app.agent.recovery import RecoveryActions,OperatorPermits
+        from app.agent.execution import ExecutionPipeline,SimulatedPolicy
+        from app.agent.archive_restore import ArchiveRestorer
+        s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
+        g=a._ledger;s.guard=g
+        permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
+        root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
+        targets=root/'targets';targets.mkdir(mode=0o700)
+        pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
+        op=uid();now=datetime.now(UTC)
+        pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
+>       pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/execution.py:193: in _claim
+    return a._mutate(actor, phase_id(operation_id, "claim"), "execution_claim", {"operation_id": operation_id}, effect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/input/source/app/agent/authority.py:313: in _mutate
+    result = effect(scope)
+             ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = 'local-service'
+
+    def effect(scope):
+        if a._ledger is not None:
+            from app.agent.recovery import analyze, snapshot
+            if not analyze(snapshot(a), scope)["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/execution.py:172: AuthorityError
+=================================== FAILURES ===================================
+_______________ test_enroll_genesis_receipt_restart_verification _______________
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc861a90>, {'body': {'request_id': '0278046f-4bfc-45bb-abd4-2...command': 'enroll_authority', ...}, 'hmac_sha256': 'a7270df3dae5ecb28c94dc0eb3c52d5f54c991a802dbbf9a50959eb336dbacef'})
+
+    def test_enroll_genesis_receipt_restart_verification(env):
+        s,permit=env;result=s.enroll(ACTOR,permit,disposable=True)
+        assert result['state']=='VERIFIED' and result['witness']['genesis']['sequence']==1
+        assert s.verify()==result
+        a=opened(s,result)
+        try:
+>           assert a.generation==1 and a.readiness()['enrollment']['state']=='VERIFIED'
+                                       ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc863230>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+________ test_independent_sigkill_enrollment[enrollment_intent_durable] ________
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol0')
+stage = 'enrollment_intent_durable'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc7db2f0>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+________ test_independent_sigkill_enrollment[enrollment_stage_created] _________
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol1')
+stage = 'enrollment_stage_created'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bce886e0>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+______ test_independent_sigkill_enrollment[enrollment_database_committed] ______
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol4')
+stage = 'enrollment_database_committed'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc7dba70>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+____ test_independent_sigkill_enrollment[enrollment_genesis_intent_durable] ____
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol5')
+stage = 'enrollment_genesis_intent_durable'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc93c9b0>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+______ test_independent_sigkill_enrollment[enrollment_genesis_published] _______
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol6')
+stage = 'enrollment_genesis_published'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc93d7c0>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+_______ test_independent_sigkill_enrollment[enrollment_prepared_durable] _______
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol7')
+stage = 'enrollment_prepared_durable'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc93e990>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+______ test_independent_sigkill_enrollment[enrollment_before_publication] ______
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol8')
+stage = 'enrollment_before_publication'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc93f7a0>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+_______ test_independent_sigkill_enrollment[enrollment_target_published] _______
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol9')
+stage = 'enrollment_target_published'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc4c47d0>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+________ test_independent_sigkill_enrollment[enrollment_final_durable] _________
+
+tmp_path = PosixPath('/work/pytest/test_independent_sigkill_enrol10')
+stage = 'enrollment_final_durable'
+
+    @pytest.mark.parametrize('stage',STAGES)
+    def test_independent_sigkill_enrollment(tmp_path,stage):
+        root=tmp_path/'case';root.mkdir(mode=0o700)
+        command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
+        with (root/'out').open('w') as out,(root/'err').open('w') as err:
+            child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
+            try:
+                until=time.monotonic()+4
+                while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
+                assert (root/'ready').exists(),(root/'err').read_text()
+                if stage=='enrollment_intent_durable':
+                    reservation=json.loads((root/'reservation.json').read_text())
+                    contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
+                    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
+                child.kill();child.wait(timeout=1);assert child.returncode<0
+            finally:
+                if child.poll() is None:child.kill()
+                child.wait(timeout=1)
+        reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
+        try:
+            # No ordinary open may create a store during the unfinished ceremony.
+            if stage!='enrollment_final_durable':
+                with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
+            if stage in ('enrollment_database_created','enrollment_before_database_commit'):
+                with pytest.raises(AuthorityError):s.reconcile()
+                assert not s.destination.exists() and s.stage.exists()
+            else:
+                result=s.reconcile();assert result['state']=='VERIFIED'
+                a=opened(s,result)
+>               try:assert a.readiness()['enrollment']['verified'] and a.generation==1
+                           ^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7ed7bc4c5400>
+
+    def readiness(self):
+        with self._mutex:
+            self._fence()
+            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
+            from app.agent.recovery import snapshot, analyze
+            consistency = analyze(snapshot(self), "local-service")
+            if not consistency["consistent"]:
+>               raise AuthorityError("ledger_inconsistent")
+E               app.agent.authority.AuthorityError: ledger_inconsistent
+
+/input/source/app/agent/authority.py:530: AuthorityError
+_____________ test_deleted_final_after_owner_open_blocks_dispatch ______________
+
+env = (<app.agent.enrollment.OfflineEnrollment object at 0x7ed7bc1cc0d0>, {'body': {'request_id': 'b2724285-46d8-43fc-a115-2...command': 'enroll_authority', ...}, 'hmac_sha256': '7bfccb2e38e4e46b4dc612cfda064d8c81be83c2ff3375cc3af00596faa7a178'})
+
+    def test_deleted_final_after_owner_open_blocks_dispatch(env):
+>       s,p=env;r=s.enroll(ACTOR,p,disposable=True);a=opened(s,r)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/tests/test_authority_enrollment.py:243: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/input/source/app/agent/enrollment.py:160: in enroll
+    if self._phases(): raise AuthorityError('enrollment_exists_reconcile')
+       ^^^^^^^^^^^^^^
+/input/source/app/agent/enrollment.py:91: in _phases
+    inventory = {p.name for p in self.custody.iterdir()}
+                                 ^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/work/pytest/test_deleted_final_after_owner0/case/custody')
+
+    def iterdir(self):
+        """Yield path objects of the directory contents.
+    
+        The children are yielded in arbitrary order, and the
+        special entries '.' and '..' are not included.
+        """
+        root_dir = str(self)
+>       with os.scandir(root_dir) as scandir_it:
+             ^^^^^^^^^^^^^^^^^^^^
+E       OSError: [Errno 24] Too many open files: '/work/pytest/test_deleted_final_after_owner0/case/custody'
+
+/usr/lib/python3.14/pathlib/__init__.py:837: OSError
+=========================== short test summary info ============================
+FAILED ../input/tests/test_authority_enrollment.py::test_enroll_genesis_receipt_restart_verification
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_intent_durable]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_stage_created]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_database_committed]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_genesis_intent_durable]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_genesis_published]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_prepared_durable]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_before_publication]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_target_published]
+FAILED ../input/tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_final_durable]
+FAILED ../input/tests/test_authority_enrollment.py::test_deleted_final_after_owner_open_blocks_dispatch
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_continuity_proposal_is_readonly_and_preserves_unknown
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[head]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[restore]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[digest]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[generation]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[key]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[expired]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[duplicate]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[activate]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[registry]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[marker]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[database]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[phase]
+ERROR ../input/tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[copy]
+11 failed, 22 passed, 14 errors in 8.22s
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T05:13:27.433580+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026532961]",
+    "mnt_namespace": "mnt:[4026532402]",
+    "pid_namespace": "pid:[4026532456]",
+    "net_namespace": "net:[4026532459]",
+    "ipc_namespace": "ipc:[4026532407]",
+    "uts_namespace": "uts:[4026532403]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051327336401Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051327336401Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051327336401Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 47,
+    "failed": 25,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T05:13:35.933044+00:00"
+}

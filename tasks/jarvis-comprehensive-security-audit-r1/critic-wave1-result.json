@@ -1,0 +1,134 @@
+{
+  "missing_units": [
+    {
+      "surface": "app/computer/screenshot.py#capture",
+      "boundary": "app/computer/screenshot.py#temporary-output",
+      "subsystem": "app/computer",
+      "attack_class": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+      "starting_paths": [
+        "app/computer/screenshot.py",
+        "app/tools/screenshot.py",
+        "app/computer/vision.py",
+        "app/computer/yolo_detector.py",
+        "requirements-desktop.txt"
+      ],
+      "selected_companion_blocks": [
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+        "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+      ],
+      "excluded_blocks": [
+        {
+          "block": "ATTACK-CLASSES.md#Injection",
+          "reason": "This focused unit concerns filesystem principal control over generated screenshot outputs; chat argument injection is covered by the legacy tool unit."
+        }
+      ],
+      "reason": "Distinct local-filesystem boundary at screenshot.py26\u201335: predictable shared-temp directory and second-resolution output name, mkdir(exist_ok=True), no owner/mode/leaf-no-follow validation before the PNG writer. Parent has a source-grounded needs-validation lead; current legacy unit did not establish shared-temp other-UID prerequisites. Review native voice/vision entry paths separately from stock HTTP admission. No exploit or severity is asserted."
+    },
+    {
+      "surface": "app/cli.py#_shutdown",
+      "boundary": "app/resource_manager.py#classify_jarvis_process",
+      "subsystem": "app/resource_manager",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "starting_paths": [
+        "app/cli.py",
+        "app/resource_manager.py",
+        "app/server.py",
+        "README.md",
+        "tests/test_resource_manager.py"
+      ],
+      "selected_companion_blocks": [],
+      "excluded_blocks": [
+        {
+          "block": "AI-AND-LLM.md#Action-confirmation and approval binding",
+          "reason": "The decisive observed selector is native process discovery during operator CLI/API resource control, not model-generated action selection; ordinary resource authorization is the direct class."
+        }
+      ],
+      "reason": "Consolidates the two hunter process-termination leads into one root-cause unit. resource_manager.py752\u2013758 classifies generic app.main:app/python -m app.main command lines before checking project cwd or provenance; terminate_jarvis_processes789\u2013805 signals selected PIDs, reached by CLI_shutdown183\u2013193 and API deep sleep with terminate_processes. Determine whether a harmless unrelated sandbox child is stopped despite the JARVIS-owned scope. Distinguish unrelated resource damage from deliberate attacker self-kill, and do not signal live/host processes."
+    },
+    {
+      "surface": "app/server.py#ws_endpoint",
+      "boundary": "app/server.py#ConnectionManager",
+      "subsystem": "app/server.py",
+      "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+      "starting_paths": [
+        "app/server.py",
+        "app/comms/ue5_bridge.py",
+        "tests/test_server_auth.py"
+      ],
+      "selected_companion_blocks": [
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules"
+      ],
+      "excluded_blocks": [
+        {
+          "block": "CLIENT-SIDE.md#Cross-site WebSocket request use",
+          "reason": "Present-Origin and bearer checks are already source-covered; this unit reviews accepted-session parsing and teardown, not a duplicate origin bypass."
+        }
+      ],
+      "reason": "ws_endpoint465\u2013470 assumes parsed JSON is an object and its message is a string; only JSONDecodeError is caught. Cleanup at517\u2013519 runs only for WebSocketDisconnect. Existing HTTP auth/WS coverage does not settle malformed accepted-session retention in manager.active or total connection bounds. Use one/few in-memory sessions only; an uncaught per-connection error alone is not a shared-service DoS finding."
+    },
+    {
+      "surface": "app/voice/vad.py#record_until_silence",
+      "boundary": "app/voice/vad.py#recording-duration-and-buffer",
+      "subsystem": "app/voice",
+      "attack_class": "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+      "starting_paths": [
+        "app/voice/vad.py",
+        "app/voice/audio_stream.py",
+        "app/voice/push_to_talk.py",
+        "app/voice/wake_word.py"
+      ],
+      "selected_companion_blocks": [
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Unbounded buffering and cardinality",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Universal moves",
+        "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Validation rules"
+      ],
+      "excluded_blocks": [
+        {
+          "block": "MEMORY-SAFETY-AND-BINARY.md",
+          "reason": "Maintained VAD wrapper is Python; review callback/recording lifecycle and resource bounds without executing native audio dependencies or hardware."
+        }
+      ],
+      "reason": "app/voice/vad.py is absent from every current reviewed_paths union. The stated12s recording cap17/42\u201345 is checked at85 only on nonspeech frames; the speech branch69\u201374 appends then continues. After speech starts the empty-queue path60\u201363 also has no timeout, and callback queue31/36 is unbounded. A finite fake audio/VAD fixture can determine whether max duration/frame count and cancellation actually bound work. Do not infer a shared-service denial without a concrete affected runtime/principal/result."
+    },
+    {
+      "surface": "app/server.py#diagnostic-and-response-helper-routes",
+      "boundary": "app/server.py#api_token_middleware",
+      "subsystem": "app/supporting-services",
+      "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage",
+      "starting_paths": [
+        "app/server.py",
+        "app/network/tailscale.py",
+        "app/tools/health_check.py",
+        "app/tools/system_stats.py",
+        "app/config_check.py",
+        "app/brain/complexity_router.py",
+        "app/brain/direct_responder.py",
+        "app/brain/morning_report.py",
+        "app/brain/planner.py",
+        "app/brain/tool_embeddings.py",
+        "app/tools/cli/__init__.py",
+        "scripts/install.ps1",
+        "scripts/wake_diag.py"
+      ],
+      "selected_companion_blocks": [],
+      "excluded_blocks": [
+        {
+          "block": "WEB-PROTOCOL-AND-AUTH.md#API-key scope and resource binding",
+          "reason": "Token-empty authority policy is tracked as hypothesisA; this unit fills concrete helper/diagnostic source-to-output coverage rather than duplicating that root cause."
+        }
+      ],
+      "reason": "The named active helper files are absent from current reviewed_paths despite full active-source scope. /network/status357\u2013366 returns tailscale.get_status including full raw status at tailscale.py33\u201338; /health/readiness352\u2013354 invokes provider/hardware/executable/path diagnostics in health_check. Adjacent deterministic arithmetic, planner/complexity, embedding cache and report readers also need explicit current-source evidence. Review the information/output and local-provider/cache bounds statically with dummy mocks if useful; same-operator diagnostics or a missing best practice is not automatically disclosure. No live tailscale/provider/audio invocation is authorized."
+    }
+  ],
+  "reassign_ids": [
+    "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::SUPPLY-CHAIN-AND-RELEASE.md%23Mutable%20and%20unbound%20build%20inputs"
+  ],
+  "resolved_prior_leads": [],
+  "stop": false
+}

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#00d4ff">
+  <title>JARVIS</title>
+  <link rel="manifest" href="./manifest.json">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --panel: rgba(18, 24, 38, 0.92);
+      --line: rgba(0, 212, 255, 0.18);
+      --accent: #00d4ff;
+      --accent-soft: rgba(0, 212, 255, 0.16);
+      --user: #1e90ff;
+      --jarvis: #72f4ff;
+      --ok: #21d07a;
+      --bad: #ff5a6b;
+      --text: #edf7ff;
+      --muted: #7b95ad;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, rgba(0, 212, 255, 0.15), transparent 28%),
+        radial-gradient(circle at bottom, rgba(30, 144, 255, 0.12), transparent 26%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 18px 16px 20px;
+      gap: 14px;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 4px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--accent);
+      font-size: 1.1rem;
+      letter-spacing: 0.38rem;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
+    .connection {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .connection-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bad);
+      box-shadow: 0 0 0 4px rgba(255, 90, 107, 0.14);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .connection-dot.connected {
+      background: var(--ok);
+      box-shadow: 0 0 0 4px rgba(33, 208, 122, 0.14);
+    }
+
+    .reactor-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 6px 0 0;
+    }
+
+    .arc-reactor {
+      width: min(56vw, 240px);
+      aspect-ratio: 1;
+      filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.28));
+    }
+
+    .reactor-core,
+    .reactor-ring,
+    .reactor-detail {
+      transform-origin: center;
+      animation: idle-spin 10s linear infinite;
+    }
+
+    .reactor-ring:nth-of-type(2) {
+      animation-direction: reverse;
+      animation-duration: 14s;
+    }
+
+    .reactor-detail {
+      animation-duration: 18s;
+    }
+
+    .arc-reactor.active .reactor-core,
+    .arc-reactor.active .reactor-ring,
+    .arc-reactor.active .reactor-detail {
+      animation: pulse-glow 1.2s ease-in-out infinite;
+    }
+
+    .status-line {
+      text-align: center;
+      min-height: 1.25rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+      letter-spacing: 0.04rem;
+    }
+
+    .transcript {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 2px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .message {
+      max-width: 82%;
+      padding: 12px 14px;
+      border-radius: 18px;
+      line-height: 1.4;
+      word-break: break-word;
+      border: 1px solid transparent;
+      backdrop-filter: blur(14px);
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: rgba(30, 144, 255, 0.18);
+      border-color: rgba(30, 144, 255, 0.34);
+      color: #d6ecff;
+    }
+
+    .message.jarvis {
+      align-self: flex-start;
+      background: var(--accent-soft);
+      border-color: var(--line);
+      color: var(--jarvis);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      align-items: center;
+      padding-top: 6px;
+    }
+
+    .input,
+    .button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .input {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 18px;
+      padding: 0 16px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .input::placeholder {
+      color: #6d8298;
+    }
+
+    .input:focus {
+      border-color: rgba(0, 212, 255, 0.45);
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+    }
+
+    .button {
+      min-width: 52px;
+      min-height: 52px;
+      border-radius: 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0 16px;
+      cursor: pointer;
+    }
+
+    .button:active {
+      transform: scale(0.98);
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.28), rgba(30, 144, 255, 0.34));
+      color: #ecfeff;
+    }
+
+    .button.icon {
+      padding: 0;
+      font-size: 1rem;
+    }
+
+    .button.secondary {
+      min-width: 0;
+      min-height: 40px;
+      padding: 0 12px;
+      font-size: 0.82rem;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(30, 144, 255, 0.22));
+      color: #dffbff;
+    }
+
+    .select {
+      min-height: 40px;
+      border-radius: 14px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.82rem;
+      outline: none;
+    }
+
+    .select:focus {
+      border-color: rgba(0, 212, 255, 0.45);
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+    }
+
+    .button.listening {
+      border-color: rgba(255, 90, 107, 0.4);
+      box-shadow: 0 0 0 3px rgba(255, 90, 107, 0.12);
+    }
+
+    @keyframes idle-spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        opacity: 0.9;
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.22));
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.04);
+        filter: drop-shadow(0 0 18px rgba(0, 212, 255, 0.55));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top-bar">
+      <h1 class="title" id="title">JARVIS</h1>
+      <div class="top-controls">
+        <select class="select" id="audio-output" aria-label="Audio output">
+          <option value="default">Default</option>
+          <option value="glasses">Glasses (Bluetooth)</option>
+        </select>
+      </div>
+      <div class="connection">
+        <span id="connectionLabel">Disconnected</span>
+        <span class="connection-dot" id="connectionDot" aria-hidden="true"></span>
+      </div>
+    </header>
+
+    <section class="reactor-wrap" aria-label="Arc reactor">
+      <svg class="arc-reactor" id="arcReactor" viewBox="0 0 240 240" role="img" aria-hidden="true">
+        <circle cx="120" cy="120" r="90" fill="none" stroke="rgba(0, 212, 255, 0.18)" stroke-width="4"></circle>
+        <g class="reactor-ring">
+          <circle cx="120" cy="120" r="72" fill="none" stroke="#00d4ff" stroke-width="6" stroke-dasharray="22 10"></circle>
+        </g>
+        <g class="reactor-ring">
+          <circle cx="120" cy="120" r="54" fill="none" stroke="rgba(114, 244, 255, 0.85)" stroke-width="5" stroke-dasharray="16 12"></circle>
+        </g>
+        <g class="reactor-detail">
+          <polygon points="120,40 132,72 168,72 139,94 150,128 120,108 90,128 101,94 72,72 108,72" fill="rgba(0, 212, 255, 0.16)" stroke="#72f4ff" stroke-width="3"></polygon>
+        </g>
+        <g class="reactor-core">
+          <circle cx="120" cy="120" r="28" fill="rgba(114, 244, 255, 0.18)" stroke="#72f4ff" stroke-width="4"></circle>
+          <circle cx="120" cy="120" r="12" fill="#00d4ff"></circle>
+        </g>
+      </svg>
+    </section>
+
+    <div class="status-line" id="statusLine">Disconnected</div>
+
+    <section class="transcript" id="transcript" aria-live="polite"></section>
+
+    <form class="controls" id="composer">
+      <input class="input" id="messageInput" type="text" placeholder="Speak or type a command" autocomplete="off">
+      <button class="button primary" type="submit">Send</button>
+      <button class="button secondary" id="glasses-toggle" type="button" aria-pressed="false">Glasses OFF</button>
+      <button class="button icon" id="micButton" type="button" aria-label="Use microphone">Mic</button>
+    </form>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

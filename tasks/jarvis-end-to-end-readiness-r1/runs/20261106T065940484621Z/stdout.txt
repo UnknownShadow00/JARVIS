@@ -1,0 +1,410 @@
+.......................................FFFFFFFFFFFFFFF..                 [100%]
+=================================== FAILURES ===================================
+_ test_independent_process_crash_reconciles_without_duplicate_execution[after_claim] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash0/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a800820f80>, <app.agent.execution_transport.SyntheticTransport object at 0x77a8001b9770>)
+stage = 'after_claim'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[before_execute] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash1/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a800820440>, <app.agent.execution_transport.SyntheticTransport object at 0x77a8001baad0>)
+stage = 'before_execute'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[transport_before_reserve] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash2/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030ed50>, <app.agent.execution_transport.SyntheticTransport object at 0x77a8001bad50>)
+stage = 'transport_before_reserve'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[transport_reserved] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash3/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030ef00>, <app.agent.execution_transport.SyntheticTransport object at 0x77a8001bb390>)
+stage = 'transport_reserved'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[transport_computed] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash4/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030f0b0>, <app.agent.execution_transport.SyntheticTransport object at 0x77a8001bbed0>)
+stage = 'transport_computed'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[transport_reported] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash5/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030f260>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb8190>)
+stage = 'transport_reported'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[transport_reply_received] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash6/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030f4a0>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb8410>)
+stage = 'transport_reply_received'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[after_record] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash7/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030f920>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb8690>)
+stage = 'after_record'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[after_publish] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash8/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030fbf0>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb9270>)
+stage = 'after_publish'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[reserve_before_commit] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash9/state', 'database': '/work/pytest/test_independent_process_cra...ecutionPipeline object at 0x77a80030fda0>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb8a50>)
+stage = 'reserve_before_commit'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[reserve_database_committed] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash10/state', 'database': '/work/pytest/test_independent_process_cr...ecutionPipeline object at 0x77a7fee18050>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeba8f0>)
+stage = 'reserve_database_committed'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[record_before_commit] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash11/state', 'database': '/work/pytest/test_independent_process_cr...ecutionPipeline object at 0x77a80030f770>, <app.agent.execution_transport.SyntheticTransport object at 0x77a80037fbb0>)
+stage = 'record_before_commit'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[record_database_committed] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash12/state', 'database': '/work/pytest/test_independent_process_cr...ecutionPipeline object at 0x77a80030f4a0>, <app.agent.execution_transport.SyntheticTransport object at 0x77a8001b8050>)
+stage = 'record_database_committed'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[publish_before_commit] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash13/state', 'database': '/work/pytest/test_independent_process_cr...ecutionPipeline object at 0x77a80030f0b0>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb8ff0>)
+stage = 'publish_before_commit'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+_ test_independent_process_crash_reconciles_without_duplicate_execution[publish_database_committed] _
+
+env = ({'root': '/work/pytest/test_independent_process_crash14/state', 'database': '/work/pytest/test_independent_process_cr...ecutionPipeline object at 0x77a80030ed50>, <app.agent.execution_transport.SyntheticTransport object at 0x77a7feeb9d10>)
+stage = 'publish_database_committed'
+
+    @pytest.mark.parametrize('stage',['after_claim','before_execute','transport_before_reserve','transport_reserved','transport_computed',
+        'transport_reported','transport_reply_received','after_record','after_publish','reserve_before_commit','reserve_database_committed',
+        'record_before_commit','record_database_committed','publish_before_commit','publish_database_committed'])
+    def test_independent_process_crash_reconciles_without_duplicate_execution(env,stage):
+        from app.agent.authority import Authority
+        state,a,p,t=env;op=uid();root=Path(state['root']);a.close()
+        case={'state':state,'operation_id':op,'stage':stage};path=root/'case.json';path.write_text(json.dumps(case));path.chmod(0o600)
+        child=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/transport_process_actor.py',str(path)])
+        try:
+            end=time.monotonic()+10
+            while not (root/'ready').exists() and time.monotonic()<end and child.poll() is None:time.sleep(.01)
+            assert (root/'ready').exists(),child.poll()
+>           with pytest.raises(AuthorityError,match='busy'):opened(state)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'busy'
+E             Actual message: 'checkpoint_owner_unavailable'
+
+/input/tests/test_secure_transport.py:213: AssertionError
+=========================== short test summary info ============================
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[after_claim]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[before_execute]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_before_reserve]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_reserved]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_computed]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_reported]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_reply_received]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[after_record]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[after_publish]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[reserve_before_commit]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[reserve_database_committed]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[record_before_commit]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[record_database_committed]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[publish_before_commit]
+FAILED ../input/tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[publish_database_committed]
+15 failed, 41 passed in 27.46s
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T06:59:40.581482+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533029]",
+    "mnt_namespace": "mnt:[4026532971]",
+    "pid_namespace": "pid:[4026532974]",
+    "net_namespace": "net:[4026532976]",
+    "ipc_namespace": "ipc:[4026532973]",
+    "uts_namespace": "uts:[4026532972]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-end-to-end-readiness-r1/runs/20261106T065940484621Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-end-to-end-readiness-r1/runs/20261106T065940484621Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-end-to-end-readiness-r1/runs/20261106T065940484621Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 56,
+    "failed": 15,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T07:00:08.303825+00:00"
+}

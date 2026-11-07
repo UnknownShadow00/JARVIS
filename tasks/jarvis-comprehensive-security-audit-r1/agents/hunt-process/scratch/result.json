@@ -1,0 +1,51 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fcli.py%23_shutdown::app%2Fresource_manager.py%23classify_jarvis_process::app%2Fresource_manager::ATTACK-CLASSES.md%23Access%20control",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/cli.py",
+        "app/resource_manager.py",
+        "app/server.py",
+        "README.md",
+        "tests/test_resource_manager.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-process",
+          "reviewed_paths": [
+            "app/cli.py",
+            "app/resource_manager.py",
+            "app/server.py",
+            "README.md",
+            "tests/test_resource_manager.py"
+          ],
+          "invariant": "Distinguish the documented JARVIS-owned shutdown resource scope from OS permission to signal a process, and identify whether a lower-trust actor crosses a security boundary.",
+          "method": "source",
+          "result": "app/cli.py:51,65 promises stopping JARVIS-owned processes, but _shutdown:186-190 unconditionally calls terminate_jarvis_processes. resource_manager.py:715-723 discovers globally visible process metadata; classify_jarvis_process:757-758 accepts generic app.main:app/python -m app.main before any cwd/project provenance check. Boot/sensor/diagnostic markers at761-766 have the same weakness. The resulting PIDs are terminated at793-800. API deep-sleep/shutdown with terminate_processes also reaches this helper through deep_sleep:242-244, but actual HTTP startup reachability is not established by this unit. start_server_process:824-844 launches under PROJECT_ROOT without persisting a managed-process identity registry. This is an actual application resource-scope defect. No lower-trust actor gaining authority over another principal was established: native caller already controls the same-UID affected processes; attacker-controlled process metadata alone can arrange self-termination, and the application has no source-visible restricted shutdown-only role.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-process",
+          "reviewed_paths": [
+            "app/resource_manager.py"
+          ],
+          "invariant": "A generic app.main:app marker on a harmless process outside the JARVIS project must not be sufficient to select and terminate that unrelated process.",
+          "method": "local",
+          "result": "Parent executed process_selection.py in isolated PID/network OS sandbox with one harmless same-UID sleeping child, cwd /scratch/unrelated-service, inert app.main:app argv. Every other visible PID was explicitly excluded. Promoted output established child_alive=true,outside_jarvis_project=true,same_uid=true,classified_role=fastapi_server,selected_child=true,selected_count=1,stopped_child=true,terminated_count=1,child_pid_exists_after=false. The genuine discovery and termination functions were exercised; CLI, HTTP, providers, databases and host processes were not executed or signalled. This proves collateral termination mechanics and limited local availability impact, not privilege escalation or unauthenticated remote reachability.",
+          "artifact": "agents/hunt-process/artifacts/process_selection.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Concrete reproduced safety/availability defect: shutdown selection trusts generic command-line substrings rather than JARVIS ownership. A same-UID dummy process outside PROJECT_ROOT with app.main:app in argv was selected as fastapi_server and actually terminated in the parent sandbox. CLI help promises JARVIS-owned processes. Keep this operational defect prominent, but do not call it a security privilege escalation: no less-privileged actor gaining authority over another principal was established in the single-operator model. No arbitrary-PID or unauthenticated remote termination was demonstrated.",
+    "Fix the selector at app/resource_manager.py:752-776 so every role requires verified JARVIS provenance before being returned, including fastapi_server, boot_orchestrator, sensor_node, wake_diagnostics and the path-only Electron branch. A conservative initial rule is project-root cwd/executable/entrypoint matching and refusal when provenance is unavailable; the stronger durable design records PID plus creation time and role from start_server_process or an OS-supervised process group/cgroup, then revalidates that identity immediately before signalling. Process names and generic app.main:app strings must not establish ownership.",
+    "Regression coverage should include an unrelated same-UID uvicorn-style process outside PROJECT_ROOT that survives JARVIS shutdown, a genuinely managed child that is stopped, missing/inaccessible cwd refusal, role-specific false positives and process identity reuse. Existing tests/test_resource_manager.py:146-149 only tests positive generic markers and pytest rejection, not ownership isolation. Use disposable children in an OS-isolated PID namespace; never run the reproduction against host process discovery.",
+    "The bounded reproduction did not depend on mandatory Authority startup or a reachable HTTP server; it exercised the native resource helper reached by CLI shutdown. HTTP/API exploitability remains outside this unit and must not inherit unsupported assumptions from the native fixture."
+  ],
+  "uncovered": []
+}

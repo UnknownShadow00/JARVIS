@@ -1,0 +1,27 @@
+{
+  "status": "STOPPED",
+  "started_at": "2026-11-06T08:30:08.540325+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533028]",
+    "mnt_namespace": "mnt:[4026532970]",
+    "pid_namespace": "pid:[4026532973]",
+    "net_namespace": "net:[4026532975]",
+    "ipc_namespace": "ipc:[4026532972]",
+    "uts_namespace": "uts:[4026532971]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T083008441368Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T083008441368Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T083008441368Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "error_type": "AuthorityError",
+  "error": "unsafe_storage_ancestor",
+  "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 35, in <module>\n    report['benchmarks']=run()\n                         ~~~^^\n  File \"/input/benchmark_workload.py\", line 43, in run\n    g=LedgerGuard(anchors,KEY,store,initialize=True,rollover=True,epoch_capacity=capacity,recovery=True)\n  File \"/input/source/app/agent/ledger.py\", line 160, in __init__\n    self.directory = private_directory(self.directory, create=initialize)\n                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/input/source/app/agent/ledger.py\", line 65, in private_directory\n    StorageAncestry(path, create=create)\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n  File \"/input/source/app/agent/storage_paths.py\", line 19, in __init__\n    self.identities = self._walk(create=create)\n                      ~~~~~~~~~~^^^^^^^^^^^^^^^\n  File \"/input/source/app/agent/storage_paths.py\", line 47, in _walk\n    raise AuthorityError('unsafe_storage_ancestor')\napp.agent.authority.AuthorityError: unsafe_storage_ancestor\n",
+  "finished_at": "2026-11-06T08:30:08.639374+00:00"
+}

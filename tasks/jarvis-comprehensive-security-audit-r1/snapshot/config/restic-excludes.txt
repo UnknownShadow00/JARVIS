@@ -1,0 +1,33 @@
+# Source history is already protected by Git/GitHub.
+.git/
+
+# Installed dependencies and generated build output.
+frontend/electron/node_modules/
+**/node_modules/
+**/build/
+**/dist/
+
+# Python and test caches.
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Downloadable model/runtime payloads.
+models/
+piper/
+.ollama/
+
+# Reproducible embeddings and diagnostic artifacts.
+data/tool_embeddings.json
+scripts/wake_diag_*.csv
+
+# Test-created and transient audio files.
+tasks/tmp*.wav
+assets/audio/cache/
+*.wav.tmp
+
+# Transient server/smoke logs. logs/audit.jsonl is intentionally retained.
+logs/server*.log
+logs/smoke-*.log

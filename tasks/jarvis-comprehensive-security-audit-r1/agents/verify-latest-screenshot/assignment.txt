@@ -1,0 +1,836 @@
+You did not write this candidate. Try to refute it from repository source and bounded
+local evidence. Do not contact deployed endpoints or external/shared services. Run
+target-controlled code only inside the approved OS-enforced sandbox: no external
+network, empty allowlisted environment, read-only target and tools, scratch-only
+writes, and explicit low resource and wall-clock limits. If any control is unavailable,
+do not execute; retain the exact missing capability as a needs_validation blocker.
+Treat every scratch entry as target-controlled after execution. After the sandbox and
+all its processes terminate, only trusted parent-side code may promote a predeclared
+scratch-relative file, following the promotion procedure block included verbatim in
+this prompt. You and target code never write retained artifacts. If promotion is
+unavailable or fails, do not use that file as evidence.
+
+1. Verify every trace and evidence file, positive line number, scope, and description.
+   Confirm the first entry is a real lower-trust entrypoint and the last is the
+   claimed sink or boundary effect.
+2. Reconstruct the strongest source-visible validation, identity, authorization,
+   normalization, lifecycle, framework, and containment controls on the path.
+   Where the architecture summary names a comparable baseline, note whether it
+   shares the pattern — as calibration, never as grounds to dismiss.
+3. For a proposed confirmed candidate, independently reproduce the minimum observed
+   result when possible. Verify inputs, interface shape, conditions, and affected
+   dummy principal/resource. Do not infer a stronger result or continue after it.
+4. Verify that likelihood, impact, confidence, and the proposed source fix match only
+   what the evidence establishes.
+5. For a proposed needs_validation candidate, decide whether the blocker is genuinely
+   outside source/local observation. If source refutes the trace, reject it. If the
+   missing fact remains decisive, keep needs_validation and make the local and
+   owner-observed plans exact and non-destructive.
+6. Preserve the fingerprint for the same source-derived root cause across every state.
+
+Return exactly one JSON object and no surrounding prose:
+{"decision": "confirmed|needs_validation|rejected", "record": { ... }}
+where record exactly matches the decision's verdict branch of the schema included
+in this prompt. A corrected record replaces the hunter's wording.
+CANDIDATE FROM EARLIER SNAPSHOT (not current truth)
+{
+  "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+  "title": "Shared temporary screenshot namespace may redirect capture output across OS users",
+  "description": "Screenshot capture accepts preexisting filesystem state in a fixed jarvis_screenshots directory under the effective temporary root and selects a second-resolution PNG name. If a different OS principal can control that namespace or its leaf entries and the installed PNG writer follows those paths, a later victim capture could disclose screen bytes through an attacker-controlled output or overwrite a victim-writable file. Final source supports this conditional path, but it does not establish the effective temporary namespace, OS permissions, installed writer or operational capture environment. No separate-UID disclosure or overwrite was demonstrated. Native helper call paths exist outside serving authority HTTP requests; their actual operation was not observed.",
+  "claimed_root_cause": "Generated screenshot storage accepts preexisting directory and leaf path state without owner/mode validation, a pinned private directory or descriptor-bound exclusive publication; whether another OS principal can influence that state is deployment-dependent.",
+  "trace": [
+    {
+      "kind": "entrypoint",
+      "file": "app/computer/screenshot.py",
+      "line": 24,
+      "scope": "capture",
+      "description": "The default fixed temporary namespace is selected; mkdir(exist_ok=True) accepts preexisting directory state without checking ownership or permissions. A lower-trust OS principal can supply this state only if the effective namespace permits it."
+    },
+    {
+      "kind": "propagation",
+      "file": "app/computer/screenshot.py",
+      "line": 27,
+      "scope": "capture",
+      "description": "The output basename depends on the capture second, and an absolute pathname is constructed without opening or pinning its directory or leaf."
+    },
+    {
+      "kind": "sink",
+      "file": "app/computer/screenshot.py",
+      "line": 32,
+      "scope": "capture",
+      "description": "Captured RGB bytes are passed to the installed mss.tools.to_png writer using the constructed pathname; the application creates no verified exclusive/no-follow output descriptor."
+    }
+  ],
+  "evidence": [
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 19,
+      "description": "mss is imported before directory selection or hardware capture; absence prevents this path from executing."
+    },
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 24,
+      "description": "Temporary root selection is runtime-dependent, and the fixed child directory receives no ownership, permissions or symlink validation."
+    },
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 27,
+      "description": "The second-resolution output name is predictable and no verified output descriptor is created by the application."
+    },
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 32,
+      "description": "The installed PNG writer receives a pathname rather than a retained verified descriptor."
+    },
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 42,
+      "description": "The normal execute wrapper refuses real capture in global dry-run mode."
+    },
+    {
+      "file": "app/tools/registry.py",
+      "line": 236,
+      "description": "Strict approval mode requires confirmation even for the Level0 screenshot tool; normal registry dry-run also gates execution."
+    },
+    {
+      "file": "app/brain/tool_params.py",
+      "line": 69,
+      "description": "Ordinary screenshot chat requests construct only monitor parameters; they do not expose arbitrary output_dir input."
+    },
+    {
+      "file": "app/voice/audio_stream.py",
+      "line": 96,
+      "description": "Native voice routes transcripts through the tool-processing helpers directly, without depending exclusively on HTTP application lifespan."
+    },
+    {
+      "file": "app/computer/vision.py",
+      "line": 44,
+      "description": "Screen analysis calls the same capture helper; its later file read at104-105 is pathname-based."
+    },
+    {
+      "file": "requirements-desktop.txt",
+      "line": 40,
+      "description": "Desktop installation declares mss>=9.0.0, which does not establish the exact installed writer implementation or an operational desktop."
+    },
+    {
+      "file": "tests/test_screenshot.py",
+      "line": 52,
+      "description": "The existing capture test replaces the PNG writer with a mock; it cannot establish real writer behavior, cross-UID permissions or shared-temp effects."
+    }
+  ],
+  "blockers": [
+    "The effective capture temporary root, its ancestor and generated-directory permissions/ACLs, umask, namespace isolation and applicable OS link protections are unobserved. A different OS principal capability to precreate/populate the namespace or influence an output leaf has not been established. A private per-user root with protected ancestors, or a protected victim-owned0700 directory, can prevent the proposed path.",
+    "The approved audit toolchain contains no mss desktop dependency, and the exact deployed writer version, capture enablement and operational display access are unknown. The parent static upstream MSSv9.0.1 writer observation corroborates ordinary pathname opening in that version only. Existing mocked-writer tests and same-UID source tracing do not establish an unauthorized cross-UID file result under the effective OS/runtime controls."
+  ],
+  "validation_plan": {
+    "local": "When an isolated disposable environment provides two dummy UIDs and the already available relevant mss dependency, use a synthetic shared temporary root and mock only pixel acquisition. Use the real PNG writer. Predeclare one harmless output and one victim-owned dummy file; let the lower-trust UID prepare only the synthetic namespace, invoke one victim capture and stop after observing rejection, redirected synthetic bytes or dummy-file overwrite. Compare a victim-owned0700 private root with protected ancestors. Record effective owner/mode/ACL/umask and link protections plus writer version. Use no real screen, host temporary directory, production file or credential; do not download/install dependencies or alter real accounts.",
+    "deployment": "The owner can inspect capture enablement, installed mss version, effective TMPDIR/TEMP or per-user temporary root, generated-directory and ancestor ownership/ACLs, umask and private-temp isolation without displaying screenshots or credentials. Determine whether a different local UID can create or replace relevant directory/leaf entries. No production capture or service probe is needed."
+  },
+  "verdict": "needs_validation"
+}
+CURRENT SOURCE /opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/snapshot-latest
+# JARVIS V2 audit architecture
+
+The reviewed target is the immutable snapshot listed in source-manifest.json, based on dirty HEAD f4cac30259a7bf4610add2063679ae49138ee637. It includes current uncommitted source, not historical Sprint 3 evidence. No compatible previous Cloudflare findings/coverage ledgers were found. Root runtime config, credentials, databases, logs, models, binary assets and historical sealed evidence are deliberately excluded. Historical task copies are inventory items, not substitute active source. Supplemental evals and task-root utilities were captured before hunting.
+
+JARVIS is a single-operator Python/FastAPI desktop/headless assistant with REST, WebSocket, PWA, Electron and hologram clients, local Ollama inference, file/shell/computer tools, optional memory services and outbound bot notifications. Authority stores task/schedule/receipt/outbox state in SQLite. Privileged resources include local files/tools, task state, HMAC checkpoint anchors, enrollment custody, operator permits and proposed Proxmox serial access. There is no source-grounded comparable security baseline.
+
+HTTP authentication uses one configured Bearer token. Empty token is permitted for loopback configuration and bypasses ordinary HTTP and WS credential checks. Remote configuration requires a token; this validates configured bind host, not incoming Host. CORS is configured; both WS paths separately validate present Origin. Ordinary authority routes use fixed Actor(local-service). Operator diagnostics independently requires a configured token. No multi-user isolation is promised. Browser, local untrusted process, authenticated client, untrusted artifact supplier, separately restricted OS UID and operator are distinct principals.
+
+The ordinary runtime opens data/authority/queue.sqlite without a ledger, enrollment witness or legacy permit. Mandatory startup therefore fails closed for missing/enrolled/legacy stores unless trusted embedding explicitly supplies an admitted authority. TestClient tests bind synthetic authorities and often skip lifespan. Do not equate isolated route reachability to a working stock deployment. Synthetic execution requires trusted opt-in and exact synthetic executor types; no real executor activation is authorized. Legacy chat tools are a distinct live-capable dispatch path gated by safety level, confirmation and dry-run.
+
+Important chains: HTTP/WS chat -> classifier -> deterministic tool parameters -> registry -> files/shell/browser/computer; tool output -> later LLM prompt. HTTP tasks/schedule -> service actor -> durable receipts and transactions -> scheduler/outbox -> synthetic execution. Operator descriptors -> permit/context authentication -> enrollment, checkpoint rollover, archive verification, disposable restore, recovery decisions and branch checks. Archive inputs are directory/JSON/SQLite bundles, not general tar extraction. Inspect recovery_decisions.py, which is present in the capture.
+
+SQLite uses lifetime flock, generation ownership, inode checks and poisoned instances on uncertain writes. Ledger adds HMAC-authenticated append-only checkpoint intents/finals, rollover epochs, state bounds and external trust context. Application file helpers check leaf type/UID/mode/link count and symlinks but use absolute path operations. Distinguish same-UID trusted control from other-UID ancestor replacement, whose filesystem prerequisites need evidence. Proposed infrastructure securefs uses descriptor-relative all-component traversal and ownership checks.
+
+Proxmox phase2 is observation/planning, and phase3 src/g6k_serial is a proposed VM164-only serial broker/worker with fixed inspection catalog, SO_PEERCRED identity, root-controlled activation/grants, durable request/session identities, TLS/VM checks, separate service accounts and seccomp/systemd designs. No actual installed identity/ACL, no-NIC, unit, grant, transport or privileged Gate6K qualification is established or tested. No production actions or provider calls are permitted.
+
+Deployment sources are app/main.py, Dockerfile/Compose, .github workflows, client launchers and infrastructure units. Compose publishes host loopback, but binds backend 0.0.0.0 inside the container. Dependencies float; actual installed versions and deployed controls are unknown. No dependency installation or whole-suite test is allowed.
+
+Selected companion domains follow visible boundaries: WEB-PROTOCOL-AND-AUTH and CLIENT-SIDE for HTTP/WS/clients; AI-AND-LLM for tool/confirmation/memory; PROTOCOLS-RPC-AND-MESSAGING for queues and serial IPC; DATA-ISOLATION-AND-LIFECYCLE for archive/restore/recovery; DESKTOP-MOBILE-AND-LOCAL-IPC for helper identities and filesystem; CLOUD-AND-DEPLOYMENT for container/config/units; SUPPLY-CHAIN-AND-RELEASE for installers/build inputs; RESOURCE-EXHAUSTION-AND-AVAILABILITY for untrusted work/retention/capacity. Native binary exploit classes are excluded: maintained application/automation source here is Python/JS, not native implementation.
+
+All hunting begins as source-only. Parent-controlled bwrap runner isolates namespaces/network, read-only target/toolchain, empty allowlisted environment, 32MiB scratch tmpfs, 512MiB address space, 10 CPU seconds, 64 processes, 96 FDs, 2MiB file size and 25-second wall time. Agents do not run target code directly: submit a small synthetic harness in assigned scratch for sequential parent execution. Source-only evidence has artifact null. Never copy untrusted scratch recursively into retained artifacts. Parent promotes only bounded predeclared stdout files after termination through retained no-follow descriptors. No heavy/concurrent tests or real execution.
+
+A second immutable capture snapshot-current at2026-11-06T06:05:16Z contains342 files. source-delta.json identifies17 changed/added paths from concurrent Sprint5, including complete recovery registry, permit authentication, branch identities, authority/CLI/diagnostic integration and new tests/docs. Original captured bytes remain intact. New delta units must review those current files and compare their strongest controls with snapshot. Original checks remain point-in-time evidence; unchanged files are hash-identical. Final candidate verification and coverage critics use snapshot-current. The early missing-method/proposal-field integration limitations must be reassessed, not carried as unresolved findings.
+
+Final frozen source snapshot-final at2026-11-06T06:13:55Z has342 files. Only recovery_decisions.py, its tests and documentation changed after snapshot-current. A third bounded source pass revalidates the complete registry and these final admission-time and SQLite journal-proof changes. Final source identities come from source-manifest-final.json/source-final.sha256; final candidate verification and critics read this capture. Earlier captures/evidence remain retained with explicit revision tags.
+
+Final-clean source selection check found PROJECT_STATUS89-94 designates tasks/proxmox-automation-phase3-review-r1 as the current broker successor. Snapshot-expanded preserves every snapshot-final file byte-for-byte and adds43 public source/test/unit/doc/manifest files from this successor, totaling385 files. No historical evidence/artifacts/credentials were copied. Two wave4 units review current identity/grant/release chain and protected file/preissuance/journal control; earlier phase3 units are baseline coverage, not current qualification. Final critics and record verification use snapshot-expanded.
+
+Latest capture snapshot-latest at2026-11-06T06:57:07Z contains388 files. Concurrent work changed/added15 safety/authority/transport files, including new execution_transport.py. Legacy chat/registry confirmations and dictation are now disabled effect paths; their earlier reproduced effects require reclassification. New transport is explicit synthetic AF_UNIX socketpair-only with independent permit/request/response keys, not a real external executor. Wave5 reviews full new transport, integration and retired paths; final records/reports must use this capture and preserve earlier results separately.
+
+LINKED UNITS
+[
+  {
+    "coverage_id": "app%2Fcomputer%2Fscreenshot.py%23capture::app%2Fcomputer%2Fscreenshot.py%23temporary-output::app%2Fcomputer::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Local%20file%20ownership%20and%20TOCTOU",
+    "canonical_refs": {
+      "surface": "app/computer/screenshot.py#capture",
+      "boundary": "app/computer/screenshot.py#temporary-output",
+      "subsystem": "app/computer",
+      "attack_class": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU"
+    },
+    "surface": "app/computer/screenshot.py#capture",
+    "boundary": "app/computer/screenshot.py#temporary-output",
+    "subsystem": "app/computer",
+    "attack_class": "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+    "starting_paths": [
+      "app/computer/screenshot.py",
+      "app/tools/screenshot.py",
+      "app/computer/vision.py",
+      "app/computer/yolo_detector.py",
+      "requirements-desktop.txt"
+    ],
+    "selected_companion_blocks": [
+      "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Core discipline",
+      "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Local file ownership and TOCTOU",
+      "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Universal moves",
+      "DESKTOP-MOBILE-AND-LOCAL-IPC.md#Validation rules"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "ATTACK-CLASSES.md#Injection",
+        "reason": "This focused unit concerns filesystem principal control over generated screenshot outputs; chat argument injection is covered by the legacy tool unit."
+      }
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Resource and file handling",
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 2,
+    "status": "candidate",
+    "agent_id": "hunt-screenshot",
+    "reviewed_paths": [
+      "Dockerfile",
+      "app/boot.py",
+      "app/brain/tool_params.py",
+      "app/computer/screenshot.py",
+      "app/computer/verifier.py",
+      "app/computer/vision.py",
+      "app/computer/yolo_detector.py",
+      "app/config.py",
+      "app/server.py",
+      "app/tools/registry.py",
+      "app/tools/screenshot.py",
+      "app/voice/audio_stream.py",
+      "config.yaml.example",
+      "docker-compose.yml",
+      "requirements-core.txt",
+      "requirements-desktop.txt",
+      "tests/test_screenshot.py",
+      "tests/test_screenshot_tool.py"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt-screenshot",
+        "reviewed_paths": [
+          "app/computer/screenshot.py",
+          "app/computer/vision.py",
+          "app/computer/yolo_detector.py",
+          "app/computer/verifier.py",
+          "tests/test_screenshot.py"
+        ],
+        "invariant": "Generated capture output must remain bound to victim-owned private storage when a different local OS principal can influence shared temporary-directory state.",
+        "method": "source",
+        "result": "capture chooses fixed tempfile.gettempdir()/jarvis_screenshots, accepts an existing directory at screenshot.py24-25, builds a second-resolution basename at27-28 and delegates pathname opening to mss.tools.to_png at32. There is no owner/mode/symlink/exclusive-create check or retained directory/file descriptor. VisionClient subsequently reopens the returned path for read_bytes at vision.py104-105. The existing capture test52-58 replaces both the hardware and PNG writer and does not test another UID or protected paths. Parent-supplied static upstream MSS9.0.1 writer observation corroborates ordinary pathname opening, but no installed dependency or capture behavior was executed here.",
+        "artifact": null,
+        "source_snapshot": "snapshot"
+      },
+      {
+        "agent_id": "hunt-screenshot",
+        "reviewed_paths": [
+          "app/tools/screenshot.py",
+          "app/tools/registry.py",
+          "app/brain/tool_params.py",
+          "app/voice/audio_stream.py",
+          "app/server.py",
+          "app/computer/screenshot.py",
+          "app/computer/vision.py",
+          "app/computer/yolo_detector.py",
+          "app/computer/verifier.py",
+          "requirements-desktop.txt",
+          "Dockerfile",
+          "docker-compose.yml",
+          "app/config.py",
+          "config.yaml.example",
+          "tests/test_screenshot_tool.py"
+        ],
+        "invariant": "Establish actual native callers and the strongest source-visible dependency, dry-run, approval and deployment controls without treating shared-temp or desktop support as observed facts.",
+        "method": "source",
+        "result": "The public screenshot wrapper aliases the real execute helper and has Level0. Normal registry invocation enforces configured confirmation and dry-run; strict mode confirms Level0. Screenshot execute and screen vision check dry-run, and missing mss raises before any directory/capture operation. Direct capture callers are screen vision, optional YOLO and action verifier. Native voice invokes _process_stream/_process directly, so this file boundary does not depend exclusively on Authority HTTP lifespan. Chat screenshot parameter construction supplies only monitor, not output_dir; no network path-injection claim is supported. Desktop requirements declare mss>=9.0.0; the headless image installs only core dependencies. Neither inspected desktop source nor container definitions establishes the effective user temporary root, umask, private-temp isolation or another UID ability to precreate/populate the namespace. A private per-user temp root or existing victim-owned0700 directory can defeat that precondition.",
+        "artifact": null,
+        "source_snapshot": "snapshot"
+      },
+      {
+        "agent_id": "verify-screenshot",
+        "reviewed_paths": [
+          "app/computer/screenshot.py",
+          "app/computer/vision.py",
+          "app/computer/yolo_detector.py",
+          "app/computer/verifier.py",
+          "app/tools/screenshot.py",
+          "app/tools/registry.py",
+          "app/brain/tool_params.py",
+          "app/voice/audio_stream.py",
+          "app/boot.py",
+          "app/server.py",
+          "Dockerfile",
+          "docker-compose.yml",
+          "config.yaml.example",
+          "requirements-core.txt",
+          "requirements-desktop.txt",
+          "tests/test_screenshot.py",
+          "tests/test_screenshot_tool.py"
+        ],
+        "invariant": "Separate a concrete cross-UID screenshot path hypothesis from trusted library parameters, protected temporary roots, absent desktop dependencies and mock-only tests.",
+        "method": "source",
+        "result": "Independently reread final expanded source and every cited line. Fixed directory acceptance, second-resolution basename and pathname-only PNG publication remain at screenshot.py24-32, with no owner/mode/no-follow/exclusive check. Strict registry approval and global dry-run gate normal invocation; missing mss fails before directory/capture; normal chat supplies only monitor. Screen vision, optional YOLO and ActionVerifier call capture directly, while native voice calls the server processing helpers without invoking HTTP lifespan. Headless image installs core dependencies only. Private temporary storage with protected ancestors can defeat other-UID setup. Actual shared-temp/UID permissions, installed writer and operational capture result remain decisive unknowns. No target code, hardware or provider was executed.",
+        "artifact": null,
+        "source_snapshot": "snapshot-expanded"
+      },
+      {
+        "agent_id": "record-screenshot",
+        "reviewed_paths": [
+          "app/brain/tool_params.py",
+          "app/computer/screenshot.py",
+          "app/computer/vision.py",
+          "app/tools/registry.py",
+          "app/voice/audio_stream.py",
+          "requirements-desktop.txt",
+          "tests/test_screenshot.py"
+        ],
+        "invariant": "Independent final structured record cites actual current source, preserves preventing controls and decisive external blockers without unsupported exploit/severity.",
+        "method": "source",
+        "result": "Fresh Phase5 reviewer reread every final record source line/scope and verified the conditional boundary, preventing controls and bounded resolution plans. Exact final decision verified; no material correction or stronger claim.",
+        "artifact": null,
+        "source_snapshot": "snapshot-expanded"
+      }
+    ],
+    "result_fingerprints": [
+      "app/computer/screenshot.py:shared-temp-output"
+    ],
+    "unresolved": [
+      "The effective desktop temporary root, its ancestor permissions and namespace isolation, and a different OS principal ability to precreate/populate jarvis_screenshots have not been observed. A private per-user temporary root or victim-owned0700 existing directory can defeat this prerequisite.",
+      "The approved local toolchain has no mss desktop dependency. Parent-only static review of upstream MSSv9.0.1 tools.py (blob de3a1afb87cfbdda3e88b7421a66bbba4f2f0b1b, ordinary open(output, wb)) corroborates one version, but does not establish a deployed version, live capture enablement or desktop permission.",
+      "No approved disposable two-UID fixture with the real PNG writer established unauthorized screen-byte read or victim-owned dummy-file overwrite. A same-UID fake-writer demonstration would not resolve that OS-principal boundary."
+    ],
+    "assignment_group": "screenshot",
+    "critic_reason": "Distinct local-filesystem boundary at screenshot.py26\u201335: predictable shared-temp directory and second-resolution output name, mkdir(exist_ok=True), no owner/mode/leaf-no-follow validation before the PNG writer. Parent has a source-grounded needs-validation lead; current legacy unit did not establish shared-temp other-UID prerequisites. Review native voice/vision entry paths separately from stock HTTP admission. No exploit or severity is asserted.",
+    "hardening": [
+      "For screenshot.py17-35, create unpredictable victim-owned0700 per-capture storage under a verified private root and create the PNG file exclusively with0600/O_NOFOLLOW using a pinned directory descriptor. Obtain PNG bytes from mss.tools.to_png(output=None) and write through that descriptor rather than letting the dependency reopen an absolute path; consume the same verified bytes/descriptor in vision and verifier paths.",
+      "Add regression coverage for preexisting foreign-owned directories, directory and leaf symlinks, timestamp collisions and private-root preventing controls. Existing mocked writer tests do not qualify different-UID filesystem isolation.",
+      "Do not classify the trusted explicit output_dir library parameter as an unauthenticated HTTP write primitive: ordinary chat construction supplies only monitor. No installed/deployed screenshot exploit or severity is asserted."
+    ],
+    "final_dispositions": {
+      "app/computer/screenshot.py:shared-temp-output": "needs_validation"
+    },
+    "record_verification": {
+      "app/computer/screenshot.py:shared-temp-output": "verified"
+    }
+  }
+]
+COMPANION VALIDATION
+## Validation rules (apply before reporting ANY finding here)
+
+1. Name the attacker starting capability, OS/app principal crossed, entry channel, accepted argument or state, and unauthorized operation or disclosure.
+2. Confirm OS sandbox, peer credential, signing, entitlement, permission, user-consent, and installer controls that apply. Unknown packaging/runtime facts require `needs_validation`.
+3. For webview bridges, cite both navigation/origin control and privileged native sink. For IPC, cite peer authentication and per-resource authorization. For helpers, verify final normalized destination.
+4. Keep local tests bounded and use dummy content/accounts. Stop after proving the boundary result; do not extend proof into persistence or broader system modification.
+5. Return `confirmed` only with a complete source and local evidence chain. Return `needs_validation` with the exact OS, manifest, signing, ACL, or device-lifecycle fact required.
+
+Artifact promotion procedure (trusted parent-side code only):
+Reference only for you: the parent performs these steps; you never perform them.
+
+Before execution, the parent opens and retains trusted, non-inheritable directory
+descriptors for the agent's scratch/ and artifacts/ roots, and records an allowlist
+of expected scratch-relative artifact files plus explicit per-file and cumulative
+byte limits. Never pass those descriptors to the agent or sandbox. After the sandbox
+and all its processes terminate, trusted parent-side code promotes each allowlisted
+file separately:
+
+1. Validate the declared relative path: reject absolute, empty, `.`, `..`, or
+   symlinked components.
+2. Walk each parent component from the retained scratch-root descriptor with
+   no-follow directory-relative operations; never reopen by path.
+3. Open the leaf no-follow and nonblocking.
+4. Verify with `fstat` that it is a regular file with link count exactly one and
+   within the recorded per-file and cumulative byte limits.
+5. Enforce those limits again while reading from that descriptor.
+6. Copy exactly the verified size, repeat `fstat`, and reject a changed identity,
+   type, link count, or size.
+7. For the destination, walk every parent component from the retained
+   artifacts-root descriptor with no-follow directory-relative operations; require
+   each existing component to be a real directory, and create any missing directory
+   exclusively before reopening and verifying it no-follow.
+8. Create the leaf exclusively without following links, verify that the opened
+   destination is a regular file with link count exactly one, and copy from the
+   verified source descriptor without reopening either path.
+9. Use equivalent race-safe APIs on non-POSIX systems.
+10. Never recursively copy or glob scratch, extract an archive into artifacts, or
+    open or promote a symlink, FIFO, socket, device, directory, hard-linked file,
+    changing file, or file that exceeds its bound.
+11. If any check is unavailable, cannot be enforced, or fails, discard the scratch
+    entry; if it is decisive evidence, retain `needs_validation` with the exact
+    promotion blocker.
+SCHEMA VERBATIM
+{
+  "$comment": "Top-level contract for findings.json. validate-findings.cjs interprets and checks this schema directly.",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "description": "A source-grounded vulnerability that was independently demonstrated.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "confirmed"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$",
+            "description": "A stable source-derived identifier that does not change between validation states."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "intended_behavior": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["authentication_level", "authorization_role", "user_interaction", "system_configuration", "network_routing", "environmental_dependency", "data_state", "timing_dependency", "third_party_dependency"]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "description"],
+              "additionalProperties": false
+            }
+          },
+          "execution": {
+            "type": "object",
+            "description": "Target-neutral reproduction in the target's native interface.",
+            "properties": {
+              "attacker_perspective": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "payloads": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "instructions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "observed_result": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["attacker_perspective", "payloads", "instructions", "observed_result"],
+            "additionalProperties": false
+          },
+          "remediation": {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "code_changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "file_name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fixed_code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file_name", "fixed_code"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["strategy"],
+            "additionalProperties": false
+          },
+          "severity": {
+            "type": "object",
+            "properties": {
+              "likelihood": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "impact": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "overall_severity": {
+                "type": "string",
+                "enum": ["informational", "low", "medium", "high", "critical"]
+              }
+            },
+            "required": ["likelihood", "impact", "overall_severity"],
+            "additionalProperties": false
+          },
+          "confidence": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["score", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "root_cause", "intended_behavior", "trace", "evidence", "conditions", "execution", "remediation", "severity", "confidence"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate whose decisive validation is blocked.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "needs_validation"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "visibleContent": true
+            }
+          },
+          "validation_plan": {
+            "type": "object",
+            "properties": {
+              "local": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "deployment": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "blockers", "validation_plan"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate refuted during validation.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "rejected"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "reason"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}
+
+Own only /opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-comprehensive-security-audit-r1/agents/verify-latest-screenshot/scratch. Do not execute target yourself; parent can run a tiny synthetic harness sequentially through existing sandbox-runner.py. NO network/live state/production/credentials/PVE/VM/privileged actions. You are not alone; never modify source/shared files. Re-read EVERY cited current line. Prior source traces must be corrected or rejected. Latest registry/server/dictation unconditionally deny real effects; screenshot ordinary native/chat reachability is now blocked. Decide whether current specific application claim should be rejected versus a legitimate independently active helper boundary; do not preserve an unsupported lead merely because it existed. Authentication route reads/cancel remain separate from the newly credentialed transport permit path. Stock runtime admission must be respected. Write exactly decision+record JSON to scratch/result.json. Optional source checks list to scratch/checks.json. Parent owns project completion log.

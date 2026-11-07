@@ -1,0 +1,2170 @@
+--- a/PROJECT_STATUS.md
++++ b/PROJECT_STATUS.md
+@@ -1,4 +1,13 @@
+ # JARVIS Project Status
++
++Latest source/offline recovery sprint (2026-11-05 America/Chicago; UTC evidence
++2026-11-06): [operator recovery and ledger report](tasks/jarvis-operator-ledger-r1/REPORT.md).
++Implemented read-only authenticated diagnostics and quiesced CLI, opt-in protected
++external HMAC checkpoints, bounded integrity-checked exports, audited local
++recovery/archive preparation, and terminal history preservation on schedule stop.
++No protected history deletion, real-store enrollment/migration or live execution.
++Exact current counts, independent review, crash evidence and limitations are in
++the new report; older entries below retain their historical evidence scope.
+ 
+ Latest offline engineering sprint (2026-11-05 America/Chicago; evidence UTC
+ 2026-11-06): [offline execution report](tasks/jarvis-offline-execution-r1/REPORT.md).
+--- a/README.md
++++ b/README.md
+@@ -22,6 +22,11 @@
+ | 5 | Autonomous Agent | Partially complete/stubbed | Local task queue, scheduler API, reporting, Discord/Telegram stubs, approval gates; Hermes is documented but not active |
+ | 6 | Multi-Device | Partially complete | Tailscale status helper and phone PWA exist; remote access stays disabled by default |
+ | 7 | Cinematic | Stubbed/deferred | UE5, Audio2Face, hologram frontend, and voice-clone hooks exist; live external runtimes are not wired |
++
++Operator recovery and ledger protection: [current guide](docs/operator_recovery.md)
++provides authenticated read-only diagnostics, protected checkpoints, bounded
++exports and archive eligibility without deleting history. Real execution stays
++disabled. See [sprint 2 evidence](tasks/jarvis-operator-ledger-r1/REPORT.md).
+ 
+ ## Hardware Requirements
+ 
+--- a/app/agent/api.py
++++ b/app/agent/api.py
+@@ -1,6 +1,7 @@
+ """Authority routes under the existing server authentication middleware."""
+ from typing import Annotated
+-from fastapi import APIRouter, Query
++from fastapi import APIRouter, Query, Request
++import secrets
+ from fastapi.responses import JSONResponse
+ from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
+ from app.agent.authority import AuthorityError
+@@ -11,7 +12,9 @@
+ PUBLIC_REQUEST_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+ UNAVAILABLE = frozenset({"execution_disabled", "execution_worker_not_ready", "execution_worker_reconcile_required",
+     "owner_busy", "owner_fenced", "store_replaced", "authority_unavailable", "storage_unknown_reconcile",
+-    "legacy_migration_required", "backend_registration_reconcile", "backend_removal_reconcile"})
++    "legacy_migration_required", "backend_registration_reconcile", "backend_removal_reconcile", "ledger_inconsistent",
++    "ledger_checkpoint_required", "ledger_checkpoint_mismatch", "checkpoint_missing", "checkpoint_authentication_failed",
++    "checkpoint_continuity_failed", "checkpoint_gap", "ledger_commit_reconcile", "checkpoint_reconciliation_required"})
+ 
+ 
+ class Submission(BaseModel):
+@@ -45,7 +48,7 @@
+     try:
+         return operation()
+     except AuthorityError as exc:
+-        if exc.code in UNAVAILABLE:
++        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_")):
+             code = 503
+         elif exc.code in {"request_conflict", "stale_occurrence"}:
+             code = 409
+@@ -69,6 +72,20 @@
+ @router.get("/execution/status")
+ async def execution_status():
+     return invoke(lambda: {**get_authority().readiness(), **execution_readiness()})
++
++
++@router.get("/operator/diagnostics")
++async def operator_diagnostics(request: Request, task_id: str | None = None,
++    limit: Annotated[int, Query(ge=1,le=200)] = 100, offset: Annotated[int, Query(ge=0,le=1000000)] = 0):
++    # Require a configured credential even when the host app permits anonymous
++    # ordinary routes. Also protects independently embedded copies of this router.
++    from app.config import settings
++    from app.agent.recovery import OperatorRecovery
++    expected=settings.server.api_token
++    supplied=request.headers.get('authorization','')
++    if not expected or not secrets.compare_digest(supplied.encode(), ('Bearer '+expected).encode()):
++        return JSONResponse(status_code=401,content={"error":"operator_authentication_required"})
++    return invoke(lambda: OperatorRecovery(get_authority()).diagnose(SERVICE_ACTOR,task_id=task_id,limit=limit,offset=offset))
+ 
+ 
+ @router.get("/tasks")
+--- a/app/agent/authority.py
++++ b/app/agent/authority.py
+@@ -79,7 +79,7 @@
+     A lost commit acknowledgement is reconciled with the original request ID.
+     Storage exceptions poison this instance; reopening is an explicit action.
+     """
+-    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=()):
++    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None):
+         self.path = Path(path).absolute()
+         self._closed = False
+         self._poisoned = False
+@@ -89,6 +89,7 @@
+         self._pid = os.getpid()
+         self._conn = None
+         self._lockfd = None
++        self._ledger = ledger
+         if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+             raise AuthorityError("invalid_busy_timeout")
+         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+@@ -110,6 +111,12 @@
+                 raise AuthorityError("owner_busy") from exc
+             self._lock_identity = self._identity(os.fstat(self._lockfd))
+             self._lockpath = lockpath
++            if self._ledger is not None:
++                from app.agent.ledger import LedgerGuard
++                if type(self._ledger) is not LedgerGuard:
++                    self._ledger = None
++                    raise AuthorityError("invalid_ledger_guard")
++                self._ledger.acquire(self.path)
+             initialized = False
+             if self.path.exists() and self.path.stat().st_size:
+                 # Inspect existing evidence read-only BEFORE journal/DDL changes.
+@@ -119,13 +126,23 @@
+                 probe = sqlite3.connect(self.path.as_uri() + "?mode=ro", uri=True, isolation_level=None)
+                 try:
+                     versions = probe.execute("SELECT version FROM meta").fetchall()
+-                    if versions != [(1,)]:
+-                        raise AuthorityError("unsupported_schema")
+                     expected = {"meta", "ownership", "control", "records", "receipts", "events", "outbox", "simulation_effects", "sqlite_sequence"}
+                     actual = {r[0] for r in probe.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+-                    if actual != expected or not probe.execute("SELECT 1 FROM ownership WHERE id=1").fetchone():
++                    bootstrap = self._ledger is not None and versions == [] and actual == expected and all(not probe.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone() for table in expected)
++                    if actual != expected or not bootstrap and (versions != [(1,)] or not probe.execute("SELECT 1 FROM ownership WHERE id=1").fetchone()):
+                         raise AuthorityError("unsupported_schema")
+-                    initialized = True
++                    initialized = not bootstrap
++                    markers = probe.execute("SELECT id FROM records WHERE kind='ledger_config'").fetchall()
++                    if bootstrap:
++                        self._ledger.verify(probe, recover=True)
++                    elif markers:
++                        if self._ledger is None:
++                            raise AuthorityError("ledger_checkpoint_required")
++                        if markers != [(self._ledger.store_id,)]:
++                            raise AuthorityError("ledger_store_mismatch")
++                        self._ledger.verify(probe, recover=True)
++                    elif self._ledger is not None:
++                        raise AuthorityError("ledger_enrollment_required")
+                     if legacy_present and not probe.execute("SELECT 1 FROM receipts WHERE operation='import_legacy_snapshot' LIMIT 1").fetchone():
+                         raise AuthorityError("legacy_migration_required")
+                 except sqlite3.Error as exc:
+@@ -156,7 +173,12 @@
+                 CREATE TABLE IF NOT EXISTS outbox(task_id TEXT PRIMARY KEY, state TEXT NOT NULL, claim_id TEXT, generation INTEGER);
+                 CREATE TABLE IF NOT EXISTS simulation_effects(task_id TEXT PRIMARY KEY, claim_id TEXT NOT NULL);
+             """)
++            if self._ledger is not None and not initialized:
++                self._ledger.verify(self._conn, new=True)
+             self._conn.execute("BEGIN IMMEDIATE")
++            if self._ledger is not None and not initialized:
++                self._create("ledger_config", self._ledger.store_id, "__authority__",
++                             {"store_id": self._ledger.store_id, "checkpoint_required": True, "format": 1})
+             versions = self._conn.execute("SELECT version FROM meta").fetchall()
+             if not versions:
+                 self._conn.execute("INSERT INTO meta VALUES(1)")
+@@ -177,7 +199,7 @@
+                 self._put("task", task["task_id"], task["scope"], task)
+             self._conn.execute("UPDATE outbox SET state='unknown' WHERE state IN ('simulating','execution_claimed')")
+             self._conn.execute("INSERT INTO events(request_id,data) VALUES(?,?)", (self.owner_id, canonical({"operation": "owner_acquired", "generation": self.generation, "recovered_unknown_count": len(abandoned), "at": datetime.now(UTC).isoformat()})))
+-            self._conn.execute("COMMIT")
++            self._commit()
+             directory = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
+             try: os.fsync(directory)
+             finally: os.close(directory)
+@@ -209,6 +231,12 @@
+         if tuple(row) != (self.generation, self.owner_id):
+             self._poisoned = True
+             raise AuthorityError("owner_fenced")
++        if self._ledger is not None and not self._conn.in_transaction:
++            try:
++                self._ledger.verify(self._conn)
++            except BaseException:
++                self._poisoned = True
++                raise
+ 
+     @contextmanager
+     def _transaction(self):
+@@ -217,9 +245,19 @@
+             try:
+                 self._conn.execute("BEGIN IMMEDIATE")
+                 self._fence()
++                if self._ledger is not None:
++                    try:
++                        self._ledger.verify(self._conn)
++                    except BaseException:
++                        self._poisoned = True
++                        raise
++                before = self._conn.total_changes
+                 yield
+                 self._fault("before_commit")
+-                self._conn.execute("COMMIT")
++                if self._ledger is not None and self._conn.total_changes != before:
++                    self._commit()
++                else:
++                    self._conn.execute("COMMIT")
+             except BaseException as exc:
+                 try:
+                     if self._conn.in_transaction:
+@@ -230,6 +268,21 @@
+                     self._poisoned = True
+                     raise AuthorityError("storage_unknown_reconcile") from exc
+                 raise
++
++    def _commit(self):
++        if self._ledger is None:
++            self._conn.execute("COMMIT")
++            return
++        try:
++            intent = self._ledger.prepare(self._conn)
++            self._conn.execute("COMMIT")
++            self._fault("ledger_database_committed")
++            self._ledger.finish(intent)
++        except BaseException as exc:
++            self._poisoned = True
++            if isinstance(exc, (OSError, sqlite3.Error)):
++                raise AuthorityError("ledger_commit_reconcile") from exc
++            raise
+ 
+     @staticmethod
+     def _scope(actor):
+@@ -396,7 +449,7 @@
+             job.update(enabled=False, removed=removed, revision=job["revision"] + 1)
+             self._put("schedule", job_id, scope, job)
+             for task in self._list("task", actor):
+-                if task["metadata"].get("job_id") == job_id:
++                if task["metadata"].get("job_id") == job_id and task["status"] in {"pending", "simulating", "executing_synthetic", "unknown", "in_progress"}:
+                     self._cancel(task)
+             return job
+         return self._mutate(actor, request_id, "set_schedule", dict(job_id=job_id, enabled=enabled, removed=removed), effect)
+@@ -411,7 +464,7 @@
+                 # every pending scheduled occurrence across its namespaces.
+                 for row in self._conn.execute("SELECT data FROM records WHERE kind='task'").fetchall():
+                     task = json.loads(row[0])
+-                    if task["occurrence_id"]:
++                    if task["occurrence_id"] and task["status"] in {"pending", "simulating", "executing_synthetic", "unknown", "in_progress"}:
+                         self._cancel(task)
+             return dict(self._conn.execute("SELECT enabled,epoch FROM control").fetchone())
+         return self._mutate(actor, request_id, "scheduler_control", {"enabled": enabled}, effect)
+@@ -463,7 +516,13 @@
+     def readiness(self):
+         with self._mutex:
+             self._fence()
+-            return {"storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0]}
++            integrity = self._ledger.verify(self._conn) if self._ledger is not None else {"verified": False, "reason": "external_checkpoint_not_configured"}
++            from app.agent.recovery import snapshot, analyze
++            consistency = analyze(snapshot(self), "local-service")
++            if not consistency["consistent"]:
++                raise AuthorityError("ledger_inconsistent")
++            return {"storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
++                    "ledger_consistent": True, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
+ 
+     def close(self):
+         with self._mutex:
+@@ -476,3 +535,5 @@
+             finally:
+                 if self._lockfd is not None:
+                     os.close(self._lockfd)
++                if self._ledger is not None:
++                    self._ledger.close()
+--- a/app/agent/execution.py
++++ b/app/agent/execution.py
+@@ -166,6 +166,10 @@
+     def _claim(self, actor, operation_id):
+         a = self.authority
+         def effect(scope):
++            if a._ledger is not None:
++                from app.agent.recovery import analyze, snapshot
++                if not analyze(snapshot(a), scope)["consistent"]:
++                    raise AuthorityError("ledger_inconsistent")
+             task = a._get("task", operation_id, scope)
+             spec = task.get("execution")
+             row = a._conn.execute("SELECT state FROM outbox WHERE task_id=?", (operation_id,)).fetchone()
+@@ -235,6 +239,9 @@
+             if row["state"] not in {"execution_claimed", "unknown"} or row["claim_id"] != operation_id or row["generation"] != evidence["generation"]:
+                 raise AuthorityError("invalid_execution_provenance")
+             response = evidence["response"]
++            expected = SyntheticExecutor().execute(operation_id, task["execution"])
++            if response.get("status") not in {"simulated_completed", "simulated_failed"} or canonical(response) != canonical(expected):
++                raise AuthorityError("untrusted_executor_response")
+             return self._state(task, response["status"], result=response, error=response["error"])
+         return a._mutate(actor, phase_id(operation_id, "publish"), "execution_publish", {"operation_id": operation_id}, effect)
+ 
+--- /dev/null
++++ b/app/agent/ledger.py
+@@ -0,0 +1,397 @@
++"""Opt-in local ledger integrity, external checkpoints and bounded archive export.
++
++The checkpoint directory/key are trusted inputs, outside export/cleanup authority.
++HMAC authenticates checkpoints; it is not a public-key signature. A malicious
++same-UID process, key compromise, or rollback of BOTH trusted anchors and SQLite
++is outside this local contract. No history deletion or real-store enrollment.
++"""
++from __future__ import annotations
++
++import fcntl
++import ctypes
++import hashlib
++import hmac
++import json
++import os
++from pathlib import Path
++import re
++import sqlite3
++import stat
++import uuid
++
++from app.agent.authority import AuthorityError, canonical, identifier
++
++TABLES = ('meta', 'ownership', 'control', 'records', 'receipts', 'events', 'outbox', 'simulation_effects', 'sqlite_sequence')
++MAX_BYTES = 32 * 1024 * 1024
++MAX_ROWS = 100000
++MAX_EXPORTS = 16
++MAX_EXPORT_BYTES = 64 * 1024 * 1024
++ZERO = '0' * 64
++
++
++def encode(value):
++    return (canonical(value) + '\n').encode('ascii')
++
++
++def strict_json(raw):
++    def pairs(values):
++        result = {}
++        for k, v in values:
++            if k in result:
++                raise ValueError('duplicate key')
++            result[k] = v
++        return result
++    try:
++        return json.loads(raw, object_pairs_hook=pairs, parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite')))
++    except (ValueError, TypeError, UnicodeError, RecursionError) as exc:
++        raise AuthorityError('ledger_invalid_json') from exc
++
++
++def private_directory(path, *, create=False):
++    path = Path(path).absolute()
++    if '..' in path.parts:
++        raise AuthorityError('unsafe_ledger_path')
++    for parent in (path, *path.parents):
++        if parent.is_symlink():
++            raise AuthorityError('unsafe_ledger_path')
++    if create:
++        path.mkdir(mode=0o700, parents=True, exist_ok=True)
++    st = path.stat()
++    if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o077:
++        raise AuthorityError('unsafe_ledger_directory')
++    return path
++
++
++def read_file(path, limit=65536):
++    try:
++        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
++        with os.fdopen(fd, 'rb') as stream:
++            st = os.fstat(stream.fileno())
++            if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1 or st.st_uid != os.getuid() or st.st_mode & 0o077 or st.st_size > limit:
++                raise AuthorityError('unsafe_ledger_file')
++            raw = stream.read(limit+1)
++            if len(raw) > limit:
++                raise AuthorityError('ledger_bound_exceeded')
++            return raw
++    except OSError as exc:
++        raise AuthorityError('ledger_file_unavailable') from exc
++
++
++def sync_directory(path):
++    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++    try:
++        os.fsync(fd)
++    finally:
++        os.close(fd)
++
++
++def publish_file(path, raw):
++    """No overwrite. Partial staging is never considered a completed record."""
++    temporary = path.with_name('.stage-' + str(uuid.uuid4()))
++    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
++    try:
++        with os.fdopen(fd, 'wb') as stream:
++            stream.write(raw)
++            stream.flush()
++            os.fsync(stream.fileno())
++        # Linux no-replace atomic rename: a crash cannot publish a two-link file.
++        libc = ctypes.CDLL(None, use_errno=True)
++        rename = getattr(libc, 'renameat2', None)
++        if rename is None:
++            raise AuthorityError('atomic_publication_unavailable')
++        rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
++        rename.restype = ctypes.c_int
++        if rename(-100, os.fsencode(temporary), -100, os.fsencode(path), 1) != 0:
++            errno = ctypes.get_errno()
++            raise OSError(errno, 'no-replace publication failed')
++        sync_directory(path.parent)
++    finally:
++        # Only this invocation's temporary file, never a checkpoint/history row.
++        temporary.unlink(missing_ok=True)
++
++
++def state_lines(conn):
++    schema = [tuple(r) for r in conn.execute("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type,name")]
++    yield encode({'type':'schema', 'value':schema})
++    for table in TABLES:  # identifiers are fixed, never caller-supplied SQL
++        for row in conn.execute(f'SELECT rowid,* FROM {table} ORDER BY rowid'):
++            yield encode({'type':'row','table':table,'value':list(row)})
++
++
++def digest_state(conn):
++    digest, size, rows = hashlib.sha256(), 0, 0
++    for line in state_lines(conn):
++        size += len(line); rows += 1
++        if size > MAX_BYTES or rows > MAX_ROWS:
++            raise AuthorityError('ledger_bound_exceeded')
++        digest.update(line)
++    return {'sha256':digest.hexdigest(), 'bytes':size, 'rows':rows}
++
++
++class LedgerGuard:
++    """Append-only signed intent/final journal, protected separately from SQLite.
++
++    Key provisioning is external. Tests supply explicit synthetic bytes only.
++    The lifetime lock also prevents sharing one journal between two owners.
++    """
++    def __init__(self, directory, key, store_id, *, initialize=False, fault_hook=None):
++        identifier(store_id)
++        if type(key) is not bytes or len(key) < 32:
++            raise AuthorityError('invalid_ledger_key')
++        self.directory = private_directory(directory, create=initialize)
++        self.store_id, self._key, self.initialize = store_id, key, initialize is True
++        self._fault = fault_hook or (lambda stage: None)
++        self._fd = None
++        self._head = None
++        self._pid = os.getpid()
++
++    def acquire(self, db_path, *, readonly=False):
++        db_path = Path(db_path).absolute()
++        if '..' in db_path.parts:
++            raise AuthorityError('unsafe_ledger_path')
++        if self.directory == db_path.parent or self.directory.is_relative_to(db_path.parent) or db_path.parent.is_relative_to(self.directory):
++            raise AuthorityError('checkpoint_not_separate')
++        flags=(os.O_RDONLY if readonly else os.O_RDWR|os.O_CREAT)|os.O_NOFOLLOW|os.O_NONBLOCK
++        fd = os.open(self.directory/'journal.lock',flags,0o600)
++        try:
++            st = os.fstat(fd)
++            if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o077 or st.st_nlink != 1:
++                raise AuthorityError('unsafe_ledger_file')
++            fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
++        except AuthorityError:
++            os.close(fd)
++            raise
++        except BlockingIOError as exc:
++            os.close(fd)
++            raise AuthorityError('checkpoint_owner_busy') from exc
++        except OSError as exc:
++            os.close(fd)
++            raise AuthorityError('checkpoint_lock_unavailable') from exc
++        self._fd = fd
++        self._identity = st.st_dev, st.st_ino
++
++    def close(self):
++        if self._fd is not None:
++            os.close(self._fd)
++            self._fd = None
++
++    def _fence(self):
++        if self._fd is None or os.getpid() != self._pid:
++            raise AuthorityError('checkpoint_owner_unavailable')
++        try:
++            st = (self.directory/'journal.lock').stat(follow_symlinks=False)
++        except OSError as exc:
++            raise AuthorityError('checkpoint_missing') from exc
++        if (st.st_dev,st.st_ino) != self._identity:
++            raise AuthorityError('checkpoint_replaced')
++        private_directory(self.directory)
++
++    def signed(self, body):
++        return {'body':body, 'hmac_sha256':hmac.new(self._key,encode(body),hashlib.sha256).hexdigest()}
++
++    def authenticate(self, envelope):
++        if type(envelope) is not dict or set(envelope) != {'body','hmac_sha256'}:
++            raise AuthorityError('checkpoint_invalid')
++        signature = self.signed(envelope['body'])['hmac_sha256']
++        if type(envelope['hmac_sha256']) is not str or not re.fullmatch('[0-9a-f]{64}',envelope['hmac_sha256']) or not hmac.compare_digest(signature,envelope['hmac_sha256']):
++            raise AuthorityError('checkpoint_authentication_failed')
++        return envelope['body']
++
++    def _read(self, path):
++        envelope = strict_json(read_file(path))
++        return self.authenticate(envelope), hashlib.sha256(encode(envelope)).hexdigest()
++
++    def history(self):
++        self._fence()
++        staging = [p for p in self.directory.iterdir() if p.name.startswith('.stage-')]
++        if len(staging)>32:
++            raise AuthorityError('checkpoint_staging_capacity')
++        for path in staging:
++            read_file(path)
++        self.staging_files = len(staging)
++        names = sorted(p.name for p in self.directory.iterdir() if not p.name.startswith('.stage-') and p.name != 'journal.lock')
++        if len(names)>20000 or any(not re.fullmatch(r'\d{8}\.(intent|final)\.json',n) for n in names):
++            raise AuthorityError('checkpoint_invalid_inventory')
++        head, result, pending = {'sequence':0,'sha256':None,'checkpoint_hash':ZERO}, [], None
++        for seq in range(1,len(names)//2+2):
++            intent_path=self.directory/f'{seq:08}.intent.json'
++            final_path=self.directory/f'{seq:08}.final.json'
++            if not intent_path.exists():
++                break
++            intent, intent_hash=self._read(intent_path)
++            if type(intent) is not dict or set(intent)!={'format','store_id','sequence','previous','before_sha256','after','last_event'} or intent['format']!='jarvis-checkpoint-intent-v1' or intent['store_id']!=self.store_id or type(intent['sequence']) is not int or intent['sequence']!=seq or intent['previous']!=head['checkpoint_hash'] or intent['before_sha256']!=head['sha256']:
++                raise AuthorityError('checkpoint_continuity_failed')
++            after = intent['after']
++            if type(after) is not dict or set(after)!={'sha256','bytes','rows'} or type(after['sha256']) is not str or not re.fullmatch('[0-9a-f]{64}',after['sha256']) or type(after['bytes']) is not int or not 0<after['bytes']<=MAX_BYTES or type(after['rows']) is not int or not 0<after['rows']<=MAX_ROWS:
++                raise AuthorityError('checkpoint_invalid')
++            event = intent['last_event']
++            if event is not None:
++                if type(event) is not dict or set(event)!={'sequence','request_id'} or type(event['sequence']) is not int or event['sequence']<1:
++                    raise AuthorityError('checkpoint_invalid_event_binding')
++                identifier(event['request_id'])
++            if not final_path.exists():
++                pending=intent
++                break
++            final, final_hash=self._read(final_path)
++            if type(final) is not dict or set(final)!={'format','store_id','sequence','previous','intent_hash','outcome','sha256'} or final['format']!='jarvis-checkpoint-final-v1' or final['store_id']!=self.store_id or type(final['sequence']) is not int or final['sequence']!=seq or final['previous']!=head['checkpoint_hash'] or final['intent_hash']!=intent_hash or final['outcome'] not in {'committed','aborted'} or final['sha256']!=(intent['after']['sha256'] if final['outcome']=='committed' else head['sha256']):
++                raise AuthorityError('checkpoint_continuity_failed')
++            head={'sequence':seq,'sha256':final['sha256'],'checkpoint_hash':final_hash}
++            result.append(head)
++        if len(names)!=len(result)*2+(1 if pending else 0):
++            raise AuthorityError('checkpoint_gap')
++        return head,pending,result
++
++    def verify(self, conn, *, recover=False, new=False):
++        head,pending,_=self.history()
++        actual=digest_state(conn)
++        if pending:
++            if not recover:
++                raise AuthorityError('checkpoint_reconciliation_required')
++            if actual['sha256']==pending['after']['sha256']:
++                self._final(pending,'committed')
++            elif head['sha256'] is not None and actual['sha256']==head['sha256']:
++                self._final(pending,'aborted')
++            else:
++                raise AuthorityError('ledger_checkpoint_mismatch')
++            head,_,_=self.history()
++        if head['sha256'] is None:
++            if not (new and self.initialize):
++                raise AuthorityError('checkpoint_missing')
++            # Anchor the empty schema before the first metadata/ownership write.
++            # Even the very first failed transaction now has an authenticated
++            # prior state and can be resolved after a process crash.
++            self._head = head
++            intent = self.prepare(conn)
++            self.finish(intent)
++            head,_,_=self.history()
++        elif actual['sha256']!=head['sha256']:
++            raise AuthorityError('ledger_checkpoint_mismatch')
++        self._head=head
++        return {**head,'verified':head['sha256'] is not None,'algorithm':'HMAC-SHA256 external full-state checkpoints',
++                'state_bytes':actual['bytes'],'state_rows':actual['rows'],'max_bytes':MAX_BYTES,'max_rows':MAX_ROWS,
++                'checkpoint_capacity':9999,'staging_files':self.staging_files}
++
++    def prepare(self, conn):
++        head,pending,_=self.history()
++        if pending or self._head is None or head!=self._head:
++            raise AuthorityError('checkpoint_reconciliation_required')
++        if head['sequence']>=9999:
++            raise AuthorityError('checkpoint_capacity_exceeded')
++        event = conn.execute('SELECT seq,request_id FROM events ORDER BY seq DESC LIMIT 1').fetchone()
++        intent=dict(format='jarvis-checkpoint-intent-v1',store_id=self.store_id,sequence=head['sequence']+1,
++                    previous=head['checkpoint_hash'],before_sha256=head['sha256'],after=digest_state(conn),
++                    last_event={'sequence':event[0],'request_id':event[1]} if event else None)
++        publish_file(self.directory/f"{intent['sequence']:08}.intent.json",encode(self.signed(intent)))
++        self._fault('checkpoint_intent_durable')
++        return intent
++
++    def _final(self, intent, outcome):
++        envelope=self.signed(intent)
++        body=dict(format='jarvis-checkpoint-final-v1',store_id=self.store_id,sequence=intent['sequence'],
++                  previous=intent['previous'],intent_hash=hashlib.sha256(encode(envelope)).hexdigest(),outcome=outcome,
++                  sha256=intent['after']['sha256'] if outcome=='committed' else intent['before_sha256'])
++        publish_file(self.directory/f"{intent['sequence']:08}.final.json",encode(self.signed(body)))
++
++    def finish(self, intent):
++        self._fault('checkpoint_before_publication')
++        self._final(intent,'committed')
++        self._head=self.history()[0]
++        self._fault('checkpoint_published')
++
++    def export(self, authority, actor, export_id, directory, *, fault_hook=None):
++        """Immutable bounded snapshot; no prune, delete, restore or enrollment."""
++        identifier(export_id)
++        fault=fault_hook or (lambda stage:None)
++        a=authority
++        parent=private_directory(directory)
++        if parent==self.directory or parent.is_relative_to(self.directory) or self.directory.is_relative_to(parent) or parent==a.path.parent or parent.is_relative_to(a.path.parent) or a.path.parent.is_relative_to(parent):
++            raise AuthorityError('unsafe_export_destination')
++        dest=parent/export_id
++        with a._mutex:
++            a._fence()
++            if a._ledger is not self:
++                raise AuthorityError('ledger_not_bound')
++            checkpoint=self.verify(a._conn)
++            if a._scope(actor)!='local-service':
++                raise AuthorityError('operator_scope_required')
++            # No cleanup is performed. Incomplete directories count against
++            # capacity too; only an independently scoped operator may remove any.
++            exports=0;used=0
++            for entry in parent.iterdir():
++                exports+=1
++                if exports>=MAX_EXPORTS:raise AuthorityError('export_capacity_exceeded')
++                identifier(entry.name)
++                private_directory(entry)
++                members=0
++                for member in entry.iterdir():
++                    members+=1
++                    st=member.stat(follow_symlinks=False)
++                    if members>8 or not stat.S_ISREG(st.st_mode) or member.is_symlink():raise AuthorityError('unsafe_export_inventory')
++                    used+=st.st_size
++            if used+checkpoint['state_bytes']+65536>MAX_EXPORT_BYTES:
++                raise AuthorityError('export_capacity_exceeded')
++            space=os.statvfs(parent)
++            if space.f_bavail*space.f_frsize<checkpoint['state_bytes']+65536:
++                raise AuthorityError('export_storage_exhausted')
++            # A whole-store export is a trusted-local operator action. Public API
++            # never accepts paths, keys, export targets or mutation commands.
++            try:dest.mkdir(mode=0o700)
++            except FileExistsError as exc:raise AuthorityError('export_already_exists') from exc
++            fd=os.open(dest/'state.jsonl',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++            digest,size,rows=hashlib.sha256(),0,0
++            with os.fdopen(fd,'wb') as stream:
++                for line in state_lines(a._conn):
++                    size+=len(line);rows+=1
++                    if size>MAX_BYTES or rows>MAX_ROWS:raise AuthorityError('ledger_bound_exceeded')
++                    stream.write(line);digest.update(line)
++                    fault('export_row_written')
++                stream.flush();os.fsync(stream.fileno())
++            fault('export_data_durable')
++            if digest.hexdigest()!=checkpoint['sha256']:
++                raise AuthorityError('export_snapshot_changed')
++            body=dict(format='jarvis-ledger-export-v1',store_id=self.store_id,export_id=export_id,
++                      checkpoint={k:checkpoint[k] for k in ('sequence','sha256','checkpoint_hash')},
++                      files={'state.jsonl':dict(sha256=digest.hexdigest(),bytes=size,rows=rows)},history_deleted=False,
++                      events=dict(zip(('first','last','count'),a._conn.execute('SELECT MIN(seq),MAX(seq),COUNT(*) FROM events').fetchone())))
++            publish_file(dest/'COMPLETE.json',encode(self.signed(body)))
++            sync_directory(parent)
++            fault('export_manifest_durable')
++            return self.verify_export(dest)
++
++    def verify_export(self, directory):
++        directory=private_directory(directory)
++        identifier(directory.name)
++        if set(p.name for p in directory.iterdir())!={'state.jsonl','COMPLETE.json'}:
++            raise AuthorityError('export_incomplete')
++        manifest=self.authenticate(strict_json(read_file(directory/'COMPLETE.json')))
++        if type(manifest) is not dict or set(manifest)!={'format','store_id','export_id','checkpoint','files','history_deleted','events'} or manifest['format']!='jarvis-ledger-export-v1' or manifest['store_id']!=self.store_id or manifest['export_id']!=directory.name or manifest['history_deleted'] is not False or type(manifest['files']) is not dict or set(manifest['files'])!={'state.jsonl'} or type(manifest['checkpoint']) is not dict:
++            raise AuthorityError('export_invalid_manifest')
++        _,pending,history=self.history()
++        if pending or manifest['checkpoint'] not in history:
++            raise AuthorityError('export_checkpoint_not_trusted')
++        raw=read_file(directory/'state.jsonl',MAX_BYTES)
++        info=manifest['files']['state.jsonl']
++        if type(info) is not dict or info!={'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'rows':len(raw.splitlines())} or info['sha256']!=manifest['checkpoint']['sha256'] or info['rows']>MAX_ROWS:
++            raise AuthorityError('export_integrity_failed')
++        # Parse every record; signed manifests do not make malformed data valid.
++        lines=raw.splitlines()
++        task_bindings={};event_sequences=[];last_table=-1;last_rowid=0
++        columns={'meta':2,'ownership':4,'control':4,'records':5,'receipts':6,'events':4,'outbox':5,'simulation_effects':3,'sqlite_sequence':3}
++        for index,line in enumerate(lines):
++            value=strict_json(line)
++            if type(value) is not dict:raise AuthorityError('export_invalid_data')
++            if index==0:
++                if set(value)!={'type','value'} or value['type']!='schema':raise AuthorityError('export_invalid_data')
++            elif set(value)!={'type','table','value'} or value['type']!='row' or value['table'] not in TABLES or type(value['value']) is not list:
++                raise AuthorityError('export_invalid_data')
++            else:
++                table=value['table'];row=value['value'];order=TABLES.index(table)
++                if order<last_table or len(row)!=columns[table] or type(row[0]) is not int or row[0]<1 or order==last_table and row[0]<=last_rowid:raise AuthorityError('export_row_order_invalid')
++                if order!=last_table:last_rowid=0
++                last_table,last_rowid=order,row[0]
++                if table=='records' and row[1]=='task':
++                    task_bindings[row[2]]=hashlib.sha256(encode(strict_json(row[4]))).hexdigest()
++                if table=='events':event_sequences.append(row[1])
++        actual_events={'first':event_sequences[0] if event_sequences else None,'last':event_sequences[-1] if event_sequences else None,'count':len(event_sequences)}
++        if manifest['events']!=actual_events or event_sequences!=list(range(1,len(event_sequences)+1)):raise AuthorityError('export_event_order_invalid')
++        return {**manifest,'verified':True,'task_bindings':task_bindings,'manifest_sha256':hashlib.sha256(read_file(directory/'COMPLETE.json')).hexdigest()}
+--- /dev/null
++++ b/app/agent/operator_cli.py
+@@ -0,0 +1,44 @@
++"""Quiesced offline diagnostics, without application/provider startup.
++
++Checkpoint key bytes arrive only through an explicitly inherited descriptor.
++No secret path, environment lookup, enrollment, recovery mutation or retry.
++"""
++import argparse
++import json
++import os
++import sys
++from app.agent.authority import AuthorityError
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import inspect_offline
++from app.agent.runtime import SERVICE_ACTOR
++
++
++def main(argv=None):
++    parser=argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--database',required=True)
++    parser.add_argument('--checkpoints')
++    parser.add_argument('--store-id')
++    parser.add_argument('--key-fd',type=int)
++    parser.add_argument('--task-id')
++    parser.add_argument('--limit',type=int,default=100)
++    parser.add_argument('--offset',type=int,default=0)
++    args=parser.parse_args(argv)
++    try:
++        configured=(args.checkpoints is not None,args.store_id is not None,args.key_fd is not None)
++        if any(configured) and not all(configured):raise AuthorityError('complete_checkpoint_configuration_required')
++        ledger=None
++        if all(configured):
++            if args.key_fd<3:raise AuthorityError('invalid_key_descriptor')
++            raw=os.read(args.key_fd,129)
++            if not 32<=len(raw)<=128:raise AuthorityError('invalid_ledger_key')
++            ledger=LedgerGuard(args.checkpoints,raw,args.store_id)
++        result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,task_id=args.task_id,limit=args.limit,offset=args.offset)
++        print(json.dumps(result,indent=2))
++        return 0 if result['consistent'] else 1
++    except (AuthorityError,OSError) as exc:
++        print(json.dumps({'consistent':False,'error':exc.code if isinstance(exc,AuthorityError) else 'operator_io_unavailable',
++                          'recommendation':'preserve_store_and_checkpoints_investigate_no_retry','mutated':False}))
++        return 1
++
++
++if __name__=='__main__':raise SystemExit(main())
+--- /dev/null
++++ b/app/agent/recovery.py
+@@ -0,0 +1,504 @@
++"""Read-only operator explanations and narrowly authenticated local recovery.
++
++No retry, force-complete, delete, reset, import or real executor action exists.
++Protected mutations require a short-lived command/payload/checkpoint-bound HMAC
++permit from a separately trusted issuer. The public API exposes diagnostics only.
++"""
++from __future__ import annotations
++
++from datetime import UTC, datetime
++import hashlib
++import hmac
++import json
++import re
++import uuid
++
++from app.agent.authority import AuthorityError, canonical, identifier, instant, text
++from app.agent.execution import phase_id, validate_spec
++from app.agent.execution import SyntheticExecutor
++from app.agent.ledger import MAX_BYTES, MAX_ROWS, encode, strict_json
++
++TERMINAL = frozenset({'simulated_completed','simulated_failed','cancelled','denied','timed_out'})
++STATUS_OUTBOX = {'pending':'held','executing_synthetic':'execution_claimed'}
++
++
++def snapshot(authority):
++    """Bounded consistent snapshot under the shared owner mutex; no mutation."""
++    a=authority
++    with a._mutex:
++        a._fence()
++        if a._conn.execute('PRAGMA quick_check').fetchone()[0]!='ok':
++            raise AuthorityError('ledger_sqlite_corrupt')
++        result={};size=rows=0
++        for table in ('meta','ownership','control','records','receipts','events','outbox','simulation_effects'):
++            values=[]
++            for row in a._conn.execute(f'SELECT * FROM {table} ORDER BY rowid'):
++                item=dict(row);size+=len(canonical(item));rows+=1
++                if size>MAX_BYTES or rows>MAX_ROWS:raise AuthorityError('diagnostic_bound_exceeded')
++                values.append(item)
++            result[table]=values
++        return result
++
++
++def analyze(values, scope, *, now=None):
++    now=now or datetime.now(UTC)
++    issues=[];tasks={};occurrences={};schedules={};evidence={};receipts={};events={};origins={}
++    def issue(code, ident=None):
++        issues.append({'code':code,'identity':ident,'unsafe_to_dispatch':True})
++    ownership=values.get('ownership',[])
++    control=values.get('control',[])
++    if values.get('meta')!=[{'version':1}]:issue('invalid_schema_metadata')
++    if len(ownership)!=1 or ownership[0].get('id')!=1 or type(ownership[0].get('generation')) is not int or ownership[0]['generation']<1:
++        issue('invalid_ownership')
++    if len(control)!=1 or control[0].get('id')!=1 or control[0].get('enabled') not in (0,1) or type(control[0].get('epoch')) is not int or control[0]['epoch']<0:
++        issue('invalid_scheduler_control')
++    for row in values['records']:
++        try:
++            data=strict_json(row['data'])
++            if type(data) is not dict:raise AuthorityError('invalid_record')
++            if row['kind']=='task':
++                identifier(row['id'])
++                if type(data.get('metadata')) is not dict or data.get('status') not in {'pending','simulating','executing_synthetic','unknown','simulated_completed','simulated_failed','cancelled','denied','timed_out','failed','in_progress'} or type(data.get('cancel_requested')) is not bool or type(data.get('created_at')) is not str or data.get('execution') is not None and type(data['execution']) is not dict:
++                    raise AuthorityError('invalid_task_record')
++                text(data.get('goal'));text(data.get('scope'),128);instant(data['created_at'])
++                execution=data.get('execution')
++                if execution is not None:
++                    validate_spec(**{k:execution[k] for k in ('capability','payload','expires_at','timeout_seconds')})
++                    if execution.get('receipt_ids')!={phase:phase_id(row['id'],phase) for phase in ('claim','dispatch','record','publish','unknown')}:
++                        issue('execution_receipt_identity_mismatch',row['id'])
++                    auth=execution.get('authorization')
++                    if type(auth) is not dict or type(auth.get('allowed')) is not bool or auth.get('scope')!=data['scope'] or auth.get('capability')!=execution['capability']:
++                        issue('inconsistent_authorization',row['id'])
++                if data.get('task_id')!=row['id'] or data.get('scope')!=row['scope']:issue('task_identity_mismatch',row['id'])
++                tasks[row['id']]=data
++            elif row['kind']=='occurrence':
++                identifier(row['id'])
++                if data.get('occurrence_id')!=row['id']:issue('occurrence_identity_mismatch',row['id'])
++                instant(data.get('nominal'))
++                occurrences[row['id']]=data
++            elif row['kind']=='schedule':
++                identifier(row['id'])
++                if data.get('job_id')!=row['id'] or data.get('scope')!=row['scope']:issue('schedule_identity_mismatch',row['id'])
++                schedules[row['id']]=data
++            elif row['kind']=='execution_evidence':
++                identifier(row['id'])
++                if type(data.get('response')) is not dict:raise AuthorityError('invalid_evidence')
++                evidence[row['id']]=data
++        except (AuthorityError,KeyError,TypeError):issue('invalid_record',row['id'])
++    for row in values['receipts']:
++        try:
++            data=strict_json(row['data'])
++            if type(data) is not dict or any(data.get(k)!=row[k] for k in ('request_id','scope','operation','payload_hash')) or data.get('state')!='committed' or type(data.get('result')) is not dict or not re.fullmatch('[0-9a-f]{64}',row['payload_hash']):
++                raise AuthorityError('invalid_receipt')
++            identifier(row['request_id'])
++            receipts[row['request_id']]=data
++            op=data['operation'];result=data['result']
++            if op in {'submit','execution_submit','occurrence'} and result.get('task_id'):
++                origins.setdefault(result['task_id'],[]).append(data)
++                payload=None
++                if op=='submit':payload={'goal':result['goal']}
++                if op=='execution_submit':payload={'goal':result['goal'],**{k:result['execution'][k] for k in ('capability','payload','expires_at','timeout_seconds')}}
++                if payload is not None and hashlib.sha256(canonical([row['scope'],op,payload]).encode()).hexdigest()!=row['payload_hash']:
++                    issue('receipt_payload_binding_mismatch',row['request_id'])
++            elif op=='import_legacy_snapshot':
++                if type(result.get('task_ids')) is not dict:raise AuthorityError('invalid_receipt')
++                for task_id in result.get('task_ids',{}).values():origins.setdefault(task_id,[]).append(data)
++        except (AuthorityError,ValueError,TypeError,KeyError):issue('invalid_receipt',row['request_id'])
++    previous=0;owner_generation=0;last_owner=None
++    for row in values['events']:
++        if row['seq']!=previous+1:issue('event_order_gap',row['request_id'])
++        previous=row['seq']
++        try:
++            event=strict_json(row['data'])
++            if type(event) is not dict:raise AuthorityError('invalid_event')
++            if event.get('operation')=='owner_acquired':
++                identifier(row['request_id'])
++                if set(event)!={'operation','generation','recovered_unknown_count','at'} or type(event['generation']) is not int or event['generation']<1 or type(event['recovered_unknown_count']) is not int or event['recovered_unknown_count']<0:
++                    raise AuthorityError('invalid_owner_event')
++                instant(event['at'])
++                if event['generation']<=owner_generation:issue('owner_generation_order',row['request_id'])
++                owner_generation=event['generation'];last_owner=(event['generation'],row['request_id'])
++                continue
++            events.setdefault(row['request_id'],[]).append(event)
++            if row['request_id'] not in receipts:issue('event_without_receipt',row['request_id'])
++        except (AuthorityError,TypeError):issue('invalid_event',row['request_id'])
++    for request_id,receipt in receipts.items():
++        matches=events.get(request_id,[])
++        if len(matches)!=1 or matches[0]!=receipt:issue('receipt_audit_mismatch',request_id)
++    if len(ownership)==1 and last_owner!=(ownership[0].get('generation'),ownership[0].get('owner')):issue('ownership_audit_mismatch')
++    outbox={row['task_id']:row for row in values['outbox']}
++    markers={row['task_id']:row for row in values['simulation_effects']}
++    for task_id,row in outbox.items():
++        if task_id not in tasks:issue('outbox_without_task',task_id)
++    for task_id,data in evidence.items():
++        task=tasks.get(task_id)
++        receipt=receipts.get(phase_id(task_id,'record'))
++        if task is None or data.get('operation_id')!=task_id or receipt is None or receipt['result']!=data:
++            issue('unbound_execution_evidence',task_id)
++    diagnostics=[]
++    for task_id,task in tasks.items():
++        row=outbox.get(task_id)
++        status=task.get('status')
++        if row is None or row['state']!=STATUS_OUTBOX.get(status,status):issue('task_outbox_mismatch',task_id)
++        origin=origins.get(task_id,[])
++        if len(origin)!=1:issue('missing_or_ambiguous_admission_receipt',task_id)
++        elif origin[0]['scope']!=task.get('scope') or origin[0]['operation']!='import_legacy_snapshot' and (origin[0]['result'].get('goal')!=task.get('goal') or origin[0]['result'].get('occurrence_id')!=task.get('occurrence_id')):
++            issue('task_admission_binding_mismatch',task_id)
++        occurrence_id=task.get('occurrence_id')
++        if occurrence_id:
++            occurrence=occurrences.get(occurrence_id)
++            if occurrence is None or occurrence.get('task_id')!=task_id or occurrence.get('nominal')!=task.get('metadata',{}).get('nominal'):
++                issue('occurrence_task_mismatch',task_id)
++        execution=task.get('execution')
++        has_evidence=task_id in evidence
++        published=receipts.get(phase_id(task_id,'publish')) if execution else None
++        if execution:
++            if execution.get('operation_id')!=task_id:issue('execution_identity_mismatch',task_id)
++            if status in {'simulated_completed','simulated_failed'} and (not has_evidence or published is None or published['result'].get('result')!=task.get('result') or evidence[task_id].get('response')!=task.get('result')):
++                issue('completion_without_bound_evidence',task_id)
++            if has_evidence and (row is None or row['claim_id']!=task_id or row['generation']!=evidence[task_id].get('generation')):
++                issue('execution_claim_provenance_mismatch',task_id)
++            if status in {'simulated_completed','simulated_failed'}:
++                for phase in ('claim','dispatch','record','publish'):
++                    receipt=receipts.get(phase_id(task_id,phase))
++                    if receipt is None or receipt['operation']!='execution_'+phase or receipt['scope']!=task['scope']:
++                        issue('execution_phase_receipt_missing',task_id)
++        elif status in {'simulated_completed','simulated_failed'} and task_id not in markers:issue('simulation_completion_without_marker',task_id)
++        if task.get('scope')!=scope:continue
++        if status=='unknown':
++            reason='result_recorded_publication_pending' if has_evidence else 'effect_outcome_unestablished'
++            recommendation='authorize_publish_existing_synthetic_evidence' if has_evidence else 'preserve_unknown_investigate_original_receipts_never_retry'
++        elif status=='executing_synthetic':
++            reason='result_recorded_publication_pending' if has_evidence else 'claimed_outcome_not_yet_established'
++            recommendation='inspect_worker_and_original_receipts_do_not_resubmit'
++        elif status=='pending':reason='admitted_execution_held';recommendation='inspect_capability_policy_worker_and_expiry'
++        elif status in {'simulated_failed','failed'}:reason=task.get('error') or 'execution_failed';recommendation='inspect_failure_evidence_no_automatic_retry'
++        else:reason=status;recommendation='preserve_durable_receipts'
++        if task.get('cancel_requested') and status=='unknown':reason='cancellation_requested_effect_outcome_unestablished'
++        diagnostics.append(dict(task_id=task_id,original_request_id=origin[0]['request_id'] if len(origin)==1 else None,
++            admission_receipt_id=origin[0]['request_id'] if len(origin)==1 else None,
++            admission_operation=origin[0]['operation'] if len(origin)==1 else None,occurrence_id=occurrence_id,
++            status=status,outbox_state=row['state'] if row else None,cancel_requested=task.get('cancel_requested'),
++            admitted=bool(origin),execution_completed=status in {'simulated_completed','simulated_failed'},
++            real_execution_completed=False,reason=reason,recommendation=recommendation,
++            phase_receipt_ids=execution.get('receipt_ids',{}) if execution else {},
++            recorded_evidence=has_evidence,published_receipt_id=published['request_id'] if published else None,
++            created_at=task.get('created_at'),
++            receipts=[{'receipt_id':receipt_id,'operation':receipts[receipt_id]['operation'] if receipt_id in receipts else expected,
++                       'state':receipts[receipt_id]['state'] if receipt_id in receipts else 'missing',
++                       'payload_hash':receipts[receipt_id]['payload_hash'] if receipt_id in receipts else None,
++                       'audit_event_present':len(events.get(receipt_id,[]))==1}
++                      for receipt_id,expected in ([(origin[0]['request_id'],origin[0]['operation'])] if len(origin)==1 else [])+
++                          ([(phase_id(task_id,phase),'execution_'+phase) for phase in ('claim','dispatch','record','publish','unknown')] if execution else [])]))
++    for occurrence_id,occurrence in occurrences.items():
++        if occurrence.get('task_id') not in tasks:issue('occurrence_without_task',occurrence_id)
++    schedule_diagnostics=[]
++    for job_id,job in schedules.items():
++        if job.get('scope')!=scope:continue
++        overdue=False
++        try:
++            if job.get('enabled'):
++                overdue=datetime.fromisoformat(instant(job['next_run_at']))<=now
++            if job.get('last_run') and not any(t.get('metadata',{}).get('job_id')==job_id and t.get('metadata',{}).get('nominal')==job['last_run'] for t in tasks.values()):
++                issue('schedule_last_run_without_occurrence',job_id)
++        except (AuthorityError,KeyError,ValueError):issue('invalid_schedule',job_id)
++        schedule_diagnostics.append(dict(job_id=job_id,enabled=job.get('enabled'),removed=job.get('removed'),
++            last_run=job.get('last_run'),next_run_at=job.get('next_run_at'),overdue=overdue,
++            recommendation='authorize_disable_without_catchup' if overdue else 'preserve_nominal_occurrence_identity'))
++    # Never describe a structurally inconsistent operation as established completion.
++    bad_ids={i['identity'] for i in issues}
++    for task in diagnostics:
++        if task['task_id'] in bad_ids or task['admission_receipt_id'] in bad_ids:
++            task.update(execution_completed=False,reason='inconsistent_durable_state',recommendation='stop_dispatch_preserve_store_and_checkpoints_investigate')
++    occurrence_summaries=[dict(occurrence_id=ident,task_id=value.get('task_id'),nominal=value.get('nominal'),
++                              binding_ok=value.get('task_id') in tasks and tasks[value['task_id']].get('occurrence_id')==ident)
++                          for ident,value in occurrences.items() if value.get('task_id') in tasks and tasks[value['task_id']].get('scope')==scope]
++    exports=[]
++    for receipt_id,receipt in receipts.items():
++        if receipt['scope']==scope and receipt['operation']=='operator_export_admit':
++            publication=receipts.get(phase_id(receipt_id,'export_complete'))
++            exports.append({'export_id':receipt_id,'admission_receipt_id':receipt_id,'publication_receipt_id':phase_id(receipt_id,'export_complete'),
++                            'state':'published' if publication else 'admitted_export_unpublished',
++                            'recommendation':'preserve_verified_archive' if publication else 'verify_existing_manifest_then_reconcile_audit_never_regenerate'})
++    return dict(consistent=not issues,issues=issues,tasks=diagnostics,schedules=schedule_diagnostics,
++                occurrence_summaries=occurrence_summaries,exports=exports,unpublished_exports=sum(e['state']!='published' for e in exports),
++                authority={'generation':ownership[0].get('generation') if len(ownership)==1 else None,
++                           'scheduler_control':control[0] if len(control)==1 else None},
++                receipts=len(receipts),events=len(values['events']),occurrences=len(occurrences),
++                unresolved=sum(t['status'] not in TERMINAL for t in diagnostics),
++                failed=sum(t['status'] in {'failed','simulated_failed'} for t in diagnostics),
++                unknown=sum(t['status']=='unknown' for t in diagnostics),
++                cancel_requested=sum(bool(t['cancel_requested']) for t in diagnostics),
++                automatic_retry=False,history_deletion_supported=False)
++
++
++class OperatorRecovery:
++    def __init__(self, authority):self.authority=authority
++
++    def diagnose(self, actor, *, task_id=None, limit=100, offset=0):
++        a=self.authority;scope=a._scope(actor)
++        if scope!='local-service':raise AuthorityError('operator_scope_required')
++        if type(limit) is not int or not 1<=limit<=200 or type(offset) is not int or not 0<=offset<=1000000:
++            raise AuthorityError('invalid_pagination')
++        if task_id is not None:identifier(task_id)
++        with a._mutex:
++            values=snapshot(a)
++            result=analyze(values,scope)
++            integrity=a._ledger.verify(a._conn) if a._ledger is not None else {'verified':False,'reason':'external_checkpoint_not_configured'}
++            tasks=[t for t in result['tasks'] if task_id is None or t['task_id']==task_id]
++            if task_id is not None and not tasks:raise AuthorityError('not_found')
++            total=len(tasks)
++            return {**result,'tasks':tasks[offset:offset+limit],'total_tasks':total,'offset':offset,
++                    'occurrence_summaries':result['occurrence_summaries'][offset:offset+limit],
++                    'schedules':result['schedules'][offset:offset+limit],'exports':result['exports'][offset:offset+limit],
++                    'next_offset':offset+limit if offset+limit<total else None,'ledger_integrity':integrity,
++                    'recovery_mutations_publicly_enabled':False}
++
++    def retention_plan(self, actor, *, older_than, limit=100):
++        with self.authority._mutex:
++            return self._retention_plan(actor,older_than=older_than,limit=limit)
++
++    def _retention_plan(self, actor, *, older_than, limit=100):
++        cutoff=datetime.fromisoformat(instant(older_than))
++        report=self.diagnose(actor,limit=200)
++        if not report['consistent'] or not report['ledger_integrity']['verified']:
++            raise AuthorityError('retention_integrity_required')
++        if type(limit) is not int or not 1<=limit<=200:raise AuthorityError('invalid_pagination')
++        eligible=[];protected=[]
++        # Eligibility covers the entire bounded diagnostic snapshot, not just page 1.
++        with self.authority._mutex:
++            all_tasks=analyze(snapshot(self.authority),self.authority._scope(actor))['tasks']
++            for task in all_tasks:
++                old=datetime.fromisoformat(instant(task['created_at']))<cutoff
++                reasons=[]
++                if task['status'] not in TERMINAL:reasons.append('unresolved_or_held')
++                if task['cancel_requested']:reasons.append('cancellation_evidence_preserved')
++                if not old:reasons.append('newer_than_cutoff')
++                if task['reason']=='inconsistent_durable_state':reasons.append('inconsistent_state')
++                if not task['admission_receipt_id']:reasons.append('missing_admission_receipt')
++                if reasons:protected.append({'task_id':task['task_id'],'reasons':reasons})
++                else:eligible.append(task['task_id'])
++        decision=hashlib.sha256()
++        for item in eligible:decision.update(encode({'eligible':item}))
++        for item in protected:decision.update(encode({'protected':item}))
++        return {'eligible_for_archive':eligible[:limit],'eligible_total':len(eligible),'eligible_listing_complete':len(eligible)<=limit,
++                'decision_sha256':decision.hexdigest(),'protected':protected[:limit],
++                'protected_total':len(protected),'older_than':cutoff.isoformat(),'deletion_authorized':False,
++                'policy':'archive-copy-only-v1','protected_history_deleted':False,
++                'checkpoint':{k:report['ledger_integrity'][k] for k in ('sequence','sha256','checkpoint_hash')}}
++
++
++class OperatorPermits:
++    """HMAC issuer/verifier is trusted-local only; no issuance endpoint."""
++    def __init__(self, key):
++        if type(key) is not bytes or len(key)<32:raise AuthorityError('invalid_operator_key')
++        self._key=key
++
++    def issue(self, *, request_id, principal, scope, command, payload, checkpoint, expires_at, issued_at):
++        identifier(request_id);text(principal,128);text(scope,128)
++        body=dict(request_id=request_id,principal=principal,scope=scope,command=command,
++                  payload_hash=hashlib.sha256(encode(payload)).hexdigest(),checkpoint=checkpoint,
++                  expires_at=instant(expires_at),issued_at=instant(issued_at))
++        return {'body':body,'hmac_sha256':hmac.new(self._key,encode(body),hashlib.sha256).hexdigest()}
++
++    def verify(self, permit, actor, request_id, command, payload):
++        if type(permit) is not dict or set(permit)!={'body','hmac_sha256'} or type(permit['body']) is not dict:
++            raise AuthorityError('operator_authentication_required')
++        body=permit['body']
++        if set(body)!={'request_id','principal','scope','command','payload_hash','checkpoint','expires_at','issued_at'}:
++            raise AuthorityError('operator_authentication_required')
++        mac=permit['hmac_sha256']
++        if type(mac) is not str or not re.fullmatch('[0-9a-f]{64}',mac) or not hmac.compare_digest(mac,hmac.new(self._key,encode(body),hashlib.sha256).hexdigest()):
++            raise AuthorityError('operator_authentication_failed')
++        now=datetime.now(UTC);start=datetime.fromisoformat(instant(body['issued_at']));end=datetime.fromisoformat(instant(body['expires_at']))
++        if not start<=now<end or not 0<(end-start).total_seconds()<=300:
++            raise AuthorityError('operator_permit_expired')
++        if (body['request_id'],body['scope'],body['command'],body['payload_hash'])!=(request_id,actor.scope,command,hashlib.sha256(encode(payload)).hexdigest()):
++            raise AuthorityError('operator_permit_binding_mismatch')
++        text(body['principal'],128)
++        return body
++
++
++class RecoveryActions:
++    """Local, authenticated, audited, checkpoint-bound conservative operations."""
++    def __init__(self, authority, permits):self.authority,self.permits=authority,permits
++
++    def apply(self, actor, request_id, command, payload, permit):
++        return self._apply(actor,request_id,command,payload,permit)
++
++    def _apply(self, actor, request_id, command, payload, permit, *, verified_export=None):
++        a=self.authority
++        identifier(request_id)
++        if uuid.UUID(request_id).version!=4:raise AuthorityError('invalid_public_request_identifier')
++        if command not in {'publish_synthetic_evidence','disable_overdue_schedule','prepare_archive'}:
++            raise AuthorityError('unsafe_recovery_action')
++        if a._ledger is None:raise AuthorityError('ledger_checkpoint_required')
++        auth=self.permits.verify(permit,actor,request_id,command,payload)
++        def authorized(result):
++            return {**result,'operator_authorization':auth,'permit_fingerprint':hashlib.sha256(encode(permit)).hexdigest()}
++        def effect(scope):
++            if auth['checkpoint']!=a._ledger._head:raise AuthorityError('stale_operator_permit')
++            report=analyze(snapshot(a),scope)
++            if not report['consistent']:raise AuthorityError('recovery_inconsistent_state')
++            if command=='publish_synthetic_evidence':
++                if type(payload) is not dict or set(payload)!={'task_id'}:raise AuthorityError('invalid_recovery_payload')
++                task_id=identifier(payload['task_id']);task=a._get('task',task_id,scope)
++                row=a._conn.execute('SELECT * FROM outbox WHERE task_id=?',(task_id,)).fetchone()
++                evidence=a._get('execution_evidence',task_id,scope)
++                if not a.allow_simulation or task['status']!='unknown' or row['state']!='unknown' or row['claim_id']!=task_id or row['generation']!=evidence['generation']:
++                    raise AuthorityError('unsafe_recovery_action')
++                # Use the existing publisher under this SAME SQL transaction so
++                # recovered state and operator authorization receipt are atomic.
++                result=evidence['response']
++                expected=SyntheticExecutor().execute(task_id,task['execution'])
++                if result.get('status') not in {'simulated_completed','simulated_failed'} or canonical(result)!=canonical(expected):
++                    raise AuthorityError('untrusted_executor_response')
++                task.update(status=result['status'],result=result,error=result['error'])
++                a._put('task',task_id,scope,task)
++                a._conn.execute('UPDATE outbox SET state=? WHERE task_id=?',(task['status'],task_id))
++                publish_id=phase_id(task_id,'publish')
++                digest=hashlib.sha256(canonical([scope,'execution_publish',{'operation_id':task_id}]).encode()).hexdigest()
++                publication=dict(request_id=publish_id,scope=scope,operation='execution_publish',payload_hash=digest,state='committed',result=task,at=datetime.now(UTC).isoformat(),owner_generation=a.generation)
++                a._conn.execute('INSERT INTO receipts VALUES(?,?,?,?,?)',(publish_id,scope,'execution_publish',digest,canonical(publication)))
++                a._conn.execute('INSERT INTO events(request_id,data) VALUES(?,?)',(publish_id,canonical(publication)))
++                return authorized({'task_id':task_id,'status':task['status'],'publication_receipt_id':publish_id,'executor_invoked':False})
++            if command=='disable_overdue_schedule':
++                if type(payload) is not dict or set(payload)!={'job_id'}:raise AuthorityError('invalid_recovery_payload')
++                job_id=identifier(payload['job_id']);job=a._get('schedule',job_id,scope)
++                if not job['enabled'] or datetime.fromisoformat(instant(job['next_run_at']))>datetime.now(UTC):raise AuthorityError('schedule_not_overdue')
++                job.update(enabled=False,revision=job['revision']+1)
++                a._put('schedule',job_id,scope,job)
++                for task in a._list('task',actor):
++                    if task['metadata'].get('job_id')==job_id and task['status'] not in TERMINAL:a._cancel(task)
++                return authorized({'job_id':job_id,'enabled':False,'catchup':False})
++            if type(payload) is not dict or set(payload)!={'export_id','manifest_sha256','older_than'}:raise AuthorityError('invalid_recovery_payload')
++            identifier(payload['export_id'])
++            # Export verification is supplied by a separate trusted-local method,
++            # never a response or caller-provided self-asserted hash.
++            verified=verified_export
++            if verified is None or (verified['export_id'],verified['manifest_sha256'])!=(payload['export_id'],payload['manifest_sha256']):
++                raise AuthorityError('verified_export_required')
++            plan=OperatorRecovery(a).retention_plan(actor,older_than=payload['older_than'],limit=200)
++            if not plan['eligible_listing_complete']:raise AuthorityError('retention_selection_too_large')
++            for task_id in plan['eligible_for_archive']:
++                current=hashlib.sha256(encode(a._get('task',task_id,scope))).hexdigest()
++                if verified['task_bindings'].get(task_id)!=current:raise AuthorityError('export_does_not_cover_retention_candidate')
++            a._create('archive_preparation',request_id,scope,{'export_id':payload['export_id'],'manifest_sha256':payload['manifest_sha256'],
++                'plan':plan,'policy':'archive-copy-only-v1','history_deleted':False})
++            return authorized({'archive_preparation_id':request_id,'plan':plan,'history_deleted':False})
++        return a._mutate(actor,request_id,'operator_recovery',{'command':command,'payload':payload,'principal':auth['principal'],'authorization_scheme':'bounded-local-HMAC-v1'},effect)
++
++    def prepare_archive(self, actor, request_id, directory, older_than, permit):
++        if self.authority._ledger is None:raise AuthorityError('ledger_checkpoint_required')
++        with self.authority._mutex:
++            verified=self.verify_export(actor,directory)
++            return self._apply(actor,request_id,'prepare_archive',dict(export_id=verified['export_id'],manifest_sha256=verified['manifest_sha256'],older_than=older_than),permit,verified_export=verified)
++
++    def verify_export(self, actor, directory):
++        a=self.authority
++        with a._mutex:
++            a._fence()
++            if a._ledger is None:raise AuthorityError('ledger_checkpoint_required')
++            verified=a._ledger.verify_export(directory)
++            admission=a.receipt(actor,verified['export_id'])
++            completion=a.receipt(actor,phase_id(verified['export_id'],'export_complete'))
++            if admission is None or admission['operation']!='operator_export_admit' or completion is None or completion['operation']!='operator_export_complete' or completion['result'].get('manifest_sha256')!=verified['manifest_sha256']:
++                raise AuthorityError('export_audit_publication_missing')
++            return {**verified,'audit_publication_verified':True}
++
++    def export(self, actor, request_id, directory, permit, *, fault_hook=None):
++        from pathlib import Path
++        a=self.authority
++        identifier(request_id)
++        if uuid.UUID(request_id).version!=4:raise AuthorityError('invalid_public_request_identifier')
++        if a._ledger is None:raise AuthorityError('ledger_checkpoint_required')
++        payload={'export_id':request_id,'destination':str(Path(directory).absolute())}
++        auth=self.permits.verify(permit,actor,request_id,'export_ledger',payload)
++        def admit(scope):
++            if scope!='local-service':raise AuthorityError('operator_scope_required')
++            if auth['checkpoint']!=a._ledger._head:raise AuthorityError('stale_operator_permit')
++            if not analyze(snapshot(a),scope)['consistent']:raise AuthorityError('recovery_inconsistent_state')
++            return {'export_id':request_id,'destination':payload['destination'],'principal':auth['principal'],'operator_authorization':auth,'permit_fingerprint':hashlib.sha256(encode(permit)).hexdigest(),'history_deleted':False}
++        with a._mutex:
++            admitted=a._mutate(actor,request_id,'operator_export_admit',{'payload':payload,'principal':auth['principal'],'authorization_scheme':'bounded-local-HMAC-v1'},admit)
++            dest=Path(directory)/request_id
++            if admitted['replayed']:
++                # Explicit same-ID reconciliation may publish an already complete
++                # snapshot. Never regenerate a missing/partial export on replay.
++                verified=a._ledger.verify_export(dest)
++            else:
++                verified=a._ledger.export(a,actor,request_id,directory,fault_hook=fault_hook)
++            if fault_hook:fault_hook('export_before_audit_publication')
++            publication=a._mutate(actor,phase_id(request_id,'export_complete'),'operator_export_complete',
++                {'export_id':request_id,'manifest_sha256':verified['manifest_sha256']},
++                lambda scope:{'export_id':request_id,'manifest_sha256':verified['manifest_sha256'],'history_deleted':False})
++            return {'export':verified,'publication':publication,'history_deleted':False}
++
++    def reconcile_admitted_export(self, actor, request_id, directory):
++        """Finish audit for an immutable export under its durable original grant.
++
++        No fresh data copy or filesystem regeneration. The original signed permit
++        was authenticated before admission; its stored decision authorizes this
++        audit-only continuation after expiry/restart. No public route exposes it.
++        """
++        from pathlib import Path
++        a=self.authority
++        with a._mutex:
++            a._fence()
++            if a._ledger is None:raise AuthorityError('ledger_checkpoint_required')
++            admission=a.receipt(actor,request_id)
++            parent=Path(directory).absolute()
++            if admission is None or admission['operation']!='operator_export_admit' or admission['result'].get('destination')!=str(parent):
++                raise AuthorityError('export_admission_required')
++            decision=admission['result'].get('operator_authorization')
++            if type(decision) is not dict or decision.get('request_id')!=request_id or decision.get('command')!='export_ledger' or decision.get('scope')!=a._scope(actor):
++                raise AuthorityError('export_admission_required')
++            verified=a._ledger.verify_export(parent/request_id)
++            return a._mutate(actor,phase_id(request_id,'export_complete'),'operator_export_complete',
++                {'export_id':request_id,'manifest_sha256':verified['manifest_sha256']},
++                lambda scope:{'export_id':request_id,'manifest_sha256':verified['manifest_sha256'],'history_deleted':False})
++
++
++def inspect_offline(database, actor, *, ledger=None, **options):
++    """Quiesced diagnostic only: SQLite mode=ro, no owner takeover or recovery.
++
++    Refuses a running owner. Does not initialize directories, databases, locks,
++    anchors or permits. A pending checkpoint is reported, never finalized here.
++    """
++    import fcntl
++    import os
++    from pathlib import Path
++    import sqlite3
++    import threading
++    from types import SimpleNamespace
++    from app.agent.authority import Authority
++    from app.agent.ledger import private_directory
++    path=Path(database).absolute()
++    private_directory(path.parent)
++    descriptor=lock=None;conn=None
++    try:
++        descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
++        Authority._check_file(descriptor)
++        lock=os.open(path.with_suffix(path.suffix+'.writer.lock'),os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
++        Authority._check_file(lock)
++        try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
++        except BlockingIOError as exc:raise AuthorityError('owner_busy') from exc
++        if ledger is not None:ledger.acquire(path,readonly=True)
++        conn=sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,isolation_level=None)
++        conn.row_factory=sqlite3.Row
++        conn.execute('BEGIN')
++        markers=conn.execute("SELECT id FROM records WHERE kind='ledger_config'").fetchall()
++        if markers:
++            if ledger is None:raise AuthorityError('ledger_checkpoint_required')
++            if [r[0] for r in markers]!=[ledger.store_id]:raise AuthorityError('ledger_store_mismatch')
++            ledger.verify(conn)
++        elif ledger is not None:raise AuthorityError('ledger_enrollment_required')
++        shim=SimpleNamespace(_conn=conn,_mutex=threading.RLock(),_scope=Authority._scope,_ledger=ledger,_fence=lambda:None)
++        return OperatorRecovery(shim).diagnose(actor,**options)
++    except (OSError,sqlite3.Error) as exc:
++        raise AuthorityError('offline_diagnostic_storage_unavailable') from exc
++    finally:
++        if conn is not None:conn.close()
++        if ledger is not None:ledger.close()
++        if lock is not None:os.close(lock)
++        if descriptor is not None:os.close(descriptor)
+--- a/app/agent/reporter.py
++++ b/app/agent/reporter.py
+@@ -6,6 +6,8 @@
+ 
+ from app.agent.authority import AuthorityError
+ from app.agent.task_queue import task_queue
++from app.agent.runtime import SERVICE_ACTOR, get_authority
++from app.agent.recovery import OperatorRecovery
+ from app.comms.discord_bot import discord_bot
+ from app.comms.telegram_bot import telegram_bot
+ from app.config import settings
+@@ -13,6 +15,15 @@
+ 
+ 
+ class Reporter:
++    def _recovery_summary(self) -> str:
++        try:
++            report = OperatorRecovery(get_authority()).diagnose(SERVICE_ACTOR, limit=1)
++        except AuthorityError:
++            return "Recovery diagnostics unavailable; preserve original receipts."
++        integrity = "verified" if report["ledger_integrity"]["verified"] else "unconfigured"
++        return (f"Ledger integrity {integrity}; consistency issues {len(report['issues'])}; "
++                f"unpublished exports {report['unpublished_exports']}; automatic retry disabled.")
++
+     def _task_snapshot(self) -> list[object]:
+         return list(task_queue.tasks)
+ 
+@@ -40,7 +51,7 @@
+ 
+     async def build_report(self) -> str:
+         cpu, ram, tasks = self._stats()
+-        return f"JARVIS status: CPU {cpu}% | RAM {ram}% | {tasks}"
++        return f"JARVIS status: CPU {cpu}% | RAM {ram}% | {tasks} {self._recovery_summary()}"
+ 
+     async def send_report(self) -> dict:
+         report = await self.build_report()
+@@ -73,7 +84,7 @@
+         cpu, ram, tasks = self._stats()
+         return (
+             f"Good morning, sir. CPU {cpu}%, RAM {ram}%. "
+-            f"{tasks}"
++            f"{tasks} {self._recovery_summary()}"
+         )
+ 
+ 
+--- a/app/cli.py
++++ b/app/cli.py
+@@ -33,6 +33,8 @@
+             return _shutdown(args)
+         if args.command == "tasks":
+             return _tasks(args)
++        if args.command == "recovery":
++            return _recovery(args)
+     except KeyboardInterrupt:
+         return 130
+     parser.print_help()
+@@ -68,7 +70,31 @@
+     tasks.add_argument("--limit", type=int, default=100, help="Tasks per page (1-200).")
+     tasks.add_argument("--offset", type=int, default=0, help="Task page offset.")
+     tasks.add_argument("--status", help="Filter by the exact durable task state.")
++    recovery = subparsers.add_parser("recovery", help="Read authenticated operator recovery diagnostics; never retry or complete work.")
++    recovery.add_argument("--task-id", help="Inspect one original task UUID.")
++    recovery.add_argument("--limit", type=int, default=100)
++    recovery.add_argument("--offset", type=int, default=0)
+     return parser
++
++
++def _recovery(args: argparse.Namespace) -> int:
++    from app.agent.authority import AuthorityError, identifier
++    from urllib.parse import urlencode
++    if not 1<=args.limit<=200 or not 0<=args.offset<=1000000:
++        print("Invalid diagnostic pagination bounds.",file=sys.stderr)
++        return 2
++    params={"limit":args.limit,"offset":args.offset}
++    if args.task_id:
++        try:params["task_id"]=identifier(args.task_id)
++        except AuthorityError:
++            print("A canonical task UUID is required.",file=sys.stderr)
++            return 2
++    result=_get('/operator/diagnostics?'+urlencode(params))
++    if result is None:
++        print("Operator diagnostics unavailable; preserve state and original request receipts. No retry was attempted.",file=sys.stderr)
++        return 1
++    print(json.dumps(result,indent=2))
++    return 0 if result.get('consistent') else 1
+ 
+ 
+ def _tasks(args: argparse.Namespace) -> int:
+--- /dev/null
++++ b/docs/operator_recovery.md
+@@ -0,0 +1,142 @@
++# Offline operator recovery and ledger protection
++
++Real execution remains disabled. This interface never retries uncertain work,
++accepts caller completion results, restores a ledger, or deletes protected history.
++The reproduction harness uses only disposable databases and synthetic credentials.
++
++## Read-only inspection
++
++`jarvis recovery [--task-id UUID] [--limit 100] [--offset 0]` reads
++`GET /operator/diagnostics`. This route requires a configured bearer credential
++even if ordinary routes allow anonymous local access. It returns only diagnostic
++metadata, not goals, payload values, keys, or mutation capabilities. No operator
++write endpoint is mounted. A missing credential or unavailable state is a nonzero
++CLI result; no service starts and no retry/fallback mutation occurs.
++
++Diagnostics show task state versus outbox state, admission UUID and operation,
++receipt identity/state/payload hash/audit presence, expected phase receipts,
++occurrence/task/nominal bindings, schedule last/next nominal, overdue blockers,
++failed and UNKNOWN counts, cancellation uncertainty, recorded versus published
++results, export publication gaps, and safe recommendations. Admission and claim
++are never represented as completed effects. Invalid/inconsistent records remain
++blocked rather than being repaired by inference.
++
++For a quiesced store whose application cannot start, `app.agent.operator_cli`
++provides a separate provider-free entrypoint. Its required database path is
++explicit; it has no real-runtime default. Checkpoint configuration requires the
++separate checkpoint directory, store UUID and an explicitly inherited key FD
++(number >=3). Key bytes are never accepted in arguments or environment variables.
++The module uses SQLite mode=ro and the existing writer lock, refuses a running
++owner, and does not advance ownership, finalize pending checkpoints or enroll a
++store. It reports pending/corrupt/missing state and exits nonzero. SQLite's
++read-only connection semantics are used; this is not a hostile-process filesystem
++sandbox qualification.
++
++Use the guarded reproduction below for development rather than importing the
++application/dependency target on the host. The full-app demonstration also runs
++the quiesced CLI and verifies unchanged database/checkpoint contents.
++
++## Protected checkpoint model
++
++`LedgerGuard` is an explicitly supplied local embedding dependency. A new
++`Authority(..., ledger=guard)` receives an external HMAC key and store UUID;
++`initialize=True` permits initial creation only. Existing unguarded ledgers refuse
++implicit enrollment. A marker in the existing records table makes a guarded
++store refuse opening without its guard. No schema migration or key provisioning
++of a real store is performed by these APIs or this sprint.
++
++The authenticated checkpoint journal must be a separate private directory outside
++both database and export trees. It contains a monotonically ordered, chained
++intent/final sequence. Each transition binds full logical SQLite state (schema,
++ordered table rows and rowids), prior digest, intended digest, and latest durable
++event/request identity. Audit receipts and events are part of that state.
++
++An intent is durable before SQLite COMMIT, and its final record is durable before
++success acknowledgement. On restart, exactly one terminal pending intent may be
++resolved only when the database matches the authenticated prior or intended
++state. Any other mismatch, missing anchor, invalid HMAC, gap, wrong key, changed
++schema, or rollback is rejected. A failed/ambiguous publication poisons the owner;
++only explicit reopen can reconcile it. No missing anchor is reconstructed from
++an existing nonempty database. Publication uses Linux renameat2(RENAME_NOREPLACE),
++file fsync and directory fsync; it never overwrites a checkpoint.
++
++This uses HMAC authentication, not public-key signatures. Trusted local Python,
++key custody and the protected anchor directory are assumptions. Same-UID key
++compromise or coordinated rollback of both database and trusted anchors is not
++prevented. No key rotation, hardware monotonic counter or multi-host consensus
++is claimed. A kill after first schema DDL but before the first genesis intent is
++fail-closed/manual quarantine; arbitrary-point first-enrollment recovery is not
++claimed. Normal transaction, export, archive and reconciliation crash boundaries
++are exercised with real independent processes.
++
++## Bounded local recovery actions
++
++`RecoveryActions` accepts a short-lived HMAC permit from a separately trusted
++`OperatorPermits` issuer. The permit binds principal, scope, request UUID4,
++command, payload hash, exact protected checkpoint, issue time and expiry
++(maximum five minutes). There is no issuance endpoint and no credential generator.
++The verified authorization decision and mutation receipt commit in Authority.
++Same-ID replay preserves the original decision; changed command/payload/principal
++conflicts. Stale/expired/forged grants fail closed.
++
++Supported actions are:
++
++- Publish an existing validated synthetic result for an UNKNOWN task, preserving
++  the original operation and phase receipt IDs. It never invokes the registered
++  executor. No evidence means no success/cancellation inference.
++- Disable an exact overdue schedule without catch-up. Held occurrences become
++  cancelled; uncertain/claimed work receives cancellation intent. Terminal task
++  records are preserved byte-for-byte. The ordinary bulk stop/remove path now
++  follows the same history-preserving rule.
++- Admit and export a ledger snapshot, publish its audit receipt, and prepare an
++  archive-copy eligibility record. No protected state is removed.
++
++Export audit reconciliation may finish an already durable authenticated admission
++after the original permit expires. It requires the exact stored destination and
++a complete anchored manifest, and performs audit publication only. It never
++regenerates a missing/partial export. This is continuation of the original durable
++authorization, available only through the trusted-local API.
++
++## Export and archive retention
++
++Exports contain deterministic `state.jsonl` plus an HMAC-authenticated
++`COMPLETE.json` manifest. Verification checks exact inventory, member SHA256,
++bytes/rows, schema/row ordering, event range/continuity, logical state digest and
++the historical checkpoint still retained in the protected journal. The local
++recovery layer additionally requires matching durable export admission and audit
++publication. A manifest alone is not authorization or current database state.
++No import/restore implementation is provided.
++
++Crash-partial exports remain quarantined and same-ID regeneration is refused.
++No automatic cleanup exists. A dedicated export root admits at most16 directories
++and64MiB accounted files, including incomplete exports, and checks free space.
++Each logical state/export is bounded at32MiB/100000 rows. The journal is bounded
++at9999 transitions and32 staging files; capacity errors fail closed. These logical
++bounds do not constitute a filesystem quota or a physical SQLite/WAL size limit.
++
++Retention eligibility explicitly protects held, claimed, UNKNOWN, cancellation
++and unresolved receipt evidence. A plan includes cutoff, totals, complete-list
++flag, deterministic decision hash and exact checkpoint. Archive preparation
++refuses more than200 eligible tasks and rejects exports that do not cover the
++current eligible task records exactly. The bounded full decision is audited.
++Receipts, events, occurrences, tasks and outbox records are never deleted, even
++when eligible for archive copying. A future deletion policy requires separately
++verified integrity, checkpoint continuity and approved retention semantics.
++
++## Reproduction and remaining activation gates
++
++Run sequentially from the project root:
++
++```sh
++python3 -I -B -S tasks/jarvis-operator-ledger-r1/run_checks.py --target tasks/jarvis-authority-readiness-r1/runs/20261031T090522534346Z/output/site-packages
++python3 -I -B -S tasks/jarvis-operator-ledger-r1/run_checks.py --mode full-app --target tasks/jarvis-authority-readiness-r1/runs/20261031T090522534346Z/output/site-packages
++```
++
++Read the new task's REPORT.md, OPERATOR-DEMONSTRATION.json, RESULTS.json and
++INDEPENDENT-REVIEW.md for source-bound evidence and known failures/warnings.
++Existing real databases are not enrolled or migrated. Actual key/FD provisioning,
++protected OS principal/storage separation, backup/restore drills, quarantine disk
++operations and any future destructive retention policy require their own scope.
++All prior serial-broker/VM164/no-NIC/Gate6K prerequisites remain unchanged. Real
++execution, providers, production startup, credentials and infrastructure are not
++authorized or activated by an offline pass.
+--- a/docs/task_api.md
++++ b/docs/task_api.md
+@@ -138,3 +138,9 @@
+ The hook trusts local Python/database ownership and the existing single-service
+ namespace. It does not provide multiuser isolation or live security qualification.
+ The actual Proxmox broker, tools, providers and credentials remain disconnected.
++
++
++The [operator recovery guide](operator_recovery.md) describes the authenticated
++read-only `/operator/diagnostics` route, `jarvis recovery`, protected checkpoint
++readiness and trusted-local recovery/export/archive interfaces. No public recovery
++mutation, completion, deletion, enrollment or retry endpoint is provided.
+--- /dev/null
++++ b/tests/ledger_process_actor.py
+@@ -0,0 +1,82 @@
++"""Cage-only independent crash actor. Keys and state are synthetic fixtures."""
++from datetime import UTC, datetime, timedelta
++import json
++import os
++from pathlib import Path
++import sys
++import time
++
++if not Path('/input/source').is_dir():raise SystemExit('isolated runner required')
++sys.path[:0]=['/input/source','/deps']
++from app.agent.authority import Authority
++from app.agent.execution import ExecutionPipeline, SimulatedPolicy, phase_id
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import RecoveryActions, OperatorPermits
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++
++KEY=b'synthetic-ledger-test-key-only-000000000000'
++PERMIT=b'synthetic-operator-test-key-only-000000000'
++config=json.loads(Path(sys.argv[1]).read_text())
++mode,stage=config['mode'],config['stage']
++armed=mode=='bootstrap'
++a=None
++
++def hold():
++    Path(config['ready']).write_text(stage)
++    end=time.monotonic()+4
++    while time.monotonic()<end:time.sleep(.01)
++    raise RuntimeError('parent did not kill owned actor')
++
++def guard_fault(current):
++    if armed and stage==current:hold()
++
++def sql_fault(current):
++    if not armed:return
++    if mode in {'retention','reconcile'}:
++        expected=config['request_id'] if mode=='retention' else phase_id(config['task_id'],'publish')
++        if not a._conn.execute('SELECT 1 FROM receipts WHERE request_id=?',(expected,)).fetchone():return
++    if current==stage:hold()
++
++def open_authority(initialize):
++    g=LedgerGuard(config['anchors'],KEY,config['store_id'],initialize=initialize,fault_hook=guard_fault)
++    a=Authority(config['db'],allow_simulation=True,ledger=g,fault_hook=sql_fault)
++    p=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
++    return a,p,g
++
++def issue(command,payload,request_id):
++    now=datetime.now(UTC)
++    return issuer.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command=command,payload=payload,
++                        checkpoint=g._head,issued_at=now.isoformat(),expires_at=(now+timedelta(seconds=1)).isoformat())
++
++a,p,g=open_authority(True)
++issuer=OperatorPermits(PERMIT);actions=RecoveryActions(a,issuer)
++if mode=='bootstrap':raise SystemExit('bootstrap crash stage not reached')
++if mode=='mutation':
++    armed=True
++    a.submit(ACTOR,config['request_id'],'crash admission')
++else:
++    p.submit(ACTOR,config['task_id'],'crash ledger fixture','synthetic.echo',{'value':'protected outcome'},(datetime.now(UTC)+timedelta(minutes=2)).isoformat())
++    if mode=='reconcile':
++        p._fault=lambda current: (_ for _ in ()).throw(RuntimeError('stop after record')) if current=='after_record' else None
++        try:p.run_once(ACTOR)
++        except RuntimeError:pass
++        a.close();a,p,g=open_authority(False)
++        armed=True
++        p.reconcile(ACTOR)
++    else:
++        p.run_once(ACTOR)
++        export_id=config['export_id']
++        token=issue('export_ledger',{'export_id':export_id,'destination':config['exports']},export_id)
++        if mode=='export':
++            armed=True
++            actions.export(ACTOR,export_id,config['exports'],token,fault_hook=lambda current:hold() if current==stage else None)
++        elif mode=='retention':
++            result=actions.export(ACTOR,export_id,config['exports'],token)
++            cutoff=(datetime.now(UTC)+timedelta(seconds=1)).isoformat()
++            payload={'export_id':export_id,'manifest_sha256':result['export']['manifest_sha256'],'older_than':cutoff}
++            token=issue('prepare_archive',payload,config['request_id'])
++            # Crash only the archive transaction, not its preceding export.
++            armed=True
++            actions.prepare_archive(ACTOR,config['request_id'],Path(config['exports'])/export_id,cutoff,token)
++        else:raise SystemExit('unsupported fixture mode')
++raise SystemExit('crash stage not reached')
+--- /dev/null
++++ b/tests/test_operator_app.py
+@@ -0,0 +1,101 @@
++"""Actual configured app diagnostics and operator CLI; no provider requests."""
++from datetime import UTC, datetime, timedelta
++import json
++import os
++from pathlib import Path
++import uuid
++
++import httpx
++import pytest
++
++from app.agent.authority import Authority
++from app.agent.execution import ExecutionPipeline, SimulatedPolicy
++from app.agent.ledger import LedgerGuard
++from app.agent import runtime
++from app import server,cli
++
++KEY=b'synthetic-operator-app-ledger-key-000000000'
++
++
++@pytest.fixture
++def bound(tmp_path):
++    previous=runtime._authority;previous_worker=runtime._execution_worker
++    runtime._authority=None;runtime._execution_worker=None
++    store_id=str(uuid.uuid4());anchors=tmp_path/'protected'
++    a=Authority(tmp_path/'state'/'db',allow_simulation=True,ledger=LedgerGuard(anchors,KEY,store_id,initialize=True))
++    runtime.bind_authority(a)
++    yield a,anchors,store_id
++    runtime.close_authority();runtime._authority=previous;runtime._execution_worker=previous_worker
++
++
++@pytest.mark.asyncio
++async def test_operator_route_requires_explicit_token_and_has_no_mutations(bound,monkeypatch):
++    a,anchors,store_id=bound
++    monkeypatch.setattr(server.settings.server,'api_token','')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic') as client:
++        assert (await client.get('/operator/diagnostics')).status_code==401
++        monkeypatch.setattr(server.settings.server,'api_token','operator-fixture-token')
++        assert (await client.get('/operator/diagnostics')).status_code==401
++        client.headers['Authorization']='Bearer operator-fixture-token'
++        before=a._ledger._head.copy()
++        response=await client.get('/operator/diagnostics')
++        assert response.status_code==200 and response.json()['consistent']
++        assert response.json()['ledger_integrity']['verified']
++        assert a._ledger._head==before
++        assert (await client.post('/operator/diagnostics',json={'command':'complete'})).status_code==405
++        assert (await client.post('/operator/recover',json={'command':'retry'})).status_code==404
++        assert a._ledger._head==before
++
++
++@pytest.mark.asyncio
++async def test_operator_cli_consumes_actual_api_and_reports_unavailable(bound,monkeypatch,capsys):
++    a,anchors,store_id=bound
++    op=str(uuid.uuid4());a.submit(runtime.SERVICE_ACTOR,op,'held')
++    monkeypatch.setattr(server.settings.server,'api_token','operator-fixture-token')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer operator-fixture-token'}) as client:
++        payload=(await client.get('/operator/diagnostics',params={'task_id':op})).json()
++    monkeypatch.setattr(cli,'_get',lambda *args,**kwargs:payload)
++    assert cli.main(['recovery','--task-id',op])==0
++    assert json.loads(capsys.readouterr().out)['tasks'][0]['execution_completed'] is False
++    monkeypatch.setattr(cli,'_get',lambda *args,**kwargs:None)
++    assert cli.main(['recovery'])==1
++    assert 'No retry was attempted' in capsys.readouterr().err
++    assert cli.main(['recovery','--task-id','invalid'])==2
++
++
++def test_quiesced_cli_key_descriptor_does_not_rewrite_store(bound,capsys):
++    from app.agent.operator_cli import main
++    a,anchors,store_id=bound
++    op=str(uuid.uuid4());a.submit(runtime.SERVICE_ACTOR,op,'held')
++    a.close()
++    before=a.path.read_bytes()
++    read_fd,write_fd=os.pipe()
++    try:
++        os.write(write_fd,KEY);os.close(write_fd)
++        assert main(['--database',str(a.path),'--checkpoints',str(anchors),'--store-id',store_id,'--key-fd',str(read_fd)])==0
++        output=capsys.readouterr().out
++        assert KEY.decode() not in output
++        assert json.loads(output)['tasks'][0]['original_request_id']==op
++    finally:os.close(read_fd)
++    assert a.path.read_bytes()==before
++
++
++@pytest.mark.asyncio
++async def test_guard_corruption_blocks_application_readiness(bound,monkeypatch):
++    a,anchors,store_id=bound
++    monkeypatch.setattr(server.settings.server,'api_token','operator-fixture-token')
++    a._conn.execute('UPDATE control SET epoch=epoch+1')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer operator-fixture-token'}) as client:
++        response=await client.get('/ready')
++        assert response.status_code==503 and response.json()['error']=='ledger_checkpoint_mismatch'
++        assert (await client.post('/execution/tasks',json={'request_id':str(uuid.uuid4()),'goal':'held','capability':'synthetic.echo','payload':{'value':'x'},'expires_at':(datetime.now(UTC)+timedelta(minutes=1)).isoformat()})).status_code==503
++
++
++@pytest.mark.asyncio
++async def test_operator_report_does_not_claim_admission_is_completion(bound):
++    from app.agent.reporter import reporter
++    a,anchors,store_id=bound
++    a.submit(runtime.SERVICE_ACTOR,str(uuid.uuid4()),'held')
++    report=await reporter.build_report()
++    assert '1 pending (admitted, execution held)' in report
++    assert 'Ledger integrity verified' in report and 'automatic retry disabled' in report
+--- /dev/null
++++ b/tests/test_operator_ledger.py
+@@ -0,0 +1,497 @@
++"""Protected disposable ledger, default-read-only diagnosis and archive safety."""
++from datetime import UTC, datetime, timedelta
++import hashlib
++import json
++from pathlib import Path
++import sqlite3
++import uuid
++
++import pytest
++
++from app.agent.authority import Authority, AuthorityError
++from app.agent.execution import ExecutionPipeline, SimulatedPolicy, phase_id
++from app.agent.ledger import LedgerGuard, encode, strict_json
++from app.agent.recovery import OperatorRecovery, OperatorPermits, RecoveryActions
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++
++SYNTHETIC_KEY=b'synthetic-ledger-test-key-only-000000000000'
++PERMIT_KEY=b'synthetic-operator-test-key-only-000000000'
++
++
++def key():return str(uuid.uuid4())
++
++
++@pytest.fixture
++def env(tmp_path):
++    paths={'db':tmp_path/'state'/'queue.sqlite','anchors':tmp_path/'protected','exports':tmp_path/'exports','store_id':key()}
++    paths['exports'].mkdir(mode=0o700)
++    guard=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id'],initialize=True)
++    a=Authority(paths['db'],allow_simulation=True,ledger=guard)
++    pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
++    permits=OperatorPermits(PERMIT_KEY)
++    actions=RecoveryActions(a,permits)
++    yield a,pipeline,guard,permits,actions,paths
++    a.close()
++
++
++def submit(p,**changes):
++    body=dict(request_id=key(),goal='operator fixture',capability='synthetic.echo',payload={'value':'evidence'},expires_at=(datetime.now(UTC)+timedelta(minutes=2)).isoformat())
++    body.update(changes)
++    return p.submit(ACTOR,**body)
++
++
++def permit(env,command,payload,request_id=None,**changes):
++    a,p,g,issuer,actions,paths=env
++    now=datetime.now(UTC)
++    body=dict(request_id=request_id or key(),principal='synthetic-operator',scope=ACTOR.scope,command=command,payload=payload,
++              checkpoint=g._head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=2)).isoformat())
++    body.update(changes)
++    return issuer.issue(**body)
++
++
++def test_guarded_pipeline_readiness_and_read_only_diagnostics(env):
++    a,p,g,issuer,actions,paths=env
++    op=submit(p)['request_id']
++    before=g._head.copy();events=a._conn.execute('SELECT COUNT(*) FROM events').fetchone()[0]
++    report=OperatorRecovery(a).diagnose(ACTOR,task_id=op)
++    assert report['consistent'] and report['ledger_integrity']['verified']
++    assert report['tasks'][0]['original_request_id']==op
++    assert report['tasks'][0]['reason']=='admitted_execution_held'
++    assert report['tasks'][0]['execution_completed'] is False
++    assert before==g._head and events==a._conn.execute('SELECT COUNT(*) FROM events').fetchone()[0]
++    p.run_once(ACTOR)
++    report=OperatorRecovery(a).diagnose(ACTOR,task_id=op)
++    assert report['consistent'] and report['tasks'][0]['execution_completed']
++    assert a.readiness()['ledger_consistent']
++
++
++def test_guard_cannot_be_omitted_or_enroll_existing_store(env,tmp_path):
++    a,p,g,issuer,actions,paths=env
++    a.close()
++    with pytest.raises(AuthorityError,match='ledger_checkpoint_required'):Authority(paths['db'])
++    plain=Authority(tmp_path/'plain'/'db');plain.close()
++    wrong=LedgerGuard(tmp_path/'other-anchors',SYNTHETIC_KEY,key(),initialize=True)
++    with pytest.raises(AuthorityError,match='ledger_enrollment_required'):Authority(tmp_path/'plain'/'db',ledger=wrong)
++
++
++def test_state_tamper_rejected_before_dispatch(env):
++    a,p,g,issuer,actions,paths=env
++    submit(p)
++    a._conn.execute("UPDATE records SET data=replace(data,'operator fixture','tampered') WHERE kind='task'")
++    with pytest.raises(AuthorityError,match='ledger_checkpoint_mismatch'):p.run_once(ACTOR)
++    assert a._conn.execute("SELECT COUNT(*) FROM records WHERE kind='execution_evidence'").fetchone()[0]==0
++
++
++def test_rollback_against_external_checkpoint_rejected(env,tmp_path):
++    a,p,g,issuer,actions,paths=env
++    backup=sqlite3.connect(tmp_path/'old.sqlite');a._conn.backup(backup);backup.close()
++    submit(p);a.close()
++    old=sqlite3.connect(tmp_path/'old.sqlite');target=sqlite3.connect(paths['db']);old.backup(target);target.close();old.close()
++    guard=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id'])
++    with pytest.raises(AuthorityError,match='ledger_checkpoint_mismatch'):Authority(paths['db'],ledger=guard)
++
++
++@pytest.mark.parametrize('damage',['missing','hmac','gap','truncated'])
++def test_checkpoint_damage_fails_closed(env,damage):
++    a,p,g,issuer,actions,paths=env
++    submit(p);a.close()
++    file=sorted(paths['anchors'].glob('*.final.json'))[-1]
++    if damage=='missing':
++        # Synthetic disaster only: protected files are never deleted by product code.
++        for entry in paths['anchors'].glob('*.json'):entry.unlink()
++    elif damage=='hmac':
++        raw=json.loads(file.read_text());raw['hmac_sha256']='0'*64;file.write_text(json.dumps(raw))
++    elif damage=='gap':file.rename(file.with_name('00009999.final.json'))
++    else:file.write_bytes(b'{')
++    guard=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id'])
++    with pytest.raises(AuthorityError):Authority(paths['db'],ledger=guard)
++
++
++def test_duplicate_does_not_advance_checkpoint(env):
++    a,p,g,issuer,actions,paths=env
++    op=key();expiry=(datetime.now(UTC)+timedelta(minutes=1)).isoformat()
++    submit(p,request_id=op,expires_at=expiry);head=g._head.copy()
++    assert submit(p,request_id=op,expires_at=expiry)['replayed']
++    assert g._head==head
++    with pytest.raises(AuthorityError,match='request_conflict'):submit(p,request_id=op,expires_at=expiry,goal='conflict')
++    assert g._head==head
++
++
++def test_export_requires_admission_and_immutable_manifest(env):
++    a,p,g,issuer,actions,paths=env
++    submit(p);p.run_once(ACTOR)
++    export_id=key();payload={'export_id':export_id,'destination':str(paths['exports'])}
++    token=permit(env,'export_ledger',payload,request_id=export_id)
++    result=actions.export(ACTOR,export_id,paths['exports'],token)
++    verified=actions.verify_export(ACTOR,paths['exports']/export_id)
++    assert verified['verified'] and verified['audit_publication_verified']
++    assert result['history_deleted'] is False
++    assert SYNTHETIC_KEY not in (paths['exports']/export_id/'state.jsonl').read_bytes()
++    assert actions.export(ACTOR,export_id,paths['exports'],token)['publication']['replayed']
++    raw=paths['exports']/export_id/'state.jsonl'
++    raw.write_bytes(raw.read_bytes()+b'{}\n')
++    with pytest.raises(AuthorityError,match='export_integrity_failed'):g.verify_export(raw.parent)
++
++
++def test_archive_preparation_preserves_unknown_held_and_receipts(env):
++    a,p,g,issuer,actions,paths=env
++    completed=submit(p)['request_id'];p.run_once(ACTOR)
++    held=submit(p)['request_id']
++    unknown=submit(p)['request_id']
++    p._claim(ACTOR,unknown)
++    p._unknown(ACTOR,unknown,a.generation,'test_uncertain')
++    a.cancel(ACTOR,key(),unknown)
++    plan=OperatorRecovery(a).retention_plan(ACTOR,older_than=(datetime.now(UTC)+timedelta(seconds=1)).isoformat())
++    assert completed in plan['eligible_for_archive']
++    assert held not in plan['eligible_for_archive'] and unknown not in plan['eligible_for_archive']
++    assert not plan['deletion_authorized']
++    assert OperatorRecovery(a).diagnose(ACTOR,task_id=unknown)['tasks'][0]['reason']=='cancellation_requested_effect_outcome_unestablished'
++
++
++@pytest.mark.parametrize('changes',[
++    {'expires_at':(datetime.now(UTC)-timedelta(seconds=1)).isoformat()},
++    {'scope':'different'}, {'principal':''},
++])
++def test_bad_permits_cannot_mutate(env,changes):
++    a,p,g,issuer,actions,paths=env
++    submit(p)
++    request_id=key();payload={'task_id':key()}
++    try:token=permit(env,'publish_synthetic_evidence',payload,request_id=request_id,**changes)
++    except AuthorityError:
++        assert changes.get('principal')==''
++        return
++    head=g._head.copy()
++    with pytest.raises(AuthorityError):actions.apply(ACTOR,request_id,'publish_synthetic_evidence',payload,token)
++    assert g._head==head
++
++
++def test_stale_permit_and_unsafe_action_refused(env):
++    a,p,g,issuer,actions,paths=env
++    payload={'task_id':key()}
++    token=permit(env,'publish_synthetic_evidence',payload)
++    submit(p)
++    with pytest.raises(AuthorityError,match='stale_operator_permit'):
++        actions.apply(ACTOR,token['body']['request_id'],'publish_synthetic_evidence',payload,token)
++    with pytest.raises(AuthorityError,match='unsafe_recovery_action'):
++        actions.apply(ACTOR,key(),'retry_unknown',{},token)
++
++
++@pytest.mark.parametrize('mode,stage',[
++    ('bootstrap','checkpoint_intent_durable'),
++    ('mutation','checkpoint_intent_durable'),
++    ('mutation','ledger_database_committed'),
++    ('mutation','checkpoint_published'),
++    ('export','export_row_written'),
++    ('export','export_data_durable'),
++    ('export','export_before_audit_publication'),
++    ('retention','checkpoint_intent_durable'),
++    ('retention','ledger_database_committed'),
++    ('reconcile','before_commit'),
++    ('reconcile','ledger_database_committed'),
++])
++def test_independent_process_crashes_preserve_evidence(tmp_path,mode,stage,monkeypatch):
++    import subprocess,sys,time
++    if not Path('/input/source').is_dir():pytest.skip('isolated runner required')
++    state=tmp_path/'case';state.mkdir(mode=0o700)
++    exports=state/'exports';exports.mkdir(mode=0o700)
++    config={'mode':mode,'stage':stage,'db':str(state/'state'/'db.sqlite'),'anchors':str(state/'protected'),
++            'exports':str(exports),'ready':str(state/'ready'),'store_id':key(),'task_id':key(),'request_id':key(),'export_id':key()}
++    command=state/'command.json';command.write_text(json.dumps(config))
++    with (state/'stdout').open('w') as out,(state/'stderr').open('w') as err:
++        child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('ledger_process_actor.py')),str(command)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
++        try:
++            deadline=time.monotonic()+4
++            while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
++            assert Path(config['ready']).exists(),(state/'stderr').read_text()
++            child.kill();child.wait(timeout=1)
++            assert child.returncode<0
++        finally:
++            if child.poll() is None:child.kill()
++            child.wait(timeout=1)
++    guard=LedgerGuard(config['anchors'],SYNTHETIC_KEY,config['store_id'])
++    a=Authority(config['db'],allow_simulation=True,ledger=guard)
++    try:
++        actions=RecoveryActions(a,OperatorPermits(PERMIT_KEY))
++        assert a.readiness()['ledger_integrity']['verified']
++        if mode=='bootstrap':assert a.list_tasks(ACTOR)==[]
++        if mode=='mutation':
++            receipt=a.receipt(ACTOR,config['request_id'])
++            assert (receipt is not None)==(stage!='checkpoint_intent_durable')
++        if mode=='export':
++            target=exports/config['export_id']
++            if stage=='export_before_audit_publication':
++                with pytest.raises(AuthorityError,match='export_audit_publication_missing'):actions.verify_export(ACTOR,target)
++                # Future simulated clock makes original permit expired; durable
++                # authenticated admission authorizes audit-only continuation.
++                import app.agent.recovery as module
++                class Future(datetime):
++                    @classmethod
++                    def now(cls,tz=None):return datetime.now(UTC)+timedelta(hours=1)
++                monkeypatch.setattr(module,'datetime',Future)
++                publication=actions.reconcile_admitted_export(ACTOR,config['export_id'],exports)
++                assert publication['operation']=='operator_export_complete'
++                assert actions.reconcile_admitted_export(ACTOR,config['export_id'],exports)['replayed']
++                assert actions.verify_export(ACTOR,target)['audit_publication_verified']
++            else:
++                with pytest.raises(AuthorityError):actions.reconcile_admitted_export(ACTOR,config['export_id'],exports)
++                assert a.receipt(ACTOR,phase_id(config['export_id'],'export_complete')) is None
++            assert len(a.list_tasks(ACTOR))==1
++        if mode=='retention':
++            record=a._conn.execute("SELECT data FROM records WHERE kind='archive_preparation'").fetchall()
++            assert bool(record)==(stage=='ledger_database_committed')
++            assert len(a.list_tasks(ACTOR))==1
++            assert a.get_task(ACTOR,config['task_id'])['status']=='simulated_completed'
++            if record:assert json.loads(record[0][0])['history_deleted'] is False
++        if mode=='reconcile':
++            p=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
++            p.registry._executor.execute=lambda *args:(_ for _ in ()).throw(AssertionError('redispatch'))
++            p.reconcile(ACTOR)
++            assert a.get_task(ACTOR,config['task_id'])['status']=='simulated_completed'
++            assert a._conn.execute('SELECT COUNT(*) FROM receipts WHERE request_id=?',(phase_id(config['task_id'],'publish'),)).fetchone()[0]==1
++    finally:a.close()
++
++
++def test_archive_mutation_has_verified_export_and_preserves_all_rows(env):
++    a,p,g,issuer,actions,paths=env
++    op=submit(p)['request_id'];p.run_once(ACTOR)
++    export_id=key();token=permit(env,'export_ledger',{'export_id':export_id,'destination':str(paths['exports'])},request_id=export_id)
++    result=actions.export(ACTOR,export_id,paths['exports'],token)
++    cutoff=(datetime.now(UTC)+timedelta(seconds=1)).isoformat()
++    request_id=key();payload={'export_id':export_id,'manifest_sha256':result['export']['manifest_sha256'],'older_than':cutoff}
++    token=permit(env,'prepare_archive',payload,request_id=request_id)
++    receipts=a._conn.execute('SELECT COUNT(*) FROM receipts').fetchone()[0]
++    prepared=actions.prepare_archive(ACTOR,request_id,paths['exports']/export_id,cutoff,token)
++    assert prepared['result']['plan']['eligible_for_archive']==[op]
++    assert not prepared['result']['history_deleted']
++    assert a._conn.execute('SELECT COUNT(*) FROM receipts').fetchone()[0]==receipts+1
++    assert a.get_task(ACTOR,op)['result']['output']=='evidence'
++
++
++def test_readonly_offline_diagnosis_does_not_take_ownership(env):
++    from app.agent.recovery import inspect_offline
++    a,p,g,issuer,actions,paths=env
++    submit(p)
++    with pytest.raises(AuthorityError,match='owner_busy'):inspect_offline(paths['db'],ACTOR)
++    a.close()
++    before=paths['db'].read_bytes();journal={f.name:f.read_bytes() for f in paths['anchors'].iterdir()}
++    report=inspect_offline(paths['db'],ACTOR,ledger=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id']))
++    assert report['consistent'] and report['tasks'][0]['status']=='pending'
++    assert paths['db'].read_bytes()==before
++    assert journal=={f.name:f.read_bytes() for f in paths['anchors'].iterdir()}
++
++
++@pytest.mark.parametrize('damage',['receipt','event','outbox','invalid_identity','nested_execution','owner_order','created_at'])
++def test_unprotected_corruption_is_explained_without_completion(tmp_path,damage):
++    a=Authority(tmp_path/'state'/'db',allow_simulation=True)
++    try:
++        p=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
++        op=submit(p)['request_id']
++        if damage=='receipt':a._conn.execute('DELETE FROM receipts WHERE request_id=?',(op,))
++        elif damage=='event':a._conn.execute('DELETE FROM events WHERE request_id=?',(op,))
++        elif damage=='outbox':a._conn.execute("UPDATE outbox SET state='simulated_completed' WHERE task_id=?",(op,))
++        elif damage=='owner_order':a._conn.execute("UPDATE events SET data=replace(data,'\"generation\":1','\"generation\":0') WHERE seq=1")
++        else:
++            row=a._get('task',op,ACTOR.scope)
++            if damage=='invalid_identity':row['task_id']='invalid'
++            elif damage=='created_at':row['created_at']='invalid'
++            else:row['execution']={}
++            a._put('task',op,ACTOR.scope,row)
++        report=OperatorRecovery(a).diagnose(ACTOR)
++        assert not report['consistent'] and report['issues']
++        assert not any(t['execution_completed'] for t in report['tasks'])
++        with pytest.raises(AuthorityError,match='ledger_inconsistent'):a.readiness()
++    finally:a.close()
++
++
++def test_checkpoint_publication_io_failure_and_storage_exhaustion(env,monkeypatch):
++    import app.agent.ledger as module
++    a,p,g,issuer,actions,paths=env
++    original=module.publish_file
++    def exhausted(path,raw):
++        if path.name.endswith('.final.json'):raise OSError(28,'synthetic ENOSPC')
++        return original(path,raw)
++    monkeypatch.setattr(module,'publish_file',exhausted)
++    op=key()
++    with pytest.raises(AuthorityError,match='ledger_commit_reconcile'):submit(p,request_id=op)
++    with pytest.raises(AuthorityError,match='authority_unavailable'):a.readiness()
++    a.close();monkeypatch.setattr(module,'publish_file',original)
++    recovered=Authority(paths['db'],allow_simulation=True,ledger=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id']))
++    try:assert recovered.receipt(ACTOR,op)['result']['status']=='pending'
++    finally:recovered.close()
++
++
++def test_authenticated_synthetic_publication_preserves_identity_and_replays(env,monkeypatch):
++    a,p,g,issuer,actions,paths=env
++    op=submit(p)['request_id']
++    p._fault=lambda stage:(_ for _ in ()).throw(RuntimeError('lost publication')) if stage=='after_record' else None
++    with pytest.raises(RuntimeError):p.run_once(ACTOR)
++    a.close()
++    guarded=Authority(paths['db'],allow_simulation=True,ledger=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id']))
++    try:
++        issuer=OperatorPermits(PERMIT_KEY);actions=RecoveryActions(guarded,issuer)
++        assert guarded.get_task(ACTOR,op)['status']=='unknown'
++        now=datetime.now(UTC);request_id=key();payload={'task_id':op}
++        token=issuer.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command='publish_synthetic_evidence',payload=payload,checkpoint=guarded._ledger._head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++        result=actions.apply(ACTOR,request_id,'publish_synthetic_evidence',payload,token)
++        assert result['result']['executor_invoked'] is False
++        assert result['result']['operator_authorization']['principal']=='synthetic-operator'
++        assert guarded.get_task(ACTOR,op)['result']['operation_id']==op
++        assert actions.apply(ACTOR,request_id,'publish_synthetic_evidence',payload,token)['replayed']
++        assert OperatorRecovery(guarded).diagnose(ACTOR)['consistent']
++    finally:guarded.close()
++
++
++def test_authenticated_schedule_disable_preserves_completed_history(env):
++    a,p,g,issuer,actions,paths=env
++    template=p.schedule_template(ACTOR,'synthetic.echo',{'value':'scheduled'})
++    nominal=(datetime.now(UTC)-timedelta(seconds=30)).isoformat()
++    job=a.add_schedule(ACTOR,key(),'overdue','* * * * *','scheduled',nominal,execution=template)['result']
++    control=a.scheduler_control(ACTOR,key(),True)['result']
++    second=(datetime.fromisoformat(nominal)+timedelta(seconds=10)).isoformat()
++    first=a.admit_occurrence(ACTOR,job['job_id'],1,nominal,control['epoch'],second)['result']['task_id']
++    p.run_once(ACTOR)
++    before=a.get_task(ACTOR,first)
++    third=(datetime.fromisoformat(second)+timedelta(seconds=10)).isoformat()
++    held=a.admit_occurrence(ACTOR,job['job_id'],1,second,control['epoch'],third)['result']['task_id']
++    payload={'job_id':job['job_id']};request_id=key()
++    token=permit(env,'disable_overdue_schedule',payload,request_id=request_id)
++    result=actions.apply(ACTOR,request_id,'disable_overdue_schedule',payload,token)
++    assert not result['result']['catchup']
++    assert a.get_task(ACTOR,first)==before
++    assert a.get_task(ACTOR,held)['status']=='cancelled'
++    assert not a.list_schedules(ACTOR)[0]['enabled']
++    assert OperatorRecovery(a).diagnose(ACTOR)['consistent']
++
++
++def test_schedule_bulk_stop_does_not_rewrite_terminal_records(env):
++    a,p,g,issuer,actions,paths=env
++    nominal=(datetime.now(UTC)+timedelta(seconds=1)).isoformat()
++    job=a.add_schedule(ACTOR,key(),'schedule','* * * * *','scheduled',nominal,execution=p.schedule_template(ACTOR,'synthetic.echo',{'value':'value'}))['result']
++    control=a.scheduler_control(ACTOR,key(),True)['result']
++    op=a.admit_occurrence(ACTOR,job['job_id'],1,nominal,control['epoch'],(datetime.now(UTC)+timedelta(minutes=1)).isoformat())['result']['task_id']
++    p.run_once(ACTOR);before=a.get_task(ACTOR,op)
++    a.scheduler_control(ACTOR,key(),False)
++    a.set_schedule(ACTOR,key(),job['job_id'],removed=True)
++    assert a.get_task(ACTOR,op)==before
++
++
++def test_unknown_without_evidence_cannot_be_recovered_as_success(env):
++    a,p,g,issuer,actions,paths=env
++    op=submit(p)['request_id'];p._claim(ACTOR,op);p._unknown(ACTOR,op,a.generation,'uncertain')
++    a.cancel(ACTOR,key(),op)
++    payload={'task_id':op};request_id=key();token=permit(env,'publish_synthetic_evidence',payload,request_id=request_id)
++    with pytest.raises(AuthorityError):actions.apply(ACTOR,request_id,'publish_synthetic_evidence',payload,token)
++    assert a.get_task(ACTOR,op)['status']=='unknown' and a.get_task(ACTOR,op)['cancel_requested']
++
++
++@pytest.mark.parametrize('failure',['quota','free_space','manifest_enospc'])
++def test_export_storage_bounds_fail_closed_without_deletion(env,monkeypatch,failure):
++    import app.agent.ledger as module
++    from types import SimpleNamespace
++    a,p,g,issuer,actions,paths=env
++    op=submit(p)['request_id'];p.run_once(ACTOR)
++    export_id=key();token=permit(env,'export_ledger',{'export_id':export_id,'destination':str(paths['exports'])},request_id=export_id)
++    if failure=='quota':monkeypatch.setattr(module,'MAX_EXPORT_BYTES',1)
++    elif failure=='free_space':monkeypatch.setattr(module.os,'statvfs',lambda path:SimpleNamespace(f_bavail=0,f_frsize=4096))
++    else:
++        original=module.publish_file
++        def fail(path,raw):
++            if path.name=='COMPLETE.json':raise OSError(28,'synthetic ENOSPC')
++            return original(path,raw)
++        monkeypatch.setattr(module,'publish_file',fail)
++    with pytest.raises((AuthorityError,OSError)):actions.export(ACTOR,export_id,paths['exports'],token)
++    assert a.get_task(ACTOR,op)['status']=='simulated_completed'
++    assert a.receipt(ACTOR,export_id)['operation']=='operator_export_admit'
++    assert a.receipt(ACTOR,phase_id(export_id,'export_complete')) is None
++
++
++def test_archive_refuses_a_snapshot_that_does_not_cover_new_completed_task(env):
++    a,p,g,issuer,actions,paths=env
++    submit(p);p.run_once(ACTOR)
++    export_id=key();token=permit(env,'export_ledger',{'export_id':export_id,'destination':str(paths['exports'])},request_id=export_id)
++    result=actions.export(ACTOR,export_id,paths['exports'],token)
++    submit(p);p.run_once(ACTOR)
++    cutoff=(datetime.now(UTC)+timedelta(seconds=1)).isoformat()
++    payload={'export_id':export_id,'manifest_sha256':result['export']['manifest_sha256'],'older_than':cutoff}
++    request_id=key();token=permit(env,'prepare_archive',payload,request_id=request_id)
++    with pytest.raises(AuthorityError,match='export_does_not_cover_retention_candidate'):
++        actions.prepare_archive(ACTOR,request_id,paths['exports']/export_id,cutoff,token)
++    assert a._conn.execute("SELECT COUNT(*) FROM records WHERE kind='archive_preparation'").fetchone()[0]==0
++
++
++def test_ledger_bound_and_checkpoint_staging_bounds_fail_closed(env,monkeypatch):
++    import app.agent.ledger as module
++    a,p,g,issuer,actions,paths=env
++    submit(p)
++    monkeypatch.setattr(module,'MAX_BYTES',1)
++    with pytest.raises(AuthorityError,match='ledger_bound_exceeded'):module.digest_state(a._conn)
++    # Lowering a validation limit also invalidates the old checkpoint's
++    # declared capacity. Refusal must happen before any dispatch.
++    with pytest.raises(AuthorityError,match='checkpoint_invalid'):a.readiness()
++
++
++def test_cross_scope_diagnostics_refused(env):
++    from app.agent.authority import Actor
++    a,p,g,issuer,actions,paths=env
++    with pytest.raises(AuthorityError,match='operator_scope_required'):OperatorRecovery(a).diagnose(Actor('another-scope'))
++
++
++def test_checkpoint_staging_inventory_has_a_hard_bound(env):
++    a,p,g,issuer,actions,paths=env
++    import os
++    for number in range(33):
++        fd=os.open(paths['anchors']/f'.stage-fixture-{number}',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
++        os.close(fd)
++    with pytest.raises(AuthorityError,match='checkpoint_staging_capacity'):a.readiness()
++
++
++@pytest.mark.parametrize('field,value',[('files',[]),('checkpoint',{}),('events',[])])
++def test_authenticated_but_malformed_export_metadata_refused(env,field,value):
++    a,p,g,issuer,actions,paths=env
++    submit(p);p.run_once(ACTOR)
++    export_id=key();token=permit(env,'export_ledger',{'export_id':export_id,'destination':str(paths['exports'])},request_id=export_id)
++    actions.export(ACTOR,export_id,paths['exports'],token)
++    manifest=paths['exports']/export_id/'COMPLETE.json'
++    body=json.loads(manifest.read_text())['body'];body[field]=value
++    manifest.write_bytes(encode(g.signed(body)))
++    with pytest.raises(AuthorityError):g.verify_export(manifest.parent)
++
++
++def test_operator_permit_payload_and_lifetime_are_strict(env):
++    a,p,g,issuer,actions,paths=env
++    payload={'task_id':key()};request_id=key()
++    token=permit(env,'publish_synthetic_evidence',payload,request_id=request_id)
++    with pytest.raises(AuthorityError,match='operator_permit_binding_mismatch'):
++        actions.apply(ACTOR,request_id,'publish_synthetic_evidence',{'task_id':key()},token)
++    now=datetime.now(UTC)
++    long=permit(env,'publish_synthetic_evidence',payload,request_id=request_id,expires_at=(now+timedelta(hours=1)).isoformat())
++    with pytest.raises(AuthorityError,match='operator_permit_expired'):
++        actions.apply(ACTOR,request_id,'publish_synthetic_evidence',payload,long)
++    token['hmac_sha256']='0'*64
++    with pytest.raises(AuthorityError,match='operator_authentication_failed'):
++        actions.apply(ACTOR,request_id,'publish_synthetic_evidence',payload,token)
++
++
++def test_export_path_alias_cannot_reach_checkpoints(env):
++    a,p,g,issuer,actions,paths=env
++    alias=paths['exports']/'..'/'protected'
++    with pytest.raises(AuthorityError,match='unsafe_ledger_path'):
++        g.export(a,ACTOR,key(),alias)
++    assert all(not entry.is_dir() for entry in paths['anchors'].iterdir())
++
++
++def test_checkpoint_initialization_rejects_symlink_before_creating_children(tmp_path):
++    outside=tmp_path/'outside';outside.mkdir(mode=0o700)
++    link=tmp_path/'link';link.symlink_to(outside,target_is_directory=True)
++    with pytest.raises(AuthorityError,match='unsafe_ledger_path'):
++        LedgerGuard(link/'must-not-be-created',SYNTHETIC_KEY,key(),initialize=True)
++    assert list(outside.iterdir())==[]
++
++
++def test_physical_database_corruption_is_rejected_before_startup(env):
++    a,p,g,issuer,actions,paths=env
++    submit(p);a.close()
++    with paths['db'].open('r+b') as stream:stream.write(b'CORRUPTED SQLITE HEADER')
++    guard=LedgerGuard(paths['anchors'],SYNTHETIC_KEY,paths['store_id'])
++    with pytest.raises(AuthorityError,match='unsupported_schema'):
++        Authority(paths['db'],ledger=guard)

@@ -1,0 +1,136 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Fauthority.py%23bind_recovery_registry::app%2Fagent%2Fauthority.py%23recovery_decision_status::app%2Fagent%2Fruntime-recovery::ATTACK-CLASSES.md%23Access%20control",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "PROJECT_STATUS.md",
+        "README.md",
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/agent/branch_verification.py",
+        "app/agent/checkpoint_epochs.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "app/agent/reporter.py",
+        "app/agent/runtime.py",
+        "docs/audit_disaster_recovery.md",
+        "docs/authority_enrollment.md",
+        "docs/operator_recovery.md",
+        "docs/recovery_decisions.md",
+        "tests/synthetic_authority.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-delta-runtime",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/api.py",
+            "app/agent/runtime.py",
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/reporter.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/branch_verification.py",
+            "README.md",
+            "PROJECT_STATUS.md",
+            "docs/audit_disaster_recovery.md",
+            "docs/authority_enrollment.md",
+            "docs/operator_recovery.md",
+            "docs/recovery_decisions.md"
+          ],
+          "invariant": "Current recovery metadata remains non-activating and public/API diagnostic access retains its strongest existing credential/scope/fencing controls.",
+          "method": "source",
+          "result": "Read complete current Authority/API/runtime/reporter, changed branch/checkpoint logic and entire RecoveryRegistry in snapshot-current, compared with original capture. Authority.__init__82-95 requires an identical guard for configured registry; startup/admission still requires existing enrolled/explicitly permitted state. Lifetime flock, generation/inode/PID fences, poisoning and request/scope/payload-bound receipts are preserved. No new HTTP mutation/approval/witness routes exist; api.py77-88 separately requires a configured matching token for detailed operator diagnostics. Authority526-551 exposes only aggregate readiness and rejects unverified registry; diagnostics require local-service scope; Reporter summarizes state while explicitly denying activation. Registry results, decisions, receipts and status do not grant executor/branch activation.",
+          "artifact": null,
+          "source_snapshot": "snapshot-current"
+        },
+        {
+          "agent_id": "hunt-delta-runtime",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/runtime.py",
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/operator_cli.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "Configured registry readiness/diagnostics are aggregate or privileged as intended, expired witness blocks readiness, and failing shutdown inspection releases storage ownership.",
+          "method": "local",
+          "result": "Parent ran runtime_integration.py once in the approved snapshot-current OS sandbox. Exit0: aggregate-only readiness true; nonactivating diagnostic metadata true; wrong scope operator_scope_required; expired witness readiness recovery_reconciliation_required; close preserved synthetic inspection failure while runtime authority was cleared and SQLite/ledger lock closed. Only synthetic scratch-local keys/SQLite/reference were used; no lifespan/provider/live application or executor was started.",
+          "artifact": "agents/hunt-delta-runtime/artifacts/runtime_integration.txt",
+          "source_snapshot": "snapshot-current"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Foperator_cli.py%23recovery-registry-modes::app%2Fagent%2Foperator_cli.py%23explicit-recovery-commit::app%2Fagent%2Fruntime-recovery::DATA-ISOLATION-AND-LIFECYCLE.md%23Import%20and%20restore%20authority%20expansion",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/authority.py",
+        "app/agent/branch_verification.py",
+        "app/agent/checkpoint_epochs.py",
+        "app/agent/operator_cli.py",
+        "app/agent/recovery.py",
+        "app/agent/recovery_decisions.py",
+        "app/agent/runtime.py",
+        "docs/audit_disaster_recovery.md",
+        "docs/authority_enrollment.md",
+        "docs/operator_recovery.md",
+        "docs/recovery_decisions.md",
+        "tests/synthetic_authority.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-delta-runtime",
+          "reviewed_paths": [
+            "app/agent/operator_cli.py",
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/branch_verification.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/authority.py",
+            "docs/recovery_decisions.md",
+            "docs/audit_disaster_recovery.md",
+            "docs/authority_enrollment.md",
+            "docs/operator_recovery.md"
+          ],
+          "invariant": "Offline registry and witness mutation require explicit operator intent plus exact independently authenticated descriptors/permits; restore/proposal history cannot become a live authority.",
+          "method": "source",
+          "result": "OperatorCLI69-86 classifies every registry mutation, requires complete checkpoint configuration and --commit-recovery before descriptor/path access. Registry103-123 requires config/reference/operator-key FDs and mutation permit/payload FDs; paths and command/payload/operation identity are rechecked by service.apply. Registry466-535 binds fresh local-service v4 UUID, payload<=48000 bytes, current source head, authenticated permit, witness validity and exact durable intent; replay requires identical original permit/payload/command and only finishes the original local publication. Historical permits are authenticated independently on replay/restart, not refreshed. Full registry history checks protected intents/commits, SQL exact rows, config/registry binding and external reference ancestry; no automatic external retry, task update or executor import occurs. Branch61-80 now includes original request/task/occurrence identities and authenticated source archive/manifest; checkpoint epoch-boundary reference allowance remains tied to verified head membership and exact rollover hash. Early missing authenticate/proposal-field mismatches from the first capture are fixed in current source.",
+          "artifact": null,
+          "source_snapshot": "snapshot-current"
+        },
+        {
+          "agent_id": "hunt-delta-runtime",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/runtime.py",
+            "app/agent/recovery.py",
+            "app/agent/recovery_decisions.py",
+            "app/agent/operator_cli.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "A registry mutation lacking explicit commit must be refused before opening checkpoints or reading credential descriptors.",
+          "method": "local",
+          "result": "In parent-promoted runtime_integration.py, operator_cli.main with --record-recovery-decision and complete dummy checkpoint flag names but without --commit-recovery returned1/error explicit_recovery_commit_required. The dummy checkpoint path remained absent and the descriptor was never read. No mutation, credential, provider or production state was touched.",
+          "artifact": "agents/hunt-delta-runtime/artifacts/runtime_integration.txt",
+          "source_snapshot": "snapshot-current"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Current snapshot fixes the initial partial-integration missing OperatorPermits.authenticate and branch original-identity/source-manifest fields; do not carry those old mismatch observations as unresolved current-source defects.",
+    "Default runtime still does not load keys, enrollment context, legacy approval or registry configuration. Its stock startup remains fail-closed until separately trusted provisioning/embedding; this does not establish anonymous serving reachability for hypothesis A.",
+    "Application absolute-path filesystem helper assumptions, independent checkpoint/operator key custody, secure clock and external reference transfer remain documented deployment boundaries. No new different-UID protection or physical power-loss qualification is inferred from the registry integration.",
+    "Recovery decisions remain finite retained historical metadata. No approval, pending/expired status, renewal, receipt replay or diagnostic result was found to activate a branch or grant a real executor capability."
+  ],
+  "uncovered": []
+}

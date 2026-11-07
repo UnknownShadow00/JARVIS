@@ -1,0 +1,176 @@
+{
+  "decision": "needs_validation",
+  "record": {
+    "verdict": "needs_validation",
+    "fingerprint": "app/server.py:anonymous-loopback-authority",
+    "title": "Anonymous task access depends on an admitted loopback deployment and an excluded local principal",
+    "description": "Packaged source still permits ordinary task HTTP requests without credentials when the API token is empty and supplies the shared local-service actor. Fresh parent-isolated verification against snapshot-packaged observed genuine stock lifespan refusing its missing synthetic database before creation. Only after explicit synthetic authority binding, native in-memory requests read and cancelled one dummy task without credentials; diagnostics rejected empty-token access and configured-token task reads rejected missing credentials. These results establish conditional task-state route behavior, not an operating anonymous deployment or a cross-UID/browser exploit. Current /stop requires credentials even in empty-token mode, host resource mutation routes deny403, and a configured transport requires a token at lifespan. Those controls narrow other paths but do not wrap ordinary task reads/cancellation. Admission and local-client trust facts remain unresolved.",
+    "claimed_root_cause": "Ordinary task HTTP routes accept anonymous requests in the explicitly configured empty-token loopback mode and operate in a fixed server-owned actor namespace. This could cross a principal boundary only if an admitted serving deployment exists and a locally reachable client is excluded from its intended trust boundary.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "app/server.py",
+        "line": 251,
+        "scope": "api_token_middleware",
+        "description": "A received ordinary task HTTP request proceeds without credential verification when server.api_token is empty (251-254); /stop is independently refused at252-253. Lower-trust entrypoint status remains conditional on the unresolved serving/principal facts."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/agent/api.py",
+        "line": 111,
+        "scope": "cancel",
+        "description": "DELETE /tasks/{task_id} passes the fixed SERVICE_ACTOR and caller-selected task/request identifiers to Authority.cancel; the request ID query is constrained to canonical UUID4 form."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/agent/authority.py",
+        "line": 432,
+        "scope": "Authority.cancel",
+        "description": "After task identifier validation, the actor scope selects the task for the cancellation effect inside the fenced mutation and request-receipt transaction."
+      },
+      {
+        "kind": "sink",
+        "file": "app/agent/authority.py",
+        "line": 425,
+        "scope": "Authority._cancel",
+        "description": "For a held task, task status and outbox state become cancelled; _put at427 persists task data in the surrounding transaction. This is a task-state effect, not proof of real executor access."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "app/config.py",
+        "line": 108,
+        "description": "The API token defaults to empty. The validator at114-136 requires configured loopback host/origins in local mode and a nonempty token for remote/nonloopback mode."
+      },
+      {
+        "file": "config.yaml.example",
+        "line": 103,
+        "description": "The public example selects127.0.0.1, explicitly describes empty-token authentication being disabled for localhost-only use at109, and sets api_token empty and remote_access_enabled false at112-113."
+      },
+      {
+        "file": "app/server.py",
+        "line": 251,
+        "description": "Empty token bypasses ordinary task HTTP authentication at251-254, with a separate /stop refusal. A configured token is checked at258 using _api_token_ok and constant-time byte comparison at201."
+      },
+      {
+        "file": "app/server.py",
+        "line": 402,
+        "description": "The actual FastAPI app includes the authority router."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 7,
+        "description": "Ordinary authority HTTP routes use the fixed Actor(local-service), rather than assigning a caller-specific namespace."
+      },
+      {
+        "file": "app/agent/api.py",
+        "line": 94,
+        "description": "Operator diagnostics independently requires a configured matching Bearer credential, including when ordinary routes permit anonymous access."
+      },
+      {
+        "file": "app/main.py",
+        "line": 11,
+        "description": "The stock entrypoint serves the reviewed FastAPI app at the configured host and port."
+      },
+      {
+        "file": "app/server.py",
+        "line": 115,
+        "description": "Mandatory lifespan obtains the authority before readiness, scheduler, listeners and background startup work. A failing get_authority prevents startup."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 17,
+        "description": "The stock opener supplies only the authority database and legacy JSON paths, without ledger, enrollment witness or legacy approval."
+      },
+      {
+        "file": "app/agent/authority.py",
+        "line": 107,
+        "description": "Missing, empty or symlinked databases are refused before directory or writer-lock creation. Existing databases additionally require enrollment or explicit legacy admission at159-163."
+      },
+      {
+        "file": "app/agent/enrollment.py",
+        "line": 299,
+        "description": "An enrolled store requires the ledger guard and external witness, neither supplied by the stock opener."
+      },
+      {
+        "file": "app/agent/enrollment.py",
+        "line": 338,
+        "description": "Legacy admission requires an explicit OperatorPermits verifier/permit tuple; its verified payload binds database path, logical state and execution_disabled at343-346."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 21,
+        "description": "The documented trusted embedding/test hook can bind an admitted authority; it is not exposed as an HTTP activation endpoint."
+      },
+      {
+        "file": "tests/test_server_auth.py",
+        "line": 17,
+        "description": "The anonymous-task test at30-33 binds an explicit synthetic authority. The module TestClient at8 skips lifespan for ordinary route requests."
+      },
+      {
+        "file": "app/server.py",
+        "line": 217,
+        "description": "Present WebSocket Origin is checked against local/configured origins before either WebSocket accepts (229-237,456,533). Native HTTP Host/Origin results do not establish browser or WebSocket exploitation."
+      },
+      {
+        "file": "app/agent/authority.py",
+        "line": 307,
+        "description": "Mutations bind actor scope, operation and canonical payload to durable request receipts and detect conflicting reuse. Reads and cancellation select records within that actor scope; these controls do not assign network-client identity."
+      },
+      {
+        "file": "app/agent/api.py",
+        "line": 72,
+        "description": "A non-null transport_permit execution submission independently requires a configured matching Bearer token at75-76. This separate check does not wrap /tasks read/cancel at99-111."
+      },
+      {
+        "file": "app/agent/api.py",
+        "line": 106,
+        "description": "Task reads use SERVICE_ACTOR; get_task validates the canonical task UUID and checks actor scope through _get at authority.py:379-384."
+      },
+      {
+        "file": "app/agent/authority.py",
+        "line": 3,
+        "description": "The contract trusts local code controlling the process/database and describes Actor as a server-owned namespace rather than application authentication. No multi-user isolation baseline is promised."
+      },
+      {
+        "file": "docs/authority_enrollment.md",
+        "line": 18,
+        "description": "Documentation explicitly requires trusted embedding to bind an already verified authority and says unprovisioned default startup fails closed. This is a supported conditional embedding mechanism, not evidence of an actual serving instance."
+      },
+      {
+        "file": "docs/TARGET_HOST_READINESS.md",
+        "line": 54,
+        "description": "Loopback is explicitly the Phase2 containment boundary; future remote access requires additional identity/session/scoping controls. An excluded local principal must therefore be established rather than inferred from a generic multi-user threat model."
+      },
+      {
+        "file": "tasks/jarvis-comprehensive-security-audit-r1/agents/verify-latest-auth/artifacts/verify_auth_packaged.txt",
+        "line": 3,
+        "description": "Parent-promoted fresh snapshot-packaged sandbox output records stock_lifespan_error authority_unenrolled_or_missing, stock_database_created false, synthetic-bound native read/cancel200 and cancelled dummy task, empty-token diagnostics401, configured-token missing401/valid200, and no real socket/browser/otherUID test. The native requests use arbitrary Host and Origin; the route fixture explicitly skips lifespan."
+      },
+      {
+        "file": "app/server.py",
+        "line": 123,
+        "description": "Actual lifespan rejects a configured execution transport when the API token is empty; this additional preventing control does not require a token for an admitted authority without a configured transport."
+      },
+      {
+        "file": "app/server.py",
+        "line": 252,
+        "description": "Empty-token requests to /stop receive401 rather than reaching the worker cancellation path."
+      },
+      {
+        "file": "app/server.py",
+        "line": 340,
+        "description": "All four host resource mutation HTTP routes unconditionally return403/offline_operator_control_required."
+      }
+    ],
+    "blockers": [
+      "No actual serving deployment with an admitted authority and an empty configured token has been established. The stock opener lacks the admission context required for missing, enrolled or legacy stores; explicit synthetic binding does not demonstrate ordinary deployed startup.",
+      "No separately restricted local OS principal, excluded by the application's intended loopback trust boundary but able to reach its listener, has been established. The fresh native in-memory fixture measures neither UIDs nor listener/network namespace/ingress controls; trusted local process/database control is outside this claim.",
+      "Any browser-specific claim additionally requires a concrete permitted request shape, browser local-network/SOP behavior and actual Host/DNS/ingress facts. No browser test occurred, and present-Origin WebSocket rejection remains an independent preventing control."
+    ],
+    "validation_plan": {
+      "local": "Fresh parent-isolated snapshot-packaged evidence already verifies genuine stock startup refusal and, separately, native dummy-task read/cancel after explicit synthetic authority binding, with credentialed/diagnostics controls. Do not expand this result to working stock startup or real execution. If a supported admitted serving mode is identified, exercise its genuine lifespan with synthetic admission context, then use a disposable isolated two-UID loopback fixture to attempt exactly one unauthenticated dummy held-task read/cancel and verify missing/valid configured-token controls. Browser testing is a separate concrete request/policy experiment only if that claim remains relevant; no deployed endpoints or real stores are needed.",
+      "deployment": "The owner can inspect launch/embedding code and configuration presence without revealing secrets, opening production databases or sending service traffic: establish whether any admitted authority is actually served with an empty token, which local principals and network namespaces can reach it, whether any such principal is outside the intended trust boundary, and applicable Host/Origin/ingress restrictions. If no admitted anonymous serving mode or excluded reachable principal exists, reject the deployed access claim. Do not create credentials, provision authority, enable an executor or change deployed access merely to validate it."
+    }
+  }
+}

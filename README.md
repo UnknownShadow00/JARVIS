@@ -1,5 +1,13 @@
 # JARVIS — Local AI Assistant
 
+Current offline application milestone: [secure execution integration and readiness](tasks/jarvis-end-to-end-readiness-r1/REPORT.md).
+The actual application now integrates signed synthetic IPC, durable receipts and
+explicit offline recovery. Real tools, confirmation dispatch, dictation effects
+and host resource mutation controls are closed. Older live-readiness and tool
+results below describe historical source, not this release's live authorization.
+See [the current execution/operator contract](docs/end_to_end_readiness.md).
+
+
 Tony Stark-style AI running 100% on your hardware. No API costs. No cloud.
 
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
@@ -12,6 +20,17 @@ JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enab
 
 ## Feature Matrix
 
+Recovery proposals and decisions now have a durable authenticated offline registry,
+protected witness renewal, explicit crash reconciliation and non-activating receipts.
+See the [recovery decision guide](docs/recovery_decisions.md) and
+[sprint 5 evidence](tasks/jarvis-recovery-decisions-r1/REPORT.md).
+
+Authority enrollment now requires an explicit offline ceremony; normal startup
+never creates a missing store. [Enrollment and branch guide](docs/authority_enrollment.md)
+describes durable genesis, restart verification and read-only restored-branch
+proposals. Trusted provisioning is required before application startup. See
+[sprint 4 evidence](tasks/jarvis-authority-enrollment-r1/REPORT.md).
+
 | Phase | Name | Status | What exists now |
 |-------|------|--------|-----------------|
 | 0 | Core Brain | Complete | FastAPI server, local LLM routing, tool registry, audit logging, kill switch, config-driven model selection |
@@ -23,12 +42,25 @@ JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enab
 | 6 | Multi-Device | Partially complete | Tailscale status helper and phone PWA exist; remote access stays disabled by default |
 | 7 | Cinematic | Stubbed/deferred | UE5, Audio2Face, hologram frontend, and voice-clone hooks exist; live external runtimes are not wired |
 
+Audit continuity and disposable restoration: [current guide](docs/audit_disaster_recovery.md)
+describes opt-in checkpoint rollover, external trust references, audited archive
+verification and crash-safe reconstruction into inert disposable artifacts.
+See [sprint 3 evidence](tasks/jarvis-audit-disaster-recovery-r1/REPORT.md).
+
+Operator recovery and ledger protection: [current guide](docs/operator_recovery.md)
+provides authenticated read-only diagnostics, protected checkpoints, bounded
+exports and archive eligibility without deleting history. Real execution stays
+disabled. See [sprint 2 evidence](tasks/jarvis-operator-ledger-r1/REPORT.md).
+
 ## Hardware Requirements
 
 Task/schedule API compatibility: the current transactional authority requires a
-retained canonical full UUID for each logical mutation and returns durable
+retained canonical UUID4 for each public logical mutation and returns durable
 receipts. A committed receipt records admission or a cancellation decision;
-execution remains disabled. See [the current contract](docs/task_api.md) before
+real execution remains disabled. An explicitly enabled offline synthetic pipeline
+now connects policy, queue, execution, durable results and restart recovery; see
+[the sprint evidence](tasks/jarvis-offline-execution-r1/REPORT.md). See
+[the current contract](docs/task_api.md) before
 connecting a client. The in-repository CLI/HUD/PWA do not submit queue mutations;
 external clients remain a rollout prerequisite. Hermes integration is planned
 and cannot replace or run a parallel queue writer.
@@ -192,7 +224,7 @@ JARVIS/
 
 ## Current Status
 
-The project is usable as a local FastAPI assistant backend with tested tool routing, health/readiness checks, local HUD/PWA assets, and explicit stubs for deferred hardware-heavy integrations. Phase 4+ capabilities are not production-complete yet and should stay documented as stubs until the dedicated server, Ollama model set, and attended voice validation are ready.
+The current release is an offline, synthetic authority and execution application. Admitted startup requires trusted enrollment and witness provisioning. Real tool dispatch and host mutation controls remain closed; HUD/PWA assets and optional voice/model paths do not establish live readiness.
 
 See `PROJECT_STATUS.md` for the current verified state, run commands, blockers, and next priorities.
 

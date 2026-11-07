@@ -1,0 +1,25 @@
+--- codex1/app/agent/storage_paths.py
++++ codex2/app/agent/storage_paths.py
+@@ -17,8 +17,6 @@
+         if '..' in self.path.parts:
+             raise AuthorityError('unsafe_storage_ancestor')
+         self.identities = self._walk(create=create)
+-        if create:
+-            self.verify()
+ 
+     def _walk(self, *, create=False):
+         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+@@ -33,10 +31,9 @@
+                     except FileNotFoundError:
+                         if not create:
+                             raise
+-                        # The retained parent has already passed its permission
+-                        # checks. Never resolve mkdir through an unchecked path.
+-                        try:os.mkdir(part, mode=0o700, dir_fd=fd)
+-                        except FileExistsError:pass
++                        # The preceding iteration validated this retained parent.
++                        # Refuse races; never follow an absolute mkdir pathname.
++                        os.mkdir(part, mode=0o700, dir_fd=fd)
+                         next_fd = os.open(part, flags, dir_fd=fd)
+                     os.close(fd)
+                     fd = next_fd

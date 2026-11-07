@@ -1,0 +1,68 @@
+--- codex1/config.yaml.example
++++ codex2/config.yaml.example
+@@ -39,8 +39,8 @@
+   approval_mode: "balanced"
+ 
+   # Dry run: JARVIS narrates what it would do instead of doing it
+-  # Keep true for the offline release candidate; this flag cannot authorize real tools.
+-  dry_run: true
++  # Set true during early testing. false for normal operation.
++  dry_run: false
+ 
+   # Confidence threshold — below this, JARVIS asks before acting
+   # even on Level 1 actions
+@@ -76,7 +76,7 @@
+ 
+   # Push-to-talk fallback hotkey
+   push_to_talk_key: "ctrl+space"
+-  dictation_enabled: false
++  dictation_enabled: true
+   dictation_hotkey: "ctrl+shift+space"
+   dictation_type_out: false
+ 
+@@ -86,7 +86,7 @@
+ 
+ # ─── Boot Sequence ───────────────────────────────────────────
+ boot:
+-  enabled: false
++  enabled: true
+   music_file: "./assets/audio/boot_intro.wav"
+   music_volume: 0.7
+   animation_delay_ms: 500
+@@ -106,8 +106,9 @@
+   ue5_enabled: false  # set true when UE5 MetaHuman project is running
+   tailscale_hostname: ""   # fill in your Tailscale machine name
+   # Bearer token for all HTTP routes (except /health) and WebSocket connects.
+-  # Authority state routes refuse access when empty, including loopback.
+-  # Configure a private bearer before controlled testing; real tools remain disabled.
++  # Empty refuses authority routes (tasks, receipts, schedules, execution, /ready).
++  # Other local assistant interfaces retain legacy local mode; use a private token
++  # for the whole deployment. A token never enables real tools or host controls.
+   # Env override: JARVIS_API_TOKEN
+   api_token: ""
+   remote_access_enabled: false
+@@ -122,13 +123,13 @@
+ 
+ # Resource management controls ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, and WAKING runtime states.
+ resource_mode:
+-  enabled: false
++  enabled: true
+   idle_timeout_minutes: 10
+   deep_sleep_timeout_minutes: 60
+   keep_wake_listener_in_light_sleep: true
+   keep_wake_listener_in_deep_sleep: false
+-  auto_light_sleep: false
+-  auto_deep_sleep: false
++  auto_light_sleep: true
++  auto_deep_sleep: true
+   stop_server_on_auto_deep_sleep: true
+   preload_primary_model_on_wake: false
+   preload_keep_alive: "5m"
+@@ -220,6 +221,6 @@
+ 
+ # ─── OpenJarvis (Phase 4+ trace optimization) ────────────────
+ openjarvis:
+-  trace_logging_enabled: false   # Explicit opt-in; avoid retaining sensitive interactions by default.
++  trace_logging_enabled: true   # Always on — collect data from day one
+   optimization_enabled: false   # Off until 500+ interactions collected
+   traces_dir: "./data/traces"

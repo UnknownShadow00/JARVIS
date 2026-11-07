@@ -1,0 +1,142 @@
+........................................................................ [ 28%]
+.........................................................F........F..... [ 56%]
+...FF................................................................... [ 85%]
+......................................                                   [100%]
+=================================== FAILURES ===================================
+__________________ test_real_api_worker_receipts_and_restart ___________________
+
+env = (<app.agent.authority.Authority object at 0x77d60e4d2030>, <app.agent.execution.ExecutionPipeline object at 0x77d60e790830>)
+
+    @pytest.mark.asyncio
+    async def test_real_api_worker_receipts_and_restart(env):
+        from fastapi import FastAPI
+        from app.agent.api import router
+        a, p = env
+        runtime.bind_authority(a)
+        worker = runtime.bind_offline_execution(p.policy)
+        app = FastAPI()
+        app.include_router(router)
+        try:
+            await worker.start()
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic') as client:
+                op = key()
+                body = dict(request_id=op, goal='API pipeline', capability='synthetic.echo', payload={'value': 'through API'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
+                admitted = await client.post('/execution/tasks', json=body)
+>               assert admitted.status_code == 200
+E               assert 401 == 200
+E                +  where 401 = <Response [401 Unauthorized]>.status_code
+
+/input/tests/test_execution_pipeline.py:283: AssertionError
+___________ test_scheduled_cancellation_policy_and_stopped_admission ___________
+
+env = (<app.agent.authority.Authority object at 0x77d60e4d2140>, <app.agent.execution.ExecutionPipeline object at 0x77d60e79f6e0>)
+
+    @pytest.mark.asyncio
+    async def test_scheduled_cancellation_policy_and_stopped_admission(env):
+        from fastapi import FastAPI
+        from app.agent.api import router
+        from app.agent.scheduler import scheduler
+        a, p = env
+        runtime.bind_authority(a)
+        worker = runtime.bind_offline_execution(p.policy)
+        app = FastAPI()
+        app.include_router(router)
+        try:
+            await worker.start()
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic') as client:
+                body = dict(request_id=key(), goal='schedule', name='scheduled echo', cron_expr='* * * * *', execution=dict(capability='shell.exec', payload={'value':'no'}))
+>               assert (await client.post('/schedule/jobs', json=body)).status_code == 400
+E               assert 401 == 400
+E                +  where 401 = <Response [401 Unauthorized]>.status_code
+
+/input/tests/test_execution_pipeline.py:416: AssertionError
+________________ test_admission_body_stream_bound_precedes_json ________________
+
+env = (<app.agent.authority.Authority object at 0x77d60d35d040>, <app.agent.execution.ExecutionPipeline object at 0x77d60d319f40>)
+
+    @pytest.mark.asyncio
+    async def test_admission_body_stream_bound_precedes_json(env):
+        from fastapi import FastAPI
+        from app.agent.api import router
+        from app.agent.admission import AdmissionBodyLimit
+        a, p=env
+        runtime.bind_authority(a)
+        app=FastAPI()
+        app.include_router(router)
+        app.add_middleware(AdmissionBodyLimit)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic') as client:
+                response=await client.post('/execution/tasks',content=b'x'*262145)
+                assert response.status_code==413
+                async def chunks():
+                    yield b'x'*150000
+                    yield b'x'*150000
+                    raise AssertionError('read beyond request limit')
+                assert (await client.post('/execution/tasks',content=chunks())).status_code==413
+                assert (await client.post('/tasks',content=b'{}',headers={'content-length':'-1'})).status_code==400
+>               assert (await client.post('/tasks',json={'request_id':key(),'goal':'within bound'})).status_code==200
+E               assert 401 == 200
+E                +  where 401 = <Response [401 Unauthorized]>.status_code
+
+/input/tests/test_execution_pipeline.py:522: AssertionError
+_________ test_public_mutations_cannot_reserve_internal_phase_receipts _________
+
+env = (<app.agent.authority.Authority object at 0x77d60d35d590>, <app.agent.execution.ExecutionPipeline object at 0x77d60d3196d0>)
+
+    @pytest.mark.asyncio
+    async def test_public_mutations_cannot_reserve_internal_phase_receipts(env):
+        from fastapi import FastAPI
+        from app.agent.api import router
+        a, p=env
+        runtime.bind_authority(a)
+        worker=runtime.bind_offline_execution(p.policy)
+        app=FastAPI()
+        app.include_router(router)
+        try:
+            await worker.start()
+            await worker.stop()
+            op=submit(p)['request_id']
+            reserved=phase_id(op,'publish')
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic') as client:
+>               assert (await client.post('/tasks',json={'request_id':reserved,'goal':'reserve internal receipt'})).status_code==422
+E               assert 401 == 422
+E                +  where 401 = <Response [401 Unauthorized]>.status_code
+
+/input/tests/test_execution_pipeline.py:545: AssertionError
+=========================== short test summary info ============================
+FAILED ../input/tests/test_execution_pipeline.py::test_real_api_worker_receipts_and_restart
+FAILED ../input/tests/test_execution_pipeline.py::test_scheduled_cancellation_policy_and_stopped_admission
+FAILED ../input/tests/test_execution_pipeline.py::test_admission_body_stream_bound_precedes_json
+FAILED ../input/tests/test_execution_pipeline.py::test_public_mutations_cannot_reserve_internal_phase_receipts
+4 failed, 250 passed in 88.92s (0:01:28)
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T08:22:15.823750+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533145]",
+    "mnt_namespace": "mnt:[4026533088]",
+    "pid_namespace": "pid:[4026533091]",
+    "net_namespace": "net:[4026533093]",
+    "ipc_namespace": "ipc:[4026533090]",
+    "uts_namespace": "uts:[4026533089]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T082215720999Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T082215720999Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-release-readiness-r1/runs/20261106T082215720999Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 254,
+    "failed": 4,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T08:23:45.032550+00:00"
+}

@@ -8,6 +8,18 @@ from app.server import app
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def explicit_disposable_authority(tmp_path):
+    from app.agent import runtime
+    from synthetic_authority import fixture_authority
+    previous,worker=runtime._authority,runtime._execution_worker
+    runtime._authority=runtime._execution_worker=None
+    runtime.bind_authority(fixture_authority(tmp_path/'auth/state.sqlite'))
+    try:yield
+    finally:
+        runtime.close_authority();runtime._authority=previous;runtime._execution_worker=worker
+
+
 @pytest.fixture
 def api_token(monkeypatch) -> str:
     token = "test-secret-token"
@@ -15,10 +27,10 @@ def api_token(monkeypatch) -> str:
     return token
 
 
-def test_auth_disabled_by_default() -> None:
+def test_blank_token_does_not_grant_task_authority() -> None:
     assert settings.server.api_token == ""
     response = client.get("/tasks")
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 
 def test_missing_token_rejected(api_token: str) -> None:

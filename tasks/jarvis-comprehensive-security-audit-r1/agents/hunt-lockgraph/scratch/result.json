@@ -1,0 +1,85 @@
+{
+  "units": [
+    {
+      "coverage_id": "Dockerfile%23build-and-runtime::app%2Fconfig.py%23load_settings::deployment-and-operations::SUPPLY-CHAIN-AND-RELEASE.md%23Mutable%20and%20unbound%20build%20inputs",
+      "disposition": "blocked",
+      "reviewed_paths": [
+        ".github/workflows/tests.yml",
+        ".gitignore",
+        "Dockerfile",
+        "docker-compose.yml",
+        "frontend/electron/README.md",
+        "frontend/electron/main.js",
+        "frontend/electron/package-lock.json",
+        "frontend/electron/package.json",
+        "frontend/hologram/app.js",
+        "frontend/hologram/index.html",
+        "requirements-core.txt",
+        "requirements-desktop.txt",
+        "requirements.txt",
+        "scripts/install.ps1",
+        "scripts/install.py",
+        "scripts/install_piper.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-lockgraph",
+          "reviewed_paths": [
+            "frontend/electron/package.json",
+            "frontend/electron/package-lock.json",
+            "frontend/electron/README.md",
+            "frontend/electron/main.js",
+            ".gitignore"
+          ],
+          "invariant": "Distinguish a source-locked npm graph from an unresolved package range, and verify package/lock identity and recorded artifact bindings.",
+          "method": "source",
+          "result": "Correction to prior attempt: frontend/electron/package-lock.json exists and is lockfileVersion3. Its root name/version/dependency declaration matches package.json, and it records13 non-root package entries, all with exact versions, HTTPS registry.npmjs.org tarball URLs and well-formed SHA512 integrity values. Electron is locked42.10.1 at lines69-85, with @electron/get5.0.0, @electron-internal/extract-zip1.0.5, @types/node24.13.3 and exact transitive entries including undici7.29.0. Declared dependency ranges agree with the captured resolved versions. package.json records only start: electron ., and no hasInstallScript marker is recorded in the lock; absence of a marker does not prove npm packages contain no lifecycle code. The Electron entry exposes cli.js and install.js bins. Tarball SRI binds the listed npm tarball bytes if used by the package manager; no downloaded package contents or installed Electron binary are present in this evidence. Do not describe Electron source as having no lock, and do not turn the source lock into a deployed-version or advisory verdict.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-lockgraph",
+          "reviewed_paths": [
+            "requirements.txt",
+            "requirements-core.txt",
+            "requirements-desktop.txt",
+            "Dockerfile",
+            "docker-compose.yml",
+            ".github/workflows/tests.yml",
+            "scripts/install.py",
+            "scripts/install.ps1"
+          ],
+          "invariant": "Identify which build commands consume which reviewed dependency identities; unknown deployed inputs are not inferred from audit toolchains.",
+          "method": "source",
+          "result": "Dockerfile15-16 consumes requirements-core.txt using pip install without a hash-locked resolution; installer109-119 and CI31 consume requirements.txt, which includes separate core and desktop lower-bound specifications. No resolved/hash-locked Python graph appears in those definitions. Docker python:3.11-slim, Compose Ollama:latest/Neo4j:5.26, ubuntu-latest and action version tags are mutable identities. The CI workflow runs Python tests and has no Electron npm ci/build/release or artifact-promotion step. Documented desktop installation uses npm install with the existing source lock; no repository build evidence proves which lock, package-manager policy, downloaded binary or installed tree a deployed HUD consumed. No lower-trust supplier/registry/cache writer or compromised artifact reaching a trusted output was established. No package-manager install, registry request, dependency audit, native build or target execution was performed.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-lockgraph",
+          "reviewed_paths": [
+            "scripts/install_piper.py",
+            "frontend/hologram/index.html",
+            "frontend/hologram/app.js"
+          ],
+          "invariant": "Separate locked npm tarballs from executable/model assets fetched outside that graph.",
+          "method": "source",
+          "result": "Hologram index.html26-35 imports Three.js0.128.0 directly from unpkg and app.js imports that module; it is independent of the Electron lock. scripts/install_piper.py13-25 names a versioned Piper Windows ZIP but mutable resolve/main voice model/config URLs. download_file34-71 skips existing nonempty files and download verification101-107 checks minimum size rather than reviewed digest. extract_piper74-98 flattens each member to a basename, which prevents ordinary archive-directory traversal, but publishes directly without content-identity validation or extraction byte totals. These are source-visible reproducibility/custody hardening risks. No attacker-owned trusted supplier path, consumed substituted executable, or arbitrary extraction outside the declared directory was demonstrated; no vulnerability candidate survives.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": [
+        "Source manifest/lock review is complete, but deployed dependency qualification remains external: no inspected build/install receipt, installed package/binary inventory, image digest/SBOM, npm/Python source-policy record or applicable advisory database is supplied for the actual deployment. Electron source does have an exact13-package integrity-bearing lock graph; Python build definitions remain lower-bound specifications. The separate preexisting audit toolchain is not deployment evidence. This blocker cannot justify a CVE or supplier-compromise finding without a concrete source/runtime path and affected resource."
+      ]
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Correct the prior blanket no-lock statement: retain and review frontend/electron/package-lock.json, use a reproducible npm ci-based HUD build with a qualified Node/npm version, and bind the resulting application/binary digest and SBOM to that source lock. Do not regenerate or remove the lock merely because package.json uses a caret.",
+    "Add independently reviewed resolved/hash-locked Python core and desktop dependency sets. Pin build/container/action inputs to reviewed immutable identities and retain source-to-built-artifact receipts. No deployed CVE status was established, and no current advisory or registry scan ran in this offline source pass.",
+    "The existing npm lock records tarball integrity, not evidence of an actually installed HUD or downloaded Electron runtime. Qualify package lifecycle/install behavior and any separate binary source/checksum policy from the exact approved package/artifact before release; no such implementation was fetched or executed in this audit.",
+    "Treat Three.js0.128.0 imported from unpkg as a separate executable supplier input: vendor or independently bind the reviewed module bytes to the shipped hologram. Its versioned URL is not part of the Electron lock, and no CDN compromise was demonstrated.",
+    "For Piper/voice provisioning, pin independently reviewed digests, validate existing files instead of trusting nonempty size, bound download/extraction totals, and publish from private exclusive staging only after verification. Current basename flattening defeats ordinary zip-slip; do not report a traversal exploit from this source.",
+    "CI currently installs Python requirements and tests source; no source-visible Electron build/release or artifact promotion consumes its results. Unknown repository/runner/registry controls remain owner-observed deployment qualifications, not automatically vulnerable CI. No supplier compromise, unauthorized release, secret exposure or privileged execution was substantiated."
+  ],
+  "uncovered": []
+}

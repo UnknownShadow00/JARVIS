@@ -14,9 +14,11 @@ from app.config import settings
 from app.resource_manager import (
     read_persisted_state,
     resource_manager,
-    start_server_process,
-    terminate_jarvis_processes,
 )
+
+
+class ClientControlError(RuntimeError):
+    pass
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -31,6 +33,13 @@ def main(argv: list[str] | None = None) -> int:
             return _status(args)
         if args.command == "shutdown":
             return _shutdown(args)
+        if args.command == "tasks":
+            return _tasks(args)
+        if args.command == "recovery":
+            return _recovery(args)
+    except ClientControlError as exc:
+        print(str(exc),file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         return 130
     parser.print_help()
@@ -55,50 +64,89 @@ def build_parser() -> argparse.ArgumentParser:
     wake.add_argument("--preload", action="store_true", help="Preload the configured primary model during wake.")
     wake.add_argument("--no-preload", action="store_true", help="Skip primary model preload even if configured.")
 
+    for control in (sleep,wake):
+        control.add_argument("--offline",action="store_true",help="Compatibility flag; cannot authorize local host-control effects.")
+
     status = subparsers.add_parser("status", help="Show runtime state and resource report.")
     status.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
 
     shutdown = subparsers.add_parser("shutdown", help="Unload models and stop JARVIS-owned runtime processes.")
+    shutdown.add_argument("--offline",action="store_true",help="Compatibility flag; cannot authorize local host-control effects.")
     shutdown.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    tasks = subparsers.add_parser("tasks", help="Read durable task states from the running API.")
+    tasks.add_argument("--task-id", help="Show one canonical task UUID.")
+    tasks.add_argument("--request-id", help="Look up a durable request receipt.")
+    tasks.add_argument("--limit", type=int, default=100, help="Tasks per page (1-200).")
+    tasks.add_argument("--offset", type=int, default=0, help="Task page offset.")
+    tasks.add_argument("--status", help="Filter by the exact durable task state.")
+    recovery = subparsers.add_parser("recovery", help="Read authenticated operator recovery diagnostics; never retry or complete work.")
+    recovery.add_argument("--task-id", help="Inspect one original task UUID.")
+    recovery.add_argument("--limit", type=int, default=100)
+    recovery.add_argument("--offset", type=int, default=0)
     return parser
 
 
-def _sleep(args: argparse.Namespace) -> int:
-    if args.light:
-        payload = _post("/resource/sleep/light")
-        if payload is None:
-            payload = asyncio.run(_local_light_sleep())
-        _print_payload(payload)
-        return 0
+def _recovery(args: argparse.Namespace) -> int:
+    from app.agent.authority import AuthorityError, identifier
+    from urllib.parse import urlencode
+    if not 1<=args.limit<=200 or not 0<=args.offset<=1000000:
+        print("Invalid diagnostic pagination bounds.",file=sys.stderr)
+        return 2
+    params={"limit":args.limit,"offset":args.offset}
+    if args.task_id:
+        try:params["task_id"]=identifier(args.task_id)
+        except AuthorityError:
+            print("A canonical task UUID is required.",file=sys.stderr)
+            return 2
+    result=_get('/operator/diagnostics?'+urlencode(params))
+    if result is None:
+        print("Operator diagnostics unavailable; preserve state and original request receipts. No retry was attempted.",file=sys.stderr)
+        return 1
+    print(json.dumps(result,indent=2))
+    return 0 if result.get('consistent') else 1
 
-    payload = _post("/resource/sleep/deep")
+
+def _tasks(args: argparse.Namespace) -> int:
+    from app.agent.authority import AuthorityError, identifier
+    if args.task_id and args.request_id:
+        print("Choose either --task-id or --request-id.", file=sys.stderr)
+        return 2
+    try:
+        key = identifier(args.task_id or args.request_id) if args.task_id or args.request_id else None
+    except AuthorityError:
+        print("A canonical UUID is required.", file=sys.stderr)
+        return 2
+    path = f"/tasks/{key}" if args.task_id else f"/requests/{key}" if args.request_id else "/tasks"
+    if key is None:
+        if not 1 <= args.limit <= 200 or not 0 <= args.offset <= 1000000:
+            print("Invalid task pagination bounds.", file=sys.stderr)
+            return 2
+        from urllib.parse import urlencode
+        query = {"limit": args.limit, "offset": args.offset}
+        if args.status is not None:
+            query["status"] = args.status
+        path += "?" + urlencode(query)
+    payload = _get(path)
     if payload is None:
-        payload = asyncio.run(_local_deep_sleep(terminate=not args.no_process_stop))
-    elif not args.no_process_stop:
-        stopped = terminate_jarvis_processes()
-        payload.setdefault("actions", []).append(f"terminated_processes:{len(stopped)}")
-        payload["terminated_processes"] = stopped
+        print("Task state unavailable; reconcile using the original request UUID.", file=sys.stderr)
+        return 1
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def _sleep(args: argparse.Namespace) -> int:
+    payload=_post('/resource/sleep/light' if args.light else '/resource/sleep/deep')
+    if payload is None:raise ClientControlError('offline_host_control_disabled_no_local_fallback')
     _print_payload(payload)
     return 0
 
 
 def _wake(args: argparse.Namespace) -> int:
-    if not _server_responds():
-        start_server_process()
-        _wait_for_server()
-
-    preload: bool | None = None
-    if args.preload:
-        preload = True
-    if args.no_preload:
-        preload = False
-
-    params = {}
-    if preload is not None:
-        params["preload_primary_model"] = str(preload).lower()
-    payload = _post("/resource/wake", params=params)
-    if payload is None:
-        payload = asyncio.run(resource_manager.wake(reason="cli", preload_primary_model=preload)).__dict__
+    params={}
+    if args.preload:params['preload_primary_model']='true'
+    if args.no_preload:params['preload_primary_model']='false'
+    payload=_post('/resource/wake',params=params)
+    if payload is None:raise ClientControlError('offline_host_control_disabled_no_automatic_start')
     _print_payload(payload)
     return 0
 
@@ -122,27 +170,19 @@ def _status(args: argparse.Namespace) -> int:
 
 
 def _shutdown(args: argparse.Namespace) -> int:
-    payload = _post("/resource/shutdown")
-    if payload is None:
-        payload = asyncio.run(_local_deep_sleep(terminate=True))
-    stopped = terminate_jarvis_processes()
-    payload.setdefault("actions", []).append(f"terminated_processes:{len(stopped)}")
-    payload["terminated_processes"] = stopped
-    if args.json:
-        print(json.dumps(payload, indent=2))
-    else:
-        _print_payload(payload)
+    payload=_post('/resource/shutdown')
+    if payload is None:raise ClientControlError('offline_host_control_disabled_no_local_fallback')
+    if args.json:print(json.dumps(payload,indent=2))
+    else:_print_payload(payload)
     return 0
 
 
-async def _local_light_sleep() -> dict[str, Any]:
-    result = await resource_manager.light_sleep(reason="cli")
-    return result.__dict__
+async def _local_light_sleep() -> dict[str,Any]:
+    raise ClientControlError('offline_host_control_disabled')
 
 
-async def _local_deep_sleep(*, terminate: bool) -> dict[str, Any]:
-    result = await resource_manager.deep_sleep(reason="cli", terminate_processes=terminate)
-    return result.__dict__
+async def _local_deep_sleep(*, terminate: bool) -> dict[str,Any]:
+    raise ClientControlError('offline_host_control_disabled')
 
 
 def _base_url() -> str:
@@ -154,7 +194,8 @@ def _base_url() -> str:
 
 def _get(path: str, *, timeout: float = 3.0) -> dict[str, Any] | None:
     try:
-        response = httpx.get(f"{_base_url()}{path}", timeout=timeout)
+        headers = {"Authorization": f"Bearer {settings.server.api_token}"} if settings.server.api_token else {}
+        response = httpx.get(f"{_base_url()}{path}", timeout=timeout, headers=headers)
         response.raise_for_status()
         payload = response.json()
         return payload if isinstance(payload, dict) else {"result": payload}
@@ -163,13 +204,19 @@ def _get(path: str, *, timeout: float = 3.0) -> dict[str, Any] | None:
 
 
 def _post(path: str, *, params: dict[str, str] | None = None) -> dict[str, Any] | None:
+    headers={"Authorization":f"Bearer {settings.server.api_token}"} if settings.server.api_token else {}
     try:
-        response = httpx.post(f"{_base_url()}{path}", params=params, timeout=120.0)
+        response=httpx.post(f"{_base_url()}{path}",params=params,timeout=10.0,headers=headers)
         response.raise_for_status()
-        payload = response.json()
-        return payload if isinstance(payload, dict) else {"result": payload}
-    except Exception:
+        payload=response.json()
+        if not isinstance(payload,dict):raise ClientControlError("invalid_control_response_no_retry")
+        return payload
+    except httpx.ConnectError:
         return None
+    except httpx.HTTPStatusError as exc:
+        raise ClientControlError(f"control_api_refused_{exc.response.status_code}_no_local_fallback") from None
+    except (httpx.TransportError,ValueError):
+        raise ClientControlError("control_outcome_unknown_no_retry") from None
 
 
 def _server_responds() -> bool:

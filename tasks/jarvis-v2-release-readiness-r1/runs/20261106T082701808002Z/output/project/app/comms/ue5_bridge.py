@@ -1,0 +1,101 @@
+from __future__ import annotations
+
+import re
+import asyncio
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from typing import Any
+
+from fastapi import WebSocket
+
+
+VALID_EMOTIONS = {"neutral", "success", "concern", "thinking", "speaking", "idle"}
+DEFAULT_ANIMATIONS = {
+    "neutral": "Idle_01",
+    "success": "React_Happy",
+    "concern": "React_Worried",
+    "thinking": "Think_01",
+    "speaking": "Talk_01",
+    "idle": "Idle_02",
+}
+_EMOTION_TAG_RE = re.compile(r"\[EMOTION:([a-z_]+)\]", re.IGNORECASE)
+
+
+class UE5ConnectionManager:
+    def __init__(self) -> None:
+        self.active: list[WebSocket] = []
+        self._accepting = 0
+
+    async def connect(self, ws: WebSocket) -> bool:
+        if len(self.active) + self._accepting >= 32:
+            await self.close(ws, code=1008, reason="connection_bound")
+            return False
+        self._accepting += 1
+        try:
+            await ws.accept()
+            self.active.append(ws)
+            return True
+        finally:
+            self._accepting -= 1
+
+    def disconnect(self, ws: WebSocket) -> None:
+        if ws in self.active:
+            self.active.remove(ws)
+
+    send_timeout_seconds = 2.0
+
+    async def send(self, ws, data):
+        await asyncio.wait_for(ws.send_json(data), timeout=self.send_timeout_seconds)
+
+    async def close(self, ws, *, code=1011, reason="send_failed"):
+        try:
+            await asyncio.wait_for(ws.close(code=code, reason=reason), timeout=self.send_timeout_seconds)
+            return True
+        except Exception:
+            return False
+
+    async def broadcast(self, data: dict[str, Any]) -> None:
+        for ws in tuple(self.active):
+            try:
+                await self.send(ws, data)
+            except Exception:
+                # Endpoint finally owns registration. Failed/slow live peers
+                # remain counted until their handler actually exits.
+                await self.close(ws)
+
+
+@dataclass(slots=True)
+class EmotionEvent:
+    emotion: str
+    intensity: float
+    animation: str
+    timestamp: str
+
+
+def build_emotion_event(emotion: str, intensity: float = 1.0) -> dict[str, Any]:
+    normalized_emotion = emotion.strip().lower()
+    if normalized_emotion not in VALID_EMOTIONS:
+        normalized_emotion = "neutral"
+
+    clamped_intensity = max(0.0, min(1.0, float(intensity)))
+    event = EmotionEvent(
+        emotion=normalized_emotion,
+        intensity=clamped_intensity,
+        animation=DEFAULT_ANIMATIONS[normalized_emotion],
+        timestamp=datetime.now(UTC).isoformat(),
+    )
+    return asdict(event)
+
+
+def parse_emotion_from_reply(reply: str) -> str | None:
+    match = _EMOTION_TAG_RE.search(reply)
+    if match is None:
+        return None
+
+    emotion = match.group(1).strip().lower()
+    if emotion not in VALID_EMOTIONS:
+        return None
+    return emotion
+
+
+ue5_manager = UE5ConnectionManager()

@@ -1,0 +1,629 @@
+Fresh independent final-record verification. You did not hunt or validate this record. Current source ONLY tasks/jarvis-comprehensive-security-audit-r1/snapshot-latest. Own only tasks/jarvis-comprehensive-security-audit-r1/agents/record-latest-screenshot/scratch. No targetexecution/network/deployment/credentials/realDB/provider/PVE/VM/hardware/privileged actions. Parent owns all shared files and completion log.
+### Phase 5: Verify the final records with fresh eyes
+
+Launch one fresh `research` verifier per final `confirmed` and `needs_validation` record, in parallel. This verifier checks the structured record, not the hunter write-up, and remains inside source/local boundaries.
+
+In a `quick` run, Phase 3 and Phase 5 merge: the Phase 3 verifier also performs these record checks and returns the final schema-shaped record, so each candidate gets one fresh independent reviewer instead of two. Every other profile keeps the two passes separate. Never skip independent review of a `confirmed` record in any profile.
+
+For `confirmed`, require it to check:
+
+1. Every repository-relative trace/evidence path, line, scope, and described operation.
+2. Real entry interface and exact local input shape.
+3. Every condition, parser/policy step, source-visible preventing layer, and observed local result.
+4. Affected principal/resource and demonstrated impact.
+5. Severity separation: realistic likelihood, demonstrated impact, overall no greater than impact.
+6. Remediation strategy and any `code_changes`, including whether the fix enforces the invariant without merely moving trust.
+
+For `needs_validation`, require it to check:
+
+1. The source path is real and supports only the `claimed_root_cause` stated.
+2. Every listed blocker is decisive and not already answerable locally.
+3. The candidate names a boundary and a possible concrete result rather than a generic concern.
+4. At least one validation-plan field is present and exact. `local` uses a bounded fixture; `deployment` asks an owner to observe a configuration, identity, route, policy, or runtime fact. Do not invent a plan for an inapplicable context, and never send audit traffic to a deployment.
+5. The fingerprint matches prior/current records for the same root cause.
+
+Each verifier returns exactly one JSON object: `{"decision":"verified","fingerprint":"..."}` or `{"decision":"replace","reason":"...","record":{...}}`, with no surrounding prose. A replacement record must match its `confirmed`, `needs_validation`, or `rejected` schema branch. Treat a malformed or prose-wrapped Phase 5 result the same way as in Phase 3: discard it without repairing it and re-run with a fresh verifier when the budget permits.
+
+Do not apply a Phase 5 replacement as final when it promotes a record to a stronger verdict, including any promotion to `confirmed`, or materially changes the root cause, trace, execution input or observed result, demonstrated impact, or severity. Give that complete replacement to a new independent verifier that did not hunt, perform Phase 3 validation, or propose the Phase 5 replacement. The new verifier rechecks the current source and independently reproduces any decisive local result under the execution boundary, then returns `verified` or another replacement. Apply a material replacement only after this fresh verification. If another material replacement results, repeat with a fresh verifier. If budget or independence is unavailable, remove the disputed record from `findings.json`, keep its ledger unit as an unresolved candidate, and set `run_status: "incomplete"` with an exact `incomplete_reason`. Non-material wording or repository-line corrections may be applied directly when they do not change meaning or evidence.
+
+After every applied replacement, rerun both validators and update linked ledger decisions. If a final verifier identifies a separate root cause, assign a new fingerprint and send it through independent candidate validation before inclusion. Set `run_status: "complete"` only when every ledger candidate has an independent final disposition and every retained record passes Phase 5.
+
+Do not verify only `confirmed` records. A misleading `needs_validation` handoff wastes owner time and can preserve a false premise.
+
+
+FINAL RECORD
+{
+  "verdict": "rejected",
+  "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+  "title": "Shared temporary screenshot output is unreachable through current application dispatch",
+  "description": "The unchanged capture helper still accepts a preexisting temporary directory and passes a predictable PNG pathname to mss. However, snapshot-latest unconditionally refuses real screenshot and vision execution in both chat processing and every registry compatibility interface. Native voice enters those same blocked processing helpers. Source review found no independently active application caller of screenshot capture, screen analysis, YOLO screen detection or ActionVerifier. The readiness utility's direct screenshot call explicitly forces dry-run mode. The earlier claim of a victim capture reachable through current application/native dispatch is therefore rejected; no screenshot, cross-UID disclosure or file overwrite was executed or observed.",
+  "claimed_root_cause": "Generated screenshot storage accepts preexisting directory and leaf path state without ownership or mode validation or descriptor-bound exclusive publication. This remains a dormant helper pattern, but the current application does not expose an active victim capture path to the proposed lower-trust principal.",
+  "trace": [
+    {
+      "kind": "entrypoint",
+      "file": "app/server.py",
+      "line": 378,
+      "scope": "chat",
+      "description": "The HTTP chat handler accepts a client message and, after the awake check, passes req.message to _process at line 390. This source route is not evidence that stock authority startup succeeds."
+    },
+    {
+      "kind": "propagation",
+      "file": "app/server.py",
+      "line": 601,
+      "scope": "_process",
+      "description": "The attempted path stops here: use_tool, confirm_action and vision intents return the real-execution-disabled response at line 602 before importing or invoking a screenshot tool."
+    },
+    {
+      "kind": "sink",
+      "file": "app/computer/screenshot.py",
+      "line": 32,
+      "scope": "capture",
+      "description": "The retained helper delegates PNG publication to mss.tools.to_png using an absolute pathname. This is the historical claimed sink, disconnected from the current application dispatch trace by the unconditional refusal."
+    }
+  ],
+  "evidence": [
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 24,
+      "description": "The helper selects tempfile.gettempdir()/jarvis_screenshots by default and accepts preexisting directory state through mkdir(exist_ok=True) at line 25. These bytes establish a storage pattern, not an active call."
+    },
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 27,
+      "description": "The basename uses second-resolution time; line 28 makes it absolute and line 32 passes it to the PNG writer without an application-created exclusive descriptor."
+    },
+    {
+      "file": "app/computer/screenshot.py",
+      "line": 19,
+      "description": "A direct trusted helper call additionally requires mss; an unavailable import raises before directory selection or pixel capture."
+    },
+    {
+      "file": "app/tools/registry.py",
+      "line": 158,
+      "description": "ToolRegistry.call unconditionally raises real_execution_disabled_independent_authorization_required. execute delegates to it at line 168; confirmed flags and dry-run configuration cannot activate an effect."
+    },
+    {
+      "file": "app/tools/registry.py",
+      "line": 59,
+      "description": "Module-level and instance TOOLS entries use a callable that unconditionally refuses execution."
+    },
+    {
+      "file": "app/tools/registry.py",
+      "line": 90,
+      "description": "Compatibility getters return metadata-only ModuleType objects whose execute is the disabled callable at line 98, rather than importing and returning a raw effect-capable tool."
+    },
+    {
+      "file": "app/server.py",
+      "line": 670,
+      "description": "Streaming chat returns None for use_tool, confirm_action and vision intents; the fallback _process then refuses them at lines 601-602."
+    },
+    {
+      "file": "app/voice/audio_stream.py",
+      "line": 96,
+      "description": "Native voice calls _process_stream and, on its None result, _process at line 112. Avoiding HTTP lifespan therefore does not avoid the current screenshot execution refusal."
+    },
+    {
+      "file": "app/computer/vision.py",
+      "line": 44,
+      "description": "Screen analysis retains a direct capture call after its dry-run check at line 38; the only application wrapper aliases vision.execute, and registry/chat dispatch to it is disabled. No independently active analyze caller was found in the reviewed source."
+    },
+    {
+      "file": "app/computer/yolo_detector.py",
+      "line": 47,
+      "description": "YOLO retains a conditional direct capture call after dry-run and optional-dependency checks, but repository source provides no active application call to detect. Test calls do not establish a running boundary."
+    },
+    {
+      "file": "app/computer/verifier.py",
+      "line": 10,
+      "description": "ActionVerifier retains a capture call, but source review found no application call to this verifier; merely constructing the module singleton at line 26 does not invoke capture."
+    },
+    {
+      "file": "tasks/tool_readiness_smoke.py",
+      "line": 101,
+      "description": "The extra direct screenshot utility call runs under temporary_attr(settings.safety, dry_run, True), so screenshot.execute returns before capture."
+    },
+    {
+      "file": "app/agent/execution.py",
+      "line": 88,
+      "description": "The durable execution registry accepts only the exact SyntheticExecutor type. Its execute method at lines 67-76 performs bounded echo/hash/failure computation, providing no replacement screenshot adapter."
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 17,
+      "description": "Stock lazy runtime constructs an authority without supplied ledger/enrollment or legacy authorization; a route-only test must not be treated as proof of an admitted stock deployment. The screenshot refusal also applies when a trusted embedding admits an authority."
+    },
+    {
+      "file": "tests/test_screenshot.py",
+      "line": 52,
+      "description": "The existing capture test substitutes a PNG writer and hardware context; it establishes neither installed-writer behavior nor a reachable application effect or a separate-UID filesystem result."
+    }
+  ],
+  "reason": "The decisive missing link is refuted by current source, not merely unobserved deployment configuration: normal HTTP, WebSocket and native voice tool/vision processing refuses real effects, and registry call, execute, TOOLS and getter interfaces also refuse them without importing a tool. Full-source call-site searches found only dormant library helper chains and a forced-dry-run readiness call outside those gates. Calling capture manually from newly written trusted Python would introduce the missing execution path rather than reproduce a current lower-trust application boundary. Consequently the old source-derived storage concern is not retained as a current needs_validation application finding. This rejection does not assert that capture is hardened or that a future independently authorized adapter could safely reuse its storage. Cross-UID temporary-directory control, actual installed PNG-writer behavior and an operational display were never observed, and no target code or external service was executed."
+}
+SCHEMA VERBATIM
+{
+  "$comment": "Top-level contract for findings.json. validate-findings.cjs interprets and checks this schema directly.",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "description": "A source-grounded vulnerability that was independently demonstrated.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "confirmed"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$",
+            "description": "A stable source-derived identifier that does not change between validation states."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "intended_behavior": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["authentication_level", "authorization_role", "user_interaction", "system_configuration", "network_routing", "environmental_dependency", "data_state", "timing_dependency", "third_party_dependency"]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "description"],
+              "additionalProperties": false
+            }
+          },
+          "execution": {
+            "type": "object",
+            "description": "Target-neutral reproduction in the target's native interface.",
+            "properties": {
+              "attacker_perspective": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "payloads": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "instructions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "observed_result": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["attacker_perspective", "payloads", "instructions", "observed_result"],
+            "additionalProperties": false
+          },
+          "remediation": {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "code_changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "file_name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fixed_code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file_name", "fixed_code"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["strategy"],
+            "additionalProperties": false
+          },
+          "severity": {
+            "type": "object",
+            "properties": {
+              "likelihood": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "impact": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "string",
+                    "enum": ["informational", "low", "medium", "high", "critical"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "visibleContent": true
+                  }
+                },
+                "required": ["score", "reason"],
+                "additionalProperties": false
+              },
+              "overall_severity": {
+                "type": "string",
+                "enum": ["informational", "low", "medium", "high", "critical"]
+              }
+            },
+            "required": ["likelihood", "impact", "overall_severity"],
+            "additionalProperties": false
+          },
+          "confidence": {
+            "type": "object",
+            "properties": {
+              "score": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "required": ["score", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "root_cause", "intended_behavior", "trace", "evidence", "conditions", "execution", "remediation", "severity", "confidence"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate whose decisive validation is blocked.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "needs_validation"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "visibleContent": true
+            }
+          },
+          "validation_plan": {
+            "type": "object",
+            "properties": {
+              "local": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              },
+              "deployment": {
+                "type": "string",
+                "minLength": 1,
+                "visibleContent": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "blockers", "validation_plan"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "description": "A source-grounded candidate refuted during validation.",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "const": "rejected"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "claimed_root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          },
+          "trace": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["entrypoint", "propagation", "sink"]
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["kind", "file", "line", "scope", "description"],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "visibleContent": true
+                }
+              },
+              "required": ["file", "line", "description"],
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "visibleContent": true
+          }
+        },
+        "required": ["verdict", "fingerprint", "title", "description", "claimed_root_cause", "trace", "evidence", "reason"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}
+
+ARCHITECTURE FACTS
+# JARVIS V2 audit architecture
+
+The review target is snapshot-latest: 388 public source, manifest, test and documentation files captured at 2026-11-06T06:57:07Z from dirty HEAD f4cac30259a7bf4610add2063679ae49138ee637. Exact per-file identity is in source-manifest-latest.json/source-latest.sha256; captures are not atomic across files. Earlier immutable captures and all revision-tagged checks remain retained. No compatible previous external Cloudflare ledger/findings was found. Public source from the current broker successor tasks/proxmox-automation-phase3-review-r1 is included because PROJECT_STATUS89-94 designates it current. Historical sealed evidence, runtime configuration, credentials, databases, logs, models and binaries are excluded from active-code conclusions.
+
+JARVIS is a single-operator Python/FastAPI assistant with REST, WebSocket, PWA, Electron and hologram clients, optional local inference/memory/voice and outbound notifications. Sensitive resources include task/schedule state, host processes, local desktop/files, HMAC checkpoints, enrollment custody, operator permits and proposed Proxmox serial access. Lower-trust principals include foreign browser origins, separately restricted local UIDs and untrusted artifact/model inputs. Same-UID control of the process, keys and database is trusted. Root/kernel compromise and coordinated rollback of all independent custody are outside the local integrity guarantee. No comparable baseline is established.
+
+Ordinary HTTP and WebSocket authentication uses a configured Bearer token. Empty-token loopback configuration deliberately bypasses ordinary credential checks; nonloopback configuration requires a token. Configuration validates bind host, not incoming Host. Both WebSocket paths separately validate present Origin. Ordinary authority routes assign fixed Actor(local-service); operator diagnostics and transport-permit submission independently require configured matching credentials. A browser/local UID access claim must establish its actual reachable serving mode, ingress and trust policy.
+
+Stock lifespan opens data/authority/queue.sqlite without supplying ledger/witness or explicit legacy approval. Mandatory admission therefore fails closed before serving missing/enrolled/legacy stores unless trusted embedding supplies an admitted authority. TestClient fixtures explicitly bind disposable authorities and often skip lifespan; their route results are not deployment reachability proof.
+
+Authority transactions bind scope, UUID, operation and canonical payload to durable receipts; scheduler occurrences/outbox preserve cancellation, deadlines, generation ownership and UNKNOWN state. SQLite uses lifetime flock, PID/generation/inode fencing, FULL transactions and poisoned uncertain writers. HMAC ledger/checkpoint rollover adds fresh-byte verification, authenticated continuity, external minimum references and explicit custody. Application helpers validate leaf type/UID/mode/link count and symlinks but use absolute path operations; different-UID ancestor replacement needs actual filesystem authority evidence. Current broker securefs instead uses descriptor-relative component ownership checks.
+
+Operator inherited descriptors and short-lived authenticated permits govern enrollment/genesis, checkpoint rollover, fixed-schema archive/branch verification, inert disposable restore, recovery proposals/decisions, CAS reconciliation and witness renewal. Approval never activates execution. Independent key/reference custody, latest reference retention, protected directories and time remain assumptions.
+
+Execution requires trusted simulation opt-in and exact synthetic types. New SyntheticTransport uses two fixed pure-computation endpoints through an unnamed AF_UNIX socketpair within the same process. SO_PEERCRED checks are co-location consistency, not OS privilege separation. Independent permit/request/response keys bind store, scope, UUID, goal, endpoint/capability, expiry, deadline and claim. Durable reservation precedes computation; signed report precedes reply; ambiguous delivery remains UNKNOWN. Recovery reconciles existing authenticated evidence without rerunning effects. No external real executor/provider/path/plugin is admitted.
+
+Latest legacy server dispatch denies use_tool/confirm_action/vision, confirmation route is removed, and every registry invocation/getter callback refuses before importing effect modules. Dictation clipboard/typing also always refuses without raw transcript logging. Historical confirmation and duplicate-note fixture effects are gated in this capture. Native file/shell/screenshot modules still exist for direct trusted imports/tests; no ordinary maintained chat/voice path around the current denial was found. Process-selection, VAD-cap, malformed-WS cleanup and CLI POST/fallback defects persist and were minimally reproduced against latest source; no lower-trust privilege gain or shared outage was established.
+
+The current proposed VM164-only broker/worker uses fixed catalog, AF_UNIX peer credentials, protected activation/grants, preissuance evidence, release binding, durable request/session identity, receipt serialization, pinned TLS/VM checks, separate service accounts and proposed systemd/seccomp policy. Installed role/ACL/unit/TTY/guest/API enforcement is not qualified. No production/credential/PVE/guest/real-execution/privileged Gate6K operation is authorized.
+
+Deployment includes Docker/Compose, CI, installers, backups and client launchers. Electron has an exact integrity-bearing source lock; Python/deployed graph and advisory status are unknown. Compose host loopback publication does not establish all bridge/ingress controls. Parent-only target execution uses namespace-isolated bwrap, no external network, readonly source/toolchain, empty allowlisted environment, scratch32MiB, AS512MiB, CPU10s, processes64, FDs96, file2MiB, wall25s and output256KiB. Only bounded nofollow descriptor-confined exclusive promotion retains results. No packages, heavy suites or concurrent target tests were used.
+
+Independently re-read every cited current source line and source-visible preventing control. Evidence paths beginning tasks/jarvis-comprehensive-security-audit-r1/ resolve from original project root, not the snapshot. Parent-promoted local artifacts are readable; no further execution is needed unless decisive fact can only be checked by a tiny sandbox fixture, in which case request parent. Return exact {"decision":"verified","fingerprint":"..."} or replacement wrapper specified above. Save exactJSON scratch/result.json. For screenshot this is an additional independent check of the rejected record and dormant-helper/current-call-graph distinction, beyond mandatory final verification; do not invent reachability.

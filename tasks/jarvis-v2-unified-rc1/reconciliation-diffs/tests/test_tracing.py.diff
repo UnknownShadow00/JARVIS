@@ -1,0 +1,52 @@
+--- codex1/tests/test_tracing.py
++++ codex2/tests/test_tracing.py
+@@ -20,7 +20,7 @@
+     start_trace,
+     trace_span,
+ )
+-from app.tools.registry import ToolRegistry, ToolError
++from app.tools.registry import ToolRegistry
+ 
+ 
+ @pytest.fixture
+@@ -204,10 +204,11 @@
+     secret = "private-tool-value"
+ 
+     with start_trace():
+-        with pytest.raises(ToolError, match="independent_authorization_required"):
+-            registry.call("trace_test", {"token": secret, "query": "private"}, confirmed=True)
++        result = registry.call("trace_test", {"token": secret, "query": "private"}, confirmed=True)
++    assert result.output == "ok"
+     assert secret not in trace_path.read_text(encoding="utf-8")
+-    assert not any(row['stage']=='tool' for row in _records(trace_path))
++    tool_end = next(row for row in _records(trace_path) if row["stage"] == "tool" and row["event"] == "end")
++    assert tool_end["parameter_keys"] == ["query", "token"]
+ 
+ 
+ def test_small_max_size_rotates_trace_file(trace_path: Path) -> None:
+@@ -261,5 +262,23 @@
+     from app import server
+     from app.tools.registry import ToolResult
+ 
+-    assert not hasattr(server, 'confirm_request')
+-    assert not any(getattr(route,'path','').startswith('/confirm') for route in server.app.routes)
++    original_trace = str(uuid.uuid4())
++    server._pending_confirmations["trace123"] = {  # noqa: SLF001
++        "tool": "shell",
++        "params": {"command": "echo safe"},
++        "trace_id": original_trace,
++    }
++    try:
++        with patch.object(
++            server.registry,
++            "call",
++            return_value=ToolResult(tool="shell", output="safe"),
++        ):
++            result = await server.confirm_request("trace123")
++    finally:
++        server._pending_confirmations.clear()  # noqa: SLF001
++    assert result["confirmed"] is True
++    rows = _records(trace_path)
++    assert rows
++    assert {row["trace_id"] for row in rows} == {original_trace}
++    assert any(row["stage"] == "confirmation" and row["status"] == "confirmed" for row in rows)

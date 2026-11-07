@@ -1,0 +1,15 @@
+--- codex1/tests/test_authority_http_security.py
++++ codex2/tests/test_authority_http_security.py
+@@ -145,3 +145,12 @@
+     client = TestClient(server.app)
+     assert client.get("/health").status_code == 200
+     assert client.get("/tasks").status_code == 401
++
++
++@pytest.mark.parametrize("blank", [" ", "\t"])
++def test_whitespace_configuration_never_grants_authority(admitted, monkeypatch, blank):
++    monkeypatch.setattr(settings.server, "api_token", blank)
++    app = FastAPI()
++    app.include_router(api.router)
++    response = TestClient(app).get("/tasks", headers={"Authorization": "Bearer " + blank})
++    assert response.status_code == 401

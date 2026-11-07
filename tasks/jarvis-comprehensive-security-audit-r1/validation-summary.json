@@ -1,0 +1,98 @@
+{
+  "regression_invocations": [
+    {
+      "source_snapshot": "snapshot",
+      "case_count": 10,
+      "artifact": "agents/hunt-ledger/artifacts/ledger_controls.txt",
+      "sha256": "334a936299bc4b9e372fed631ba727e9c025776e4d85e8cd89b1475257ab4d01",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot",
+      "case_count": 8,
+      "artifact": "agents/hunt-recovery/artifacts/recovery-controls.txt",
+      "sha256": "0699f27a57117a61856dac022656af0fc9d7e745c5c8f8af3ea444beaf9036c6",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot",
+      "case_count": 14,
+      "artifact": "agents/hunt-infra/artifacts/infra-controls.txt",
+      "sha256": "f633ad8e738512bb7562a43fab273ab65cdc5a224925052dd0e38b5bd4931a80",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-current",
+      "case_count": 7,
+      "artifact": "agents/parent-current/artifacts/current-regressions.txt",
+      "sha256": "5b56d7217913c66c4cb4684868ee35596540bdcfa7e8faffeff04ad10b5173f8",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-current",
+      "case_count": 10,
+      "artifact": "agents/parent-registry/artifacts/registry-controls.txt",
+      "sha256": "22d5ed0b58c0d8e8a6e5f5cb105b49cba3c66e883213ccbe83c5663b3d6e07ed",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-final",
+      "case_count": 6,
+      "artifact": "agents/hunt-final-registry/artifacts/proposed-tests.txt",
+      "sha256": "f256f2c5e7cd4ab60ca538c5d39efb2f1b67c27714fc8dcba62479825b8f0567",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-final",
+      "case_count": 2,
+      "artifact": "agents/parent-final/artifacts/hot-journal-controls.txt",
+      "sha256": "6cc6aaa4ff8a632915934766b8ffae3d2f1aed8736956d7c2984926cc3243e81",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-expanded",
+      "case_count": 8,
+      "artifact": "agents/hunt-infra-current-chain/artifacts/current_chain_controls.txt",
+      "sha256": "77d39d232626e3e59e6a916819491f0ba13a87739af70ac3ae4468c1f8dea0c8",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-expanded",
+      "case_count": 10,
+      "artifact": "agents/hunt-infra-current-files/artifacts/current-file-controls.txt",
+      "sha256": "7ada9f6e6f2e49ce5d47796c9c2d5a0ee664b54f48cfb456ce70c3ea2aba1686",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-latest",
+      "case_count": 10,
+      "artifact": "agents/hunt-latest-transport/artifacts/transport-selected-tests.txt",
+      "sha256": "f61ba8de186692cdcd4d94681ef42a1c1cf8228af6db60783726a59f0e3116b7",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-packaged",
+      "case_count": 8,
+      "artifact": "agents/hunt-packaged-transport/artifacts/packaged_transport_tests.txt",
+      "sha256": "1be9f3683c32c6f063b2cb52d50b3c704acfcf88a7ff895e06cab00447168540",
+      "result": "passed"
+    },
+    {
+      "source_snapshot": "snapshot-packaged",
+      "case_count": 8,
+      "artifact": "agents/hunt-packaged-safety/artifacts/packaged_safety_tests.txt",
+      "sha256": "3cc57bf14f92bb18899fefc892acfc0ed6dec8398e3d28441cc1902538c052d3",
+      "result": "passed"
+    }
+  ],
+  "total_selected_cases_across_captures": 101,
+  "interpretation": "Separate revision-tagged bounded checks, not a single full current-suite baseline. Additional microfixtures prove or refute precise mechanics.",
+  "current_microfixtures": [
+    "agents/verify-latest-auth/artifacts/verify_auth_packaged.txt",
+    "agents/hunt-packaged-safety/artifacts/ue5_binary_cleanup.txt"
+  ],
+  "execution": "Parent-only bwrap namespace isolation/no external network, readonly source/toolchain, empty allowlisted environment, scratch32MiB, AS512MiB, CPU10s, NPROC64, FD96, file2MiB, wall25s, stdout256KiB. Only bounded predeclared files promoted through retained no-follow directory descriptors after all sandbox processes terminate.",
+  "toolchain_inventory": "agents/parent-final/artifacts/toolchain-inventory.txt",
+  "toolchain_limit": "Preexisting audit dependencies/Python3.14.4 are not installed deployment evidence. Early stdlib checks used Python3.11. No packages installed.",
+  "qualification_limits": "No production/provider/real DB/credential/desktop/audio/PVE/VM/privileged Gate6K, physical power-loss or shared availability stress qualification."
+}

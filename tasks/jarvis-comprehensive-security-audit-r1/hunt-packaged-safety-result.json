@@ -1,0 +1,226 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fcli.py%23packaged-delta::app%2Fresource_manager.py%23current-invariants::app%2Fpackaged-safety::ATTACK-CLASSES.md%23Chained%20vulnerabilities%20and%20trust%20boundaries",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/cli.py",
+        "app/resource_manager.py",
+        "tests/test_resource_manager.py",
+        "tests/test_audit_integration_fixes.py",
+        "app/voice/vad.py",
+        "app/voice/wake_word.py",
+        "app/brain/cancel_token.py",
+        "app/server.py",
+        "app/comms/ue5_bridge.py",
+        "tests/test_server_integration.py",
+        "tests/test_cancel_token.py",
+        "app/agent/runtime.py",
+        "app/agent/api.py",
+        "app/agent/authority.py",
+        "app/tools/registry.py",
+        "app/brain/tool_params.py",
+        "app/voice/dictation.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/resource_manager.py",
+            "tests/test_resource_manager.py",
+            "tests/test_audit_integration_fixes.py"
+          ],
+          "invariant": "Process-name discovery must not confer signal authority over unrelated processes.",
+          "method": "source",
+          "result": "D3 fixed in packaged source: terminate_jarvis_processes (794-813) no longer consumes process discovery. It iterates only _owned_processes, populated by start_server_process (830-855) from the direct child it launched. Each signal checks creation time, executable, exact resolved project cwd, and current parent PID; escalation repeats the checks. Untracked or stale leases cannot reach terminate/kill. Classification now requires project cwd for runtime roles (762-771), but classification is descriptive rather than signal authorization. Positive lease identity and stale/nonowned refusal tests appear at tests/test_audit_integration_fixes.py:73-96. No target or real process was executed by this agent.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/voice/vad.py",
+            "app/voice/wake_word.py",
+            "app/brain/cancel_token.py",
+            "tests/test_audit_integration_fixes.py"
+          ],
+          "invariant": "Continuous speech, empty streams, cancellation, and callback overproduction must remain bounded.",
+          "method": "source",
+          "result": "D4 fixed in packaged source: vad.py:65 checks cancellation, absolute deadline and accumulated frame limit before every iteration, including the all-speech branch that continues at 82. timeout is validated finite and positive at 34 and capped by max_record_seconds at 49. Queue maxsize=64 and put_nowait/full-drop at 37-43 bound retained callback data; wake_word.py:60-67 applies the same queue bound. Existing integration tests supply finite dummy frames and cover continuous speech and frame-by-frame cancellation at 99-121. No microphone/model/stream was opened.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/comms/ue5_bridge.py",
+            "tests/test_audit_integration_fixes.py",
+            "tests/test_server_integration.py"
+          ],
+          "invariant": "Malformed ordinary WebSocket messages must not retain the connection in the active manager or reach chat processing as invalid types.",
+          "method": "source",
+          "result": "D5 fixed for /ws: server.py:464-475 enforces the UTF-8 8192-byte bound, JSON object/message-string shape and nonempty text; raw non-JSON text remains accepted deliberately. An outer finally at 524-526 unconditionally disconnects after parse failures, close/return, disconnect or processing exceptions. Origin/token checks precede manager.connect at 455-458. The /ue5 sibling retains exception-specific cleanup at 538-543; its source-only reliability residual is recorded as hardening, with no demonstrated shared-resource impact.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/cli.py",
+            "app/server.py",
+            "tests/test_audit_integration_fixes.py"
+          ],
+          "invariant": "HTTP refusal or ambiguous delivery must not trigger privileged local fallback or unauthorized implicit server launch.",
+          "method": "source",
+          "result": "D6 fixed for its POST root cause: cli.py:244-257 adds the configured bearer and maps only ConnectError to unavailable. HTTP status failures and ambiguous transport/JSON failures raise ClientControlError; main returns 1. sleep/shutdown and unavailable wake fallback additionally require explicit --offline. New server resource mutation routes always return 403 at 336-342, so even a bearer cannot authorize those host effects. _wake still uses the legacy broad-error health probe before possible explicit-offline launch; that functional gap has no established lower-trust privilege gain and is recorded as hardening.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/agent/runtime.py",
+            "app/agent/api.py",
+            "app/agent/authority.py",
+            "tests/test_cancel_token.py",
+            "tests/test_server_integration.py",
+            "tests/test_audit_integration_fixes.py"
+          ],
+          "invariant": "Packaged changes must preserve actual admission and authentication boundaries, without treating fixture route reachability as stock deployment proof.",
+          "method": "source",
+          "result": "Ordinary configured-token middleware semantics remain at server.py:250-261; empty-token ordinary bypass is unchanged, with a new explicit 401 for /stop. /stop can stop an execution worker at 392-399; chat cancellation only cancels response/TTS at 577-585 and does not stop that worker. Lifespan calls get_authority and readiness before scheduler/worker start at 115-128, and newly rejects a transport worker with empty token at 123-125. Stock runtime.py:13-18 supplies no ledger/enrollment/legacy approval; authority.py:105-108 rejects missing stores, 150-163 rejects missing checkpoint/enrollment/legacy approval. Tests bind disposable authority or omit lifespan and therefore do not establish production serving reachability. Task routes retain SERVICE_ACTOR and middleware reliance, while operator diagnostics and transport-permit submissions separately require a configured credential at api.py:72-76 and 85-96. No new auth bypass found in the changed functions.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/tools/registry.py",
+            "app/brain/tool_params.py",
+            "app/voice/dictation.py",
+            "tests/test_audit_integration_fixes.py",
+            "tests/test_server_integration.py"
+          ],
+          "invariant": "Legacy chat, compatibility tool getters and dictation must not regain real desktop or filesystem effects.",
+          "method": "source",
+          "result": "Unchanged denyall remains current: server.py:600-601 returns for use_tool/confirm_action/vision and streaming 669-670 returns to that refusal path. Registry call refuses at 158; execute delegates to it; get/get_tool return a metadata-only module whose execute is the denying _LazyToolCallable (90-109). Screenshot parameter handling in tool_params.py:69-71 is pure monitor parsing, and chat cannot reach it after denial; no screenshot effect through this path. Dictation handle_transcript and helper methods always refuse at dictation.py:16-25 without logging transcript. Some old integration test names/assertions still expect vision invocation or dry-run wording; those tests are stale expectations, not evidence of current effects.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/resource_manager.py",
+            "app/cli.py",
+            "app/voice/vad.py",
+            "tests/test_audit_integration_fixes.py"
+          ],
+          "invariant": "Current controls must reject the prior defect fixtures and preserve intended positive child ownership and bounded capture behavior.",
+          "method": "local",
+          "result": "Parent ran eight selected existing cases in its approved networkless resource-bounded cage against snapshot-packaged and safely promoted output: resource shutdown HTTP refusal, empty-token stop refusal, malformed /ws cleanup, CLI 401 bearer/no-fallback, untracked child survival, positive child-lease termination, continuous-speech frame cap, and active-capture cancellation. Observed 8 passed in 0.18s. Existing deprecated TestClient dependencies emitted two warnings. This is bounded fixture evidence, not stock runtime or deployed ingress qualification.",
+          "artifact": "agents/hunt-packaged-safety/artifacts/packaged_safety_tests.txt"
+        },
+        {
+          "agent_id": "hunt-packaged-safety",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/comms/ue5_bridge.py"
+          ],
+          "invariant": "UE5 session cleanup should run for malformed frame type as well as normal disconnect.",
+          "method": "local",
+          "result": "Parent ran two credentialed in-memory TestClient sessions with no lifespan or actual socket in its approved cage and promoted output. A single binary byte hex 78 raised KeyError and retained one UE5 manager entry; normal text-session disconnect retained zero. The finally cleanup added to /ws is absent from the UE5 sibling. This establishes a per-session implementation defect only; no shared outage, browser reachability, other-UID authority or security severity was established.",
+          "artifact": "agents/hunt-packaged-safety/artifacts/ue5_binary_cleanup.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "server.py:529-543 /ue5 still catches only WebSocketDisconnect. Parent's bounded in-memory check confirmed that a single binary frame raises KeyError and retains one manager entry; a normal disconnect retains zero. Add unconditional finally disconnect and reject unsupported frame types. This is a per-session reliability implementation defect (D7); no confirmed shared outage, cross-principal effect or security severity.",
+    "cli.py:160-179 wake --offline may spawn a child after _get('/health') swallowed a connected server error or timeout; following successful startup it POSTs an endpoint now permanently returning 403. Make explicit local wake and launch outcomes coherent and distinguish an unavailable connection from an ambiguous health probe. This is an operator workflow defect, not an established privilege boundary failure.",
+    "Process leases are intentionally process-local. Later CLI invocations cannot signal an earlier invocation's server child, so descriptions promising cross-process shutdown exceed current functionality. Keep the safe refusal or design an independently protected persistent lease ceremony; do not restore process-name selection.",
+    "tests/test_server_integration.py:47-63 still asserts a real vision registry invocation and 80-88 expects prior dry-run wording, despite current unconditional refusal. Update those expectations before treating that whole suite as a packaged-source regression gate."
+  ],
+  "uncovered": [],
+  "packaged_observations": {
+    "source_snapshot": "snapshot-packaged",
+    "profile": "strict (read-only source review; only assigned scratch result written)",
+    "target_execution": "No target execution by this agent. Parent performed and safely promoted eight selected cases plus a two-session in-memory UE5 cleanup check under its approved networkless bounded cage.",
+    "ue5_implementation_defect": {
+      "id": "D7",
+      "classification": "Current per-session cleanup implementation defect; no security severity assigned.",
+      "trace": [
+        {
+          "file": "app/server.py",
+          "line": 533,
+          "kind": "entrypoint",
+          "description": "Origin and matching configured bearer checks allow the credentialed /ue5 dummy session."
+        },
+        {
+          "file": "app/server.py",
+          "line": 535,
+          "kind": "propagation",
+          "description": "ue5_manager.connect accepts the session and appends it to active."
+        },
+        {
+          "file": "app/comms/ue5_bridge.py",
+          "line": 29,
+          "kind": "propagation",
+          "description": "The accepted websocket is retained in the global UE5 active list."
+        },
+        {
+          "file": "app/server.py",
+          "line": 540,
+          "kind": "propagation",
+          "description": "receive_text reads a binary frame; Starlette raises KeyError because no text field exists."
+        },
+        {
+          "file": "app/server.py",
+          "line": 541,
+          "kind": "sink",
+          "description": "Only WebSocketDisconnect invokes disconnect; KeyError exits without list removal. Parent observed retained_after_binary_session=1 versus retained_after_normal_disconnect=0."
+        }
+      ],
+      "minimum_input": "One authenticated in-memory /ue5 session, binary byte hex 78; one normal disconnect control.",
+      "artifact": "agents/hunt-packaged-safety/artifacts/ue5_binary_cleanup.txt",
+      "limits": "Parent approved cage described in assignment: no external network, empty allowlisted environment, read-only source/toolchain, scratch only, 32MiB scratch, 512MiB AS, 10s CPU, 64 processes, 96 FDs, 2MiB file size, 25s wall, 256KiB output; no actual socket or lifespan for this fixture.",
+      "smallest_fix": "Place ue5_manager.disconnect and disconnect logging in finally, and close or reject unsupported frame types.",
+      "impact_limit": "Only retention of the submitting credentialed session was observed. Repetition, shared outage, browser and other-UID reachability were not tested."
+    },
+    "previous_defects": [
+      {
+        "id": "D3",
+        "status": "fixed_in_current_source",
+        "control": "Positive in-process child lease replaces process discovery as signal authority; identity checked again before escalation."
+      },
+      {
+        "id": "D4",
+        "status": "fixed_in_current_source",
+        "control": "Top-of-loop total deadline/frame/cancel guard and bounded nonblocking callback queues."
+      },
+      {
+        "id": "D5",
+        "status": "fixed_in_current_source_for_ws",
+        "control": "Shape/length/empty-message validation plus unconditional manager cleanup. /ue5 residual is separately scoped reliability hardening."
+      },
+      {
+        "id": "D6",
+        "status": "fixed_in_current_source_for_post_fallback",
+        "control": "Bearer POST plus distinct refusal/unknown outcomes; only ConnectError may permit explicitly authorized offline fallback."
+      }
+    ],
+    "suggested_parent_checks": [
+      "Mock all four resource mutation handlers with forbidden-effect sentinels; valid bearer must receive 403 without invoking them.",
+      "Mock /stop worker/TTS/token effects; empty configured token must return 401 without invoking any effect; configured matching bearer may stop dummy worker.",
+      "Mock one /ws channel with JSON array, non-string message, empty message and 8193-byte text in separate finite cases; assert close and manager restoration without chat/model callbacks.",
+      "Mock cli.httpx.post to return 401/403/500; assert configured bearer is present, main returns 1 and offline fallback sentinel is untouched.",
+      "Mock POST to raise ConnectError or ReadTimeout; without --offline neither may fall back, and with --offline only ConnectError may call a dummy local handler.",
+      "Mock psutil.Process and _owned_processes for untracked, wrong creation time, executable, cwd and ppid cases; assert no terminate/kill call, then one valid lease terminates the mock.",
+      "Mock a valid leased process whose terminate wait times out and identity changes before escalation; assert kill is never called.",
+      "Use the finite dummy stream test_vad_continuous_speech_respects_frame_and_callback_queue_bounds; assert exactly 20 frames for timeout .6 and 200 callback attempts, with no real input stream.",
+      "Use test_vad_active_capture_cancellation_is_checked_each_frame plus invalid finite/negative timeout cases with a stream-open sentinel; assert three frames on cancellation and no stream open on invalid timeout.",
+      "Mock registry effect imports, desktop modules and transcript logger; all call/get/get_tool/TOOLS callbacks must refuse, dictation must return false, and classified use_tool/vision chat must not invoke registry or screenshot helpers."
+    ],
+    "scope_limit": "Agent performed source review only. Parent's isolated fixture checks include declared scratch-child process cases and synthetic credentials. No deployed ingress, package state, real host process signaling, microphone, desktop, provider, PVE, VM or real credentials were examined. No current security candidate survived the source-grounded boundary gate."
+  }
+}

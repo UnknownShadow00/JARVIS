@@ -1,0 +1,182 @@
+{
+  "snapshot": "snapshot-packaged",
+  "mode": "strict source review; parent owns execution and artifact promotion",
+  "comparison_baseline": "none named by architecture",
+  "result": "needs_validation",
+  "references": [
+    {
+      "file": "app/server.py",
+      "line": 251,
+      "text": "    if not settings.server.api_token:",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 111,
+      "text": "    return invoke(lambda: get_authority().cancel(SERVICE_ACTOR, request_id, task_id))",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 432,
+      "text": "        return self._mutate(actor, request_id, \"cancel\", {\"task_id\": task_id}, lambda scope: self._cancel(self._get(\"task\", task_id, scope)))",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 425,
+      "text": "            task[\"status\"] = \"cancelled\"",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/config.py",
+      "line": 108,
+      "text": "    api_token: str = \"\"",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "config.yaml.example",
+      "line": 103,
+      "text": "  host: \"127.0.0.1\"",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/server.py",
+      "line": 251,
+      "text": "    if not settings.server.api_token:",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/server.py",
+      "line": 402,
+      "text": "app.include_router(authority_router)",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 7,
+      "text": "SERVICE_ACTOR = Actor(\"local-service\")",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 94,
+      "text": "    if not expected or not secrets.compare_digest(supplied.encode(), ('Bearer '+expected).encode()):",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/main.py",
+      "line": 11,
+      "text": "    uvicorn.run(app, host=settings.server.host, port=settings.server.port)",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/server.py",
+      "line": 115,
+      "text": "    authority = get_authority()",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 17,
+      "text": "            _authority = Authority(PROJECT_ROOT / \"data/authority/queue.sqlite\", legacy_paths=(PROJECT_ROOT / \"data/agent_tasks.json\", PROJECT_ROOT / \"data/scheduled_jobs.json\"))",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 107,
+      "text": "        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/enrollment.py",
+      "line": 299,
+      "text": "    if len(rows) != 1 or guard is None or type(witness) is not dict:",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/enrollment.py",
+      "line": 338,
+      "text": "    if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/runtime.py",
+      "line": 21,
+      "text": "def bind_authority(authority):",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "tests/test_server_auth.py",
+      "line": 17,
+      "text": "    runtime.bind_authority(fixture_authority(tmp_path/'auth/state.sqlite'))",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/server.py",
+      "line": 217,
+      "text": "def _ws_origin_allowed(websocket: WebSocket) -> bool:",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 307,
+      "text": "    def _mutate(self, actor, request_id, operation, payload, effect):",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 72,
+      "text": "    if request.transport_permit is not None:",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/api.py",
+      "line": 106,
+      "text": "    return invoke(lambda: get_authority().get_task(SERVICE_ACTOR, task_id))",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "app/agent/authority.py",
+      "line": 3,
+      "text": "Local code controlling this process/database is trusted. Actor is a server-owned",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "docs/authority_enrollment.md",
+      "line": 18,
+      "text": "the same custody evidence before admission/dispatch. Default runtime startup does",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "docs/TARGET_HOST_READINESS.md",
+      "line": 54,
+      "text": "Loopback is the Phase 2 containment boundary, not a multi-device authentication system. Before phone or remote access, Phase 11 must add device identities, authenticated sessions, scoped authority, requester-bound approvals, nonces, expiry, revocation, and Tailscale transport. Do not solve those concerns by exposing an unauthenticated loopback-era service.",
+      "same_bytes_as_latest": true
+    },
+    {
+      "file": "tasks/jarvis-comprehensive-security-audit-r1/agents/verify-latest-auth/artifacts/verify_auth_packaged.txt",
+      "line": 3,
+      "text": "{\"arbitrary_host_and_origin_native_cancel\": 200, \"arbitrary_host_and_origin_native_read\": 200, \"conditional_fixture\": \"explicitly bound synthetic authority; route checks skip lifespan\", \"configured_token_missing_header\": 401, \"configured_token_valid_header\": 200, \"dummy_task_state\": \"cancelled\", \"operator_diagnostics_empty_token\": 401, \"real_socket_or_browser_or_other_uid_tested\": false, \"stock_database_created\": false, \"stock_lifespan_error\": \"authority_unenrolled_or_missing\"}",
+      "same_bytes_as_latest": null
+    },
+    {
+      "file": "app/server.py",
+      "line": 123,
+      "text": "        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token:",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/server.py",
+      "line": 252,
+      "text": "        if request.url.path==\"/stop\":",
+      "same_bytes_as_latest": false
+    },
+    {
+      "file": "app/server.py",
+      "line": 340,
+      "text": "async def resource_mutation_unavailable() -> Any:",
+      "same_bytes_as_latest": false
+    }
+  ]
+}

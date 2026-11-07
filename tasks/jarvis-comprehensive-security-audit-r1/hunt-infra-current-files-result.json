@@ -1,0 +1,101 @@
+{
+  "units": [
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3-review-r1%2Fsrc%2Fg6k_serial%2Fsecurefs.py::tasks%2Fproxmox-automation-phase3-review-r1%2Fsrc%2Fg6k_serial%2Fprovision.py::tasks%2Fproxmox-automation-phase3-review-r1::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "tasks/proxmox-automation-phase3-review-r1/INSTALLATION.md",
+        "tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.service",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.socket",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.service",
+        "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.socket",
+        "tasks/proxmox-automation-phase3-review-r1/src/entry.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/broker.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/policy.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+        "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/worker.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/support.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/test_preissuance.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/test_review_r1.py",
+        "tasks/proxmox-automation-phase3-review-r1/tests/test_storage.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra-current-files",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/policy.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/entry.py",
+            "tasks/proxmox-automation-phase3-review-r1/INSTALLATION.md",
+            "tasks/proxmox-automation-phase3-review-r1/LIVE-ACCEPTANCE.md",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.service",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial-precheck.socket",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.service",
+            "tasks/proxmox-automation-phase3-review-r1/deploy/g6k-serial.socket",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_preissuance.py"
+          ],
+          "invariant": "Only root-controlled protected grant/source/CA/acceptance state can admit the separate root issuance operation; delayed prompts cannot bypass current gate or disclose secrets.",
+          "method": "source",
+          "result": "securefs.py10-40 walks every component relative to retained descriptors with O_NOFOLLOW, owner and non-writable-mode checks, then validates leaf type/link/mode; read_checked bounds bytes. preissuance.py24-64 requires root-owned0600 exact-schema acceptance bound to grant/release/caller/broker/operator, absent host markers, true check booleans and <=600s validity no later than grant expiry; failure is constant. provision.py25-114 requires root/private TTY, verifies current disabled config/accounts/release/CA/gate before reservation, uses exclusive0600 output under checked state descriptor, revalidates all policy after prompts before fixed TLS dial, never retries/overwrites/prints credentials. Existing partial output is preserved. Runtime precheck construct cannot load ledger/token or construct real transport. Installed root-owned interpreter/paths and actual principal qualification remain deployment prerequisites.",
+          "artifact": null,
+          "source_snapshot": "snapshot-expanded"
+        },
+        {
+          "agent_id": "hunt-infra-current-files",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/worker.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/support.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_storage.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_review_r1.py"
+          ],
+          "invariant": "Private journal operations reserve request identity before inspection and retain ambiguity/receipt halt, while source filesystem checks prevent lower-UID path substitution under their stated ownership model.",
+          "method": "source",
+          "result": "journal.py25-52 initializes only exclusive no-follow files; Ledger validates private directory/leaves and existing purpose/grant/audit chain before use. Nonblocking process/thread operation locks serialize conversations through acknowledge_held; reserve performs unique ID/capacity/revocation/uncertainty checks in BEGIN IMMEDIATE. Broker/worker callers reserve before send/inspection, preserve RESERVED/UNKNOWN on failure, and require correct authenticated UID/request receipt to release host REPORTED halt. Capacity is10000 requests with bounded IDs/actions and no reset/delete API. Root-controlled production ancestors exclude different-UID rename capability; same-UID service/database compromise is not a demonstrated privilege gain. No source-grounded candidate survived.",
+          "artifact": null,
+          "source_snapshot": "snapshot-expanded"
+        },
+        {
+          "agent_id": "hunt-infra-current-files",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/securefs.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/preissuance.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/provision.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3-review-r1/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_preissuance.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/test_storage.py",
+            "tasks/proxmox-automation-phase3-review-r1/tests/support.py"
+          ],
+          "invariant": "Current mocked preissuance rejects stale/unbound/marker/delayed-policy changes before any real credential/network effect; synthetic storage rejects unsafe paths, damaged history and incorrect receipts.",
+          "method": "local",
+          "result": "Trusted parent ran current-file-controls.py sequentially against snapshot-expanded under the approved OS cage: exit0,10 tests OK in0.052s. Five mocked preissuance methods cover exact binding/types, bounded time, forbidden markers, gate-before-output/prompt/network and policy revalidation after prompt delay. Five scratch-local storage methods cover symlink/hardlink/writable-parent/wrong-mode refusal, absent-state refusal, no-overwrite initialization, corrupt-audit refusal without repair and wrong-receipt halt. No target code executed by this reviewer; mocks are not deployed UID/ACL/TTY/kernel qualification, and no real token or operator attestation was created.",
+          "artifact": "agents/hunt-infra-current-files/artifacts/current-file-controls.txt",
+          "source_snapshot": "snapshot-expanded"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Current R1 source uses descriptor-relative all-component ownership and no-follow checks; application ledger absolute-path hypothesis B must not be conflated with this stronger helper. Actual installed UID/group/ACL/mount/interpreter/unit protection and root operator acceptance have not been qualified in this audit.",
+    "PREISSUANCE-ACCEPTED.json is root-retained operator evidence, not automated qualification or a public-key signature. Preserve its exact grant/source/UID bindings and independent escalation/canary evidence; source mocks never authorize issuance or activation.",
+    "Treat uncertain issuance as a manually inspected/revoked fixed named credential with preserved partial output; do not retry or overwrite. This audit did not issue a real token, write an operator acceptance record, inspect installed credentials, alter ACLs or touch a guest."
+  ],
+  "uncovered": []
+}

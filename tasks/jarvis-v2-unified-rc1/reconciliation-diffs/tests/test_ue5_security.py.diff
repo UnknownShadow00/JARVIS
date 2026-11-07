@@ -1,0 +1,190 @@
+--- codex1/tests/test_ue5_security.py
++++ codex2/tests/test_ue5_security.py
+@@ -22,7 +22,7 @@
+     return manager
+ 
+ 
+-async def exercise(frames, *, before_receive=None):
++async def exercise(frames, *, before_receive=None, on_send=None, endpoint=None, path="/ue5"):
+     """Use Starlette's actual protocol state machine, without a listener."""
+     incoming = iter([{"type": "websocket.connect"}, *frames])
+     sent = []
+@@ -37,11 +37,13 @@
+ 
+     async def send(message):
+         sent.append(message)
++        if on_send is not None:
++            await on_send(message)
+ 
+     ws = WebSocket(
+         {
+             "type": "websocket",
+-            "path": "/ue5",
++            "path": path,
+             "headers": [(b"authorization", ("Bearer " + TOKEN).encode())],
+             "client": ("127.0.0.1", 12345),
+             "query_string": b"",
+@@ -49,7 +51,7 @@
+         receive,
+         send,
+     )
+-    await server.ue5_endpoint(ws)
++    await (endpoint or server.ue5_endpoint)(ws)
+     return ws, sent
+ 
+ 
+@@ -59,7 +61,7 @@
+         {"type": "websocket.receive", "text": '{"type":"client-ready"}'},
+         {"type": "websocket.disconnect", "code": code},
+     ]))
+-    assert sent == [{"type": "websocket.accept", "subprotocol": None, "headers": []}]
++    assert len(sent) == 1 and sent[0]["type"] == "websocket.accept"
+     assert manager.active == []
+     manager.disconnect(ws)
+     manager.disconnect(ws)
+@@ -70,7 +72,7 @@
+ def test_binary_frames_close_cleanly(manager, payload):
+     _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
+     assert sent[-1]["type"] == "websocket.close"
+-    assert sent[-1]["code"] == 1003
++    assert sent[-1]["code"] == 1008
+     assert manager.active == []
+ 
+ 
+@@ -86,9 +88,19 @@
+     assert manager.active == []
+ 
+ 
+-def test_oversized_text_is_bounded(manager):
+-    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "text": "x" * 8193}]))
++@pytest.mark.parametrize("text", ["x" * 8193, "é" * 4097])
++def test_oversized_text_is_bounded(manager, text):
++    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "text": text}]))
+     assert sent[-1]["code"] == 1009
++    assert manager.active == []
++
++
++def test_valid_utf8_frame_at_byte_limit_is_preserved(manager):
++    _, sent = asyncio.run(exercise([
++        {"type": "websocket.receive", "text": "é" * 4096},
++        {"type": "websocket.disconnect", "code": 1000},
++    ]))
++    assert len(sent) == 1 and sent[0]["type"] == "websocket.accept"
+     assert manager.active == []
+ 
+ 
+@@ -154,7 +166,113 @@
+             ws.send_bytes(b"x")
+             with pytest.raises(WebSocketDisconnect) as closed:
+                 ws.receive_text()
+-            assert closed.value.code == 1003
++            assert closed.value.code == 1008
+         assert manager.active == []
+     assert TOKEN not in repr(events)
+     assert "authorization" not in repr(events).lower()
++
++
++def test_cancellation_during_accept_releases_pending_capacity(manager):
++    async def run():
++        accepting = asyncio.Event()
++
++        async def receive():
++            return {"type": "websocket.connect"}
++
++        async def send(message):
++            accepting.set()
++            await asyncio.Future()
++
++        ws = WebSocket({
++            "type": "websocket", "path": "/ue5",
++            "headers": [(b"authorization", ("Bearer " + TOKEN).encode())],
++            "client": ("127.0.0.1", 12345),
++        }, receive, send)
++        task = asyncio.create_task(server.ue5_endpoint(ws))
++        await asyncio.wait_for(accepting.wait(), timeout=1)
++        task.cancel()
++        with pytest.raises(asyncio.CancelledError):
++            await task
++        assert manager.active == []
++        assert manager._accepting == 0
++
++    asyncio.run(run())
++
++
++def test_connection_bound_refuses_growth_and_reclaims_capacity(manager):
++    class Client:
++        def __init__(self):
++            self.closed = None
++
++        async def accept(self):
++            pass
++
++        async def close(self, **kwargs):
++            self.closed = kwargs
++
++    async def run():
++        accepted = [Client() for _ in range(32)]
++        for client in accepted:
++            assert await manager.connect(client)
++        refused = Client()
++        assert await manager.connect(refused) is False
++        assert refused.closed["code"] == 1008
++        assert len(manager.active) == 32
++        for client in accepted:
++            manager.disconnect(client)
++            manager.disconnect(client)
++        assert manager.active == [] and manager._accepting == 0
++        assert await manager.connect(refused)
++        manager.disconnect(refused)
++        assert manager.active == []
++
++    asyncio.run(run())
++
++
++def test_slow_close_cannot_retain_registration(manager, monkeypatch):
++    monkeypatch.setattr(server, "_UE5_CLOSE_TIMEOUT", 0.01)
++
++    async def slow(message):
++        if message["type"] == "websocket.close":
++            await asyncio.Future()
++
++    _, sent = asyncio.run(exercise([
++        {"type": "websocket.receive", "bytes": b"x"},
++    ], on_send=slow))
++    assert sent[-1]["code"] == 1008
++    assert manager.active == []
++
++
++def test_close_exception_cannot_retain_registration(manager):
++    async def broken(message):
++        if message["type"] == "websocket.close":
++            raise RuntimeError("synthetic close failure")
++
++    with pytest.raises(RuntimeError, match="synthetic close failure"):
++        asyncio.run(exercise([
++            {"type": "websocket.receive", "bytes": b"x"},
++        ], on_send=broken))
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("stage", ["registration", "audit"])
++def test_sibling_chat_registration_cleanup_uses_same_lifetime_scope(manager, monkeypatch, stage):
++    chat = server.ConnectionManager()
++    monkeypatch.setattr(server, "manager", chat)
++    if stage == "registration":
++        original = chat.connect
++
++        async def interrupted(ws):
++            await original(ws)
++            raise RuntimeError("synthetic registration failure")
++
++        monkeypatch.setattr(chat, "connect", interrupted)
++    else:
++        def audit(event, data):
++            if event == "ws_connect":
++                raise RuntimeError("synthetic audit failure")
++
++        monkeypatch.setattr(server.audit, "log", audit)
++    with pytest.raises(RuntimeError, match="synthetic"):
++        asyncio.run(exercise([], endpoint=server.ws_endpoint, path=settings.server.websocket_path))
++    assert chat.active == []

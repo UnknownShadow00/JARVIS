@@ -1,0 +1,56 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fserver.py%23ws_endpoint::app%2Fserver.py%23ConnectionManager::app%2Fserver.py::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Unbounded%20buffering%20and%20cardinality",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/server.py",
+        "app/comms/ue5_bridge.py",
+        "app/config.py",
+        "app/main.py",
+        "app/resource_manager.py",
+        "app/agent/admission.py",
+        "tests/test_server_auth.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-ws",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/comms/ue5_bridge.py",
+            "app/config.py",
+            "app/main.py",
+            "app/resource_manager.py",
+            "app/agent/admission.py",
+            "tests/test_server_auth.py"
+          ],
+          "invariant": "Accepted-session malformed input must not escape teardown; distinguish a session exception/retained object from demonstrated shared-service denial.",
+          "method": "source",
+          "result": "server.py:458-460 performs Origin/token rejection before manager registration. At465-470, a parsed JSON list raises AttributeError at data.get and a dictionary message that is not text can raise TypeError in processing; only JSONDecodeError is handled. The endpoint disconnects the manager only for WebSocketDisconnect at517-519, so other exceptions bypass cleanup. manager.active has no application aggregate cap or expiry. broadcast65-73 prunes entries only after a later failed send, while disconnect_all75-84 and resource_manager415-420 provide explicit cleanup. UE5 uses the same class of disconnect-only exception cleanup but has no JSON parsing. Native app.main does not set an explicit WebSocket frame/concurrency bound; framework/proxy settings remain deployment facts. No process-wide stop, memory exhaustion, cross-user impact or production reachability is established by this trace.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-ws",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/config.py"
+          ],
+          "invariant": "After a malformed in-memory session exits, compare retained manager entries with an ordinary disconnect control.",
+          "method": "local",
+          "result": "Parent sandbox ran ws_cleanup.py successfully using exactly3 tiny TestClient sessions with a synthetic configured token and lifespan skipped. Input [] raised AttributeError and left1 manager entry after session exit. Input {\"message\":[]} raised TypeError and left1 entry. Normal disconnect left0. The awake helper was mocked true; no provider, real network, tasks or model execution occurred. This proves abnormal-teardown retention and request validation defects, not a shared-service denial-of-service result.",
+          "artifact": "agents/hunt-ws/artifacts/ws_cleanup.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Reproduced WebSocket robustness/resource defect: [] and {\"message\":[]} exit via uncaught exceptions and retain1 manager.active entry, whereas a normal disconnect retains0. This is a concrete teardown bug; no shared-service DoS severity is assigned from three bounded in-memory sessions or from missing limits alone.",
+    "At app/server.py:463-519, move manager.disconnect(websocket) into an outer finally that runs for cancellation, parse/processing errors and normal disconnect. Validate the envelope as an object and its message as a bounded string before processing; close or reject invalid payloads with a documented protocol error. Add regressions asserting manager membership returns to baseline for JSON-list, nonstring-message and unexpected-processing-exception exits.",
+    "Apply equivalent always-run teardown to /ue5 and its UE5ConnectionManager. Later broadcast cleanup and deep-sleep disconnect_all are recovery paths, not per-session teardown guarantees.",
+    "Document and enforce appropriate frame, active-session, idle and per-connection buffering bounds at the application/server ingress before enabling broader access. Existing task-admission body middleware handles three HTTP POST paths and does not bound WebSocket frames. Actual package/proxy limits and admitted deployment reachability were not tested."
+  ],
+  "uncovered": []
+}

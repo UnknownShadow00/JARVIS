@@ -1,0 +1,131 @@
+{
+  "decision": "needs_validation",
+  "record": {
+    "verdict": "needs_validation",
+    "fingerprint": "app/server.py:anonymous-loopback-authority",
+    "title": "Anonymous loopback authority access remains conditional on an admitted serving deployment",
+    "description": "Empty-token loopback mode deliberately permits ordinary HTTP requests without a credential, and authority routes assign each accepted request the shared local-service actor. An untrusted local OS principal reaching a serving instance in that mode could read or cancel an operator task. Independent parent-isolated verification of the final source exercised genuine stock lifespan with its missing synthetic database: admission failed before database creation. After explicit synthetic authority binding, native in-memory requests read and cancelled one dummy task without credentials; configured-token and operator-diagnostics controls rejected absent credentials. These results establish conditional route behavior, not a deployed or cross-UID/browser exploit. The normal opener supplies neither ledger/enrollment witness nor explicit legacy approval; serving deployment and local-client trust facts remain unresolved. Present-Origin WebSocket checks are a separate preventing control.",
+    "claimed_root_cause": "Ordinary privileged HTTP routes accept anonymous requests when the configured API token is empty, then use the server-owned service actor rather than a network-caller identity. Whether this crosses an actual lower-trust principal boundary depends on the admitted deployment and its local-client trust model.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "app/server.py",
+        "line": 239,
+        "scope": "api_token_middleware",
+        "description": "An ordinary HTTP request is passed onward without credential verification when server.api_token is empty."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/agent/api.py",
+        "line": 103,
+        "scope": "cancel",
+        "description": "DELETE /tasks/{task_id} supplies the server-owned SERVICE_ACTOR plus the caller-selected canonical task and request identities to Authority.cancel."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/agent/authority.py",
+        "line": 428,
+        "scope": "Authority.cancel",
+        "description": "The actor scope selects the task passed to the cancellation effect inside the authority mutation and receipt transaction."
+      },
+      {
+        "kind": "sink",
+        "file": "app/agent/authority.py",
+        "line": 421,
+        "scope": "Authority._cancel",
+        "description": "For a held task, status and outbox state become cancelled; _put persists the task in the surrounding fenced transaction."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "app/config.py",
+        "line": 108,
+        "description": "The API token defaults to empty; the validator at114-136 permits this only for configured loopback mode and requires a nonempty token for remote/nonloopback configuration."
+      },
+      {
+        "file": "config.yaml.example",
+        "line": 103,
+        "description": "The public example selects127.0.0.1, an empty token at112 and remote_access_enabled:false at113; its comments explicitly describe anonymous localhost-only use."
+      },
+      {
+        "file": "app/server.py",
+        "line": 240,
+        "description": "Empty configured token bypasses the ordinary HTTP credential check; nonempty token is constant-time compared through _api_token_ok."
+      },
+      {
+        "file": "app/server.py",
+        "line": 404,
+        "description": "The authority router is mounted in the actual FastAPI application."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 7,
+        "description": "Ordinary authority routes share Actor(\"local-service\"); the HTTP caller does not choose a separate actor scope."
+      },
+      {
+        "file": "app/agent/api.py",
+        "line": 86,
+        "description": "Operator diagnostics independently refuses requests unless a configured matching Bearer credential exists, including when ordinary routes allow anonymous mode."
+      },
+      {
+        "file": "app/main.py",
+        "line": 11,
+        "description": "The stock entrypoint starts the reviewed app using configured host and port."
+      },
+      {
+        "file": "app/server.py",
+        "line": 114,
+        "description": "Application lifespan must open the authority before readiness, scheduler, listeners or background startup work."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 17,
+        "description": "The default opener supplies only the database and legacy JSON paths; no ledger, enrollment witness or explicit legacy approval is supplied."
+      },
+      {
+        "file": "app/agent/authority.py",
+        "line": 107,
+        "description": "A missing, empty or symlinked authority database is refused before directory or writer-lock creation."
+      },
+      {
+        "file": "app/agent/enrollment.py",
+        "line": 299,
+        "description": "Enrolled store admission requires the external witness and ledger guard; this context is absent from the default runtime opener."
+      },
+      {
+        "file": "app/agent/enrollment.py",
+        "line": 338,
+        "description": "Legacy store admission requires an explicit OperatorPermits verifier/permit tuple; there is no automatic approval on default startup."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 21,
+        "description": "A trusted local embedding/test hook can bind an explicitly admitted authority; it is not an HTTP enrollment or activation endpoint."
+      },
+      {
+        "file": "tests/test_server_auth.py",
+        "line": 17,
+        "description": "The test demonstrating anonymous task access explicitly binds a synthetic approved authority; its TestClient at8 skips lifespan unless used as a context manager."
+      },
+      {
+        "file": "app/server.py",
+        "line": 206,
+        "description": "Present WebSocket Origin is allowlisted independently before either WebSocket accepts, so HTTP Host/CORS behavior does not prove a cross-site WebSocket bypass."
+      },
+      {
+        "file": "app/agent/authority.py",
+        "line": 303,
+        "description": "Scope, operation and canonical payload are bound into durable request receipts; these controls prevent request/scope substitution but rely on the caller identity established before the fixed service actor is assigned."
+      }
+    ],
+    "blockers": [
+      "No actual serving launch or supported deployed embedding with an admitted authority and an empty configured token has been established. The current stock runtime opener fails admission for missing/enrolled/legacy stores without the required externally supplied context; a synthetic bind does not demonstrate ordinary deployed startup.",
+      "An actual lower-trust different OS principal, excluded by the deployment trust model but able to reach this listener, has not been established. Native TestClient input does not measure OS UID, network-namespace, listener or ingress restrictions. Same-UID control of the process/database is explicitly trusted by the authority contract.",
+      "Browser exploitation additionally depends on the concrete browser/local-network policy, accepted request shape and Host/DNS/ingress behavior. No such browser test was performed; configured-token HTTP routes and foreign-origin WebSocket rejection are preventing controls."
+    ],
+    "validation_plan": {
+      "local": "The independent parent-isolated fixture has verified genuine stock lifespan refusal before database creation and conditional native read/cancel only after explicit synthetic authority binding, with configured-token and operator-diagnostics controls. Resolve any claimed usable admitted launch by exercising its actual lifespan using synthetic admission context. If that mode is relevant, use an isolated disposable two-UID/loopback fixture to test one unauthenticated held-task read/cancel and the credentialed preventing controls. Test a specific browser request shape separately under its actual local-network/SOP policy. The in-memory fixture did not create a real socket or browser session and does not measure OS-principal reachability.",
+      "deployment": "The owner can inspect launch/embedding code and configuration state without probing the service or revealing credentials: establish whether an admitted authority is actually served with an empty token, which OS principals/network namespaces can reach it, whether those principals are outside the intended trust boundary, and what ingress Host/Origin controls apply. If no serving anonymous admitted mode exists, the deployed exploit claim does not apply. Do not open production databases, extract token values or send audit traffic to production."
+    }
+  }
+}

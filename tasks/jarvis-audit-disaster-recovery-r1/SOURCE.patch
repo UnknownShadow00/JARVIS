@@ -1,0 +1,2129 @@
+--- before/PROJECT_STATUS.md
++++ after/PROJECT_STATUS.md
+@@ -1,4 +1,13 @@
+ # JARVIS Project Status
++
++Latest audit durability sprint (2026-11-05 America/Chicago; UTC evidence
++2026-11-06): [audit disaster recovery](tasks/jarvis-audit-disaster-recovery-r1/REPORT.md).
++Implemented opt-in same-key checkpoint generations, independently supplied trust
++references, durable export attestations, verified transactional reconstruction
++and authenticated offline restore/reconciliation CLI. Restored artifacts remain
++inert; UNKNOWN outcomes and all historical identities are preserved. Current
++source-bound tests, independent review, bounded benchmarks and exact limitations
++are in that report. No protected deletion, runtime migration or live activation.
+ 
+ Latest source/offline recovery sprint (2026-11-05 America/Chicago; UTC evidence
+ 2026-11-06): [operator recovery and ledger report](tasks/jarvis-operator-ledger-r1/REPORT.md).
+--- before/README.md
++++ after/README.md
+@@ -22,6 +22,11 @@
+ | 5 | Autonomous Agent | Partially complete/stubbed | Local task queue, scheduler API, reporting, Discord/Telegram stubs, approval gates; Hermes is documented but not active |
+ | 6 | Multi-Device | Partially complete | Tailscale status helper and phone PWA exist; remote access stays disabled by default |
+ | 7 | Cinematic | Stubbed/deferred | UE5, Audio2Face, hologram frontend, and voice-clone hooks exist; live external runtimes are not wired |
++
++Audit continuity and disposable restoration: [current guide](docs/audit_disaster_recovery.md)
++describes opt-in checkpoint rollover, external trust references, audited archive
++verification and crash-safe reconstruction into inert disposable artifacts.
++See [sprint 3 evidence](tasks/jarvis-audit-disaster-recovery-r1/REPORT.md).
+ 
+ Operator recovery and ledger protection: [current guide](docs/operator_recovery.md)
+ provides authenticated read-only diagnostics, protected checkpoints, bounded
+--- before/app/agent/api.py
++++ after/app/agent/api.py
+@@ -48,7 +48,7 @@
+     try:
+         return operation()
+     except AuthorityError as exc:
+-        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_")):
++        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_", "restore_", "archive_attestation_")):
+             code = 503
+         elif exc.code in {"request_conflict", "stale_occurrence"}:
+             code = 409
+--- /dev/null
++++ after/app/agent/archive_restore.py
+@@ -0,0 +1,271 @@
++"""Verified offline reconstruction into exclusive, disabled disposable artifacts.
++
++No archive SQL is executed. The source DB, original request IDs and protected
++checkpoint history are never modified. Restored snapshots are not live Authority
++branches; they require separate explicit anchoring before any runtime use.
++"""
++from __future__ import annotations
++from datetime import UTC,datetime
++import ctypes
++import hashlib
++import os
++from pathlib import Path
++import sqlite3
++import uuid
++from functools import wraps
++
++from app.agent.authority import AuthorityError,canonical,identifier
++from app.agent.ledger import (MAX_BYTES,MAX_ROWS,TABLES,encode,private_directory,read_file,
++                             publish_file,strict_json,sync_directory,digest_state)
++from app.agent.ledger_schema import SCHEMA_SQL
++from app.agent.recovery import analyze
++
++MAX_RESTORES=4
++MAX_RESTORE_BYTES=64*1024*1024
++
++
++def serialized(method):
++    @wraps(method)
++    def run(self,*args,**kwargs):
++        with self.guard._operation_mutex:return method(self,*args,**kwargs)
++    return run
++
++
++def _file_sha(path):
++    raw=read_file(path,MAX_RESTORE_BYTES)
++    return hashlib.sha256(raw).hexdigest()
++
++
++def _rename_directory(source,target):
++    libc=ctypes.CDLL(None,use_errno=True)
++    rename=getattr(libc,'renameat2',None)
++    if rename is None:raise AuthorityError('atomic_publication_unavailable')
++    rename.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint]
++    rename.restype=ctypes.c_int
++    if rename(-100,os.fsencode(source),-100,os.fsencode(target),1)!=0:
++        raise OSError(ctypes.get_errno(),'restore no-replace publication failed')
++    sync_directory(target.parent)
++
++
++def _schema():
++    conn=sqlite3.connect(':memory:')
++    try:
++        conn.executescript(SCHEMA_SQL)
++        return [list(row) for row in conn.execute("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type,name")]
++    finally:conn.close()
++
++
++def _inspect_snapshot(conn,expected,store_id):
++    if conn.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:raise AuthorityError('restore_sqlite_corrupt')
++    actual=digest_state(conn)
++    if actual['sha256']!=expected['checkpoint']['sha256'] or actual!=expected['files']['state.jsonl']:
++        raise AuthorityError('restore_logical_digest_mismatch')
++    markers=conn.execute("SELECT id,scope,data FROM records WHERE kind='ledger_config'").fetchall()
++    if len(markers)!=1 or tuple(markers[0])!=(store_id,'__authority__',canonical({'store_id':store_id,'checkpoint_required':True,'format':1})):
++        raise AuthorityError('restore_store_identity_mismatch')
++    conn.row_factory=sqlite3.Row
++    values={table:[dict(row) for row in conn.execute(f'SELECT * FROM {table} ORDER BY rowid')] for table in ('meta','ownership','control','records','receipts','events','outbox','simulation_effects')}
++    report=analyze(values,'local-service')
++    if not report['consistent']:raise AuthorityError('restore_semantic_inconsistency')
++    conn.row_factory=None
++    return {'consistent':True,'logical_state':actual,'unknown':report['unknown'],'unresolved':report['unresolved'],
++            'cancel_requested':report['cancel_requested'],'failed':report['failed'],'task_count':len(report['tasks']),
++            'execution_enabled':False,'runtime_activation_allowed':False}
++
++
++class ArchiveRestorer:
++    def __init__(self,guard,permits=None,*,fault_hook=None):
++        if not guard.recovery_enabled:raise AuthorityError('archive_restore_disabled')
++        self.guard,self.permits=guard,permits
++        self._fault=fault_hook or (lambda stage:None)
++
++    @serialized
++    def verify_archive(self,directory,expected_manifest_sha256):
++        g=self.guard
++        if g.trust_context is None:raise AuthorityError('restore_external_trust_reference_required')
++        if not g._hash(expected_manifest_sha256):raise AuthorityError('invalid_expected_manifest_hash')
++        verified=g.verify_export(directory)
++        if verified['manifest_sha256']!=expected_manifest_sha256:raise AuthorityError('archive_expected_manifest_mismatch')
++        if verified['format']!='jarvis-ledger-export-v2':raise AuthorityError('restore_checkpoint_lineage_required')
++        proof=g.verify_export_attestation(verified)
++        raw=read_file(Path(directory)/'state.jsonl',MAX_BYTES)
++        lines=raw.splitlines()
++        if not lines or strict_json(lines[0])!={'type':'schema','value':_schema()}:
++            raise AuthorityError('restore_incompatible_schema')
++        return {**verified,'completion_attestation':proof,'schema_compatible':True,'semantic_restore_verified':False,'execution_enabled':False}
++
++    def _paths(self,restore_id):
++        g=self.guard;identifier(restore_id)
++        return tuple(g.directory/f'restore-{restore_id}.{phase}.json' for phase in ('intent','prepared','final'))
++
++    def _target(self,parent,restore_id,archive,*,require_archive=True):
++        parent=private_directory(parent);archive=private_directory(archive) if require_archive else Path(archive).absolute()
++        if '..' in archive.parts:raise AuthorityError('unsafe_restore_destination')
++        g=self.guard
++        if any(parent==p or parent.is_relative_to(p) or p.is_relative_to(parent) for p in (g.directory,archive.parent)):
++            raise AuthorityError('unsafe_restore_destination')
++        return parent,parent/restore_id,parent/f'.restore-{restore_id}.pending'
++
++    def _capacity(self,parent,expected_bytes):
++        count=size=0
++        for entry in parent.iterdir():
++            count+=1
++            if count>=MAX_RESTORES:raise AuthorityError('restore_capacity_exceeded')
++            private_directory(entry)
++            members=0
++            for member in entry.iterdir():
++                members+=1
++                if members>8 or member.is_symlink() or not member.is_file():raise AuthorityError('unsafe_restore_inventory')
++                size+=member.stat().st_size
++        if size+expected_bytes*2+65536>MAX_RESTORE_BYTES:raise AuthorityError('restore_capacity_exceeded')
++        space=os.statvfs(parent)
++        if space.f_bavail*space.f_frsize<expected_bytes*2+65536:raise AuthorityError('restore_storage_exhausted')
++
++    @serialized
++    def restore(self,actor,restore_id,archive,parent,expected_manifest_sha256,permit,*,disposable=False):
++        g=self.guard
++        g._writable()
++        if not disposable:raise AuthorityError('explicit_disposable_restore_required')
++        identifier(restore_id)
++        if uuid.UUID(restore_id).version!=4 or actor.scope!='local-service':raise AuthorityError('invalid_restore_identity')
++        verified=self.verify_archive(archive,expected_manifest_sha256)
++        parent,target,stage=self._target(parent,restore_id,archive)
++        payload={'export_id':verified['export_id'],'manifest_sha256':expected_manifest_sha256,'target_parent':str(parent),'restore_id':restore_id}
++        if self.permits is None:raise AuthorityError('operator_authentication_required')
++        auth=self.permits.verify(permit,actor,restore_id,'restore_archive',payload)
++        head,pending,_=g.history()
++        if pending or auth['checkpoint']!=head:raise AuthorityError('stale_operator_permit')
++        intent_path,prepared_path,final_path=self._paths(restore_id)
++        if intent_path.exists() or target.exists() or stage.exists():raise AuthorityError('restore_already_exists_reconcile')
++        if len(list(g.directory.glob('restore-*.intent.json')))>=64:raise AuthorityError('restore_capacity_exceeded')
++        self._capacity(parent,verified['files']['state.jsonl']['bytes'])
++        intent=dict(format='jarvis-restore-intent-v1',store_id=g.store_id,key_id=g.key_id,restore_id=restore_id,
++                    archive=str(private_directory(archive)),target_parent=str(parent),manifest_sha256=expected_manifest_sha256,
++                    source_checkpoint=verified['checkpoint'],source_lineage=g.checkpoint_lineage(verified['checkpoint']['sequence']),
++                    source_attestation_sha256=verified['completion_attestation']['attestation_sha256'],
++                    trusted_admission_head=head,authorization=auth,permit_sha256=hashlib.sha256(encode(permit)).hexdigest(),
++                    admitted_at=datetime.now(UTC).isoformat(),execution_enabled=False)
++        publish_file(intent_path,encode(g.signed(intent)))
++        self._fault('restore_intent_durable')
++        stage.mkdir(mode=0o700);sync_directory(parent)
++        self._fault('restore_stage_created')
++        db=stage/'state.sqlite'
++        fd=os.open(db,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
++        conn=sqlite3.connect(db,isolation_level=None)
++        try:
++            conn.execute('PRAGMA synchronous=FULL');conn.execute('PRAGMA journal_mode=DELETE')
++            conn.execute('BEGIN IMMEDIATE')
++            for statement in SCHEMA_SQL.split(';'):
++                if statement.strip():conn.execute(statement)
++            self._fault('restore_schema_created')
++            # Verification reads captured bytes; no path extraction, SQL, pickle,
++            # callbacks or table/column names are taken from the archive.
++            raw=read_file(Path(archive)/'state.jsonl',MAX_BYTES)
++            if hashlib.sha256(raw).hexdigest()!=verified['checkpoint']['sha256']:raise AuthorityError('archive_changed_during_restore')
++            for line in raw.splitlines()[1:]:
++                item=strict_json(line);table=item['table'];values=item['value']
++                if table=='sqlite_sequence':
++                    if len(values)!=3 or values[1]!='events' or type(values[2]) is not int or values[2]<0:raise AuthorityError('restore_invalid_sequence')
++                    # SQLite creates this system row while inserting events.
++                    # Reproduce its archived rowid/high-water mark exactly.
++                    changed=conn.execute('UPDATE sqlite_sequence SET rowid=?,seq=? WHERE name=?',(values[0],values[2],values[1])).rowcount
++                    if changed!=1:raise AuthorityError('restore_invalid_sequence')
++                else:
++                    if table not in TABLES:raise AuthorityError('restore_invalid_table')
++                    conn.execute(f"INSERT INTO {table} (rowid,{','.join(r[1] for r in conn.execute('PRAGMA table_info('+table+')'))}) VALUES ({','.join('?' for _ in values)})",values)
++                self._fault('restore_row_inserted')
++            self._fault('restore_before_database_commit')
++            conn.execute('COMMIT')
++            self._fault('restore_database_committed')
++            summary=_inspect_snapshot(conn,verified,g.store_id)
++        except BaseException:
++            if conn.in_transaction:conn.execute('ROLLBACK')
++            raise
++        finally:conn.close()
++        fd=os.open(db,os.O_RDONLY|os.O_NOFOLLOW)
++        try:os.fsync(fd)
++        finally:os.close(fd)
++        os.chmod(db,0o400)
++        marker=dict(format='jarvis-disposable-restore-v1',restore_id=restore_id,source_store_id=g.store_id,execution_enabled=False,runtime_activation_allowed=False)
++        publish_file(stage/'DISPOSABLE.json',encode(g.signed(marker)))
++        receipt=dict(format='jarvis-restore-prepared-v1',store_id=g.store_id,key_id=g.key_id,restore_id=restore_id,
++                     intent_sha256=hashlib.sha256(encode(g.signed(intent))).hexdigest(),manifest_sha256=expected_manifest_sha256,
++                     source_checkpoint=verified['checkpoint'],source_lineage=intent['source_lineage'],source_attestation_sha256=intent['source_attestation_sha256'],
++                     database_sha256=_file_sha(db),summary=summary,execution_enabled=False)
++        publish_file(stage/'RESTORE.json',encode(g.signed(receipt)));sync_directory(stage)
++        g._writable()
++        publish_file(prepared_path,encode(g.signed(receipt)))
++        self._fault('restore_prepared_durable')
++        return self.reconcile(restore_id)
++
++    def _validate_artifact(self,directory,receipt,verified):
++        g=self.guard;directory=private_directory(directory)
++        if set(p.name for p in directory.iterdir())!={'state.sqlite','RESTORE.json','DISPOSABLE.json'}:raise AuthorityError('restore_incomplete_artifact')
++        body=g.authenticate(strict_json(read_file(directory/'RESTORE.json')))
++        marker=g.authenticate(strict_json(read_file(directory/'DISPOSABLE.json')))
++        if body!=receipt or marker!=dict(format='jarvis-disposable-restore-v1',restore_id=receipt['restore_id'],source_store_id=g.store_id,execution_enabled=False,runtime_activation_allowed=False):raise AuthorityError('restore_artifact_binding_mismatch')
++        db=directory/'state.sqlite'
++        if db.stat().st_mode&0o222 or _file_sha(db)!=receipt['database_sha256']:raise AuthorityError('restore_database_modified')
++        conn=sqlite3.connect(db.as_uri()+'?mode=ro',uri=True)
++        try:summary=_inspect_snapshot(conn,verified,g.store_id)
++        finally:conn.close()
++        if summary!=receipt['summary']:raise AuthorityError('restore_summary_mismatch')
++        return summary
++
++    @serialized
++    def reconcile(self,restore_id):
++        """Complete only an authenticated, already prepared target. Never rebuild."""
++        g=self.guard;g._writable();identifier(restore_id)
++        intent_path,prepared_path,final_path=self._paths(restore_id)
++        intent,intent_hash=g._read(intent_path)
++        if intent.get('restore_id')!=restore_id or intent.get('store_id')!=g.store_id or intent.get('execution_enabled') is not False:raise AuthorityError('restore_intent_invalid')
++        parent,target,stage=self._target(intent['target_parent'],restore_id,intent['archive'],require_archive=False)
++        if not prepared_path.exists():raise AuthorityError('restore_incomplete_manual_quarantine')
++        receipt,receipt_hash=g._read(prepared_path)
++        verified=self._prepared_source(intent,receipt)
++        if receipt.get('intent_sha256')!=intent_hash or receipt.get('restore_id')!=restore_id or receipt.get('source_checkpoint')!=verified['checkpoint'] or receipt.get('source_attestation_sha256')!=verified['completion_attestation']['attestation_sha256']:
++            raise AuthorityError('restore_preparation_binding_mismatch')
++        if stage.exists() and target.exists():raise AuthorityError('restore_target_conflict')
++        if not target.exists():
++            self._validate_artifact(stage,receipt,verified)
++            g._writable();self._fault('restore_before_publication')
++            _rename_directory(stage,target)
++            self._fault('restore_target_published')
++        summary=self._validate_artifact(target,receipt,verified)
++        final=dict(format='jarvis-restore-final-v1',store_id=g.store_id,key_id=g.key_id,restore_id=restore_id,
++                   prepared_sha256=receipt_hash,target_parent=str(parent),target_name=restore_id,
++                   manifest_sha256=verified['manifest_sha256'],database_sha256=receipt['database_sha256'],
++                   source_checkpoint=verified['checkpoint'],source_lineage=receipt['source_lineage'],execution_enabled=False,state='committed')
++        if final_path.exists():
++            old,_=g._read(final_path)
++            if old!=final:raise AuthorityError('restore_receipt_conflict')
++            replayed=True
++        else:
++            g._writable();publish_file(final_path,encode(g.signed(final)))
++            replayed=False
++        self._fault('restore_publication_committed')
++        return {**final,'verified':True,'replayed':replayed,'summary':summary,'runtime_activation_allowed':False}
++
++    @serialized
++    def verify_restored(self,directory):
++        g=self.guard;directory=private_directory(directory);restore_id=identifier(directory.name)
++        intent_path,prepared_path,final_path=self._paths(restore_id)
++        intent,intent_hash=g._read(intent_path);prepared,prepared_hash=g._read(prepared_path);final,_=g._read(final_path)
++        if intent.get('restore_id')!=restore_id or intent.get('target_parent')!=str(directory.parent) or prepared.get('intent_sha256')!=intent_hash or final.get('prepared_sha256')!=prepared_hash or final.get('state')!='committed' or final.get('database_sha256')!=prepared.get('database_sha256') or final.get('execution_enabled') is not False:
++            raise AuthorityError('restore_receipt_binding_mismatch')
++        verified=self._prepared_source(intent,prepared)
++        if prepared['source_checkpoint']!=verified['checkpoint']:raise AuthorityError('restore_source_checkpoint_mismatch')
++        summary=self._validate_artifact(directory,prepared,verified)
++        return {**final,'verified':True,'summary':summary,'runtime_activation_allowed':False}
++
++    def _prepared_source(self,intent,prepared):
++        """Prepared copies can be checked even after archive media is unavailable."""
++        g=self.guard
++        if g.trust_context is None:raise AuthorityError('restore_external_trust_reference_required')
++        g.history()  # validates all protected phase links and authorization
++        if type(prepared.get('summary')) is not dict or type(prepared['summary'].get('logical_state')) is not dict:raise AuthorityError('restore_history_invalid')
++        verified={'export_id':Path(intent['archive']).name,'manifest_sha256':intent['manifest_sha256'],
++                  'checkpoint':prepared['source_checkpoint'],'files':{'state.jsonl':prepared['summary']['logical_state']}}
++        proof=g.verify_export_attestation(verified)
++        if proof['attestation_sha256']!=prepared['source_attestation_sha256']:raise AuthorityError('restore_attestation_mismatch')
++        return {**verified,'completion_attestation':proof}
+--- /dev/null
++++ after/app/agent/audit_attestations.py
+@@ -0,0 +1,135 @@
++"""Protected export-completion attestations independent of a surviving source DB."""
++import hashlib
++from app.agent.authority import AuthorityError, identifier
++
++
++class AuditAttestations:
++    def verify_export_markers(self,conn):
++        """A later SQL checkpoint binds each published external proof identity."""
++        from app.agent.ledger import strict_json
++        for row in conn.execute("SELECT data FROM receipts WHERE operation='operator_export_attested'"):
++            if not self.recovery_enabled:raise AuthorityError('checkpoint_features_required')
++            receipt=strict_json(row[0])
++            if type(receipt) is not dict or type(receipt.get('result')) is not dict:raise AuthorityError('archive_attestation_marker_mismatch')
++            result=receipt['result']
++            export_id=identifier(result.get('export_id'))
++            body,digest=self._read(self.directory/f'export-{export_id}.json')
++            if result.get('attestation_sha256')!=digest or result.get('manifest_sha256')!=body.get('manifest_sha256'):
++                raise AuthorityError('archive_attestation_marker_mismatch')
++
++    def attest_export(self, authority, actor, verified):
++        from app.agent.execution import phase_id
++        from app.agent.ledger import encode, publish_file
++        self._writable()
++        if not self.recovery_enabled:raise AuthorityError('archive_restore_disabled')
++        a=authority
++        with a._mutex:
++            a._fence()
++            if a._ledger is not self or a._scope(actor)!='local-service':raise AuthorityError('operator_scope_required')
++            export_id=identifier(verified['export_id'])
++            admission=a.receipt(actor,export_id)
++            completion=a.receipt(actor,phase_id(export_id,'export_complete'))
++            if admission is None or admission['operation']!='operator_export_admit' or completion is None or completion['operation']!='operator_export_complete' or completion['result'].get('manifest_sha256')!=verified['manifest_sha256']:
++                raise AuthorityError('export_audit_publication_missing')
++            _,pending,history=self.history()
++            if pending:raise AuthorityError('checkpoint_reconciliation_required')
++            checkpoint=None
++            for head in reversed(history):
++                intent,_=self._read(self._checkpoint_directory(head['sequence'])/f"{head['sequence']:08}.intent.json")
++                if intent['last_event'] and intent['last_event']['request_id']==completion['request_id']:
++                    final,_=self._read(self._checkpoint_directory(head['sequence'])/f"{head['sequence']:08}.final.json")
++                    if final['outcome']=='committed':checkpoint=head;break
++            if checkpoint is None:raise AuthorityError('export_publication_checkpoint_missing')
++            body=dict(format='jarvis-export-attestation-v1',store_id=self.store_id,key_id=self.key_id,export_id=export_id,
++                manifest_sha256=verified['manifest_sha256'],snapshot_checkpoint=verified['checkpoint'],
++                publication_checkpoint=checkpoint,publication_lineage=self.checkpoint_lineage(checkpoint['sequence']),
++                admission_receipt=admission,completion_receipt=completion,
++                completion_receipt_sha256=hashlib.sha256(encode(completion)).hexdigest())
++            path=self.directory/f'export-{export_id}.json'
++            if path.exists():
++                old,_=self._read(path)
++                if old!=body:raise AuthorityError('export_attestation_conflict')
++            else:
++                if len(list(self.directory.glob('export-*.json')))>=256:raise AuthorityError('checkpoint_auxiliary_capacity')
++                self._fault('export_before_attestation')
++                publish_file(path,encode(self.signed(body)))
++                self._fault('export_attested')
++            return self.verify_export_attestation(verified)
++
++    def verify_export_attestation(self, verified, *, _history=None):
++        from app.agent.execution import phase_id
++        from app.agent.ledger import encode
++        self._fence()
++        if not self.recovery_enabled:raise AuthorityError('archive_restore_disabled')
++        body,attestation_hash=self._read(self.directory/f"export-{identifier(verified['export_id'])}.json")
++        keys={'format','store_id','key_id','export_id','manifest_sha256','snapshot_checkpoint','publication_checkpoint','publication_lineage','admission_receipt','completion_receipt','completion_receipt_sha256'}
++        if type(body) is not dict or set(body)!=keys or body['format']!='jarvis-export-attestation-v1' or body['store_id']!=self.store_id or body['key_id']!=self.key_id or body['export_id']!=verified['export_id'] or body['manifest_sha256']!=verified['manifest_sha256'] or body['snapshot_checkpoint']!=verified['checkpoint']:
++            raise AuthorityError('archive_attestation_mismatch')
++        if _history is None:
++            _,pending,history=self.history()
++        else:
++            pending=None;history=_history
++        if pending or body['publication_checkpoint'] not in history or body['publication_lineage']!=self.checkpoint_lineage(body['publication_checkpoint']['sequence']):
++            raise AuthorityError('archive_attestation_checkpoint_mismatch')
++        if body['snapshot_checkpoint'] not in history or body['publication_checkpoint']['sequence']<=body['snapshot_checkpoint']['sequence'] or not self._hash(body['manifest_sha256']):
++            raise AuthorityError('archive_attestation_checkpoint_mismatch')
++        admission=body['admission_receipt'];completion=body['completion_receipt']
++        if type(admission) is not dict or type(completion) is not dict or admission.get('request_id')!=body['export_id'] or admission.get('scope')!='local-service' or admission.get('operation')!='operator_export_admit' or admission.get('state')!='committed' or completion.get('request_id')!=phase_id(body['export_id'],'export_complete') or completion.get('scope')!='local-service' or completion.get('operation')!='operator_export_complete' or completion.get('state')!='committed' or type(completion.get('result')) is not dict or completion['result'].get('manifest_sha256')!=body['manifest_sha256'] or body['completion_receipt_sha256']!=hashlib.sha256(encode(completion)).hexdigest():
++            raise AuthorityError('archive_attestation_invalid_receipts')
++        return {'verified':True,'attestation_sha256':attestation_hash,'publication_checkpoint':body['publication_checkpoint'],
++                'publication_lineage':body['publication_lineage'],'completion_receipt_id':completion['request_id']}
++
++    def _validate_auxiliary(self,history):
++        """Authenticate receipt groups; phase existence is never completion proof."""
++        from pathlib import Path
++        from app.agent.ledger import encode
++        for path in self.directory.glob('export-*.json'):
++            body,_=self._read(path)
++            if not {'export_id','manifest_sha256','snapshot_checkpoint'}<=set(body):raise AuthorityError('archive_attestation_mismatch')
++            self.verify_export_attestation({'export_id':body['export_id'],'manifest_sha256':body['manifest_sha256'],'checkpoint':body['snapshot_checkpoint']},_history=history)
++        groups={}
++        for path in self.directory.glob('restore-*.json'):
++            ident,phase=path.name[len('restore-'):].removesuffix('.json').split('.')
++            groups.setdefault(ident,{})[phase]=self._read(path)
++        if len(groups)>64:raise AuthorityError('restore_capacity_exceeded')
++        required_intent={'format','store_id','key_id','restore_id','archive','target_parent','manifest_sha256','source_checkpoint','source_lineage','source_attestation_sha256','trusted_admission_head','authorization','permit_sha256','admitted_at','execution_enabled'}
++        required_prepared={'format','store_id','key_id','restore_id','intent_sha256','manifest_sha256','source_checkpoint','source_lineage','source_attestation_sha256','database_sha256','summary','execution_enabled'}
++        required_final={'format','store_id','key_id','restore_id','prepared_sha256','target_parent','target_name','manifest_sha256','database_sha256','source_checkpoint','source_lineage','execution_enabled','state'}
++        for restore_id,phases in groups.items():
++            if set(phases) not in ({'intent'},{'intent','prepared'},{'intent','prepared','final'}):raise AuthorityError('restore_history_incomplete')
++            intent,intent_hash=phases['intent']
++            if any(body.get('restore_id')!=restore_id for body,_ in phases.values()):raise AuthorityError('restore_history_invalid')
++            if set(intent)!=required_intent or intent['format']!='jarvis-restore-intent-v1' or intent['trusted_admission_head'] not in history or intent['source_checkpoint'] not in history or intent['execution_enabled'] is not False or not self._hash(intent['manifest_sha256']) or not self._hash(intent['permit_sha256']):raise AuthorityError('restore_history_invalid')
++            for value in ('archive','target_parent'):
++                if type(intent[value]) is not str or not Path(intent[value]).is_absolute() or '..' in Path(intent[value]).parts:raise AuthorityError('restore_history_invalid')
++            identifier(Path(intent['archive']).name)
++            expected_payload={'export_id':Path(intent['archive']).name,'manifest_sha256':intent['manifest_sha256'],'target_parent':intent['target_parent'],'restore_id':restore_id}
++            auth=intent['authorization']
++            if type(auth) is not dict or auth.get('request_id')!=restore_id or auth.get('command')!='restore_archive' or auth.get('scope')!='local-service' or auth.get('checkpoint')!=intent['trusted_admission_head'] or auth.get('payload_hash')!=hashlib.sha256(encode(expected_payload)).hexdigest():raise AuthorityError('restore_authorization_binding_mismatch')
++            if intent['source_lineage']!=self.checkpoint_lineage(intent['source_checkpoint']['sequence']):raise AuthorityError('restore_history_invalid')
++            proof=self.verify_export_attestation({'export_id':Path(intent['archive']).name,'manifest_sha256':intent['manifest_sha256'],'checkpoint':intent['source_checkpoint']},_history=history)
++            if intent['source_attestation_sha256']!=proof['attestation_sha256']:raise AuthorityError('restore_attestation_mismatch')
++            if 'prepared' in phases:
++                prepared,prepared_hash=phases['prepared']
++                if set(prepared)!=required_prepared or prepared['format']!='jarvis-restore-prepared-v1' or prepared['intent_sha256']!=intent_hash or prepared['execution_enabled'] is not False or not self._hash(prepared['database_sha256']) or type(prepared['summary']) is not dict:raise AuthorityError('restore_history_invalid')
++                if any(prepared[k]!=intent[k] for k in ('manifest_sha256','source_checkpoint','source_lineage','source_attestation_sha256')):raise AuthorityError('restore_history_invalid')
++                if 'final' in phases:
++                    final,_=phases['final']
++                    if set(final)!=required_final or final['format']!='jarvis-restore-final-v1' or final['prepared_sha256']!=prepared_hash or final['target_parent']!=intent['target_parent'] or final['target_name']!=restore_id or final['state']!='committed' or final['execution_enabled'] is not False or any(final[k]!=prepared[k] for k in ('database_sha256','manifest_sha256','source_checkpoint','source_lineage')):raise AuthorityError('restore_history_invalid')
++        self._restore_groups=groups
++
++    def disaster_status(self):
++        from app.agent.ledger import strict_json, read_file
++        head,pending,_=self.history()
++        results=[]
++        ids=sorted(self._restore_groups)
++        if len(ids)>64:raise AuthorityError('restore_capacity_exceeded')
++        for restore_id in ids:
++            identifier(restore_id)
++            phases=self._restore_groups[restore_id]
++            state='committed' if 'final' in phases else 'prepared' if 'prepared' in phases else 'incomplete'
++            results.append({'restore_id':restore_id,'status':state,'artifact_currently_verified':False,'execution_enabled':False,'automatic_retry':False})
++        return {'epoch':self._epoch,'max_epochs':self.max_epochs,'epoch_capacity':self.epoch_capacity,
++                'rollover_enabled':self.rollover_enabled,'rollover_hash':self._rollover_hash,
++                'trust_reference_configured':self.trust_context is not None,'restore_enabled':self.recovery_enabled,
++                'restores':results,'history_deleted':False}
+--- before/app/agent/authority.py
++++ after/app/agent/authority.py
+@@ -90,8 +90,14 @@
+         self._conn = None
+         self._lockfd = None
+         self._ledger = ledger
++        self._ledger_acquired = False
+         if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+             raise AuthorityError("invalid_busy_timeout")
++        # A verified historical restore is an inert artifact, not a runtime
++        # branch. Refuse before creating even the writer-lock sidecar.
++        marker = self.path.parent / "DISPOSABLE.json"
++        if marker.exists() or marker.is_symlink():
++            raise AuthorityError("restore_activation_prohibited")
+         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+         for parent in [self.path.parent, *self.path.parent.parents]:
+             if parent.is_symlink():
+@@ -116,7 +122,9 @@
+                 if type(self._ledger) is not LedgerGuard:
+                     self._ledger = None
+                     raise AuthorityError("invalid_ledger_guard")
++                self._mutex = self._ledger._operation_mutex
+                 self._ledger.acquire(self.path)
++                self._ledger_acquired = True
+             initialized = False
+             if self.path.exists() and self.path.stat().st_size:
+                 # Inspect existing evidence read-only BEFORE journal/DDL changes.
+@@ -163,16 +171,8 @@
+             self._conn.execute("PRAGMA journal_mode=WAL")
+             self._conn.execute("PRAGMA synchronous=FULL")
+             self._conn.execute(f"PRAGMA busy_timeout={busy_ms}")
+-            self._conn.executescript("""
+-                CREATE TABLE IF NOT EXISTS meta(version INTEGER NOT NULL);
+-                CREATE TABLE IF NOT EXISTS ownership(id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL, owner TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS control(id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL, epoch INTEGER NOT NULL);
+-                CREATE TABLE IF NOT EXISTS records(kind TEXT NOT NULL, id TEXT NOT NULL, scope TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(kind,id));
+-                CREATE TABLE IF NOT EXISTS receipts(request_id TEXT PRIMARY KEY, scope TEXT NOT NULL, operation TEXT NOT NULL, payload_hash TEXT NOT NULL, data TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT NOT NULL, data TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS outbox(task_id TEXT PRIMARY KEY, state TEXT NOT NULL, claim_id TEXT, generation INTEGER);
+-                CREATE TABLE IF NOT EXISTS simulation_effects(task_id TEXT PRIMARY KEY, claim_id TEXT NOT NULL);
+-            """)
++            from app.agent.ledger_schema import SCHEMA_SQL
++            self._conn.executescript(SCHEMA_SQL)
+             if self._ledger is not None and not initialized:
+                 self._ledger.verify(self._conn, new=True)
+             self._conn.execute("BEGIN IMMEDIATE")
+@@ -227,8 +227,12 @@
+         if not matched:
+             self._poisoned = True
+             raise AuthorityError("store_replaced")
+-        row = self._conn.execute("SELECT generation,owner FROM ownership WHERE id=1").fetchone()
+-        if tuple(row) != (self.generation, self.owner_id):
++        try:
++            row = self._conn.execute("SELECT generation,owner FROM ownership WHERE id=1").fetchone()
++        except sqlite3.Error as exc:
++            self._poisoned = True
++            raise AuthorityError("storage_unknown_reconcile") from exc
++        if row is None or tuple(row) != (self.generation, self.owner_id):
+             self._poisoned = True
+             raise AuthorityError("owner_fenced")
+         if self._ledger is not None and not self._conn.in_transaction:
+@@ -522,7 +526,7 @@
+             if not consistency["consistent"]:
+                 raise AuthorityError("ledger_inconsistent")
+             return {"storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
+-                    "ledger_consistent": True, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
++                    "ledger_consistent": True, "disaster_recovery": self._ledger.disaster_status() if self._ledger is not None else {"enabled": False}, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
+ 
+     def close(self):
+         with self._mutex:
+@@ -535,5 +539,5 @@
+             finally:
+                 if self._lockfd is not None:
+                     os.close(self._lockfd)
+-                if self._ledger is not None:
++                if self._ledger is not None and self._ledger_acquired:
+                     self._ledger.close()
+--- /dev/null
++++ after/app/agent/checkpoint_epochs.py
+@@ -0,0 +1,283 @@
++"""Retained, same-key checkpoint generations; no pruning or key rotation.
++
++External references are caller-custodied minimum ancestors, never discovered
++from an archive. Local HMAC files alone cannot defeat a privileged rollback.
++"""
++from datetime import UTC, datetime
++import hashlib
++import re
++import uuid
++from functools import wraps
++
++from app.agent.authority import AuthorityError, identifier, instant
++
++ZERO='0'*64
++
++
++def guard_locked(method):
++    @wraps(method)
++    def locked(self,*args,**kwargs):
++        with self._operation_mutex:return method(self,*args,**kwargs)
++    return locked
++
++
++class CheckpointEpochs:
++    def _configure_epochs(self, *, rollover, epoch_capacity, max_epochs, recovery, trust_context):
++        if type(rollover) is not bool or type(recovery) is not bool or type(epoch_capacity) is not int or not 4<=epoch_capacity<=9999 or type(max_epochs) is not int or not 1<=max_epochs<=16:
++            raise AuthorityError('invalid_checkpoint_epoch_policy')
++        self.rollover_enabled=rollover
++        self.recovery_enabled=recovery
++        self.epoch_capacity=epoch_capacity if rollover else 9999
++        self.max_epochs=max_epochs if rollover else 1
++        self._epoch=0;self._epoch_start=1;self._rollover_hash=ZERO
++        self._epoch_directories=[self.directory]
++        self._epoch_ranges=[]
++        self.trust_context=trust_context
++        self._check_trust_time()
++
++    @property
++    def key_id(self):
++        import hmac
++        return hmac.new(self._key,b'jarvis-checkpoint-key-identity-v1',hashlib.sha256).hexdigest()
++
++    def _check_trust_time(self):
++        ctx=self.trust_context
++        if ctx is None:return
++        if type(ctx) is not dict or set(ctx)!={'store_id','key_id','epoch','rollover_hash','head','valid_from','expires_at'}:
++            raise AuthorityError('invalid_external_trust_context')
++        if ctx['store_id']!=self.store_id or ctx['key_id']!=self.key_id:
++            raise AuthorityError('checkpoint_trust_key_mismatch')
++        if type(ctx['epoch']) is not int or not 0<=ctx['epoch']<16 or type(ctx['head']) is not dict or set(ctx['head'])!={'sequence','sha256','checkpoint_hash'}:
++            raise AuthorityError('invalid_external_trust_context')
++        if type(ctx['head']['sequence']) is not int or ctx['head']['sequence']<0 or not self._hash(ctx['rollover_hash']) or not self._hash(ctx['head']['checkpoint_hash']):
++            raise AuthorityError('invalid_external_trust_context')
++        if ctx['head']['sequence']==0:
++            if ctx['head']!={'sequence':0,'sha256':None,'checkpoint_hash':ZERO} or ctx['epoch']!=0 or ctx['rollover_hash']!=ZERO:
++                raise AuthorityError('invalid_external_trust_context')
++        elif not self._hash(ctx['head']['sha256']):raise AuthorityError('invalid_external_trust_context')
++        start=datetime.fromisoformat(instant(ctx['valid_from']));end=datetime.fromisoformat(instant(ctx['expires_at']))
++        if not 0<(end-start).total_seconds()<=86400 or not start<=datetime.now(UTC)<end:
++            raise AuthorityError('checkpoint_trust_expired')
++
++    @staticmethod
++    def _hash(value):return type(value) is str and re.fullmatch('[0-9a-f]{64}',value) is not None
++
++    @staticmethod
++    def _auxiliary(name):
++        return re.fullmatch(r'(rollover-\d{4}\.(intent|final|recovery)|export-[0-9a-f-]{36}|restore-[0-9a-f-]{36}\.(intent|prepared|final))\.json',name) is not None or re.fullmatch(r'epoch-\d{4}',name) is not None
++
++    def _transition_body(self, epoch, head, previous):
++        return dict(format='jarvis-checkpoint-rollover-v1',store_id=self.store_id,epoch=epoch,
++                    previous_epoch=epoch-1,previous_transition=previous,previous_head=head,
++                    operation_id=str(uuid.uuid5(uuid.UUID(self.store_id),f"rollover:{epoch}:{head['checkpoint_hash']}")),
++                    key_id=self.key_id,epoch_capacity=self.epoch_capacity,max_epochs=self.max_epochs)
++
++    def _validate_transition(self, body, epoch, head, previous):
++        if body!=self._transition_body(epoch,head,previous):raise AuthorityError('checkpoint_rollover_binding_mismatch')
++
++    def _transition_paths(self, epoch):
++        return (self.directory/f'rollover-{epoch:04}.intent.json',self.directory/f'epoch-{epoch:04}',self.directory/f'rollover-{epoch:04}.final.json')
++
++    def _finish_transition(self, body, intent_hash, directory, *, create_link=False):
++        from app.agent.ledger import encode, private_directory, publish_file, sync_directory
++        self._writable()
++        epoch=body['epoch'];_,expected,final=self._transition_paths(epoch)
++        if directory!=expected:raise AuthorityError('checkpoint_rollover_binding_mismatch')
++        if create_link:
++            if not directory.exists():
++                directory.mkdir(mode=0o700);sync_directory(self.directory)
++                self._fault('rollover_directory_created')
++            private_directory(directory)
++            if not (directory/'LINK.json').exists():
++                if list(directory.iterdir()):raise AuthorityError('checkpoint_rollover_incomplete')
++                link=dict(format='jarvis-checkpoint-generation-v1',store_id=self.store_id,epoch=epoch,intent_hash=intent_hash,
++                          previous_head=body['previous_head'],key_id=self.key_id)
++                publish_file(directory/'LINK.json',encode(self.signed(link)))
++                self._fault('rollover_link_durable')
++        private_directory(directory)
++        link,link_hash=self._read(directory/'LINK.json')
++        if link!=dict(format='jarvis-checkpoint-generation-v1',store_id=self.store_id,epoch=epoch,intent_hash=intent_hash,previous_head=body['previous_head'],key_id=self.key_id):
++            raise AuthorityError('checkpoint_generation_link_mismatch')
++        if set(p.name for p in directory.iterdir())!={'LINK.json'}:
++            raise AuthorityError('checkpoint_rollover_incomplete')
++        result=dict(format='jarvis-checkpoint-rollover-commit-v1',store_id=self.store_id,epoch=epoch,intent_hash=intent_hash,
++                    link_hash=link_hash,previous_head=body['previous_head'],key_id=self.key_id)
++        recovery=self.directory/f'rollover-{epoch:04}.recovery.json'
++        if recovery.exists():result['recovery_receipt_sha256']=self._read(recovery)[1]
++        self._writable()
++        publish_file(final,encode(self.signed(result)))
++        self._fault('rollover_committed')
++
++    @guard_locked
++    def history(self, *, recover_rollover=False):
++        from app.agent.ledger import private_directory
++        self._fence()
++        entries=list(self.directory.iterdir())
++        if len(entries)>21000:raise AuthorityError('checkpoint_invalid_inventory')
++        auxiliary=[p for p in entries if self._auxiliary(p.name)]
++        if auxiliary and not (self.rollover_enabled or self.recovery_enabled):
++            raise AuthorityError('checkpoint_features_required')
++        if len([p for p in auxiliary if p.name.startswith('export-')])>256 or len([p for p in auxiliary if p.name.startswith('restore-')])>192:
++            raise AuthorityError('checkpoint_auxiliary_capacity')
++        for path in auxiliary:
++            if path.name.startswith(('export-','restore-')) or path.name.endswith('.recovery.json'):
++                body,_=self._read(path)
++                if type(body) is not dict or body.get('store_id')!=self.store_id or body.get('key_id')!=self.key_id:
++                    raise AuthorityError('checkpoint_auxiliary_invalid')
++                if path.name.startswith('export-'):
++                    if path.name!=f"export-{identifier(body.get('export_id'))}.json" or body.get('format')!='jarvis-export-attestation-v1':raise AuthorityError('checkpoint_auxiliary_invalid')
++                elif path.name.startswith('restore-'):
++                    if not path.name.startswith('restore-'+identifier(body.get('restore_id'))+'.') or body.get('format') not in {'jarvis-restore-intent-v1','jarvis-restore-prepared-v1','jarvis-restore-final-v1'}:raise AuthorityError('checkpoint_auxiliary_invalid')
++                elif body.get('format')!='jarvis-rollover-recovery-v1':raise AuthorityError('checkpoint_auxiliary_invalid')
++        head,pending,result=self._history_group(self.directory,{'sequence':0,'sha256':None,'checkpoint_hash':ZERO})
++        epoch=0;previous=ZERO;directories=[self.directory];ranges=[{'epoch':0,'start':1,'end':head['sequence'],'rollover_hash':ZERO}]
++        expected_aux={p.name for p in auxiliary if p.name.startswith(('export-','restore-'))}
++        for next_epoch in range(1,self.max_epochs):
++            intent,directory,final=self._transition_paths(next_epoch)
++            if not intent.exists():break
++            if not self.rollover_enabled or pending:raise AuthorityError('checkpoint_rollover_incomplete')
++            body,intent_hash=self._read(intent)
++            self._validate_transition(body,next_epoch,head,previous)
++            expected_aux.add(intent.name)
++            recovery=self.directory/f'rollover-{next_epoch:04}.recovery.json'
++            if recovery.exists():expected_aux.add(recovery.name)
++            if not final.exists():
++                pending_inventory=expected_aux|({directory.name} if directory.exists() else set())
++                if {p.name for p in auxiliary}!=pending_inventory:raise AuthorityError('checkpoint_generation_gap')
++                if not recover_rollover or not (directory/'LINK.json').exists():raise AuthorityError('checkpoint_rollover_incomplete')
++                self._finish_transition(body,intent_hash,directory)
++                return self.history(recover_rollover=True)
++            private_directory(directory)
++            link,link_hash=self._read(directory/'LINK.json')
++            expected_link=dict(format='jarvis-checkpoint-generation-v1',store_id=self.store_id,epoch=next_epoch,intent_hash=intent_hash,previous_head=head,key_id=self.key_id)
++            commit,commit_hash=self._read(final)
++            expected_commit=dict(format='jarvis-checkpoint-rollover-commit-v1',store_id=self.store_id,epoch=next_epoch,intent_hash=intent_hash,link_hash=link_hash,previous_head=head,key_id=self.key_id)
++            if recovery.exists():expected_commit['recovery_receipt_sha256']=self._read(recovery)[1]
++            if link!=expected_link or commit!=expected_commit:
++                raise AuthorityError('checkpoint_generation_link_mismatch')
++            expected_aux.update((directory.name,final.name))
++            recovery=self.directory/f'rollover-{next_epoch:04}.recovery.json'
++            if recovery.exists():expected_aux.add(recovery.name)
++            start=head['sequence']+1
++            head,pending,tail=self._history_group(directory,head)
++            if len(tail)>self.epoch_capacity:raise AuthorityError('checkpoint_epoch_capacity_exceeded')
++            result.extend(tail);epoch=next_epoch;previous=commit_hash;directories.append(directory)
++            ranges.append({'epoch':epoch,'start':start,'end':head['sequence'],'rollover_hash':previous})
++        if {p.name for p in auxiliary}!=expected_aux:raise AuthorityError('checkpoint_generation_gap')
++        self._epoch,self._rollover_hash=epoch,previous
++        self._epoch_start=ranges[-1]['start'];self._epoch_directories=directories;self._epoch_ranges=ranges
++        self._validate_auxiliary(result)
++        recovery_ids=set()
++        for path in self.directory.glob('rollover-*.recovery.json'):
++            decision,_=self._read(path)
++            epoch=int(path.name.split('-')[1].split('.')[0])
++            intent,_=self._read(self._transition_paths(epoch)[0])
++            self._validate_recovery_decision(decision,epoch,intent)
++            if decision['request_id'] in recovery_ids:raise AuthorityError('checkpoint_recovery_duplicate_nonce')
++            recovery_ids.add(decision['request_id'])
++        ctx=self.trust_context
++        if ctx is not None:
++            if ctx['epoch']>epoch or ranges[ctx['epoch']]['rollover_hash']!=ctx['rollover_hash'] or ctx['head']['sequence'] and ctx['head'] not in result:
++                raise AuthorityError('checkpoint_external_reference_mismatch')
++            selected=ranges[ctx['epoch']]
++            if ctx['head']['sequence'] and not (selected['start']<=ctx['head']['sequence']<=selected['end'] or selected['start']>selected['end'] and ctx['head']['sequence']==selected['start']-1):
++                raise AuthorityError('checkpoint_external_reference_mismatch')
++        return head,pending,result
++
++    def _checkpoint_directory(self, sequence):
++        for generation in self._epoch_ranges:
++            if generation['start']<=sequence<=generation['end'] or generation['epoch']==self._epoch and sequence==generation['end']+1:
++                return self._epoch_directories[generation['epoch']]
++        raise AuthorityError('checkpoint_generation_gap')
++
++    def checkpoint_lineage(self, sequence):
++        for generation in self._epoch_ranges:
++            if generation['start']<=sequence<=generation['end']:
++                return {'epoch':generation['epoch'],'rollover_hash':generation['rollover_hash'],'key_id':self.key_id}
++        raise AuthorityError('checkpoint_not_found')
++
++    def trust_reference(self, *, valid_from, expires_at):
++        head,pending,_=self.history()
++        if pending:raise AuthorityError('checkpoint_reconciliation_required')
++        return dict(store_id=self.store_id,key_id=self.key_id,epoch=self._epoch,rollover_hash=self._rollover_hash,head=head,
++                    valid_from=instant(valid_from),expires_at=instant(expires_at))
++
++    @guard_locked
++    def rollover(self):
++        from app.agent.ledger import encode, publish_file
++        self._writable()
++        if not self.rollover_enabled:raise AuthorityError('checkpoint_rollover_disabled')
++        head,pending,_=self.history()
++        if pending or self._head!=head:raise AuthorityError('checkpoint_reconciliation_required')
++        epoch=self._epoch+1
++        if epoch>=self.max_epochs:raise AuthorityError('checkpoint_generation_capacity')
++        intent,directory,_=self._transition_paths(epoch)
++        body=self._transition_body(epoch,head,self._rollover_hash)
++        raw=encode(self.signed(body));intent_hash=hashlib.sha256(raw).hexdigest()
++        publish_file(intent,raw)
++        self._fault('rollover_intent_durable')
++        self._finish_transition(body,intent_hash,directory,create_link=True)
++        self._head=self.history()[0]
++        return {'epoch':self._epoch,'head':self._head,'rollover_hash':self._rollover_hash,'history_deleted':False}
++
++    def _validate_recovery_decision(self,decision,epoch,intent):
++        from app.agent.ledger import encode
++        from app.agent.authority import text
++        keys={'format','store_id','key_id','request_id','operation_id','epoch','authorization','permit_sha256','state'}
++        if type(decision) is not dict or set(decision)!=keys or decision['format']!='jarvis-rollover-recovery-v1' or decision['store_id']!=self.store_id or decision['key_id']!=self.key_id or type(decision['epoch']) is not int or decision['epoch']!=epoch or decision['operation_id']!=intent['operation_id'] or decision['state']!='authorized' or not self._hash(decision['permit_sha256']):
++            raise AuthorityError('checkpoint_recovery_binding_mismatch')
++        identifier(decision['request_id'])
++        if uuid.UUID(decision['request_id']).version!=4:raise AuthorityError('checkpoint_recovery_binding_mismatch')
++        auth=decision['authorization']
++        required={'request_id','principal','scope','command','payload_hash','checkpoint','expires_at','issued_at'}
++        if type(auth) is not dict or set(auth)!=required or auth['request_id']!=decision['request_id'] or auth['scope']!='local-service' or auth['command']!='resume_rollover' or auth['checkpoint']!=intent['previous_head'] or auth['payload_hash']!=hashlib.sha256(encode({'operation_id':intent['operation_id']})).hexdigest():
++            raise AuthorityError('checkpoint_recovery_binding_mismatch')
++        text(auth['principal'],128)
++        start=datetime.fromisoformat(instant(auth['issued_at']));end=datetime.fromisoformat(instant(auth['expires_at']))
++        if not 0<(end-start).total_seconds()<=300:raise AuthorityError('checkpoint_recovery_binding_mismatch')
++
++    @guard_locked
++    def resume_rollover(self, permit, permits, actor, request_id):
++        """Resume only the exact bounded intent, including expired durable grants."""
++        from app.agent.ledger import encode,publish_file
++        self._writable()
++        if not self.recovery_enabled:raise AuthorityError('checkpoint_recovery_disabled')
++        identifier(request_id)
++        if uuid.UUID(request_id).version!=4 or actor.scope!='local-service':raise AuthorityError('invalid_operator_identity')
++        for recovery in sorted(self.directory.glob('rollover-*.recovery.json')):
++            decision,_=self._read(recovery)
++            if decision.get('request_id')!=request_id:continue
++            epoch=int(recovery.name.split('-')[1].split('.')[0])
++            intent_path,directory,final=self._transition_paths(epoch)
++            body,intent_hash=self._read(intent_path)
++            self._validate_recovery_decision(decision,epoch,body)
++            if not final.exists():
++                try:self.history()
++                except AuthorityError as exc:
++                    if exc.code!='checkpoint_rollover_incomplete':raise
++                else:raise AuthorityError('checkpoint_rollover_not_pending')
++                self._finish_transition(body,intent_hash,directory,create_link=True)
++            self._head=self.history()[0]
++            return {'request_id':request_id,'operation_id':body['operation_id'],'epoch':epoch,'history_deleted':False,'replayed':True}
++        epoch=1
++        while epoch<self.max_epochs and self._transition_paths(epoch)[2].exists():epoch+=1
++        intent,directory,final=self._transition_paths(epoch)
++        body,intent_hash=self._read(intent)
++        try:self.history()
++        except AuthorityError as exc:
++            if exc.code!='checkpoint_rollover_incomplete':raise
++        else:raise AuthorityError('checkpoint_rollover_not_pending')
++        if permits is None or permit is None:raise AuthorityError('operator_authentication_required')
++        auth=permits.verify(permit,actor,request_id,'resume_rollover',{'operation_id':body['operation_id']})
++        if auth['checkpoint']!=body['previous_head']:raise AuthorityError('stale_operator_permit')
++        recovery=self.directory/f'rollover-{epoch:04}.recovery.json'
++        decision=dict(format='jarvis-rollover-recovery-v1',store_id=self.store_id,key_id=self.key_id,
++                      request_id=request_id,operation_id=body['operation_id'],epoch=epoch,
++                      authorization=auth,permit_sha256=hashlib.sha256(encode(permit)).hexdigest(),state='authorized')
++        self._validate_recovery_decision(decision,epoch,body)
++        if recovery.exists():raise AuthorityError('request_conflict')
++        publish_file(recovery,encode(self.signed(decision)))
++        self._fault('rollover_recovery_admitted')
++        self._finish_transition(body,intent_hash,directory,create_link=True)
++        self._head=self.history()[0]
++        return {'request_id':request_id,'operation_id':body['operation_id'],'epoch':self._epoch,'history_deleted':False,'replayed':False}
+--- before/app/agent/ledger.py
++++ after/app/agent/ledger.py
+@@ -18,6 +18,13 @@
+ import sqlite3
+ import stat
+ import uuid
++from collections import OrderedDict
++from app.agent.checkpoint_epochs import CheckpointEpochs
++from app.agent.audit_attestations import AuditAttestations
++import copy
++import threading
++import math
++from app.agent.checkpoint_epochs import guard_locked
+ 
+ from app.agent.authority import AuthorityError, canonical, identifier
+ 
+@@ -128,30 +135,39 @@
+     return {'sha256':digest.hexdigest(), 'bytes':size, 'rows':rows}
+ 
+ 
+-class LedgerGuard:
++class LedgerGuard(CheckpointEpochs, AuditAttestations):
+     """Append-only signed intent/final journal, protected separately from SQLite.
+ 
+     Key provisioning is external. Tests supply explicit synthetic bytes only.
+     The lifetime lock also prevents sharing one journal between two owners.
+     """
+-    def __init__(self, directory, key, store_id, *, initialize=False, fault_hook=None):
++    def __init__(self, directory, key, store_id, *, initialize=False, fault_hook=None, rollover=False, epoch_capacity=9999, max_epochs=16, recovery=False, trust_context=None, cache_verified=True):
+         identifier(store_id)
+         if type(key) is not bytes or len(key) < 32:
+             raise AuthorityError('invalid_ledger_key')
+-        self.directory = private_directory(directory, create=initialize)
++        self.directory = Path(directory).absolute()
+         self.store_id, self._key, self.initialize = store_id, key, initialize is True
+         self._fault = fault_hook or (lambda stage: None)
+         self._fd = None
+         self._head = None
+         self._pid = os.getpid()
++        self._readonly = False
++        self._operation_mutex = threading.RLock()
++        self._verified_cache = OrderedDict()
++        self.cache_verified = cache_verified is True
++        self.cache_hits = self.cache_misses = 0
++        self._configure_epochs(rollover=rollover, epoch_capacity=epoch_capacity, max_epochs=max_epochs, recovery=recovery, trust_context=trust_context)
++        self.directory = private_directory(self.directory, create=initialize)
+ 
+     def acquire(self, db_path, *, readonly=False):
++        if self._fd is not None:raise AuthorityError('checkpoint_owner_busy')
+         db_path = Path(db_path).absolute()
+         if '..' in db_path.parts:
+             raise AuthorityError('unsafe_ledger_path')
+         if self.directory == db_path.parent or self.directory.is_relative_to(db_path.parent) or db_path.parent.is_relative_to(self.directory):
+             raise AuthorityError('checkpoint_not_separate')
+-        flags=(os.O_RDONLY if readonly else os.O_RDWR|os.O_CREAT)|os.O_NOFOLLOW|os.O_NONBLOCK
++        flags=(os.O_RDONLY if readonly else os.O_RDWR|(os.O_CREAT if self.initialize else 0))|os.O_NOFOLLOW|os.O_NONBLOCK
++        self._readonly = readonly is True
+         fd = os.open(self.directory/'journal.lock',flags,0o600)
+         try:
+             st = os.fstat(fd)
+@@ -175,7 +191,12 @@
+             os.close(self._fd)
+             self._fd = None
+ 
++    def _writable(self):
++        self._fence()
++        if self._readonly:raise AuthorityError('checkpoint_read_only')
++
+     def _fence(self):
++        self._check_trust_time()
+         if self._fd is None or os.getpid() != self._pid:
+             raise AuthorityError('checkpoint_owner_unavailable')
+         try:
+@@ -198,24 +219,35 @@
+         return envelope['body']
+ 
+     def _read(self, path):
+-        envelope = strict_json(read_file(path))
+-        return self.authenticate(envelope), hashlib.sha256(encode(envelope)).hexdigest()
+-
+-    def history(self):
+-        self._fence()
+-        staging = [p for p in self.directory.iterdir() if p.name.startswith('.stage-')]
++        raw=read_file(path)
++        digest=hashlib.sha256(raw).hexdigest()
++        if self.cache_verified and digest in self._verified_cache:
++            self.cache_hits+=1
++            self._verified_cache.move_to_end(digest)
++            return copy.deepcopy(self._verified_cache[digest])
++        self.cache_misses+=1
++        envelope=strict_json(raw)
++        result=self.authenticate(envelope),hashlib.sha256(encode(envelope)).hexdigest()
++        if self.cache_verified:
++            self._verified_cache[digest]=copy.deepcopy(result)
++            if len(self._verified_cache)>2048:self._verified_cache.popitem(last=False)
++        return result
++
++    def _history_group(self, directory, head):
++        staging = [p for p in directory.iterdir() if p.name.startswith('.stage-')]
+         if len(staging)>32:
+             raise AuthorityError('checkpoint_staging_capacity')
+         for path in staging:
+             read_file(path)
+         self.staging_files = len(staging)
+-        names = sorted(p.name for p in self.directory.iterdir() if not p.name.startswith('.stage-') and p.name != 'journal.lock')
++        names = sorted(p.name for p in directory.iterdir() if not p.name.startswith('.stage-') and p.name != 'journal.lock' and not (directory!=self.directory and p.name=='LINK.json') and not (directory==self.directory and self._auxiliary(p.name)))
+         if len(names)>20000 or any(not re.fullmatch(r'\d{8}\.(intent|final)\.json',n) for n in names):
+             raise AuthorityError('checkpoint_invalid_inventory')
+-        head, result, pending = {'sequence':0,'sha256':None,'checkpoint_hash':ZERO}, [], None
+-        for seq in range(1,len(names)//2+2):
+-            intent_path=self.directory/f'{seq:08}.intent.json'
+-            final_path=self.directory/f'{seq:08}.final.json'
++        result,pending=[],None
++        start=head['sequence']+1
++        for seq in range(start,start+len(names)//2+1):
++            intent_path=directory/f'{seq:08}.intent.json'
++            final_path=directory/f'{seq:08}.final.json'
+             if not intent_path.exists():
+                 break
+             intent, intent_hash=self._read(intent_path)
+@@ -241,8 +273,9 @@
+             raise AuthorityError('checkpoint_gap')
+         return head,pending,result
+ 
++    @guard_locked
+     def verify(self, conn, *, recover=False, new=False):
+-        head,pending,_=self.history()
++        head,pending,_=self.history(recover_rollover=recover)
+         actual=digest_state(conn)
+         if pending:
+             if not recover:
+@@ -266,32 +299,41 @@
+             head,_,_=self.history()
+         elif actual['sha256']!=head['sha256']:
+             raise AuthorityError('ledger_checkpoint_mismatch')
++        self.verify_export_markers(conn)
+         self._head=head
+         return {**head,'verified':head['sha256'] is not None,'algorithm':'HMAC-SHA256 external full-state checkpoints',
+                 'state_bytes':actual['bytes'],'state_rows':actual['rows'],'max_bytes':MAX_BYTES,'max_rows':MAX_ROWS,
+-                'checkpoint_capacity':9999,'staging_files':self.staging_files}
+-
++                'checkpoint_capacity':self.epoch_capacity,'staging_files':self.staging_files,'epoch':self._epoch,
++                'max_epochs':self.max_epochs,'rollover_hash':self._rollover_hash,'recovery_enabled':self.recovery_enabled,
++                'external_reference_configured':self.trust_context is not None}
++
++    @guard_locked
+     def prepare(self, conn):
+         head,pending,_=self.history()
+         if pending or self._head is None or head!=self._head:
+             raise AuthorityError('checkpoint_reconciliation_required')
+-        if head['sequence']>=9999:
+-            raise AuthorityError('checkpoint_capacity_exceeded')
++        self._writable()
++        if head['sequence']-self._epoch_start+1>=self.epoch_capacity:
++            if not self.rollover_enabled:raise AuthorityError('checkpoint_capacity_exceeded')
++            self.rollover()
++            head,pending,_=self.history()
+         event = conn.execute('SELECT seq,request_id FROM events ORDER BY seq DESC LIMIT 1').fetchone()
+         intent=dict(format='jarvis-checkpoint-intent-v1',store_id=self.store_id,sequence=head['sequence']+1,
+                     previous=head['checkpoint_hash'],before_sha256=head['sha256'],after=digest_state(conn),
+                     last_event={'sequence':event[0],'request_id':event[1]} if event else None)
+-        publish_file(self.directory/f"{intent['sequence']:08}.intent.json",encode(self.signed(intent)))
++        publish_file(self._epoch_directories[-1]/f"{intent['sequence']:08}.intent.json",encode(self.signed(intent)))
+         self._fault('checkpoint_intent_durable')
+         return intent
+ 
+     def _final(self, intent, outcome):
++        self._writable()
+         envelope=self.signed(intent)
+         body=dict(format='jarvis-checkpoint-final-v1',store_id=self.store_id,sequence=intent['sequence'],
+                   previous=intent['previous'],intent_hash=hashlib.sha256(encode(envelope)).hexdigest(),outcome=outcome,
+                   sha256=intent['after']['sha256'] if outcome=='committed' else intent['before_sha256'])
+-        publish_file(self.directory/f"{intent['sequence']:08}.final.json",encode(self.signed(body)))
+-
++        publish_file(self._checkpoint_directory(intent['sequence'])/f"{intent['sequence']:08}.final.json",encode(self.signed(body)))
++
++    @guard_locked
+     def finish(self, intent):
+         self._fault('checkpoint_before_publication')
+         self._final(intent,'committed')
+@@ -353,6 +395,9 @@
+                       checkpoint={k:checkpoint[k] for k in ('sequence','sha256','checkpoint_hash')},
+                       files={'state.jsonl':dict(sha256=digest.hexdigest(),bytes=size,rows=rows)},history_deleted=False,
+                       events=dict(zip(('first','last','count'),a._conn.execute('SELECT MIN(seq),MAX(seq),COUNT(*) FROM events').fetchone())))
++            if self.recovery_enabled:
++                body['format']='jarvis-ledger-export-v2'
++                body['lineage']=self.checkpoint_lineage(checkpoint['sequence'])
+             publish_file(dest/'COMPLETE.json',encode(self.signed(body)))
+             sync_directory(parent)
+             fault('export_manifest_durable')
+@@ -364,11 +409,13 @@
+         if set(p.name for p in directory.iterdir())!={'state.jsonl','COMPLETE.json'}:
+             raise AuthorityError('export_incomplete')
+         manifest=self.authenticate(strict_json(read_file(directory/'COMPLETE.json')))
+-        if type(manifest) is not dict or set(manifest)!={'format','store_id','export_id','checkpoint','files','history_deleted','events'} or manifest['format']!='jarvis-ledger-export-v1' or manifest['store_id']!=self.store_id or manifest['export_id']!=directory.name or manifest['history_deleted'] is not False or type(manifest['files']) is not dict or set(manifest['files'])!={'state.jsonl'} or type(manifest['checkpoint']) is not dict:
++        if type(manifest) is not dict or set(manifest)!=({'format','store_id','export_id','checkpoint','files','history_deleted','events','lineage'} if manifest.get('format')=='jarvis-ledger-export-v2' else {'format','store_id','export_id','checkpoint','files','history_deleted','events'}) or manifest['format'] not in {'jarvis-ledger-export-v1','jarvis-ledger-export-v2'} or manifest['store_id']!=self.store_id or manifest['export_id']!=directory.name or manifest['history_deleted'] is not False or type(manifest['files']) is not dict or set(manifest['files'])!={'state.jsonl'} or type(manifest['checkpoint']) is not dict:
+             raise AuthorityError('export_invalid_manifest')
+         _,pending,history=self.history()
+         if pending or manifest['checkpoint'] not in history:
+             raise AuthorityError('export_checkpoint_not_trusted')
++        if manifest['format']=='jarvis-ledger-export-v2' and manifest['lineage']!=self.checkpoint_lineage(manifest['checkpoint']['sequence']):
++            raise AuthorityError('export_generation_mismatch')
+         raw=read_file(directory/'state.jsonl',MAX_BYTES)
+         info=manifest['files']['state.jsonl']
+         if type(info) is not dict or info!={'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'rows':len(raw.splitlines())} or info['sha256']!=manifest['checkpoint']['sha256'] or info['rows']>MAX_ROWS:
+@@ -387,6 +434,12 @@
+             else:
+                 table=value['table'];row=value['value'];order=TABLES.index(table)
+                 if order<last_table or len(row)!=columns[table] or type(row[0]) is not int or row[0]<1 or order==last_table and row[0]<=last_rowid:raise AuthorityError('export_row_order_invalid')
++                for field in row:
++                    if type(field) not in (str,int,float,type(None)) or type(field) is int and not -(2**63)<=field<2**63 or type(field) is float and not math.isfinite(field):
++                        raise AuthorityError('export_invalid_data')
++                    if type(field) is str:
++                        try:field.encode('utf-8')
++                        except UnicodeError as exc:raise AuthorityError('export_invalid_data') from exc
+                 if order!=last_table:last_rowid=0
+                 last_table,last_rowid=order,row[0]
+                 if table=='records' and row[1]=='task':
+--- /dev/null
++++ after/app/agent/ledger_schema.py
+@@ -0,0 +1,3 @@
++"""Fixed trusted schema shared by creation and offline reconstruction."""
++
++SCHEMA_SQL = '\n                CREATE TABLE IF NOT EXISTS meta(version INTEGER NOT NULL);\n                CREATE TABLE IF NOT EXISTS ownership(id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL, owner TEXT NOT NULL);\n                CREATE TABLE IF NOT EXISTS control(id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL, epoch INTEGER NOT NULL);\n                CREATE TABLE IF NOT EXISTS records(kind TEXT NOT NULL, id TEXT NOT NULL, scope TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(kind,id));\n                CREATE TABLE IF NOT EXISTS receipts(request_id TEXT PRIMARY KEY, scope TEXT NOT NULL, operation TEXT NOT NULL, payload_hash TEXT NOT NULL, data TEXT NOT NULL);\n                CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT NOT NULL, data TEXT NOT NULL);\n                CREATE TABLE IF NOT EXISTS outbox(task_id TEXT PRIMARY KEY, state TEXT NOT NULL, claim_id TEXT, generation INTEGER);\n                CREATE TABLE IF NOT EXISTS simulation_effects(task_id TEXT PRIMARY KEY, claim_id TEXT NOT NULL);\n            '
+--- before/app/agent/operator_cli.py
++++ after/app/agent/operator_cli.py
+@@ -1,44 +1,112 @@
+-"""Quiesced offline diagnostics, without application/provider startup.
++"""Offline diagnostics and explicitly authorized disposable disaster recovery.
+ 
+-Checkpoint key bytes arrive only through an explicitly inherited descriptor.
+-No secret path, environment lookup, enrollment, recovery mutation or retry.
++Default modes verify only. Keys and permits arrive through inherited descriptors;
++no credential paths/environment lookup, runtime startup or executor activation.
+ """
+ import argparse
+ import json
+ import os
+-import sys
+-from app.agent.authority import AuthorityError
+-from app.agent.ledger import LedgerGuard
+-from app.agent.recovery import inspect_offline
++import sqlite3
++from pathlib import Path
++from app.agent.authority import AuthorityError,identifier
++from app.agent.ledger import LedgerGuard,strict_json
++from app.agent.recovery import inspect_offline,OperatorPermits
+ from app.agent.runtime import SERVICE_ACTOR
++
++
++def _read_fd(number,limit):
++    if number is None or number<3:raise AuthorityError('invalid_key_descriptor')
++    raw=os.read(number,limit+1)
++    if len(raw)>limit:raise AuthorityError('operator_descriptor_too_large')
++    return raw
+ 
+ 
+ def main(argv=None):
+     parser=argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument('--database',required=True)
++    parser.add_argument('--database')
+     parser.add_argument('--checkpoints')
+     parser.add_argument('--store-id')
+     parser.add_argument('--key-fd',type=int)
++    parser.add_argument('--trust-fd',type=int)
+     parser.add_argument('--task-id')
+     parser.add_argument('--limit',type=int,default=100)
+     parser.add_argument('--offset',type=int,default=0)
++    parser.add_argument('--rollover-enabled',action='store_true')
++    parser.add_argument('--disaster-recovery-enabled',action='store_true')
++    parser.add_argument('--epoch-capacity',type=int,default=9999)
++    parser.add_argument('--max-epochs',type=int,default=16)
++    modes=parser.add_mutually_exclusive_group()
++    modes.add_argument('--checkpoint-status',action='store_true')
++    modes.add_argument('--verify-archive')
++    modes.add_argument('--verify-restored')
++    modes.add_argument('--restore-archive')
++    modes.add_argument('--reconcile-restore')
++    modes.add_argument('--resume-rollover',action='store_true')
++    parser.add_argument('--expected-manifest-sha256')
++    parser.add_argument('--disposable-target-parent')
++    parser.add_argument('--operation-id')
++    parser.add_argument('--operator-key-fd',type=int)
++    parser.add_argument('--permit-fd',type=int)
++    parser.add_argument('--commit-recovery',action='store_true')
+     args=parser.parse_args(argv)
++    mutation=bool(args.restore_archive or args.reconcile_restore or args.resume_rollover)
++    disaster=bool(args.checkpoint_status or args.verify_archive or args.verify_restored or mutation)
++    ledger=None
+     try:
+         configured=(args.checkpoints is not None,args.store_id is not None,args.key_fd is not None)
+         if any(configured) and not all(configured):raise AuthorityError('complete_checkpoint_configuration_required')
+-        ledger=None
++        if disaster and not all(configured):raise AuthorityError('complete_checkpoint_configuration_required')
++        if mutation and not args.commit_recovery:raise AuthorityError('explicit_recovery_commit_required')
+         if all(configured):
+-            if args.key_fd<3:raise AuthorityError('invalid_key_descriptor')
+-            raw=os.read(args.key_fd,129)
+-            if not 32<=len(raw)<=128:raise AuthorityError('invalid_ledger_key')
+-            ledger=LedgerGuard(args.checkpoints,raw,args.store_id)
+-        result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,task_id=args.task_id,limit=args.limit,offset=args.offset)
+-        print(json.dumps(result,indent=2))
+-        return 0 if result['consistent'] else 1
+-    except (AuthorityError,OSError) as exc:
+-        print(json.dumps({'consistent':False,'error':exc.code if isinstance(exc,AuthorityError) else 'operator_io_unavailable',
+-                          'recommendation':'preserve_store_and_checkpoints_investigate_no_retry','mutated':False}))
++            raw=_read_fd(args.key_fd,128)
++            if len(raw)<32:raise AuthorityError('invalid_ledger_key')
++            trust=strict_json(_read_fd(args.trust_fd,16384)) if args.trust_fd is not None else None
++            ledger=LedgerGuard(args.checkpoints,raw,args.store_id,rollover=args.rollover_enabled,
++                               epoch_capacity=args.epoch_capacity,max_epochs=args.max_epochs,recovery=disaster or args.disaster_recovery_enabled or args.rollover_enabled,trust_context=trust)
++        if not disaster:
++            if not args.database:raise AuthorityError('database_path_required')
++            result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,task_id=args.task_id,limit=args.limit,offset=args.offset)
++            success=result['consistent']
++        else:
++            # This opens only the existing protected journal lock. No source DB
++            # is opened or created. An active application owner excludes this CLI.
++            coordinate=Path(args.disposable_target_parent) if args.disposable_target_parent else ledger.directory.parent/'.operator-coordination'
++            ledger.acquire(coordinate/'unused.sqlite',readonly=not mutation)
++            if args.checkpoint_status:
++                result=ledger.disaster_status();success=True
++            else:
++                from app.agent.archive_restore import ArchiveRestorer
++                restorer=ArchiveRestorer(ledger)
++                if args.verify_archive:
++                    result=restorer.verify_archive(args.verify_archive,args.expected_manifest_sha256);success=True
++                elif args.verify_restored:
++                    result=restorer.verify_restored(args.verify_restored);success=True
++                elif args.reconcile_restore:
++                    # Audit-only continuation of an existing protected admission;
++                    # no new SQL reconstruction or effects, even after grant expiry.
++                    result=restorer.reconcile(identifier(args.reconcile_restore));success=True
++                else:
++                    if args.resume_rollover and args.operator_key_fd is None and args.permit_fd is None:
++                        permits=permit=None
++                    else:
++                        key=_read_fd(args.operator_key_fd,128)
++                        permits=OperatorPermits(key);permit=strict_json(_read_fd(args.permit_fd,65536))
++                    if args.resume_rollover:
++                        result=ledger.resume_rollover(permit,permits,SERVICE_ACTOR,identifier(args.operation_id));success=True
++                    else:
++                        if not args.disposable_target_parent:raise AuthorityError('disposable_target_parent_required')
++                        result=ArchiveRestorer(ledger,permits).restore(SERVICE_ACTOR,identifier(args.operation_id),args.restore_archive,
++                            args.disposable_target_parent,args.expected_manifest_sha256,permit,disposable=True)
++                        success=True
++        print(json.dumps(result,indent=2));return 0 if success else 1
++    except (AuthorityError,OSError,sqlite3.Error) as exc:
++        print(json.dumps({'verified':False,'error':exc.code if isinstance(exc,AuthorityError) else 'operator_io_unavailable',
++            'recommendation':'preserve_artifacts_and_protected_anchors_no_automatic_retry',
++            'mutation_outcome':'reconciliation_required' if mutation else 'none','operation_id':args.operation_id or args.reconcile_restore,
++            'execution_enabled':False}))
+         return 1
++    finally:
++        if ledger is not None:ledger.close()
+ 
+ 
+ if __name__=='__main__':raise SystemExit(main())
+--- before/app/agent/recovery.py
++++ after/app/agent/recovery.py
+@@ -252,7 +252,7 @@
+                     'occurrence_summaries':result['occurrence_summaries'][offset:offset+limit],
+                     'schedules':result['schedules'][offset:offset+limit],'exports':result['exports'][offset:offset+limit],
+                     'next_offset':offset+limit if offset+limit<total else None,'ledger_integrity':integrity,
+-                    'recovery_mutations_publicly_enabled':False}
++                    'recovery_mutations_publicly_enabled':False,'disaster_recovery':a._ledger.disaster_status() if a._ledger is not None else {'enabled':False}}
+ 
+     def retention_plan(self, actor, *, older_than, limit=100):
+         with self.authority._mutex:
+@@ -404,7 +404,8 @@
+             completion=a.receipt(actor,phase_id(verified['export_id'],'export_complete'))
+             if admission is None or admission['operation']!='operator_export_admit' or completion is None or completion['operation']!='operator_export_complete' or completion['result'].get('manifest_sha256')!=verified['manifest_sha256']:
+                 raise AuthorityError('export_audit_publication_missing')
+-            return {**verified,'audit_publication_verified':True}
++            attestation=a._ledger.verify_export_attestation(verified) if a._ledger.recovery_enabled else None
++            return {**verified,'audit_publication_verified':True,'attestation':attestation}
+ 
+     def export(self, actor, request_id, directory, permit, *, fault_hook=None):
+         from pathlib import Path
+@@ -432,7 +433,9 @@
+             publication=a._mutate(actor,phase_id(request_id,'export_complete'),'operator_export_complete',
+                 {'export_id':request_id,'manifest_sha256':verified['manifest_sha256']},
+                 lambda scope:{'export_id':request_id,'manifest_sha256':verified['manifest_sha256'],'history_deleted':False})
+-            return {'export':verified,'publication':publication,'history_deleted':False}
++            attestation=a._ledger.attest_export(a,actor,verified) if a._ledger.recovery_enabled else None
++            if attestation:self._record_attestation(actor,verified,attestation)
++            return {'export':verified,'publication':publication,'attestation':attestation,'history_deleted':False}
+ 
+     def reconcile_admitted_export(self, actor, request_id, directory):
+         """Finish audit for an immutable export under its durable original grant.
+@@ -454,9 +457,19 @@
+             if type(decision) is not dict or decision.get('request_id')!=request_id or decision.get('command')!='export_ledger' or decision.get('scope')!=a._scope(actor):
+                 raise AuthorityError('export_admission_required')
+             verified=a._ledger.verify_export(parent/request_id)
+-            return a._mutate(actor,phase_id(request_id,'export_complete'),'operator_export_complete',
++            publication=a._mutate(actor,phase_id(request_id,'export_complete'),'operator_export_complete',
+                 {'export_id':request_id,'manifest_sha256':verified['manifest_sha256']},
+                 lambda scope:{'export_id':request_id,'manifest_sha256':verified['manifest_sha256'],'history_deleted':False})
++            if a._ledger.recovery_enabled:
++                attestation=a._ledger.attest_export(a,actor,verified)
++                self._record_attestation(actor,verified,attestation)
++            return publication
++
++    def _record_attestation(self,actor,verified,attestation):
++        export_id=verified['export_id']
++        payload={'export_id':export_id,'manifest_sha256':verified['manifest_sha256'],'attestation_sha256':attestation['attestation_sha256']}
++        return self.authority._mutate(actor,phase_id(export_id,'export_attested'),'operator_export_attested',payload,
++                                      lambda scope:{**payload,'execution_enabled':False})
+ 
+ 
+ def inspect_offline(database, actor, *, ledger=None, **options):
+--- before/app/agent/reporter.py
++++ after/app/agent/reporter.py
+@@ -21,8 +21,16 @@
+         except AuthorityError:
+             return "Recovery diagnostics unavailable; preserve original receipts."
+         integrity = "verified" if report["ledger_integrity"]["verified"] else "unconfigured"
+-        return (f"Ledger integrity {integrity}; consistency issues {len(report['issues'])}; "
+-                f"unpublished exports {report['unpublished_exports']}; automatic retry disabled.")
++        summary = (f"Ledger integrity {integrity}; consistency issues {len(report['issues'])}; "
++                   f"unpublished exports {report['unpublished_exports']}; automatic retry disabled.")
++        disaster = report.get("disaster_recovery", {})
++        if "epoch" in disaster:
++            states = {state: sum(item["status"] == state for item in disaster["restores"])
++                      for state in ("committed", "prepared", "incomplete")}
++            summary += (f" Checkpoint epoch {disaster['epoch']}; restore receipts "
++                        f"committed {states['committed']}, prepared {states['prepared']}, "
++                        f"incomplete {states['incomplete']}; artifact verification is separate.")
++        return summary
+ 
+     def _task_snapshot(self) -> list[object]:
+         return list(task_queue.tasks)
+--- /dev/null
++++ after/docs/audit_disaster_recovery.md
+@@ -0,0 +1,129 @@
++# Offline audit continuity and disposable restore
++
++This is an opt-in local embedding capability. It enables no real executor,
++provider, production service or runtime migration. Reproduction and exact results
++are in [the sprint 3 packet](../tasks/jarvis-audit-disaster-recovery-r1/REPORT.md).
++
++## Checkpoint generations
++
++`LedgerGuard(..., rollover=True, epoch_capacity=9999, max_epochs=16,
++recovery=True)` retains every original checkpoint and advances the global
++sequence across generations. Capacity is explicitly bounded: 4–9999 checkpoints
++per generation and 1–16 generations. With rollover disabled, the original single
++9999-checkpoint limit applies. Exhaustion refuses further writes; no cleanup or
++chain reset occurs. Changing the policy after rollover is rejected.
++
++Generation zero retains its existing flat intent/final files. Each later
++`epoch-NNNN/LINK.json` and root rollover intent/commit binds the previous terminal
++head, prior transition hash, store identity, same-key identity and policy. Intent,
++linked and committed are distinct states. An authenticated unique pending LINK
++can finish on startup. An intent without LINK requires explicit operator recovery.
++An authenticated recovery admission is durable before continuation; after a crash
++it can finish the same operation even after the original short-lived permit
++expires. It cannot authorize another operation. Committed recovery links bind
++their admission receipt hash, so deleting the receipt is detected.
++
++Every read checks file ownership/mode/link constraints and hashes fresh bytes.
++The bounded 2048-entry decode/HMAC cache is keyed by that content hash; returned
++objects are copied. It skips repeated decoding of unchanged content, never file
++reads, hashing, chain validation or complete logical database verification.
++
++## External trust context
++
++Archive restoration requires an independently supplied reference containing
++`store_id`, `key_id`, `epoch`, `rollover_hash`, `head`, `valid_from`, `expires_at`.
++The head contains sequence, logical-state SHA256 and checkpoint hash. Validity
++is bounded to 24 hours and checked against the local clock. The reference is an
++expected ancestor, allowing legitimate descendant history while rejecting a
++missing ancestor, wrong generation/key, expired reference or older chain.
++
++`trust_reference()` produces a public witness; storing it beside the ledger does
++not establish independent custody. Its provenance, external protection, secure
++clock and HMAC key custody are caller responsibilities. Local HMAC files do not
++defeat key compromise or privileged/same-UID coordinated database-and-anchor
++rollback. This implementation uses one key; key rotation and hardware anchors
++remain future work. No synthetic key in a test is a production credential.
++
++## Export and restore
++
++Recovery-enabled exports use a version 2 manifest with generation lineage. A
++protected completion attestation is issued only after the source export-complete
++receipt and checkpoint are durable. A subsequent source receipt binds the
++attestation hash. Missing attestations block archive acceptance, and removing an
++attestation after recorded success also fails source readiness. A manifest alone
++cannot claim audited publication.
++
++Archive verification requires the expected manifest hash, exact file inventory,
++ordered record hashes, supported fixed schema, source publication attestation and
++the expected external trust reference. It reports schema compatibility separately
++from semantic reconstruction verification. Version 1 exports remain verifiable
++through the earlier interface but cannot be restored through this workflow.
++
++Restore requires a canonical UUID4, explicit disposable destination and a fresh
++`OperatorPermits` authorization bound to actor, command, target, manifest and
++current checkpoint. No archive SQL is executed. One SQLite FULL-synchronous
++transaction reconstructs the trusted schema and explicit ordered rows, then
++checks SQLite integrity, complete logical digest, store marker and task/receipt/
++outbox/scheduler consistency. UNKNOWN work, original identities, cancellation
++uncertainty and held outbox records remain intact.
++
++The protected phases are intent, prepared and final. Preparation fsyncs the
++complete artifact before signing a prepared receipt. Linux `renameat2` with
++`RENAME_NOREPLACE` publishes its exclusive directory; final publication is then
++recorded. Reconciliation can publish an exactly verified prepared artifact,
++including after the original source/archive becomes unavailable. Partial targets
++without a prepared receipt require manual quarantine; they are never rebuilt by
++inference. Any error after a mutation reports reconciliation required.
++
++Each artifact has a read-only `state.sqlite`, signed `RESTORE.json` and
++`DISPOSABLE.json`. `verify_restored()` rechecks current bytes, protected phase
++links, inventory and semantic state. Application diagnostics report receipt
++status, explicitly separate from current artifact verification. `Authority`
++refuses these artifacts before creating a writer sidecar. Restoring historical
++data does not create a runnable branch or resume execution. A future separately
++authorized branch/re-anchor ceremony would be required for runtime use.
++
++## Operator interface
++
++The provider-free `app.agent.operator_cli` defaults to read-only. It uses existing
++exclusive journal locks and refuses an active application owner. No public
++restore/completion endpoint exists. Supply checkpoint/store identity and key
++through `--key-fd` (inherited FD >=3); the public trust JSON uses `--trust-fd`.
++Key bytes and permits are not command-line/environment values. See the guarded
++full-application demonstration for actual FD handoff rather than opening real
++runtime data to reproduce this feature.
++
++Read-only modes are `--checkpoint-status`, `--verify-archive DIR` with
++`--expected-manifest-sha256 HASH`, and `--verify-restored DIR`. Opt in using
++`--rollover-enabled` and the original capacity/policy; diagnostic database mode
++can also specify `--disaster-recovery-enabled`.
++
++New restore admission additionally requires `--restore-archive DIR`,
++`--disposable-target-parent DIR`, `--operation-id UUID`,
++`--expected-manifest-sha256 HASH`, `--operator-key-fd`, `--permit-fd` and
++`--commit-recovery`. The permit command is `restore_archive`; payload is exactly
++`export_id`, `manifest_sha256`, absolute `target_parent` and `restore_id`.
++`--resume-rollover --operation-id UUID --commit-recovery` requires a new scoped
++permit unless the same durable admission already exists. Its command is
++`resume_rollover`, payload is the recorded rollover `operation_id`.
++`--reconcile-restore UUID --commit-recovery` only continues a protected prepared
++admission and requires no new permit. Neither continuation reconstructs unknown
++missing state or authorizes execution.
++
++## Bounds and deployment limits
++
++Logical snapshots remain capped at 32MiB/100000 rows. Restore parents allow at
++most four artifact/staging directories with 64MiB accounting; protected journals
++allow at most 64 restore admissions and 256 export attestations. Existing export
++limits remain 16 directories/64MiB. Partial artifacts consume capacity. These are
++application bounds, not a filesystem/SQLite WAL quota. No protected deletion,
++automatic retention cleanup or key provisioning is implemented.
++
++Verification remains linear in protected history and logical state. The packet
++benchmarks bounded synthetic histories; it makes no production SLO or million-row
++claim. SIGKILL tests exercise process interruption and fsync ordering, not actual
++hardware power-loss durability. A crash before initial genesis intent still
++requires manual quarantine. Live activation requires independently protected OS
++identities/storage, externally custodied keys/anchors and clock, approved policy,
++qualified dependencies, enrollment/branch recovery and separately authorized
++deployment/executor qualification. This guide authorizes none of those actions.
+--- before/docs/operator_recovery.md
++++ after/docs/operator_recovery.md
+@@ -1,8 +1,13 @@
+ # Offline operator recovery and ledger protection
+ 
+ Real execution remains disabled. This interface never retries uncertain work,
+-accepts caller completion results, restores a ledger, or deletes protected history.
++accepts caller completion results or deletes protected history.
+ The reproduction harness uses only disposable databases and synthetic credentials.
++
++Sprint 3 adds opt-in checkpoint generations and authenticated restoration into
++exclusive inert disposable artifacts. See [audit disaster recovery](audit_disaster_recovery.md)
++for the external trust boundary, new offline CLI modes and current limits.
++Earlier read-only database inspection behavior below remains available.
+ 
+ ## Read-only inspection
+ 
+--- before/docs/task_api.md
++++ after/docs/task_api.md
+@@ -2,6 +2,11 @@
+ 
+ The authority stores decisions, held work, and opt-in synthetic execution results.
+ Real execution is disabled; no real adapter can be registered.
++Authenticated diagnostics additionally expose checkpoint generation and restore
++receipt phase counts. A committed restore receipt does not verify current artifact
++bytes or complete a task. Archive restore remains an explicitly authorized offline
++CLI operation; no public mutation endpoint is mounted. See
++[the disaster recovery guide](audit_disaster_recovery.md).
+ This document changes no authentication policy or permissions and approves no
+ service startup, client rollout, broker connection or privileged action.
+ 
+--- /dev/null
++++ after/tests/audit_process_actor.py
+@@ -0,0 +1,68 @@
++"""Independent cage-only rollover/restore/attestation crash actor."""
++from datetime import UTC,datetime,timedelta
++import json
++from pathlib import Path
++import sys,time
++if not Path('/input/source').is_dir():raise SystemExit('isolated runner required')
++sys.path[:0]=['/input/source','/deps']
++from app.agent.authority import Authority
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import OperatorPermits,RecoveryActions
++from app.agent.archive_restore import ArchiveRestorer
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++
++KEY=b'synthetic-sprint3-ledger-only-key-00000000';OPKEY=b'synthetic-sprint3-operator-only-key-000000'
++config=json.loads(Path(sys.argv[1]).read_text());armed=False
++
++def fault(stage):
++    if armed and stage==config['stage']:
++        Path(config['ready']).write_text(stage)
++        deadline=time.monotonic()+4
++        while time.monotonic()<deadline:time.sleep(.01)
++        raise RuntimeError('parent did not terminate owned actor')
++
++g=LedgerGuard(config['anchors'],KEY,config['store_id'],initialize=True,rollover=True,epoch_capacity=4,recovery=True,fault_hook=fault)
++a=Authority(config['db'],allow_simulation=True,ledger=g)
++issuer=OperatorPermits(OPKEY);actions=RecoveryActions(a,issuer)
++
++def context():
++    now=datetime.now(UTC)
++    value=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=10)).isoformat())
++    Path(config['context']).write_text(json.dumps(value));return value
++
++def issue(command,payload,request_id,head):
++    now=datetime.now(UTC)
++    return issuer.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command=command,payload=payload,checkpoint=head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=2)).isoformat())
++
++if config['mode']=='rollover_recovery':
++    a.submit(ACTOR,config['task_id'],'one');a.submit(ACTOR,config['extra_id'],'two')
++    ref=context()
++    def interrupt(stage):
++        if stage=='rollover_intent_durable':raise RuntimeError('stop before link')
++    g._fault=interrupt
++    try:a.submit(ACTOR,config['failed_request_id'],'interrupted')
++    except RuntimeError:pass
++    a.close()
++    g=LedgerGuard(config['anchors'],KEY,config['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=ref,fault_hook=fault)
++    g.acquire(config['db'])
++    body=json.loads((Path(config['anchors'])/'rollover-0001.intent.json').read_text())['body']
++    permit=issue('resume_rollover',{'operation_id':body['operation_id']},config['request_id'],ref['head'])
++    armed=True
++    g.resume_rollover(permit,issuer,ACTOR,config['request_id'])
++elif config['mode']=='rollover':
++    a.submit(ACTOR,config['task_id'],'one');a.submit(ACTOR,config['extra_id'],'two')
++    context();armed=True
++    a.submit(ACTOR,config['request_id'],'interrupted rollover')
++else:
++    a.submit(ACTOR,config['task_id'],'held and never executed')
++    export_id=config['export_id'];payload={'export_id':export_id,'destination':config['exports']}
++    if config['mode']=='attestation':context();armed=True
++    result=actions.export(ACTOR,export_id,config['exports'],issue('export_ledger',payload,export_id,g._head))
++    ref=context();a.close()
++    g=LedgerGuard(config['anchors'],KEY,config['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=ref)
++    g.acquire(Path(config['targets'])/'unused.sqlite')
++    restore_id=config['request_id'];payload={'export_id':export_id,'manifest_sha256':result['export']['manifest_sha256'],'target_parent':config['targets'],'restore_id':restore_id}
++    permit=issue('restore_archive',payload,restore_id,ref['head'])
++    armed=True
++    ArchiveRestorer(g,issuer,fault_hook=fault).restore(ACTOR,restore_id,Path(config['exports'])/export_id,config['targets'],result['export']['manifest_sha256'],permit,disposable=True)
++raise SystemExit('requested crash stage not reached')
+--- /dev/null
++++ after/tests/test_audit_disaster.py
+@@ -0,0 +1,573 @@
++"""Rollover/restore contracts, synthetic keys, disposable SQLite state only."""
++from datetime import UTC,datetime,timedelta
++import json
++from pathlib import Path
++import uuid
++import pytest
++from app.agent.authority import Authority,AuthorityError
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import OperatorPermits,RecoveryActions
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++
++KEY=b'synthetic-sprint3-ledger-only-key-00000000'
++OPKEY=b'synthetic-sprint3-operator-only-key-000000'
++
++def key():return str(uuid.uuid4())
++
++@pytest.fixture
++def env(tmp_path):
++    store=key();anchors=tmp_path/'protected';db=tmp_path/'db'/'state.sqlite';exports=tmp_path/'exports';exports.mkdir(mode=0o700)
++    g=LedgerGuard(anchors,KEY,store,initialize=True,rollover=True,epoch_capacity=4,recovery=True)
++    a=Authority(db,allow_simulation=True,ledger=g)
++    permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
++    yield a,g,actions,permits,{'db':db,'anchors':anchors,'exports':exports,'store_id':store,'parent':tmp_path}
++    a.close()
++
++def issue(env,command,payload,request_id):
++    a,g,actions,permits,paths=env;now=datetime.now(UTC)
++    return permits.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command=command,payload=payload,checkpoint=g._head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=2)).isoformat())
++
++def exported(env):
++    a,g,actions,permits,paths=env
++    a.submit(ACTOR,key(),'held synthetic task')
++    export_id=key();payload={'export_id':export_id,'destination':str(paths['exports'])}
++    return actions.export(ACTOR,export_id,paths['exports'],issue(env,'export_ledger',payload,export_id))
++
++def test_rollover_retains_checkpoint_identities(env):
++    a,g,actions,permits,paths=env
++    old={p.name:p.read_bytes() for p in paths['anchors'].glob('*.json')}
++    for _ in range(8):a.submit(ACTOR,key(),'synthetic')
++    head,pending,history=g.history()
++    assert g._epoch>=2 and not pending
++    assert [h['sequence'] for h in history]==list(range(1,head['sequence']+1))
++    assert all((paths['anchors']/name).read_bytes()==raw for name,raw in old.items())
++    assert a.readiness()['ledger_integrity']['epoch']>=2
++
++def test_export_attestation_survives_source_database_loss(env):
++    a,g,actions,permits,paths=env
++    result=exported(env)
++    assert result['attestation']['verified']
++    verified=g.verify_export(paths['exports']/result['export']['export_id'])
++    assert verified['format']=='jarvis-ledger-export-v2'
++    assert g.verify_export_attestation(verified)['completion_receipt_id']==result['publication']['request_id']
++
++
++def test_legacy_export_is_inspectable_but_cannot_be_restored(env):
++    from app.agent.archive_restore import ArchiveRestorer
++    a,g,actions,permits,paths=env
++    g.recovery_enabled=False
++    try:result=exported(env)
++    finally:g.recovery_enabled=True
++    archive=paths['exports']/result['export']['export_id']
++    assert g.verify_export(archive)['format']=='jarvis-ledger-export-v1'
++    now=datetime.now(UTC)
++    g.trust_context=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    with pytest.raises(AuthorityError,match='restore_checkpoint_lineage_required'):
++        ArchiveRestorer(g).verify_archive(archive,result['export']['manifest_sha256'])
++
++def test_wrong_key_and_expired_reference_refused(env):
++    a,g,actions,permits,paths=env
++    a.submit(ACTOR,key(),'value')
++    now=datetime.now(UTC)
++    ref=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    with pytest.raises(AuthorityError,match='checkpoint_trust_key_mismatch'):
++        LedgerGuard(paths['anchors'],b'wrong-synthetic-key-0000000000000000000',paths['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=ref)
++    ref['expires_at']=(now-timedelta(milliseconds=1)).isoformat()
++    with pytest.raises(AuthorityError,match='checkpoint_trust_expired'):
++        LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=ref)
++
++def test_total_generation_capacity_is_conservative(env):
++    a,g,actions,permits,paths=env
++    g.max_epochs=1
++    a.submit(ACTOR,key(),'one');a.submit(ACTOR,key(),'two')
++    with pytest.raises(AuthorityError,match='checkpoint_generation_capacity'):
++        a.submit(ACTOR,key(),'refused')
++
++@pytest.mark.parametrize('fault',['rollover_intent_durable','rollover_link_durable'])
++def test_interrupted_rollover_is_not_silently_reset(env,fault):
++    a,g,actions,permits,paths=env
++    a.submit(ACTOR,key(),'one');a.submit(ACTOR,key(),'two')
++    def stop(stage):
++        if stage==fault:raise RuntimeError('power-loss-like injected interruption')
++    g._fault=stop
++    with pytest.raises(RuntimeError):a.submit(ACTOR,key(),'interrupted')
++    a.close()
++    new=LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True)
++    if fault=='rollover_intent_durable':
++        with pytest.raises(AuthorityError,match='checkpoint_rollover_incomplete'):Authority(paths['db'],ledger=new)
++    else:
++        recovered=Authority(paths['db'],ledger=new)
++        try:assert recovered.readiness()['ledger_integrity']['epoch']==1
++        finally:recovered.close()
++
++
++def restore_ready(env):
++    a,g,actions,permits,paths=env
++    result=exported(env)
++    now=datetime.now(UTC)
++    g.trust_context=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=10)).isoformat())
++    from app.agent.archive_restore import ArchiveRestorer
++    restorer=ArchiveRestorer(g,permits)
++    target=paths['parent']/'restores';target.mkdir(mode=0o700)
++    return restorer,result,paths['exports']/result['export']['export_id'],target
++
++
++def restore_permit(env,result,target,restore_id):
++    payload={'export_id':result['export']['export_id'],'manifest_sha256':result['export']['manifest_sha256'],'target_parent':str(target),'restore_id':restore_id}
++    return issue(env,'restore_archive',payload,restore_id)
++
++
++def test_restore_reconstructs_exact_disabled_artifact(env):
++    from app.agent.archive_restore import ArchiveRestorer
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env)
++    restore_id=key();before=g._head.copy()
++    receipt=restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    assert receipt['verified'] and receipt['state']=='committed'
++    assert not receipt['execution_enabled'] and not receipt['runtime_activation_allowed']
++    assert g._head==before
++    artifact=parent/restore_id
++    assert restorer.verify_restored(artifact)['summary']['unresolved']==1
++    assert restorer.reconcile(restore_id)['replayed']
++    with pytest.raises(AuthorityError,match='restore_already_exists_reconcile'):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    with pytest.raises(AuthorityError,match='restore_activation_prohibited'):
++        Authority(artifact/'state.sqlite')
++    assert restorer.verify_restored(artifact)['verified']
++    assert not (artifact/'state.sqlite.writer.lock').exists()
++
++
++def test_default_restore_requires_external_reference_and_explicit_grant(env):
++    from app.agent.archive_restore import ArchiveRestorer
++    a,g,actions,permits,paths=env
++    result=exported(env);restorer=ArchiveRestorer(g,permits)
++    archive=paths['exports']/result['export']['export_id']
++    with pytest.raises(AuthorityError,match='restore_external_trust_reference_required'):
++        restorer.verify_archive(archive,result['export']['manifest_sha256'])
++    restorer,result,archive,parent=restore_ready_existing(env,result)
++    restore_id=key();token=restore_permit(env,result,parent,restore_id)
++    with pytest.raises(AuthorityError,match='explicit_disposable_restore_required'):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],token)
++    token['hmac_sha256']='0'*64
++    with pytest.raises(AuthorityError,match='operator_authentication_failed'):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],token,disposable=True)
++    assert list(parent.iterdir())==[]
++
++
++def restore_ready_existing(env,result):
++    from app.agent.archive_restore import ArchiveRestorer
++    a,g,actions,permits,paths=env;now=datetime.now(UTC)
++    g.trust_context=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=10)).isoformat())
++    parent=paths['parent']/'restores';parent.mkdir(mode=0o700)
++    return ArchiveRestorer(g,permits),result,paths['exports']/result['export']['export_id'],parent
++
++
++@pytest.mark.parametrize('damage',['missing','duplicate','modified','reordered'])
++def test_archive_disaster_rejected_before_target_creation(env,damage):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env)
++    data=archive/'state.jsonl';lines=data.read_bytes().splitlines(keepends=True)
++    if damage=='missing':lines.pop()
++    elif damage=='duplicate':lines.append(lines[-1])
++    elif damage=='modified':lines[-1]=lines[-1].replace(b'events',b'evEnts')
++    else:lines[1],lines[2]=lines[2],lines[1]
++    data.write_bytes(b''.join(lines))
++    restore_id=key()
++    with pytest.raises(AuthorityError):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    assert list(parent.iterdir())==[]
++    assert not list(g.directory.glob('restore-*.intent.json'))
++
++
++def test_restored_unknown_and_cancellation_are_preserved(env):
++    from app.agent.execution import ExecutionPipeline,SimulatedPolicy
++    a,g,actions,permits,paths=env
++    p=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
++    op=key()
++    p.submit(ACTOR,op,'uncertain','synthetic.echo',{'value':'uncertain'},(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
++    p._claim(ACTOR,op);p._unknown(ACTOR,op,a.generation,'uncertain');a.cancel(ACTOR,key(),op)
++    restorer,result,archive,parent=restore_ready(env)
++    restore_id=key()
++    restored=restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    assert restored['summary']['unknown']==1 and restored['summary']['cancel_requested']==1
++    import sqlite3
++    conn=sqlite3.connect((parent/restore_id/'state.sqlite').as_uri()+'?mode=ro',uri=True)
++    try:
++        row=json.loads(conn.execute("SELECT data FROM records WHERE kind='task' AND id=?",(op,)).fetchone()[0])
++        assert row['status']=='unknown' and row['result'] is None and row['cancel_requested']
++    finally:conn.close()
++
++
++@pytest.mark.parametrize('stage',['restore_intent_durable','restore_row_inserted','restore_prepared_durable','restore_target_published'])
++def test_restore_failure_is_quarantined_or_reconciled(env,stage):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env)
++    restore_id=key()
++    restorer._fault=lambda current:(_ for _ in ()).throw(RuntimeError('simulated power interruption')) if current==stage else None
++    with pytest.raises(RuntimeError):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    restorer._fault=lambda _:None
++    if stage in {'restore_prepared_durable','restore_target_published'}:
++        assert restorer.reconcile(restore_id)['verified']
++        assert restorer.verify_restored(parent/restore_id)['verified']
++    else:
++        with pytest.raises(AuthorityError,match='restore_incomplete_manual_quarantine'):restorer.reconcile(restore_id)
++        assert not (parent/restore_id).exists()
++
++
++@pytest.mark.parametrize('mode,stage',[
++    ('rollover','rollover_intent_durable'),('rollover','rollover_directory_created'),('rollover','rollover_link_durable'),('rollover','rollover_committed'),
++    ('restore','restore_intent_durable'),('restore','restore_stage_created'),('restore','restore_schema_created'),('restore','restore_row_inserted'),
++    ('restore','restore_before_database_commit'),('restore','restore_database_committed'),('restore','restore_prepared_durable'),('restore','restore_target_published'),('restore','restore_publication_committed'),
++    ('attestation','export_before_attestation'),('rollover_recovery','rollover_recovery_admitted'),
++])
++def test_independent_sigkill_disaster_recovery(tmp_path,mode,stage):
++    import subprocess,sys,time
++    from app.agent.archive_restore import ArchiveRestorer
++    if not Path('/input/source').is_dir():pytest.skip('guarded runner required')
++    root=tmp_path/'case';root.mkdir(mode=0o700)
++    for name in ('exports','targets'):(root/name).mkdir(mode=0o700)
++    config={'mode':mode,'stage':stage,'anchors':str(root/'protected'),'db':str(root/'db'/'state.sqlite'),
++        'exports':str(root/'exports'),'targets':str(root/'targets'),'ready':str(root/'ready'),'context':str(root/'context.json'),
++        'store_id':key(),'task_id':key(),'extra_id':key(),'request_id':key(),'failed_request_id':key(),'export_id':key()}
++    path=root/'command.json';path.write_text(json.dumps(config))
++    with (root/'stdout').open('w') as out,(root/'stderr').open('w') as err:
++        child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('audit_process_actor.py')),str(path)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,close_fds=True,env={'LANG':'C.UTF-8'})
++        try:
++            deadline=time.monotonic()+4
++            while not Path(config['ready']).exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.01)
++            assert Path(config['ready']).exists(),(root/'stderr').read_text()
++            child.kill();child.wait(timeout=1)
++            assert child.returncode<0
++        finally:
++            if child.poll() is None:child.kill()
++            child.wait(timeout=1)
++    ref=json.loads(Path(config['context']).read_text())
++    def new_guard():return LedgerGuard(config['anchors'],KEY,config['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=ref)
++    if mode=='rollover':
++        if stage in {'rollover_intent_durable','rollover_directory_created'}:
++            with pytest.raises(AuthorityError,match='checkpoint_rollover_incomplete'):Authority(config['db'],ledger=new_guard())
++            g=new_guard();g.acquire(config['db'])
++            try:
++                body=json.loads((Path(config['anchors'])/'rollover-0001.intent.json').read_text())['body']
++                issuer=OperatorPermits(OPKEY);now=datetime.now(UTC);request_id=key()
++                permit=issuer.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command='resume_rollover',payload={'operation_id':body['operation_id']},checkpoint=ref['head'],issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++                assert g.resume_rollover(permit,issuer,ACTOR,request_id)['epoch']==1
++            finally:g.close()
++        a=Authority(config['db'],ledger=new_guard())
++        try:
++            assert a.readiness()['ledger_integrity']['epoch']==1
++            assert a.receipt(ACTOR,config['request_id']) is None
++            assert len(a.list_tasks(ACTOR))==2
++        finally:a.close()
++    elif mode=='rollover_recovery':
++        from unittest.mock import patch
++        g=new_guard();g.acquire(config['db'])
++        try:
++            with patch.object(OperatorPermits,'verify',side_effect=AssertionError('expired grant must not be reauthenticated')):
++                result=g.resume_rollover(None,None,ACTOR,config['request_id'])
++                assert result['replayed'] and result['epoch']==1
++                assert g.resume_rollover(None,None,ACTOR,config['request_id'])['replayed']
++        finally:g.close()
++        a=Authority(config['db'],ledger=new_guard())
++        try:assert len(a.list_tasks(ACTOR))==2
++        finally:a.close()
++    elif mode=='attestation':
++        a=Authority(config['db'],ledger=new_guard())
++        try:
++            g=a._ledger;actions=RecoveryActions(a,OperatorPermits(OPKEY));archive=root/'exports'/config['export_id']
++            verified=g.verify_export(archive)
++            with pytest.raises(AuthorityError):g.verify_export_attestation(verified)
++            actions.reconcile_admitted_export(ACTOR,config['export_id'],root/'exports')
++            assert g.verify_export_attestation(verified)['verified']
++        finally:a.close()
++    else:
++        g=new_guard();g.acquire(root/'targets'/'unused.sqlite')
++        try:
++            restorer=ArchiveRestorer(g,OperatorPermits(OPKEY));target=root/'targets'/config['request_id']
++            prepared=stage in {'restore_prepared_durable','restore_target_published','restore_publication_committed'}
++            if prepared:
++                result=restorer.reconcile(config['request_id'])
++                assert result['verified'] and restorer.verify_restored(target)['verified']
++                assert not result['execution_enabled']
++            else:
++                with pytest.raises(AuthorityError,match='restore_incomplete_manual_quarantine'):restorer.reconcile(config['request_id'])
++                assert not target.exists()
++            assert g.disaster_status()['restores'][0]['status']==('committed' if prepared else 'incomplete')
++        finally:g.close()
++
++
++@pytest.mark.parametrize('phase',['intent','prepared','final'])
++def test_missing_restore_receipt_phase_is_not_reported_committed(env,phase):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    (g.directory/f'restore-{restore_id}.{phase}.json').unlink() # disposable disaster injection only
++    if phase=='final':
++        assert g.disaster_status()['restores'][0]['status']=='prepared'
++        with pytest.raises(AuthorityError):restorer.verify_restored(parent/restore_id)
++    else:
++        with pytest.raises(AuthorityError,match='restore_history_incomplete'):g.disaster_status()
++
++
++def test_wrong_rollover_policy_and_unexpected_generation_refused(env):
++    a,g,actions,permits,paths=env
++    for _ in range(4):a.submit(ACTOR,key(),'value')
++    a.close()
++    wrong=LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=8,recovery=True)
++    with pytest.raises(AuthorityError,match='checkpoint_rollover_binding_mismatch'):Authority(paths['db'],ledger=wrong)
++    extra=paths['anchors']/'epoch-0015';extra.mkdir(mode=0o700)
++    normal=LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True)
++    with pytest.raises(AuthorityError,match='checkpoint_generation_gap'):Authority(paths['db'],ledger=normal)
++
++
++def test_cached_checkpoint_bytes_are_still_hash_verified(env):
++    a,g,actions,permits,paths=env
++    a.submit(ACTOR,key(),'value');a.readiness();hits=g.cache_hits
++    a.readiness();assert g.cache_hits>hits
++    final=sorted(g.directory.glob('*.final.json'))[-1]
++    body=json.loads(final.read_text());body['body']['sha256']='0'*64
++    final.write_text(json.dumps(body))
++    with pytest.raises(AuthorityError,match='checkpoint_authentication_failed'):a.readiness()
++
++
++def test_shared_guard_restore_serializes_source_mutations(env):
++    from concurrent.futures import ThreadPoolExecutor
++    import threading
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key();token=restore_permit(env,result,parent,restore_id)
++    entered=threading.Event();release=threading.Event()
++    def fault(stage):
++        if stage=='restore_prepared_durable':
++            entered.set();assert release.wait(2)
++    restorer._fault=fault
++    with ThreadPoolExecutor(max_workers=2) as pool:
++        restore=pool.submit(restorer.restore,ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],token,disposable=True)
++        assert entered.wait(2)
++        mutation=pool.submit(a.submit,ACTOR,key(),'wait for restore')
++        assert not mutation.done()
++        release.set()
++        assert restore.result(timeout=3)['verified']
++        assert mutation.result(timeout=3)['state']=='committed'
++
++
++def test_restore_does_not_require_source_database_or_archive_after_preparation(env):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    archive.rename(archive.with_name('unavailable-media'))
++    assert restorer.verify_restored(parent/restore_id)['verified']
++
++
++def test_guard_cannot_be_shared_by_two_authorities(env):
++    a,g,actions,permits,paths=env
++    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):Authority(paths['parent']/'other'/'db',ledger=g)
++    assert a.readiness()['ledger_integrity']['verified']
++
++
++def test_incompatible_signed_schema_is_never_executed(env):
++    a,g,actions,permits,paths=env
++    def extra(scope):
++        a._conn.execute('CREATE INDEX synthetic_extra ON outbox(state)')
++        return {'synthetic_schema_extension':True}
++    a._mutate(ACTOR,key(),'synthetic_schema_fixture',{},extra)
++    restorer,result,archive,parent=restore_ready(env)
++    restore_id=key()
++    with pytest.raises(AuthorityError,match='restore_incompatible_schema'):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    assert list(parent.iterdir())==[]
++
++
++def test_inconsistent_restored_receipt_and_corrupt_pages_refused(env):
++    import os,sqlite3
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    db=parent/restore_id/'state.sqlite';os.chmod(db,0o600)
++    conn=sqlite3.connect(db)
++    try:conn.execute('DELETE FROM receipts WHERE rowid=(SELECT MIN(rowid) FROM receipts)');conn.commit()
++    finally:conn.close()
++    os.chmod(db,0o400)
++    with pytest.raises(AuthorityError,match='restore_database_modified'):restorer.verify_restored(parent/restore_id)
++
++
++@pytest.mark.parametrize('failure',['disk_full','permission'])
++def test_restore_publication_storage_failures_preserve_prepared_evidence(env,monkeypatch,failure):
++    import app.agent.archive_restore as module
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    original=module.publish_file
++    def fail(path,raw):
++        if path.name.endswith('.final.json') and path.name.startswith('restore-'):
++            raise OSError(28 if failure=='disk_full' else 13,'synthetic storage failure')
++        return original(path,raw)
++    monkeypatch.setattr(module,'publish_file',fail)
++    with pytest.raises(OSError):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    with pytest.raises(AuthorityError):restorer.verify_restored(parent/restore_id)
++    monkeypatch.setattr(module,'publish_file',original)
++    assert restorer.reconcile(restore_id)['verified']
++
++
++def test_trust_reference_rejects_rolled_back_checkpoint_generation(env):
++    import shutil
++    a,g,actions,permits,paths=env
++    prior=paths['parent']/'prior-anchors';shutil.copytree(g.directory,prior)
++    for _ in range(4):a.submit(ACTOR,key(),'history')
++    now=datetime.now(UTC)
++    reference=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    a.close()
++    # A separate copied old tree models rollback; original evidence is retained.
++    rolled=LedgerGuard(prior,KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=reference)
++    rolled.acquire(paths['parent']/'unused'/'db')
++    try:
++        with pytest.raises(AuthorityError,match='checkpoint_external_reference_mismatch'):rolled.history()
++    finally:rolled.close()
++
++
++def test_trust_reference_cannot_claim_a_different_epoch(env):
++    a,g,actions,permits,paths=env
++    for _ in range(4):a.submit(ACTOR,key(),'history')
++    now=datetime.now(UTC)
++    ref=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    ref.update(epoch=0,rollover_hash='0'*64)
++    g.trust_context=ref
++    with pytest.raises(AuthorityError,match='checkpoint_external_reference_mismatch'):a.readiness()
++
++
++def test_missing_export_attestation_invalidates_restore_history(env):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    (g.directory/f"export-{result['export']['export_id']}.json").unlink()
++    with pytest.raises(AuthorityError):g.disaster_status()
++
++
++def test_offline_cli_verifies_and_commits_only_explicit_authorized_restore(env,capsys):
++    import os
++    from app.agent.operator_cli import main
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    token=restore_permit(env,result,parent,restore_id);ctx=g.trust_context
++    a.close()
++    def cli(extra,with_permit=False):
++        fds=[];args=['--checkpoints',str(paths['anchors']),'--store-id',paths['store_id'],'--rollover-enabled','--epoch-capacity','4']
++        try:
++            for option,value in [('--key-fd',KEY),('--trust-fd',json.dumps(ctx).encode())]+([('--operator-key-fd',OPKEY),('--permit-fd',json.dumps(token).encode())] if with_permit else []):
++                read,write=os.pipe();os.write(write,value);os.close(write);fds.append(read);args.extend([option,str(read)])
++            code=main(args+extra);return code,json.loads(capsys.readouterr().out)
++        finally:
++            for fd in fds:os.close(fd)
++    code,verified=cli(['--verify-archive',str(archive),'--expected-manifest-sha256',result['export']['manifest_sha256']])
++    assert code==0 and verified['schema_compatible'] and not verified['semantic_restore_verified']
++    options=['--restore-archive',str(archive),'--operation-id',restore_id,'--disposable-target-parent',str(parent),'--expected-manifest-sha256',result['export']['manifest_sha256']]
++    code,refused=cli(options,True);assert code==1 and refused['error']=='explicit_recovery_commit_required'
++    assert list(parent.iterdir())==[]
++    code,restored=cli(options+['--commit-recovery'],True);assert code==0 and restored['state']=='committed'
++    code,verified=cli(['--verify-restored',str(parent/restore_id)])
++    assert code==0 and verified['verified'] and not verified['runtime_activation_allowed']
++
++
++def test_actual_restored_page_bit_flip_is_detected(env):
++    import os
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    db=parent/restore_id/'state.sqlite';assert db.stat().st_size>8192
++    os.chmod(db,0o600)
++    with db.open('r+b') as stream:
++        stream.seek(4096+128);old=stream.read(1);stream.seek(4096+128);stream.write(bytes([old[0]^255]));stream.flush();os.fsync(stream.fileno())
++    os.chmod(db,0o400)
++    with pytest.raises(AuthorityError,match='restore_database_modified'):restorer.verify_restored(parent/restore_id)
++
++
++@pytest.mark.parametrize('target_kind',['traversal','overlap','symlink','existing'])
++def test_restore_paths_and_existing_targets_refused(env,target_kind):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    if target_kind=='traversal':parent=parent/'..'/'protected'
++    elif target_kind=='overlap':parent=g.directory
++    elif target_kind=='symlink':
++        link=paths['parent']/'linked-archive';link.symlink_to(archive,target_is_directory=True);archive=link
++    else:
++        (parent/restore_id).mkdir(mode=0o700);(parent/restore_id/'sentinel').write_text('preserve')
++    with pytest.raises(AuthorityError):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    assert not (g.directory/f'restore-{restore_id}.intent.json').exists()
++    if target_kind=='existing':assert (parent/restore_id/'sentinel').read_text()=='preserve'
++
++
++def test_no_replace_publication_preserves_a_racing_target(env):
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env);restore_id=key()
++    def race(stage):
++        if stage=='restore_before_publication':
++            (parent/restore_id).mkdir(mode=0o700);(parent/restore_id/'sentinel').write_text('foreign target')
++    restorer._fault=race
++    with pytest.raises(OSError):
++        restorer.restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],restore_permit(env,result,parent,restore_id),disposable=True)
++    assert (parent/restore_id/'sentinel').read_text()=='foreign target'
++    with pytest.raises(AuthorityError,match='restore_target_conflict'):restorer.reconcile(restore_id)
++
++
++def test_attestation_removal_is_detected_even_before_any_restore(env):
++    a,g,actions,permits,paths=env
++    result=exported(env)
++    assert a.receipt(ACTOR,__import__('app.agent.execution',fromlist=['phase_id']).phase_id(result['export']['export_id'],'export_attested'))
++    (g.directory/f"export-{result['export']['export_id']}.json").unlink()
++    with pytest.raises(AuthorityError):a.readiness()
++
++
++def test_recovery_receipt_is_bound_to_committed_rollover(env):
++    a,g,actions,permits,paths=env
++    a.submit(ACTOR,key(),'one');a.submit(ACTOR,key(),'two')
++    def interrupted(stage):
++        if stage=='rollover_intent_durable':raise RuntimeError('stop')
++    g._fault=interrupted
++    with pytest.raises(RuntimeError):a.submit(ACTOR,key(),'stop')
++    a.close()
++    g=LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True)
++    g.acquire(paths['db'])
++    try:
++        body=json.loads((g.directory/'rollover-0001.intent.json').read_text())['body'];now=datetime.now(UTC);request_id=key()
++        token=permits.issue(request_id=request_id,principal='synthetic-operator',scope=ACTOR.scope,command='resume_rollover',payload={'operation_id':body['operation_id']},checkpoint=body['previous_head'],issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++        g.resume_rollover(token,permits,ACTOR,request_id)
++        (g.directory/'rollover-0001.recovery.json').unlink()
++        with pytest.raises(AuthorityError,match='checkpoint_generation_link_mismatch'):g.history()
++    finally:g.close()
++
++
++def test_restore_succeeds_with_source_database_unavailable(env):
++    from app.agent.archive_restore import ArchiveRestorer
++    a,g,actions,permits,paths=env
++    restorer,result,archive,parent=restore_ready(env)
++    context=g.trust_context;head=g._head.copy();a.close()
++    paths['db'].rename(paths['db'].with_suffix('.unavailable'))
++    fresh=LedgerGuard(paths['anchors'],KEY,paths['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=context)
++    fresh.acquire(parent/'unused.sqlite')
++    try:
++        restore_id=key();now=datetime.now(UTC)
++        payload={'export_id':result['export']['export_id'],'manifest_sha256':result['export']['manifest_sha256'],'target_parent':str(parent),'restore_id':restore_id}
++        token=permits.issue(request_id=restore_id,principal='synthetic-operator',scope=ACTOR.scope,command='restore_archive',payload=payload,checkpoint=head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++        restored=ArchiveRestorer(fresh,permits).restore(ACTOR,restore_id,archive,parent,result['export']['manifest_sha256'],token,disposable=True)
++        assert restored['verified'] and not paths['db'].exists()
++        assert ArchiveRestorer(fresh).verify_restored(parent/restore_id)['verified']
++    finally:fresh.close()
++
++
++def test_expired_external_context_never_creates_an_anchor_directory(env):
++    a,g,actions,permits,paths=env;now=datetime.now(UTC)
++    ref=g.trust_reference(valid_from=(now-timedelta(seconds=3)).isoformat(),expires_at=(now-timedelta(seconds=1)).isoformat())
++    target=paths['parent']/'must-not-be-created'
++    with pytest.raises(AuthorityError,match='checkpoint_trust_expired'):
++        LedgerGuard(target,KEY,paths['store_id'],initialize=True,rollover=True,epoch_capacity=4,recovery=True,trust_context=ref)
++    assert not target.exists()
++
++
++def test_missing_owner_row_fails_closed_with_explicit_code(tmp_path):
++    a=Authority(tmp_path/'state'/'db')
++    try:
++        a._conn.execute('DELETE FROM ownership')
++        with pytest.raises(AuthorityError,match='owner_fenced'):a.readiness()
++        with pytest.raises(AuthorityError,match='authority_unavailable'):a.submit(ACTOR,key(),'no dispatch')
++    finally:a.close()
+--- /dev/null
++++ after/tests/test_audit_disaster_app.py
+@@ -0,0 +1,68 @@
++"""Application-facing disaster status and receipt corruption refusal."""
++from datetime import UTC,datetime,timedelta
++import json
++import uuid
++import httpx
++import pytest
++
++from app import server
++from app.agent import runtime
++from app.agent.authority import Authority
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import OperatorPermits,RecoveryActions
++from app.agent.archive_restore import ArchiveRestorer
++
++KEY=b'synthetic-disaster-app-ledger-key-000000000'
++OPKEY=b'synthetic-disaster-app-operator-key-0000000'
++
++def key():return str(uuid.uuid4())
++
++@pytest.fixture
++def bound(tmp_path):
++    previous,worker=runtime._authority,runtime._execution_worker
++    runtime._authority=runtime._execution_worker=None
++    exports=tmp_path/'exports';targets=tmp_path/'targets';exports.mkdir(mode=0o700);targets.mkdir(mode=0o700)
++    g=LedgerGuard(tmp_path/'protected',KEY,key(),initialize=True,rollover=True,epoch_capacity=4,recovery=True)
++    a=Authority(tmp_path/'db'/'state.sqlite',allow_simulation=True,ledger=g)
++    runtime.bind_authority(a)
++    issuer=OperatorPermits(OPKEY);actions=RecoveryActions(a,issuer)
++    for _ in range(4):a.submit(runtime.SERVICE_ACTOR,key(),'held')
++    export_id=key();now=datetime.now(UTC)
++    token=issuer.issue(request_id=export_id,principal='synthetic-operator',scope=runtime.SERVICE_ACTOR.scope,command='export_ledger',payload={'export_id':export_id,'destination':str(exports)},checkpoint=g._head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    result=actions.export(runtime.SERVICE_ACTOR,export_id,exports,token)
++    g.trust_context=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=10)).isoformat())
++    restore_id=key();payload={'export_id':export_id,'manifest_sha256':result['export']['manifest_sha256'],'target_parent':str(targets),'restore_id':restore_id}
++    token=issuer.issue(request_id=restore_id,principal='synthetic-operator',scope=runtime.SERVICE_ACTOR.scope,command='restore_archive',payload=payload,checkpoint=g._head,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    restored=ArchiveRestorer(g,issuer).restore(runtime.SERVICE_ACTOR,restore_id,exports/export_id,targets,result['export']['manifest_sha256'],token,disposable=True)
++    yield a,g,restored
++    runtime.close_authority();runtime._authority=previous;runtime._execution_worker=worker
++
++@pytest.mark.asyncio
++async def test_operator_status_exposes_rollover_and_verified_receipt_state(bound,monkeypatch):
++    a,g,restored=bound
++    monkeypatch.setattr(server.settings.server,'api_token','disaster-fixture-only')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer disaster-fixture-only'}) as client:
++        result=(await client.get('/operator/diagnostics')).json()
++        assert result['disaster_recovery']['epoch']>=1
++        assert result['disaster_recovery']['restores'][0]['status']=='committed'
++        assert not result['disaster_recovery']['restores'][0]['artifact_currently_verified']
++        assert all(not t['execution_completed'] for t in result['tasks'])
++        assert (await client.post('/operator/restore',json={'target':'real'})).status_code==404
++
++@pytest.mark.asyncio
++async def test_missing_preparation_blocks_operator_health(bound,monkeypatch):
++    a,g,restored=bound
++    (g.directory/f"restore-{restored['restore_id']}.prepared.json").unlink()
++    monkeypatch.setattr(server.settings.server,'api_token','disaster-fixture-only')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer disaster-fixture-only'}) as client:
++        response=await client.get('/operator/diagnostics')
++        assert response.status_code==503 and response.json()['error']=='restore_history_incomplete'
++
++@pytest.mark.asyncio
++async def test_disaster_report_never_claims_execution_from_restore(bound):
++    from app.agent.reporter import reporter
++    a,g,restored=bound
++    report=await reporter.build_report()
++    assert '4 pending (admitted, execution held)' in report
++    assert 'Ledger integrity verified' in report
++    assert not restored['execution_enabled'] and not restored['runtime_activation_allowed']

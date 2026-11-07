@@ -1,0 +1,69 @@
+{
+  "at": "2026-11-06T05:27:20.725406+00:00",
+  "reviewer": "separate /root/audit_review agent",
+  "method": "Independent read-only static source/evidence review; primary executed guarded runtime tests",
+  "verdict": "PASS",
+  "unresolved_scoped_findings": [],
+  "source_sha256": {
+    "app/agent/api.py": "a13a855ed2e277a27908de0b0ba033c2822cfc724a85a9b0f191402432c53964",
+    "app/agent/authority.py": "14e382eae4562a2373ef0a27fd07cbff594553f5111de1f05e0068237d161ce1",
+    "app/agent/branch_verification.py": "d305a803f28636a71e6539d67247678cfb43ff63e70b3de83e719a00b18d6d2b",
+    "app/agent/enrollment.py": "f701594ad8053fe8532864203ce3ae4d0bbebf29ec3b36586af8dd77bc0846ef",
+    "app/agent/operator_cli.py": "d616d34671ef0ef15931b102338e7c3dd6171087cac6e9ebb359089001ef69b2",
+    "app/agent/recovery.py": "3524ec06d440909dbc5b7cce78e237b59283766f3881de70f416447316c2c98c",
+    "app/agent/reporter.py": "9036ebf7967824a98239a2f1c8a5b97e3ebf053078b6b52c9c4459ce0dd74639"
+  },
+  "findings": [
+    {
+      "severity": "HIGH",
+      "finding": "Implicit creation and schema-shaped legacy bypass",
+      "state": "CLOSED",
+      "resolution": "Normal opening refuses absent/zero/schema-only; no O_CREAT/DDL; enrolled state needs guard/witness; unmarked state requires explicit exact-state/path/head trusted-local compatibility capability."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Missing physical genesis/no-follow binding",
+      "state": "CLOSED",
+      "resolution": "Bounded no-follow reads, physical hash whenever logical state remains genesis, identity/postread checks and exact original enrollment record/receipt checks."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Branch verify/reopen race and identity collision",
+      "state": "CLOSED",
+      "resolution": "Expected full-byte hash and before/after inode/byte validation plus original-request collision refusal; negative/read-only/race tests."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Owner metadata rejected by consistency validator",
+      "state": "CLOSED",
+      "resolution": "Strict VERIFIED/LEGACY_APPROVED schemas with historical four-field compatibility; repeated focused/core/app validation."
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Legacy empty-head binding and sequence-based physical binding",
+      "state": "CLOSED",
+      "resolution": "Guarded compatibility binds current protected head; genesis physical binding follows logical seed equality rather than sequence."
+    },
+    {
+      "severity": "LOW",
+      "finding": "Malformed Actor and UUID domains",
+      "state": "CLOSED",
+      "resolution": "Exact Actor validation and distinct enrollment/store/trust; branch identities cannot equal store/restore/original operation IDs."
+    }
+  ],
+  "accepted_limitations": [
+    "Legacy verifier is caller-rooted trusted in-process capability, not independent historical provenance",
+    "Local Python, key provisioning, custody and secure time trusted; no privileged/same-UID coordinated rollback/key compromise protection",
+    "Genesis witness is minimum ancestor; later rollback needs newer independent reference",
+    "Proposals are unsigned, non-activating; registry freshness/global uniqueness external",
+    "Unprovisioned default startup fails closed; disposable startup is not general production readiness",
+    "Partial unknown SQL remains quarantined; no arbitrary bootstrap repair or real re-anchoring"
+  ],
+  "observed_final_runs": {
+    "benchmark": "20261106T052133594998Z",
+    "core": "20261106T052306740768Z",
+    "focused": "20261106T052048890683Z",
+    "full-app": "20261106T052023170164Z"
+  },
+  "live_qualification": false
+}

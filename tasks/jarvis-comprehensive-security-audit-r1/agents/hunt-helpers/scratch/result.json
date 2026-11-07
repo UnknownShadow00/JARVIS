@@ -1,0 +1,113 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fserver.py%23diagnostic-and-response-helper-routes::app%2Fserver.py%23api_token_middleware::app%2Fsupporting-services::ATTACK-CLASSES.md%23Feature%20abuse%20and%20data%20leakage",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/boot.py",
+        "app/brain/complexity_router.py",
+        "app/brain/direct_responder.py",
+        "app/brain/morning_report.py",
+        "app/brain/planner.py",
+        "app/brain/router.py",
+        "app/brain/tool_embeddings.py",
+        "app/config_check.py",
+        "app/network/tailscale.py",
+        "app/server.py",
+        "app/tools/cli/__init__.py",
+        "app/tools/health_check.py",
+        "app/tools/registry.py",
+        "app/tools/system_stats.py",
+        "scripts/install.ps1",
+        "scripts/wake_diag.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-helpers",
+          "reviewed_paths": [
+            "app/server.py",
+            "app/network/tailscale.py",
+            "app/tools/health_check.py",
+            "app/config_check.py",
+            "app/tools/system_stats.py"
+          ],
+          "invariant": "Diagnostic output must not cross a caller-identity boundary or accept an untrusted command/endpoint selector.",
+          "method": "source",
+          "result": "server.py238-248 applies the configured Bearer policy to /network/status, /health/tools and /health/readiness; only exact /health is exempt. Empty-token policy belongs to hypothesis A, not a new helper bypass. tailscale.py11-38 uses fixed argv tailscale status --json with five-second timeout and returns the parsed raw status; there is no caller-controlled shell argument. health_check.py80-111 and114-234 check trusted configured Ollama URL, module presence, executable/file paths and audio devices; config_check.py32-51 logs boolean/component names. system_stats.py15-79 returns utilization and visible process names/PIDs, not credentials or process command lines. No separately lower-authority diagnostic role or cross-principal exposure was established. No actual diagnostics/provider/hardware command was executed.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-helpers",
+          "reviewed_paths": [
+            "app/brain/direct_responder.py",
+            "app/brain/complexity_router.py",
+            "app/server.py"
+          ],
+          "invariant": "Arithmetic and complexity helpers must not interpret chat as executable Python or caller-supplied model/runtime authority.",
+          "method": "source",
+          "result": "direct_responder.py43-84 restricts input to an80-character arithmetic alphabet, then recursively interprets only numeric constants and whitelisted AST arithmetic/unary operators; each result is magnitude bounded. It does not call eval/exec or permit names/calls/attributes. complexity_router.py30-63 selects configured models and fixed80/150/700 response token budgets; server.py553-555 uses this decision, rather than executing a generated TaskPlan. Fractional powers of negative bases can yield complex results and a later uncaught formatting TypeError; this supports only a per-request robustness note, not code execution or shared denial of service.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-helpers",
+          "reviewed_paths": [
+            "app/brain/planner.py",
+            "app/server.py"
+          ],
+          "invariant": "Planner output must remain data and failure must not create an execution authorization.",
+          "method": "source",
+          "result": "planner.py20-61 catches unavailable/model/JSON errors and returns a single-goal fallback. Its parser validates steps/tool_hints as string lists and positive estimated_turns (82-104); it returns a TaskPlan data object and never dispatches the hints. Active server planning uses complexity_router.decide at553-555. No planner-to-tool execution or approval bypass path was found. Model output size/list counts are not independently bounded in this unused data planner, but no lower-trust-to-privileged execution effect was established.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-helpers",
+          "reviewed_paths": [
+            "app/brain/tool_embeddings.py",
+            "app/brain/router.py",
+            "app/tools/registry.py"
+          ],
+          "invariant": "Embedding/cache influence may choose only discovered candidates and must not supply execution approval or lower the selected tool own safety gate.",
+          "method": "source",
+          "result": "tool_embeddings.py59-90 iterates the caller candidate list, binds cached entries to configured model and current description, and returns a scored candidate name. router.py117-159 applies this only to use_tool results; failures fall back to the existing selection. registry.py153-224 then loads the actual selected tool and independently enforces its own Level3 denial, configured confirmation requirement and dry-run before module.execute. Cache/provider data lacks finite-vector/dimension/file-size limits, atomic writes or ownership validation, but local cache/provider identity is trusted in the visible deployment model and no cross-principal cache modification or gate bypass was established.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-helpers",
+          "reviewed_paths": [
+            "app/brain/morning_report.py",
+            "app/boot.py",
+            "app/tools/system_stats.py"
+          ],
+          "invariant": "Status report state readers must not activate work or derive authority from failed or stale local data.",
+          "method": "source",
+          "result": "morning_report.py13-89 reads fixed root-relative project_state.json and tasks/state.json, catches parse/read errors, coerces counts and produces narration; it never writes/activates execution or derives an authorization. boot.py136-140 consumes the report as text. get_stats normalizes utilization/GPU temperature only. The unconditional All systems operational phrase and stale JSON-era pending count can mislead operators, but no concrete unauthorized operation or cross-principal leakage was established. No real state files or GPU/system diagnostics were read.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-helpers",
+          "reviewed_paths": [
+            "app/tools/cli/__init__.py",
+            "scripts/install.ps1",
+            "scripts/wake_diag.py"
+          ],
+          "invariant": "Ancillary readiness/installer/audio tools must not accept lower-trust executable or output selectors implicitly.",
+          "method": "source",
+          "result": "tools/cli/__init__.py19-45 only checks named executable availability or returns a dry-run plan; it does not execute its command field. install.ps1 uses the operator PATH python and fixed repository-relative scripts/install.py; no network/install was performed. wake_diag.py100-140 explicitly captures a caller-requested finite frame count, stores scalar score/detected CSV rows under scripts/, and cleans up hardware handles in finally. CLI duration, PATH and project directory are trusted operator inputs; no public route to arbitrary duration/path or separately writable output ancestor was established. Its output collision/bounds and model/hardware dependency behavior remain operational hardening, not a demonstrated boundary failure.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Minimize /network/status raw Tailscale JSON and readiness path/error detail to the operator-visible fields actually needed. In token-enabled mode these routes already require the shared credential; no separate unauthorized reader was established. Empty-token reachability remains hypothesis A.",
+    "Move synchronous configured-provider/Tailscale/audio diagnostics out of async route execution and bound captured output sizes. Current explicit provider/tailscale timeouts are two/five seconds, and ordinary work blocking alone is not reported as a shared-service DoS finding.",
+    "Validate finite numeric embedding vectors with explicit dimension/file limits and atomically write a private cache. Current cache/provider inputs are trusted in the visible model, and registry safety still gates selected tools.",
+    "Reject complex/nonfinite arithmetic intermediates and catch formatting TypeError. Source predicts a per-request failure for (-1)**0.5+1; no runtime check or stronger impact was asserted. This is a variant to account for in existing accepted-session cleanup coverage, not a separate security candidate.",
+    "Replace unconditional All systems operational narration and legacy tasks/state.json pending counts with truthful current authority/recovery status or explicit unavailable text. No authorization is based on that narration.",
+    "Ancillary wake diagnostics accumulate the explicitly requested capture in memory and publish timestamp CSV without exclusive creation. Operator invocation and protected project directory are assumptions; no other-UID write/output-control prerequisite was established."
+  ],
+  "uncovered": []
+}

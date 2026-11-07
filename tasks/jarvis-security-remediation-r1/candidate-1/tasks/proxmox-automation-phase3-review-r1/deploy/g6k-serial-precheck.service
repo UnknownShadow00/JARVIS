@@ -1,0 +1,42 @@
+[Unit]
+Description=Transport-disabled pre-credential peer qualification
+Requires=g6k-serial-precheck.socket
+After=g6k-serial-precheck.socket
+ConditionPathExists=/etc/g6k-serial/HOST-PRECHECK
+
+[Service]
+Type=simple
+User=g6k-pve-broker
+Group=g6k-pve-broker
+ExecStart=/usr/bin/python3 -I -B /opt/g6k-serial/entry.py host-precheck
+Restart=no
+TimeoutStopSec=8
+KillMode=control-group
+UMask=0077
+LimitCORE=0
+StandardInput=null
+StandardOutput=null
+StandardError=journal
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+SystemCallFilter=~@mount @reboot @swap @module @raw-io
+TasksMax=8
+MemoryMax=128M
+CPUQuota=25%

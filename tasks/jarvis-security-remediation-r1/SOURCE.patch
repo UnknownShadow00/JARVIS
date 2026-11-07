@@ -1,0 +1,1210 @@
+--- before/.dockerignore
++++ final/.dockerignore
+@@ -0,0 +1,22 @@
++# Restrict the build context to the inputs explicitly copied by Dockerfile.
++**
++!Dockerfile
++!requirements-core.txt
++!config.yaml.example
++!app/
++!app/**
++!assets/
++!assets/**
++!frontend/
++!frontend/**
++
++# Private/runtime artifacts are never build inputs, including nested copies.
++**/.env
++**/.env.*
++**/*.key
++**/*.pem
++**/*.db
++**/*.sqlite*
++**/__pycache__/
++**/*.py[cod]
++**/node_modules/
+--- before/app/agent/api.py
++++ final/app/agent/api.py
+@@ -1,6 +1,6 @@
+-"""Authority routes under the existing server authentication middleware."""
++"""Authority routes enforce configured identity even when embedded independently."""
+ from typing import Annotated
+-from fastapi import APIRouter, Query, Request
++from fastapi import APIRouter, Depends, HTTPException, Query, Request
+ import secrets
+ from fastapi.responses import JSONResponse
+ from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
+@@ -8,7 +8,16 @@
+ from app.agent.runtime import SERVICE_ACTOR, get_authority, get_execution_pipeline, execution_readiness
+ from app.agent.scheduler import scheduler
+ 
+-router = APIRouter()
++async def require_authority_identity(request: Request):
++    """Loopback reachability is not operator identity, including embedded routers."""
++    from app.config import settings
++    expected = settings.server.api_token
++    supplied = request.headers.get("authorization", "")
++    if not expected.strip() or not secrets.compare_digest(supplied.encode(), ("Bearer " + expected).encode()):
++        raise HTTPException(status_code=401, detail="authority_authentication_required")
++
++
++router = APIRouter(dependencies=[Depends(require_authority_identity)])
+ PUBLIC_REQUEST_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+ UNAVAILABLE = frozenset({"execution_disabled", "execution_worker_not_ready", "execution_worker_reconcile_required",
+     "owner_busy", "owner_fenced", "store_replaced", "authority_unavailable", "storage_unknown_reconcile",
+--- before/app/agent/authority.py
++++ final/app/agent/authority.py
+@@ -112,6 +112,8 @@
+                 raise AuthorityError("unsafe_store_path")
+         if self.path.parent.stat().st_mode & 0o077:
+             raise AuthorityError("store_directory_not_private")
++        from app.agent.storage_paths import StorageAncestry
++        self._ancestry = StorageAncestry(self.path.parent)
+         # Existing legacy state requires explicit migration; never silently start
+         # an empty authority beside a populated JSON store.
+         legacy_present = any(Path(p).exists() or Path(p).is_symlink() for p in legacy_paths)
+@@ -179,6 +181,7 @@
+             finally:
+                 os.close(fd)
+             self._conn = sqlite3.connect(self.path, timeout=busy_ms / 1000, isolation_level=None, check_same_thread=False)
++            self._ancestry.verify()
+             self._conn.row_factory = sqlite3.Row
+             self._conn.execute("PRAGMA foreign_keys=ON")
+             self._conn.execute("PRAGMA journal_mode=WAL")
+@@ -228,7 +231,11 @@
+         if self._closed or self._poisoned or os.getpid() != self._pid:
+             raise AuthorityError("authority_unavailable")
+         try:
++            self._ancestry.verify()
+             matched = self._identity(self.path.stat(follow_symlinks=False)) == self._db_identity and self._identity(self._lockpath.stat(follow_symlinks=False)) == self._lock_identity
++        except AuthorityError:
++            self._poisoned = True
++            raise
+         except OSError:
+             matched = False
+         if not matched:
+--- before/app/agent/ledger.py
++++ final/app/agent/ledger.py
+@@ -61,8 +61,8 @@
+     for parent in (path, *path.parents):
+         if parent.is_symlink():
+             raise AuthorityError('unsafe_ledger_path')
+-    if create:
+-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
++    from app.agent.storage_paths import StorageAncestry
++    StorageAncestry(path, create=create)
+     st = path.stat()
+     if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o077:
+         raise AuthorityError('unsafe_ledger_directory')
+@@ -158,6 +158,8 @@
+         self.cache_hits = self.cache_misses = 0
+         self._configure_epochs(rollover=rollover, epoch_capacity=epoch_capacity, max_epochs=max_epochs, recovery=recovery, trust_context=trust_context)
+         self.directory = private_directory(self.directory, create=initialize)
++        from app.agent.storage_paths import StorageAncestry
++        self._ancestry = StorageAncestry(self.directory)
+ 
+     def acquire(self, db_path, *, readonly=False):
+         if self._fd is not None:raise AuthorityError('checkpoint_owner_busy')
+@@ -205,6 +207,7 @@
+             raise AuthorityError('checkpoint_missing') from exc
+         if (st.st_dev,st.st_ino) != self._identity:
+             raise AuthorityError('checkpoint_replaced')
++        self._ancestry.verify()
+         private_directory(self.directory)
+ 
+     def signed(self, body):
+--- before/app/agent/storage_paths.py
++++ final/app/agent/storage_paths.py
+@@ -0,0 +1,55 @@
++"""Protected directory ancestry checks; same-UID/root compromise remains excluded.
++
++Component-relative no-follow opens reject writable/foreign ancestors. Retained
++identities detect later replacement, including replacement with the same leaf.
++This is not an atomic SQLite VFS or protection from a malicious process owner.
++"""
++import os
++from pathlib import Path
++import stat
++
++from app.agent.authority import AuthorityError
++
++
++class StorageAncestry:
++    def __init__(self, directory, *, create=False):
++        self.path = Path(directory).absolute()
++        if '..' in self.path.parts:
++            raise AuthorityError('unsafe_storage_ancestor')
++        self.identities = self._walk(create=create)
++
++    def _walk(self, *, create=False):
++        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
++        fd = None
++        result = []
++        try:
++            fd = os.open('/', flags)
++            for part in ('', *self.path.parts[1:]):
++                if part:
++                    try:
++                        next_fd = os.open(part, flags, dir_fd=fd)
++                    except FileNotFoundError:
++                        if not create:
++                            raise
++                        # The preceding iteration validated this retained parent.
++                        # Refuse races; never follow an absolute mkdir pathname.
++                        os.mkdir(part, mode=0o700, dir_fd=fd)
++                        next_fd = os.open(part, flags, dir_fd=fd)
++                    os.close(fd)
++                    fd = next_fd
++                item = os.fstat(fd)
++                # Root-owned sticky /tmp protects existing user-owned entries.
++                sticky_root = item.st_uid == 0 and bool(item.st_mode & stat.S_ISVTX)
++                if item.st_uid not in {0, os.getuid()} or item.st_mode & 0o022 and not sticky_root:
++                    raise AuthorityError('unsafe_storage_ancestor')
++                result.append((item.st_dev, item.st_ino, item.st_uid, stat.S_IMODE(item.st_mode)))
++            return tuple(result)
++        except OSError as exc:
++            raise AuthorityError('unsafe_storage_ancestor') from exc
++        finally:
++            if fd is not None:
++                os.close(fd)
++
++    def verify(self):
++        if self._walk() != self.identities:
++            raise AuthorityError('storage_ancestor_replaced')
+--- before/app/comms/ue5_bridge.py
++++ final/app/comms/ue5_bridge.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ import re
++import asyncio
+ from dataclasses import asdict, dataclass
+ from datetime import UTC, datetime
+ from typing import Any
+@@ -23,10 +24,19 @@
+ class UE5ConnectionManager:
+     def __init__(self) -> None:
+         self.active: list[WebSocket] = []
++        self._accepting = 0
+ 
+-    async def connect(self, ws: WebSocket) -> None:
+-        await ws.accept()
+-        self.active.append(ws)
++    async def connect(self, ws: WebSocket) -> bool:
++        if len(self.active) + self._accepting >= 32:
++            await ws.close(code=1008, reason="connection_bound")
++            return False
++        self._accepting += 1
++        try:
++            await ws.accept()
++            self.active.append(ws)
++            return True
++        finally:
++            self._accepting -= 1
+ 
+     def disconnect(self, ws: WebSocket) -> None:
+         if ws in self.active:
+@@ -36,7 +46,7 @@
+         dead: list[WebSocket] = []
+         for ws in self.active:
+             try:
+-                await ws.send_json(data)
++                await asyncio.wait_for(ws.send_json(data), timeout=2)
+             except Exception:
+                 dead.append(ws)
+         for ws in dead:
+--- before/app/server.py
++++ final/app/server.py
+@@ -54,10 +54,19 @@
+ class ConnectionManager:
+     def __init__(self) -> None:
+         self.active: list[WebSocket] = []
+-
+-    async def connect(self, ws: WebSocket) -> None:
+-        await ws.accept()
+-        self.active.append(ws)
++        self._accepting = 0
++
++    async def connect(self, ws: WebSocket) -> bool:
++        if len(self.active) + self._accepting >= 32:
++            await ws.close(code=1008, reason="connection_bound")
++            return False
++        self._accepting += 1
++        try:
++            await ws.accept()
++            self.active.append(ws)
++            return True
++        finally:
++            self._accepting -= 1
+ 
+     def disconnect(self, ws: WebSocket) -> None:
+         if ws in self.active:
+@@ -67,7 +76,7 @@
+         dead = []
+         for ws in self.active:
+             try:
+-                await ws.send_json(data)
++                await asyncio.wait_for(ws.send_json(data), timeout=2)
+             except Exception:
+                 dead.append(ws)
+         for ws in dead:
+@@ -455,13 +464,19 @@
+ async def ws_endpoint(websocket: WebSocket) -> None:
+     if await _reject_unauthorized_websocket(websocket, settings.server.websocket_path):
+         return
+-    await manager.connect(websocket)
+-    audit.log("ws_connect", {"client": str(websocket.client)})
+-
+     try:
++        if not await manager.connect(websocket):
++            return
++        audit.log("ws_connect", {"client": str(websocket.client)})
+         while True:
+-            raw = await websocket.receive_text()
+-            if len(raw.encode('utf-8'))>8192:
++            frame = await websocket.receive()
++            if frame["type"] == "websocket.disconnect":
++                return
++            raw = frame.get("text")
++            if type(raw) is not str:
++                await websocket.close(code=1008, reason="text_required")
++                return
++            if len(raw)>8192 or len(raw.encode('utf-8'))>8192:
+                 await websocket.close(code=1009,reason="message_bound");return
+             try:
+                 data = json.loads(raw)
+@@ -526,19 +541,41 @@
+         audit.log("ws_disconnect", {"client": str(websocket.client)})
+ 
+ 
++_UE5_CLOSE_TIMEOUT = 2.0
++
++
++async def _close_ue5(websocket: WebSocket, *, code: int, reason: str) -> None:
++    try:
++        await asyncio.wait_for(websocket.close(code=code, reason=reason), timeout=_UE5_CLOSE_TIMEOUT)
++    except TimeoutError:
++        # The endpoint's synchronous finally still releases the registration.
++        pass
++
++
+ @app.websocket("/ue5")
+ async def ue5_endpoint(websocket: WebSocket) -> None:
+     from app.comms.ue5_bridge import ue5_manager
+ 
+     if await _reject_unauthorized_websocket(websocket, "/ue5"):
+         return
+-    await ue5_manager.connect(websocket)
+-    audit.log("ue5_ws_connect", {"client": str(websocket.client)})
+-
+     try:
++        if not await ue5_manager.connect(websocket):
++            return
++        audit.log("ue5_ws_connect", {"client": str(websocket.client)})
+         while True:
+-            await websocket.receive_text()
++            frame = await websocket.receive()
++            if frame["type"] == "websocket.disconnect":
++                return
++            raw = frame.get("text")
++            if type(raw) is not str:
++                await _close_ue5(websocket, code=1008, reason="text_required")
++                return
++            if len(raw) > 8192 or len(raw.encode("utf-8")) > 8192:
++                await _close_ue5(websocket, code=1009, reason="message_bound")
++                return
+     except WebSocketDisconnect:
++        pass
++    finally:
+         ue5_manager.disconnect(websocket)
+         audit.log("ue5_ws_disconnect", {"client": str(websocket.client)})
+ 
+--- before/config.yaml.example
++++ final/config.yaml.example
+@@ -106,8 +106,9 @@
+   ue5_enabled: false  # set true when UE5 MetaHuman project is running
+   tailscale_hostname: ""   # fill in your Tailscale machine name
+   # Bearer token for all HTTP routes (except /health) and WebSocket connects.
+-  # Empty = auth disabled (localhost-only use).
+-  # REQUIRED before any Tailscale/remote exposure — tools include shell and file access.
++  # Empty refuses authority routes (tasks, receipts, schedules, execution, /ready).
++  # Other local assistant interfaces retain legacy local mode; use a private token
++  # for the whole deployment. A token never enables real tools or host controls.
+   # Env override: JARVIS_API_TOKEN
+   api_token: ""
+   remote_access_enabled: false
+--- before/docs/end_to_end_readiness.md
++++ final/docs/end_to_end_readiness.md
+@@ -98,9 +98,10 @@
+    expired approval. Explicitly decide how overdue schedules remain held. No
+    automatic adoption, restored activation, history deletion or real migration.
+ 4. A nonempty configured API credential even on loopback, a documented caller
+-   identity/scope policy and verified ingress/origin protections. Ordinary pure
+-   held-task routes retain the documented anonymous local mode; that mode is not
+-   acceptable for the proposed live stage. Qualify actual startup/shutdown and
++   identity/scope policy and verified ingress/origin protections. Authority routes
++   require the configured Bearer credential, including held-task reads and
++   cancellation and independently embedded routers. Empty-token loopback startup
++   does not grant anonymous task authority. Qualify actual startup/shutdown and
+    private data/log handling without invoking production startup now.
+ 5. Physical filesystem/WAL/fsync/rename/quota and actual power-loss qualification
+    on the intended storage. SIGKILL plus disposable SQLite tests are insufficient
+--- before/docs/security_baseline.md
++++ final/docs/security_baseline.md
+@@ -0,0 +1,88 @@
++# Offline security baseline
++
++The remediation evidence is in
++[`tasks/jarvis-security-remediation-r1/`](../tasks/jarvis-security-remediation-r1/).
++It preserves the comprehensive audit and Sprint 6 evidence unchanged. The exact
++tested source, failed pre-fix regressions, successful checks and limitations are
++recorded separately; earlier test totals are not counted as new tests.
++
++## Authority identity
++
++Every authority-router endpoint requires a configured matching Bearer credential,
++including task reads, cancellation, receipts, schedules, execution and `/ready`.
++The router applies the check when embedded independently. Blank configuration,
++missing/wrong/malformed headers and query-string credentials are refused. Trusted
++enrollment or legacy admission does not authenticate an HTTP caller. Stock
++unprovisioned startup still fails before creating authority state.
++
++Use the existing private `JARVIS_API_TOKEN` launch environment or protected server
++configuration to supply a credential. Do not put credentials in URLs, examples,
++source, public artifacts or logs. No production configuration was changed by this
++work. Clients must send the configured credential; the CLI already supports it.
++The browser clients are not qualified as authenticated authority clients.
++
++Loopback identifies an interface, not an OS user. Before the correction, an
++explicitly admitted synthetic service with a genuine lifespan accepted held-task
++read/cancel requests from a separate local client process without credentials.
++After the correction those requests return 401 and leave the dummy task pending;
++the valid-credential control still reads/cancels and replays receipts correctly.
++These experiments used a network namespace, ephemeral socket and disposable state,
++not a production listener or real task database.
++
++HTTP Host is not an identity allowlist. Native clients can supply Host/Origin;
++neither substitutes for the credential. Foreign-origin browser preflights are
++refused by the configured CORS policy. Actual browser/local-network behavior was
++not qualified, and the socket experiment used one UID. The unprivileged namespace
++has only one mapped UID; changing to a second UID fails, and no host identities or
++privileged mapping helpers were provisioned. No cross-UID privilege escalation is
++claimed. All valid credential holders share the single operator's service actor;
++this is not per-user or multi-tenant authorization.
++
++`/health` is separate public liveness. Other non-authority assistant HTTP/WS
++interfaces retain the documented local mode when the token is empty. Configure a
++token for the entire deployment rather than treating that mode as user isolation.
++Real tool/getter/dictation and host-control effects remain disabled independently.
++
++## UE5 connection lifetime
++
++`/ue5` reads ASGI frames explicitly, refuses binary/malformed input with policy
++close 1008 and rejects text over 8192 UTF-8 bytes with close 1009. Registration and
++connect logging are inside the cleanup scope. A synchronous `finally` removes the
++manager entry after normal disconnect, malformed input, cancellation, exceptions,
++partial registration, audit failure or close failure. Policy-close delivery has a
++two-second timeout; the manager is cleaned even if a peer stalls that delivery.
++Cleanup is idempotent and leaves other connections intact. No incoming payload,
++authorization header or credential is added to these audit events.
++
++The UE5 singleton manager caps accepted plus accepting connections at 32 per process; cancelled
++acceptance releases its reserved capacity. Tests repeat hostile sessions, check
++reclaimed slots and preserve valid broadcasts. This proves the reviewed cleanup
++and finite manager-state behavior, not global service availability. Multiworker
++admission, upstream frame allocation, network/TLS and deployment rate limits still
++need operator qualification.
++
++## Protected storage and recovery
++
++Ancestry checks open components relative to a retained no-follow directory
++descriptor and refuse foreign/writable ancestors. Permitted root-owned sticky
++temporary roots still require the subsequent protected components to pass owner
++and permission checks. New private components are created relative to an already
++validated parent with mode 0700, before proceeding to the next component. Unsafe
++ancestors and competing symlinks are refused before descendant creation.
++
++Authority and ledger fences verify retained ancestor identities as well as leaf
++ownership; replacement poisons/refuses the writer. This is not an atomic SQLite
++VFS or protection against a malicious process owner, root, privileged mounts or
++unqualified filesystem/WAL semantics. Independent key/witness/reference custody,
++time, real ACLs, rename/fsync and physical power-loss behavior remain assumptions.
++
++The integrated replay exercises one shared history through authenticated admission,
++pure signed transport, nominal scheduler callbacks, witness renewal, loss recovery,
++offline FD-only operator reconciliation, explicit publication and inert archive
++restoration. Approval/restoration never activates real execution. Same-process
++synthetic HMAC IPC is not an isolated real executor or public-key nonrepudiation.
++
++No provider, real desktop/audio, production database, infrastructure credential,
++Proxmox/VM, NIC, guest console, power or privileged Gate 6K operation was used.
++The separately reviewed broker remains unconnected and requires its existing
++independent authorization and installed-identity qualification.
+--- before/docs/task_api.md
++++ final/docs/task_api.md
+@@ -5,6 +5,13 @@
+ The top-level `transport_permit` on `POST /execution/tasks` is optional and only accepted with an explicitly
+ configured exact synthetic transport and matching API credential. It grants no
+ real tool access. Public task metadata includes endpoint and grant digest only.
++
++All authority HTTP routes require a configured, matching `Authorization: Bearer`
++credential, including held-task reads/cancellation, receipts, schedules,
++execution status and `/ready`. The router enforces this independently of the host
++middleware. An empty token refuses these requests even after trusted admission;
++loopback, Host, Origin and query-string tokens do not supply identity. `/health`
++remains a separate public liveness route. See [the security baseline](security_baseline.md).
+ 
+ 
+ The authority stores decisions, held work, and opt-in synthetic execution results.
+@@ -19,7 +26,7 @@
+ bytes or complete a task. Archive restore remains an explicitly authorized offline
+ CLI operation; no public mutation endpoint is mounted. See
+ [the disaster recovery guide](audit_disaster_recovery.md).
+-This document changes no authentication policy or permissions and approves no
++This contract grants no additional execution permissions and approves no
+ service startup, client rollout, broker connection or privileged action.
+ 
+ The repository CLI also exposes read-only `jarvis tasks`, `--task-id UUID`,
+@@ -50,8 +57,8 @@
+ 2. `POST /tasks` takes exactly request_id and goal. `POST /schedule/jobs` also
+    takes name and cron_expr, with an optional explicit synthetic `execution`
+    template described below. Unknown fields are rejected. The actor scope is
+-   server-owned; a username/header/body field cannot select authority. Existing
+-   optional bearer enforcement still applies where configured.
++   server-owned; a username/header/body field cannot select authority. A configured
++   matching bearer credential is mandatory before authority access.
+ 3. Consume the returned receipt, including operation, request_id, state and
+    result. `state=committed` proves the stored decision, not guest execution,
+    effect completion or a human receiving the response. Ordinary `/tasks` work
+--- before/tests/test_authority_http_security.py
++++ final/tests/test_authority_http_security.py
+@@ -0,0 +1,156 @@
++"""Authority identity regressions against admitted dummy state, never live stores."""
++from datetime import UTC, datetime, timedelta
++from uuid import uuid4
++
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++
++from app import server
++from app.agent import api, runtime
++from app.agent.authority import AuthorityError
++from app.config import settings
++from synthetic_authority import fixture_authority
++
++
++TOKEN = "synthetic-authority-http-regression-token"
++
++
++@pytest.fixture
++def admitted(tmp_path, monkeypatch):
++    previous, worker = runtime._authority, runtime._execution_worker
++    runtime._authority = runtime._execution_worker = None
++    authority = fixture_authority(tmp_path / "authority" / "state.sqlite")
++    runtime.bind_authority(authority)
++    request_id = str(uuid4())
++    authority.submit(runtime.SERVICE_ACTOR, request_id, "dummy operator task")
++    monkeypatch.setattr(settings.server, "api_token", "")
++    try:
++        yield authority, request_id
++    finally:
++        runtime.close_authority()
++        runtime._authority, runtime._execution_worker = previous, worker
++
++
++@pytest.mark.parametrize("token", ["", TOKEN])
++def test_stock_startup_still_requires_real_admission_context(tmp_path, monkeypatch, token):
++    previous, worker = runtime._authority, runtime._execution_worker
++    runtime._authority = runtime._execution_worker = None
++    root = tmp_path / "unprovisioned"
++    monkeypatch.setattr(runtime, "PROJECT_ROOT", root)
++    monkeypatch.setattr(settings.server, "api_token", token)
++    try:
++        with pytest.raises(AuthorityError, match="authority_unenrolled_or_missing"):
++            with TestClient(server.app):
++                pytest.fail("unprovisioned startup admitted")
++        assert runtime._authority is None
++        assert not root.exists()
++    finally:
++        runtime._authority, runtime._execution_worker = previous, worker
++
++
++@pytest.mark.parametrize("embedded", [False, True])
++@pytest.mark.parametrize("authorization", [None, "Bearer wrong", TOKEN, "Bearer "])
++def test_explicit_admission_does_not_grant_anonymous_http_authority(admitted, embedded, authorization):
++    authority, task_id = admitted
++    app = server.app
++    if embedded:
++        app = FastAPI()
++        app.include_router(api.router)
++    client = TestClient(app)
++    headers = {"Authorization": authorization} if authorization is not None else {}
++    assert client.get("/tasks/" + task_id, headers=headers).status_code == 401
++    request_id = str(uuid4())
++    assert client.delete("/tasks/" + task_id, params={"request_id": request_id}, headers=headers).status_code == 401
++    assert authority.get_task(runtime.SERVICE_ACTOR, task_id)["status"] == "pending"
++    assert authority.receipt(runtime.SERVICE_ACTOR, request_id) is None
++
++
++@pytest.mark.parametrize("authorization", [None, "Bearer wrong", TOKEN, "Bearer "])
++def test_configured_token_rejects_missing_invalid_and_malformed_identity(admitted, monkeypatch, authorization):
++    authority, task_id = admitted
++    monkeypatch.setattr(settings.server, "api_token", TOKEN)
++    headers = {"Authorization": authorization} if authorization is not None else {}
++    client = TestClient(server.app)
++    assert client.get("/tasks/" + task_id, headers=headers).status_code == 401
++    assert client.get("/tasks/" + task_id + "?token=" + TOKEN).status_code == 401
++    assert authority.get_task(runtime.SERVICE_ACTOR, task_id)["status"] == "pending"
++
++
++@pytest.mark.parametrize("embedded", [False, True])
++def test_valid_identity_preserves_read_cancel_receipt_and_idempotency(admitted, monkeypatch, embedded):
++    authority, task_id = admitted
++    monkeypatch.setattr(settings.server, "api_token", TOKEN)
++    app = server.app
++    if embedded:
++        app = FastAPI()
++        app.include_router(api.router)
++    client = TestClient(app, headers={"Authorization": "Bearer " + TOKEN})
++    assert client.get("/tasks/" + task_id).status_code == 200
++    request_id = str(uuid4())
++    cancelled = client.delete("/tasks/" + task_id, params={"request_id": request_id})
++    assert cancelled.status_code == 200
++    replay = client.delete("/tasks/" + task_id, params={"request_id": request_id})
++    assert replay.status_code == 200 and replay.json()["replayed"]
++    assert client.get("/requests/" + request_id).status_code == 200
++    assert authority.get_task(runtime.SERVICE_ACTOR, task_id)["status"] == "cancelled"
++
++
++@pytest.mark.parametrize("method,path,body", [
++    ("GET", "/tasks", None),
++    ("GET", "/requests/{uuid}", None),
++    ("POST", "/tasks", {"request_id": "{uuid}", "goal": "never admitted"}),
++    ("GET", "/schedule/jobs", None),
++    ("POST", "/schedule/jobs", {"request_id": "{uuid}", "goal": "never admitted", "name": "dummy", "cron_expr": "* * * * *"}),
++    ("DELETE", "/schedule/jobs/{uuid}?request_id={uuid}", None),
++    ("GET", "/execution/status", None),
++    ("GET", "/ready", None),
++    ("POST", "/execution/tasks", {"request_id": "{uuid}", "goal": "never admitted", "capability": "synthetic.echo", "payload": {"value": "dummy"}, "expires_at": "{future}"}),
++])
++def test_every_privileged_route_refuses_unconfigured_identity(admitted, method, path, body):
++    operation = str(uuid4())
++    path = path.replace("{uuid}", operation)
++    if body is not None:
++        body = dict(body)
++        if body.get("request_id") == "{uuid}":
++            body["request_id"] = operation
++        if body.get("expires_at") == "{future}":
++            body["expires_at"] = (datetime.now(UTC) + timedelta(minutes=1)).isoformat()
++    response = TestClient(server.app).request(method, path, json=body)
++    assert response.status_code == 401
++    assert admitted[0].receipt(runtime.SERVICE_ACTOR, operation) is None
++
++
++def test_arbitrary_host_origin_cannot_replace_credentials(admitted, monkeypatch):
++    _, task_id = admitted
++    client = TestClient(server.app, base_url="http://foreign.invalid")
++    foreign = {"Origin": "https://foreign.invalid"}
++    assert client.get("/tasks/" + task_id, headers=foreign).status_code == 401
++    monkeypatch.setattr(settings.server, "api_token", TOKEN)
++    assert client.get("/tasks/" + task_id, headers=foreign).status_code == 401
++    response = client.get("/tasks/" + task_id, headers={**foreign, "Authorization": "Bearer " + TOKEN})
++    assert response.status_code == 200  # Host/Origin are not caller identity.
++    assert "access-control-allow-origin" not in response.headers
++    preflight = client.options("/tasks/" + task_id, headers={
++        **foreign, "Authorization": "Bearer " + TOKEN,
++        "Access-Control-Request-Method": "DELETE",
++        "Access-Control-Request-Headers": "Authorization",
++    })
++    assert preflight.status_code == 400
++    assert "access-control-allow-origin" not in preflight.headers
++    assert TOKEN not in response.text
++
++
++def test_anonymous_health_does_not_grant_task_access(admitted):
++    client = TestClient(server.app)
++    assert client.get("/health").status_code == 200
++    assert client.get("/tasks").status_code == 401
++
++
++@pytest.mark.parametrize("blank", [" ", "\t"])
++def test_whitespace_configuration_never_grants_authority(admitted, monkeypatch, blank):
++    monkeypatch.setattr(settings.server, "api_token", blank)
++    app = FastAPI()
++    app.include_router(api.router)
++    response = TestClient(app).get("/tasks", headers={"Authorization": "Bearer " + blank})
++    assert response.status_code == 401
+--- before/tests/test_enrollment_app.py
++++ final/tests/test_enrollment_app.py
+@@ -49,9 +49,9 @@
+     previous,worker=runtime._authority,runtime._execution_worker
+     runtime._authority=runtime._execution_worker=None
+     monkeypatch.setattr(runtime,'PROJECT_ROOT',tmp_path/'unprovisioned')
+-    monkeypatch.setattr(server.settings.server,'api_token','')
++    monkeypatch.setattr(server.settings.server,'api_token','synthetic-unprovisioned-caller')
+     try:
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic') as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-unprovisioned-caller'}) as client:
+             result=await client.get('/tasks')
+             assert result.status_code==503 and result.json()['error']=='authority_unenrolled_or_missing'
+         assert not (tmp_path/'unprovisioned').exists()
+--- before/tests/test_execution_pipeline.py
++++ final/tests/test_execution_pipeline.py
+@@ -17,8 +17,15 @@
+ from app.agent.execution import (DisabledExecutor, ExecutionPipeline, ExecutionWorker,
+                                  ExecutorRegistry, SimulatedPolicy, SyntheticExecutor, phase_id)
+ from app.agent import runtime
++from app.config import settings
+ 
+ ACTOR = runtime.SERVICE_ACTOR
++API_HEADERS = {"Authorization": "Bearer synthetic-execution-api-regression"}
++
++
++@pytest.fixture(autouse=True)
++def authenticated_api_identity(monkeypatch):
++    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-execution-api-regression')
+ 
+ 
+ def key():
+@@ -276,7 +283,7 @@
+     app.include_router(router)
+     try:
+         await worker.start()
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic') as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
+             op = key()
+             body = dict(request_id=op, goal='API pipeline', capability='synthetic.echo', payload={'value': 'through API'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
+             admitted = await client.post('/execution/tasks', json=body)
+@@ -411,7 +418,7 @@
+     app.include_router(router)
+     try:
+         await worker.start()
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic') as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
+             body = dict(request_id=key(), goal='schedule', name='scheduled echo', cron_expr='* * * * *', execution=dict(capability='shell.exec', payload={'value':'no'}))
+             assert (await client.post('/schedule/jobs', json=body)).status_code == 400
+             assert a.list_schedules(ACTOR) == []
+@@ -510,7 +517,7 @@
+     app.include_router(router)
+     app.add_middleware(AdmissionBodyLimit)
+     try:
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic') as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
+             response=await client.post('/execution/tasks',content=b'x'*262145)
+             assert response.status_code==413
+             async def chunks():
+@@ -541,7 +548,7 @@
+         await worker.stop()
+         op=submit(p)['request_id']
+         reserved=phase_id(op,'publish')
+-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic') as client:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
+             assert (await client.post('/tasks',json={'request_id':reserved,'goal':'reserve internal receipt'})).status_code==422
+             assert (await client.delete('/tasks/'+op,params={'request_id':reserved})).status_code==422
+             assert (await client.delete('/schedule/jobs/'+op,params={'request_id':reserved})).status_code==422
+--- before/tests/test_release_security.py
++++ final/tests/test_release_security.py
+@@ -0,0 +1,141 @@
++"""Release boundary regressions; disposable state, native IPC/ASGI only."""
++import asyncio
++import importlib.util
++from pathlib import Path
++from types import SimpleNamespace
++from unittest.mock import AsyncMock
++import uuid
++
++import httpx
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++from starlette.websockets import WebSocketDisconnect
++from app.agent import runtime
++from app.agent.api import router
++from app.agent.authority import Authority, AuthorityError
++from app.agent.storage_paths import StorageAncestry
++from app.agent.ledger import private_directory
++from app.config import settings
++from app import server
++from app.comms.ue5_bridge import UE5ConnectionManager, ue5_manager
++from synthetic_authority import fixture_authority
++
++
++@pytest.fixture
++def admitted(tmp_path, monkeypatch):
++    previous,worker=runtime._authority,runtime._execution_worker
++    runtime._authority=runtime._execution_worker=None
++    a=fixture_authority(tmp_path/'authority/state.sqlite')
++    runtime.bind_authority(a)
++    monkeypatch.setattr(settings.server,'api_token','synthetic-release-client')
++    try:yield a
++    finally:
++        runtime.close_authority();runtime._authority=previous;runtime._execution_worker=worker
++
++
++@pytest.mark.parametrize('path,method',[
++    ('/tasks','GET'),('/tasks','POST'),('/tasks/'+str(uuid.uuid4()),'GET'),
++    ('/tasks/'+str(uuid.uuid4())+'?request_id='+str(uuid.uuid4()),'DELETE'),
++    ('/requests/'+str(uuid.uuid4()),'GET'),('/schedule/jobs','GET'),('/schedule/jobs','POST'),
++    ('/schedule/jobs/'+str(uuid.uuid4())+'?request_id='+str(uuid.uuid4()),'DELETE'),
++    ('/execution/tasks','POST'),('/execution/status','GET'),('/operator/diagnostics','GET')])
++def test_empty_token_authority_access_refused_even_embedded(admitted,monkeypatch,path,method):
++    monkeypatch.setattr(settings.server,'api_token','')
++    app=FastAPI();app.include_router(router)
++    before=admitted._conn.total_changes
++    response=TestClient(app).request(method,path,json={'request_id':str(uuid.uuid4()),'goal':'held'})
++    assert response.status_code==401
++    assert admitted._conn.total_changes==before
++
++
++@pytest.mark.asyncio
++async def test_baseline_anonymous_read_cancel_reproduced_then_fixed(admitted,monkeypatch):
++    # Original source definitions, not a fabricated auth stub. Same-process
++    # admitted fixture only: no claim of deployed or cross-UID exploitation.
++    path=Path('/input/baseline_api.py')
++    if not path.exists():pytest.skip('retained baseline supplied by release cage')
++    spec=importlib.util.spec_from_file_location('baseline_authority_routes',path)
++    baseline=importlib.util.module_from_spec(spec);spec.loader.exec_module(baseline)
++    old=FastAPI();old.include_router(baseline.router)
++    key=str(uuid.uuid4());task=admitted.submit(runtime.SERVICE_ACTOR,key,'dummy held task')['result']
++    monkeypatch.setattr(settings.server,'api_token','')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=old),base_url='http://synthetic') as c:
++        assert (await c.get('/tasks/'+key)).status_code==200
++        cancel=await c.delete('/tasks/'+key,params={'request_id':str(uuid.uuid4())})
++        assert cancel.status_code==200 and cancel.json()['result']['status']=='cancelled'
++    fresh=FastAPI();fresh.include_router(router)
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=fresh),base_url='http://synthetic') as c:
++        assert (await c.get('/tasks/'+key)).status_code==401
++        assert (await c.delete('/tasks/'+key,params={'request_id':str(uuid.uuid4())})).status_code==401
++        monkeypatch.setattr(settings.server,'api_token','synthetic-release-client')
++        assert (await c.get('/tasks/'+key)).status_code==401
++        c.headers['Authorization']='Bearer synthetic-release-client'
++        assert (await c.get('/tasks/'+key)).json()['status']=='cancelled'
++
++
++@pytest.mark.parametrize('path',['/ws','/ue5'])
++@pytest.mark.parametrize('payload',[b'x','x'*8193])
++def test_websocket_binary_and_oversize_cleanup(admitted,path,payload):
++    manager=server.manager if path=='/ws' else ue5_manager
++    before=len(manager.active)
++    with TestClient(server.app).websocket_connect(path,headers={'Authorization':'Bearer synthetic-release-client'}) as c:
++        if isinstance(payload,bytes):c.send_bytes(payload)
++        else:c.send_text(payload)
++        with pytest.raises(WebSocketDisconnect) as e:c.receive_json()
++        assert e.value.code in (1008,1009)
++    assert len(manager.active)==before
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize('manager_type',[server.ConnectionManager,UE5ConnectionManager])
++async def test_connection_accept_bound_and_cancellation_cleanup(manager_type):
++    manager=manager_type();gate=asyncio.Event();entered=asyncio.Event()
++    class Peer:
++        async def accept(self):entered.set();await gate.wait()
++        async def close(self,**kwargs):self.closed=kwargs
++    waiting=Peer();task=asyncio.create_task(manager.connect(waiting));await entered.wait()
++    manager.active.extend([object()]*31)
++    refused=Peer();assert await manager.connect(refused) is False
++    assert refused.closed['code']==1008
++    task.cancel()
++    with pytest.raises(asyncio.CancelledError):await task
++    assert manager._accepting==0 and waiting not in manager.active
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize('failure',[RuntimeError('synthetic receive failure'),asyncio.CancelledError()])
++async def test_ue5_all_exit_cleanup(admitted,monkeypatch,failure):
++    monkeypatch.setattr(server,'_reject_unauthorized_websocket',AsyncMock(return_value=False))
++    peer=SimpleNamespace(accept=AsyncMock(),receive=AsyncMock(side_effect=failure),client='synthetic')
++    before=len(ue5_manager.active)
++    with pytest.raises(type(failure)):await server.ue5_endpoint(peer)
++    assert len(ue5_manager.active)==before
++
++
++@pytest.mark.parametrize('mode',[0o722,0o770,0o777])
++def test_writable_ancestor_refused_before_sqlite(tmp_path,mode):
++    parent=tmp_path/'untrusted';parent.mkdir(mode=0o700)
++    child=parent/'private';child.mkdir(mode=0o700)
++    db=child/'state.sqlite';db.write_bytes(b'synthetic-not-a-store');db.chmod(0o600)
++    parent.chmod(mode)
++    with pytest.raises(AuthorityError,match='unsafe_storage_ancestor'):private_directory(child)
++    with pytest.raises(AuthorityError,match='unsafe_storage_ancestor'):Authority(db)
++    assert not db.with_suffix('.sqlite.writer.lock').exists()
++
++
++def test_component_symlink_refused(tmp_path):
++    original=tmp_path/'original';original.mkdir(mode=0o700)
++    link=tmp_path/'alias';link.symlink_to(original,target_is_directory=True)
++    with pytest.raises(AuthorityError,match='unsafe_storage_ancestor'):StorageAncestry(link)
++
++
++def test_parent_replaced_with_same_leaf_inodes_fences_writer(tmp_path):
++    parent=tmp_path/'parent';a=fixture_authority(parent/'private/state.sqlite')
++    leaf=a.path.parent
++    parent.rename(tmp_path/'saved');parent.mkdir(mode=0o700)
++    (tmp_path/'saved/private').rename(leaf)
++    try:
++        with pytest.raises(AuthorityError,match='storage_ancestor_replaced'):a.submit(runtime.SERVICE_ACTOR,str(uuid.uuid4()),'must not write')
++        assert a._poisoned
++    finally:a.close()
+--- before/tests/test_server_auth.py
++++ final/tests/test_server_auth.py
+@@ -27,10 +27,10 @@
+     return token
+ 
+ 
+-def test_auth_disabled_by_default() -> None:
++def test_blank_token_does_not_grant_task_authority() -> None:
+     assert settings.server.api_token == ""
+     response = client.get("/tasks")
+-    assert response.status_code == 200
++    assert response.status_code == 401
+ 
+ 
+ def test_missing_token_rejected(api_token: str) -> None:
+--- before/tests/test_storage_ancestry_security.py
++++ final/tests/test_storage_ancestry_security.py
+@@ -0,0 +1,62 @@
++"""Creation must validate its retained parent before any filesystem mutation."""
++import os
++
++import pytest
++
++from app.agent.authority import AuthorityError
++from app.agent.ledger import private_directory
++from app.agent.storage_paths import StorageAncestry
++
++
++@pytest.mark.parametrize("mode", [0o722, 0o770, 0o777])
++def test_unsafe_ancestor_refused_before_creating_descendants(tmp_path, mode):
++    parent = tmp_path / "untrusted"
++    parent.mkdir(mode=0o700)
++    parent.chmod(mode)
++    child = parent / "new" / "private"
++    with pytest.raises(AuthorityError, match="unsafe_storage_ancestor"):
++        private_directory(child, create=True)
++    assert not (parent / "new").exists()
++
++
++def test_private_nested_creation_is_descriptor_relative_and_owner_only(tmp_path):
++    parent = tmp_path / "trusted"
++    parent.mkdir(mode=0o700)
++    target = parent / "new" / "private"
++    original = os.umask(0)
++    try:
++        assert private_directory(target, create=True) == target
++    finally:
++        os.umask(original)
++    assert (parent / "new").stat().st_mode & 0o777 == 0o700
++    assert target.stat().st_mode & 0o777 == 0o700
++    guard = StorageAncestry(target)
++    guard.verify()
++
++
++def test_symlink_ancestor_cannot_redirect_creation(tmp_path):
++    outside = tmp_path / "outside"
++    outside.mkdir(mode=0o700)
++    alias = tmp_path / "alias"
++    alias.symlink_to(outside, target_is_directory=True)
++    with pytest.raises(AuthorityError):
++        private_directory(alias / "new", create=True)
++    assert not (outside / "new").exists()
++
++
++def test_creation_race_refuses_competing_leaf_without_following_it(tmp_path, monkeypatch):
++    outside = tmp_path / "outside"
++    outside.mkdir(mode=0o700)
++    parent = tmp_path / "trusted"
++    parent.mkdir(mode=0o700)
++    original = os.mkdir
++
++    def race(path, mode=0o777, *, dir_fd=None):
++        if path == "new" and dir_fd is not None:
++            os.symlink(str(outside), path, dir_fd=dir_fd)
++        return original(path, mode=mode, dir_fd=dir_fd)
++
++    monkeypatch.setattr(os, "mkdir", race)
++    with pytest.raises(AuthorityError, match="unsafe_storage_ancestor"):
++        private_directory(parent / "new" / "victim", create=True)
++    assert not (outside / "victim").exists()
+--- before/tests/test_ue5_security.py
++++ final/tests/test_ue5_security.py
+@@ -0,0 +1,278 @@
++"""UE5 protocol and lifetime regressions using dummy ASGI connections only."""
++import asyncio
++import json
++
++import pytest
++from fastapi.testclient import TestClient
++from starlette.websockets import WebSocket, WebSocketDisconnect
++
++from app import server
++from app.comms import ue5_bridge
++from app.config import settings
++
++
++TOKEN = "synthetic-ue5-regression-token"
++
++
++@pytest.fixture
++def manager(monkeypatch):
++    manager = ue5_bridge.UE5ConnectionManager()
++    monkeypatch.setattr(ue5_bridge, "ue5_manager", manager)
++    monkeypatch.setattr(settings.server, "api_token", TOKEN)
++    return manager
++
++
++async def exercise(frames, *, before_receive=None, on_send=None, endpoint=None, path="/ue5"):
++    """Use Starlette's actual protocol state machine, without a listener."""
++    incoming = iter([{"type": "websocket.connect"}, *frames])
++    sent = []
++
++    async def receive():
++        item = next(incoming)
++        if before_receive is not None:
++            await before_receive(item)
++        if isinstance(item, BaseException):
++            raise item
++        return item
++
++    async def send(message):
++        sent.append(message)
++        if on_send is not None:
++            await on_send(message)
++
++    ws = WebSocket(
++        {
++            "type": "websocket",
++            "path": path,
++            "headers": [(b"authorization", ("Bearer " + TOKEN).encode())],
++            "client": ("127.0.0.1", 12345),
++            "query_string": b"",
++        },
++        receive,
++        send,
++    )
++    await (endpoint or server.ue5_endpoint)(ws)
++    return ws, sent
++
++
++@pytest.mark.parametrize("code", [1000, 1006])
++def test_valid_text_and_peer_disconnect_cleanup(manager, code):
++    ws, sent = asyncio.run(exercise([
++        {"type": "websocket.receive", "text": '{"type":"client-ready"}'},
++        {"type": "websocket.disconnect", "code": code},
++    ]))
++    assert len(sent) == 1 and sent[0]["type"] == "websocket.accept"
++    assert manager.active == []
++    manager.disconnect(ws)
++    manager.disconnect(ws)
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("payload", [b"", b"x", b'\xff\x00'])
++def test_binary_frames_close_cleanly(manager, payload):
++    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
++    assert sent[-1]["type"] == "websocket.close"
++    assert sent[-1]["code"] == 1008
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("frame", [
++    {"type": "websocket.receive"},
++    {"type": "websocket.receive", "text": 42},
++    {"type": "websocket.receive", "text": None},
++])
++def test_malformed_frames_close_cleanly(manager, frame):
++    _, sent = asyncio.run(exercise([frame]))
++    assert sent[-1]["type"] == "websocket.close"
++    assert sent[-1]["code"] == 1008
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("text", ["x" * 8193, "é" * 4097])
++def test_oversized_text_is_bounded(manager, text):
++    _, sent = asyncio.run(exercise([{"type": "websocket.receive", "text": text}]))
++    assert sent[-1]["code"] == 1009
++    assert manager.active == []
++
++
++def test_valid_utf8_frame_at_byte_limit_is_preserved(manager):
++    _, sent = asyncio.run(exercise([
++        {"type": "websocket.receive", "text": "é" * 4096},
++        {"type": "websocket.disconnect", "code": 1000},
++    ]))
++    assert len(sent) == 1 and sent[0]["type"] == "websocket.accept"
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("failure", [asyncio.CancelledError, RuntimeError])
++def test_cancellation_and_receive_exception_always_cleanup(manager, failure):
++    with pytest.raises(failure):
++        asyncio.run(exercise([failure("synthetic failure")]))
++    assert manager.active == []
++
++
++def test_connection_registration_failure_always_cleanup(manager, monkeypatch):
++    original = manager.connect
++
++    async def interrupted(ws):
++        await original(ws)
++        raise RuntimeError("synthetic registration failure")
++
++    monkeypatch.setattr(manager, "connect", interrupted)
++    with pytest.raises(RuntimeError, match="synthetic registration failure"):
++        asyncio.run(exercise([]))
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("event", ["ue5_ws_connect", "ue5_ws_disconnect"])
++def test_audit_exception_cannot_orphan_connection(manager, monkeypatch, event):
++    def fail(which, data):
++        if which == event:
++            raise RuntimeError("synthetic audit failure")
++
++    monkeypatch.setattr(server.audit, "log", fail)
++    with pytest.raises(RuntimeError, match="synthetic audit failure"):
++        asyncio.run(exercise([{"type": "websocket.disconnect", "code": 1000}]))
++    assert manager.active == []
++
++
++def test_valid_connection_preserves_broadcast_and_other_entries(manager):
++    other = object()
++    manager.active.append(other)
++
++    async def broadcast(item):
++        if item.get("type") == "websocket.receive":
++            # Keep the independent entry out of this broadcast only.
++            manager.active.remove(other)
++            await manager.broadcast({"type": "emotion", "emotion": "neutral"})
++            manager.active.append(other)
++
++    ws, sent = asyncio.run(exercise([
++        {"type": "websocket.receive", "text": "client ready"},
++        {"type": "websocket.disconnect", "code": 1000},
++    ], before_receive=broadcast))
++    assert json.loads(sent[1]["text"]) == {"type": "emotion", "emotion": "neutral"}
++    manager.disconnect(ws)
++    assert manager.active == [other]
++    manager.active.clear()
++
++
++def test_repeated_hostile_sessions_leave_no_persistent_entries_or_secrets(manager, monkeypatch):
++    events = []
++    monkeypatch.setattr(server.audit, "log", lambda event, data: events.append((event, data)))
++    client = TestClient(server.app)
++    for _ in range(32):
++        with client.websocket_connect("/ue5", headers={"Authorization": "Bearer " + TOKEN}) as ws:
++            ws.send_bytes(b"x")
++            with pytest.raises(WebSocketDisconnect) as closed:
++                ws.receive_text()
++            assert closed.value.code == 1008
++        assert manager.active == []
++    assert TOKEN not in repr(events)
++    assert "authorization" not in repr(events).lower()
++
++
++def test_cancellation_during_accept_releases_pending_capacity(manager):
++    async def run():
++        accepting = asyncio.Event()
++
++        async def receive():
++            return {"type": "websocket.connect"}
++
++        async def send(message):
++            accepting.set()
++            await asyncio.Future()
++
++        ws = WebSocket({
++            "type": "websocket", "path": "/ue5",
++            "headers": [(b"authorization", ("Bearer " + TOKEN).encode())],
++            "client": ("127.0.0.1", 12345),
++        }, receive, send)
++        task = asyncio.create_task(server.ue5_endpoint(ws))
++        await asyncio.wait_for(accepting.wait(), timeout=1)
++        task.cancel()
++        with pytest.raises(asyncio.CancelledError):
++            await task
++        assert manager.active == []
++        assert manager._accepting == 0
++
++    asyncio.run(run())
++
++
++def test_connection_bound_refuses_growth_and_reclaims_capacity(manager):
++    class Client:
++        def __init__(self):
++            self.closed = None
++
++        async def accept(self):
++            pass
++
++        async def close(self, **kwargs):
++            self.closed = kwargs
++
++    async def run():
++        accepted = [Client() for _ in range(32)]
++        for client in accepted:
++            assert await manager.connect(client)
++        refused = Client()
++        assert await manager.connect(refused) is False
++        assert refused.closed["code"] == 1008
++        assert len(manager.active) == 32
++        for client in accepted:
++            manager.disconnect(client)
++            manager.disconnect(client)
++        assert manager.active == [] and manager._accepting == 0
++        assert await manager.connect(refused)
++        manager.disconnect(refused)
++        assert manager.active == []
++
++    asyncio.run(run())
++
++
++def test_slow_close_cannot_retain_registration(manager, monkeypatch):
++    monkeypatch.setattr(server, "_UE5_CLOSE_TIMEOUT", 0.01)
++
++    async def slow(message):
++        if message["type"] == "websocket.close":
++            await asyncio.Future()
++
++    _, sent = asyncio.run(exercise([
++        {"type": "websocket.receive", "bytes": b"x"},
++    ], on_send=slow))
++    assert sent[-1]["code"] == 1008
++    assert manager.active == []
++
++
++def test_close_exception_cannot_retain_registration(manager):
++    async def broken(message):
++        if message["type"] == "websocket.close":
++            raise RuntimeError("synthetic close failure")
++
++    with pytest.raises(RuntimeError, match="synthetic close failure"):
++        asyncio.run(exercise([
++            {"type": "websocket.receive", "bytes": b"x"},
++        ], on_send=broken))
++    assert manager.active == []
++
++
++@pytest.mark.parametrize("stage", ["registration", "audit"])
++def test_sibling_chat_registration_cleanup_uses_same_lifetime_scope(manager, monkeypatch, stage):
++    chat = server.ConnectionManager()
++    monkeypatch.setattr(server, "manager", chat)
++    if stage == "registration":
++        original = chat.connect
++
++        async def interrupted(ws):
++            await original(ws)
++            raise RuntimeError("synthetic registration failure")
++
++        monkeypatch.setattr(chat, "connect", interrupted)
++    else:
++        def audit(event, data):
++            if event == "ws_connect":
++                raise RuntimeError("synthetic audit failure")
++
++        monkeypatch.setattr(server.audit, "log", audit)
++    with pytest.raises(RuntimeError, match="synthetic"):
++        asyncio.run(exercise([], endpoint=server.ws_endpoint, path=settings.server.websocket_path))
++    assert chat.active == []

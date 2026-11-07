@@ -1,0 +1,59 @@
+Independent reviewer: /root/independent_security_review_r3
+Scope: pure Python source review and fixture-backed tests only. No network,
+Proxmox, dpkg-query, systemd, timer, suspend, VM, guest, credential, or host
+subprocess operation was run.
+
+Process-wide tripwire command:
+python3 -I -B -S -c 'import os,subprocess,sys,unittest; subprocess.Popen=<raising tripwire>; os.killpg=<raising tripwire>; discover and run test_independent_review.py'
+
+Final v4 result with process-wide Popen/killpg tripwires:
+- Ran: 17 test methods
+- Passed: 17
+- Failed: 0
+- Errors: 0
+- Skipped: 0
+- Popen tripwire activations: 0
+- killpg tripwire activations: 0
+
+New v4 coverage and review:
+- the positive host-authorization fixture uses explicit
+  reviewed_stage2_host_evidence and reviewed_candidate_authorization_record
+  kinds;
+- every root, filesystem, package-query and host interface in that positive
+  path is mocked; Runner.run returns a fixed four-package metadata fixture and
+  is asserted to receive only the exact allowlisted PACKAGE_COMMAND;
+- synthetic prerequisite evidence is rejected even when all canonical hashes
+  are internally consistent;
+- a changed qemu-server package version is rejected against the separately
+  mocked runtime package output;
+- current source, prerequisite and review canonical hashes remain bound before
+  record kinds or runtime package metadata can authorize the adapter;
+- an active immutable session prepared under one source hash rejects a new
+  Engine source generation before snapshot or VM start;
+- CLI source inspection confirms the initial source hash must equal the permit
+  source hash after authorization and that package-query/backend Runner budgets
+  share the pre-authorization absolute deadline rather than resetting it.
+
+Source finding fixed during v4 review:
+The immutable session plan stored source_sha256 but action paths did not compare
+it with the currently running Engine source. Engine._plan now performs that
+comparison centrally for start, expire, cleanup, retire, verify and observe.
+The independent negative confirms source drift fails before the fake backend
+can change VM state.
+
+Additional source observations:
+- Stage2 canary is standalone, rejects UID/eUID 0, allows only one public
+  root-owned non-writable regular-file path with an exact content hash, and has
+  no subprocess or network interface. It reads clocks/boot ID and writes only
+  its JSON stdout result. Its behavior remains future Stage2 work.
+- The Stage3 pre-arm canary remains the separate root selfcheck command.
+- observe is read-only and explicitly non-qualifying. Missing inactive owned
+  units are recognized without issuing systemctl stop; changed identities fail
+  closed.
+- Runtime Policy B and qm stop remain absent.
+
+Conclusion:
+PASS_OFFLINE_HOST_ENFORCEMENT_ENGINEERING_ONLY. Package metadata, Stage2 canary,
+systemd/Proxmox behavior, installed source custody, timer firing and VM behavior
+remain unexecuted and unqualified. No live-host, expiration, bootstrap,
+forced-stop, installation, or Gate 6K authorization follows from this review.

@@ -1,0 +1,176 @@
+{
+  "units": [
+    {
+      "coverage_id": "app%2Fagent%2Fledger.py%23checkpoint-and-export::app%2Fagent%2Fledger.py%23LedgerGuard::app%2Fagent%2Fledger::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/authority.py",
+        "app/agent/checkpoint_epochs.py",
+        "app/agent/ledger.py",
+        "tests/test_audit_disaster.py",
+        "tests/test_operator_ledger.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/ledger.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/authority.py"
+          ],
+          "invariant": "Checkpoint authentication, fresh-byte cache validation, complete logical-state verification and fail-closed transaction publication.",
+          "method": "source",
+          "result": "ledger.py:210-234 authenticates canonical strict JSON with HMAC-SHA256 and constant-time comparison; cache is keyed by freshly read raw SHA256 and returns deep copies. ledger.py:236-341 binds sequence/store/prior head/intent/outcome and verifies complete state. authority.py:249-291 verifies before mutations and poisons uncertain ledger commits.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/ledger.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/authority.py",
+            "tests/test_operator_ledger.py",
+            "tests/test_audit_disaster.py"
+          ],
+          "invariant": "Tampered state/checkpoints and cached-byte changes do not authorize synthetic dispatch or pass ledger verification.",
+          "method": "local",
+          "result": "Parent OS-sandboxed ledger_controls.py: 10 cases passed in 0.19s, including state tamper, missing/HMAC/gap/truncation checkpoint failures, modified cached bytes, path alias/static symlink refusals, rollback reference and rollover retention.",
+          "artifact": "agents/hunt-ledger/artifacts/ledger_controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fledger.py%23checkpoint-and-export::app%2Fagent%2Fledger.py%23LedgerGuard::app%2Fagent%2Fledger::DATA-ISOLATION-AND-LIFECYCLE.md%23Backup%20and%20replication%20boundary%20drift",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/audit_attestations.py",
+        "app/agent/checkpoint_epochs.py",
+        "app/agent/ledger.py",
+        "docs/audit_disaster_recovery.md",
+        "tests/test_audit_disaster.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/ledger.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/audit_attestations.py",
+            "docs/audit_disaster_recovery.md"
+          ],
+          "invariant": "Exports and retained generations preserve store/history binding; independent references protect their stated minimum ancestry.",
+          "method": "source",
+          "result": "ledger.py:343-450 restricts whole-store export to local-service, separate private destination, exact inventory, signed manifest, bounded logical rows/bytes and retained checkpoint membership. audit_attestations.py:20-118 binds source publication receipt/checkpoint and restore phase links. checkpoint_epochs.py:112-185 retains generation links and checks externally supplied minimum ancestor; docs explicitly exclude key compromise/coordinated rollback without independent custody.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/ledger.py",
+            "tests/test_audit_disaster.py"
+          ],
+          "invariant": "Rollover retains old checkpoint bytes and a newer independent reference rejects an older generation.",
+          "method": "local",
+          "result": "Parent sandboxed ledger_controls.py passed test_rollover_retains_checkpoint_identities and test_trust_reference_rejects_rolled_back_checkpoint_generation, within its 10 passing cases.",
+          "artifact": "agents/hunt-ledger/artifacts/ledger_controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fledger.py%23checkpoint-and-export::app%2Fagent%2Fledger.py%23LedgerGuard::app%2Fagent%2Fledger::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Local%20file%20ownership%20and%20TOCTOU",
+      "disposition": "blocked",
+      "reviewed_paths": [
+        "app/agent/authority.py",
+        "app/agent/ledger.py",
+        "docs/audit_disaster_recovery.md",
+        "docs/operator_recovery.md",
+        "tests/synthetic_authority.py",
+        "tests/test_operator_ledger.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/ledger.py",
+            "app/agent/authority.py",
+            "docs/operator_recovery.md",
+            "docs/audit_disaster_recovery.md"
+          ],
+          "invariant": "Distinguish actual other-UID ancestor replacement from trusted same-UID file manipulation and enforce leaf type/owner/mode/link restrictions.",
+          "method": "source",
+          "result": "ledger.py:57-69 checks ancestor symlinks but only final-directory ownership/private mode; ledger.py:72-117 and authority.py:106-175 use absolute path operations with leaf O_NOFOLLOW and private single-link regular-file checks. Persistent descriptor-relative ancestor pinning is absent. Protected directory/key/OS identity custody is an explicit deployment assumption in docs. No different-principal rename-capable ancestor was observed or assumed.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/authority.py",
+            "app/agent/ledger.py",
+            "tests/synthetic_authority.py"
+          ],
+          "invariant": "A concrete final-connection pathname substitution must actually admit fabricated state before it can support an integrity-bypass claim.",
+          "method": "local",
+          "result": "Parent sandboxed ancestor_connection.py switched the same-UID synthetic ancestor at final writable SQLite connect and restored expected pathname. SQLite rejected constructor with OperationalError: attempt to write a readonly database. No injected task was accepted; this exact tested integrity-bypass chain is refuted. It was never a cross-UID qualification.",
+          "artifact": "agents/hunt-ledger/artifacts/ancestor_connection.txt"
+        },
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/ledger.py",
+            "tests/test_operator_ledger.py"
+          ],
+          "invariant": "Static symlink and traversal/alias paths are rejected before protected child publication.",
+          "method": "local",
+          "result": "Parent sandboxed ledger_controls.py passed static-symlink initialization and export path-alias checks.",
+          "artifact": "agents/hunt-ledger/artifacts/ledger_controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": [
+        "Hypothesis B remains unqualified for deployed other-UID behavior: actual owner/mode/ACL/mount/sticky-directory controls and a rename-capable lower-trust principal for an ancestor of the configured DB/checkpoint/export/custody roots were deliberately not observed. A same-UID race is not privilege escalation. The tested final SQLite connection substitution was rejected. Before claiming another exploit, first establish the distinct OS principal prerequisite and a concrete redirected operation that survives current controls in an approved disposable multi-UID fixture."
+      ]
+    },
+    {
+      "coverage_id": "app%2Fagent%2Fledger.py%23checkpoint-and-export::app%2Fagent%2Fledger.py%23LedgerGuard::app%2Fagent%2Fledger::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Unsafe%20recovery%20and%20capacity%20rollback",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "app/agent/audit_attestations.py",
+        "app/agent/authority.py",
+        "app/agent/checkpoint_epochs.py",
+        "app/agent/ledger.py",
+        "docs/audit_disaster_recovery.md"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-ledger",
+          "reviewed_paths": [
+            "app/agent/ledger.py",
+            "app/agent/checkpoint_epochs.py",
+            "app/agent/audit_attestations.py",
+            "app/agent/authority.py",
+            "docs/audit_disaster_recovery.md"
+          ],
+          "invariant": "Recovery retains ambiguity/evidence and capacity exhaustion refuses new mutation without resetting trust or deleting history.",
+          "method": "source",
+          "result": "ledger.py:32-35,128-135 caps logical state at32MiB/100000 rows; history caps root/epoch/staging/auxiliary inventories; epochs are bounded4-9999 checkpoints and1-16 generations. Export accounts incomplete directories and bytes (343-377). Pending checkpoints reconcile only exact committed or authenticated prior state (276-301); authority poisons uncertain commit acknowledgement. No cleanup, arbitrary checkpoint regeneration or rollover reset occurs. Documentation explicitly disclaims physical SQLite/WAL quotas and hardware power-loss qualification. No independently exploitable untrusted input-to-cost violation was established in this ledger-only scope.",
+          "artifact": null
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "Hypothesis B is not a confirmed vulnerability. Application helpers should ideally adopt descriptor-relative all-component traversal/owner/write-permission validation and retain directory descriptors, as the proposed Proxmox securefs design does. Current application safety depends on separately protected ancestors; observed same-UID substitution was rejected by SQLite and cannot establish other-UID exploitation.",
+    "Independent external minimum-reference custody, HMAC key custody and trustworthy clock remain documented deployment assumptions; same-UID key compromise or coordinated rollback of both database and anchors is explicitly outside the local contract. No key-rotation or hardware-anchor guarantee should be inferred.",
+    "Logical snapshot/export/journal bounds are not physical filesystem or SQLite WAL quotas. Retained history has finite capacity and intentionally stops mutation at exhaustion; operators need a reviewed capacity/retention plan before any activation.",
+    "No application source, snapshot, active worktree or shared reports were modified. Only two synthetic harnesses and this structured result were written under assigned scratch."
+  ],
+  "uncovered": []
+}

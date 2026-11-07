@@ -1,0 +1,117 @@
+{
+  "clock_us": 1000000000,
+  "host_boot_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "expected_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "cases": [
+    {
+      "name": "snapshot-valid",
+      "file": "snapshot-valid.json",
+      "expected_consistent": true,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-wrong-vmid",
+      "file": "snapshot-wrong-vmid.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-wrong-uuid",
+      "file": "snapshot-wrong-uuid.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-wrong-disk",
+      "file": "snapshot-wrong-disk.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-wrong-serial",
+      "file": "snapshot-wrong-serial.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-wrong-boot",
+      "file": "snapshot-wrong-boot.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-missing-iso",
+      "file": "snapshot-missing-iso.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-wrong-iso-content",
+      "file": "snapshot-wrong-iso-content.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-network",
+      "file": "snapshot-network.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-agent",
+      "file": "snapshot-agent.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-pending",
+      "file": "snapshot-pending.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-changed-digest",
+      "file": "snapshot-changed-digest.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-stale",
+      "file": "snapshot-stale.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-host-reboot",
+      "file": "snapshot-host-reboot.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "snapshot-missing-vga",
+      "file": "snapshot-missing-vga.json",
+      "expected_consistent": false,
+      "category": "snapshot"
+    },
+    {
+      "name": "scenario-A-stops",
+      "file": "scenario-A-stops.json",
+      "expected_consistent": true,
+      "category": "scenario"
+    },
+    {
+      "name": "scenario-A-refuses",
+      "file": "scenario-A-refuses.json",
+      "expected_consistent": true,
+      "category": "scenario"
+    },
+    {
+      "name": "scenario-B-refuses",
+      "file": "scenario-B-refuses.json",
+      "expected_consistent": true,
+      "category": "scenario"
+    }
+  ],
+  "all_synthetic": true,
+  "root_boot_go": false
+}

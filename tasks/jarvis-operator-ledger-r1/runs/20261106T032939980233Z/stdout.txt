@@ -1,0 +1,55 @@
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+................................F.........                               [100%]
+=================================== FAILURES ===================================
+_________ test_ledger_bound_and_checkpoint_staging_bounds_fail_closed __________
+
+env = (<app.agent.authority.Authority object at 0x7dadccba60d0>, <app.agent.execution.ExecutionPipeline object at 0x7dadccba...PosixPath('/work/pytest/test_ledger_bound_and_checkpoi0/exports'), 'store_id': '623b065f-25e5-4a43-9bc2-74a1b1ca1c2c'})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7dadccbbbe00>
+
+    def test_ledger_bound_and_checkpoint_staging_bounds_fail_closed(env,monkeypatch):
+        import app.agent.ledger as module
+        a,p,g,issuer,actions,paths=env
+        submit(p)
+        monkeypatch.setattr(module,'MAX_BYTES',1)
+>       with pytest.raises(AuthorityError,match='ledger_bound_exceeded'):a.readiness()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'ledger_bound_exceeded'
+E         Actual message: 'checkpoint_invalid'
+
+/input/tests/test_operator_ledger.py:427: AssertionError
+=========================== short test summary info ============================
+FAILED ../input/tests/test_operator_ledger.py::test_ledger_bound_and_checkpoint_staging_bounds_fail_closed
+1 failed, 185 passed in 26.61s
+{
+  "status": "TEST_FAILURE",
+  "started_at": "2026-11-06T03:29:40.081366+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026532961]",
+    "mnt_namespace": "mnt:[4026532402]",
+    "pid_namespace": "pid:[4026532456]",
+    "net_namespace": "net:[4026532459]",
+    "ipc_namespace": "ipc:[4026532407]",
+    "uts_namespace": "uts:[4026532403]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-operator-ledger-r1/runs/20261106T032939980233Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-operator-ledger-r1/runs/20261106T032939980233Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-operator-ledger-r1/runs/20261106T032939980233Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "tests": {
+    "collected": 186,
+    "failed": 1,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "full_app_import_attempts": {},
+  "finished_at": "2026-11-06T03:30:06.961517+00:00"
+}

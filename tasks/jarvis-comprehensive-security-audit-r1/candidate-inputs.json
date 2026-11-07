@@ -1,0 +1,200 @@
+[
+  {
+    "fingerprint": "app/server.py:anonymous-loopback-authority",
+    "title": "Anonymous loopback authority policy needs admitted-runtime reachability validation",
+    "description": "The ordinary HTTP middleware permits requests without credentials when server.api_token is empty, as allowed for loopback configuration. Task and schedule routes then act as the operator's shared SERVICE_ACTOR. A different OS principal able to connect to a serving instance could consequently read or cancel operator tasks without the credential. This is a source-grounded conditional path, not a confirmed vulnerability in the stock current launch: mandatory authority admission currently lacks the context needed to open missing, enrolled or legacy stores. Browser exploitation is also unproven and must not be inferred from missing Host validation or CORS behavior.",
+    "claimed_root_cause": "An empty API token disables authentication for ordinary privileged HTTP routes; loopback network reachability substitutes for caller identity, and the authority API assigns every accepted request the fixed local-service actor.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "app/server.py",
+        "line": 239,
+        "scope": "api_token_middleware",
+        "description": "An ordinary HTTP request passes directly to the application when no API token is configured."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/agent/api.py",
+        "line": 101,
+        "scope": "cancel",
+        "description": "DELETE /tasks/{task_id} invokes cancellation with the server-owned SERVICE_ACTOR and caller-supplied task/request identities."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/agent/authority.py",
+        "line": 423,
+        "scope": "Authority.cancel",
+        "description": "The fixed actor supplies the scope used to retrieve and mutate the task; no network caller identity reaches this layer."
+      },
+      {
+        "kind": "sink",
+        "file": "app/agent/authority.py",
+        "line": 414,
+        "scope": "Authority._cancel",
+        "description": "A held task is marked cancelled and its outbox state is durably changed."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "app/config.py",
+        "line": 108,
+        "description": "API token defaults to empty. The validator requires a nonempty token for remote/non-loopback configuration but permits anonymous loopback mode."
+      },
+      {
+        "file": "app/server.py",
+        "line": 238,
+        "description": "HTTP middleware returns call_next immediately when the configured token is empty; otherwise it requires a constant-time-compared Bearer token."
+      },
+      {
+        "file": "app/server.py",
+        "line": 404,
+        "description": "The authority router is included in the actual application."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 7,
+        "description": "All ordinary authority API callers share Actor(\"local-service\")."
+      },
+      {
+        "file": "app/agent/api.py",
+        "line": 77,
+        "description": "Operator diagnostics provides a stronger sibling control: a configured matching credential is required even when ordinary routes permit anonymous access."
+      },
+      {
+        "file": "app/server.py",
+        "line": 114,
+        "description": "Lifespan must successfully open the authority before startup proceeds."
+      },
+      {
+        "file": "app/agent/runtime.py",
+        "line": 17,
+        "description": "Default authority opening supplies no ledger, enrollment context or legacy approval."
+      },
+      {
+        "file": "app/agent/enrollment.py",
+        "line": 299,
+        "description": "An enrolled authority requires a ledger and external witness."
+      },
+      {
+        "file": "app/agent/enrollment.py",
+        "line": 338,
+        "description": "Legacy authority opening requires an explicit external verifier/permit tuple."
+      },
+      {
+        "file": "tests/test_server_auth.py",
+        "line": 11,
+        "description": "The test demonstrating unauthenticated task reads explicitly binds a synthetic authority, so it does not establish stock lifespan reachability."
+      },
+      {
+        "file": "app/server.py",
+        "line": 206,
+        "description": "Present WebSocket Origin is explicitly checked, preventing an unsupported direct cross-site WebSocket bypass claim."
+      }
+    ],
+    "blockers": [
+      "A normally launched, admitted application serving these routes without a configured token has not been established. Current default startup does not supply the ledger/enrollment witness or explicit legacy approval needed by the authority constructor.",
+      "No separate-UID local socket reproduction or browser reproduction has been performed. Browser local-network policy, ingress Host restrictions and DNS behavior remain unobserved; these facts are necessary before claiming browser exploitation."
+    ],
+    "validation_plan": {
+      "local": "Run the prepared minimal auth_route_probe.py through the parent OS sandbox to establish only route-layer behavior against one synthetic admitted authority: unauthenticated read/cancel, arbitrary Host/Origin acceptance, configured-token rejection and independent operator-diagnostics rejection. Then construct a documented admitted startup fixture that exercises lifespan rather than bypassing it. If assessing browser reachability, use an isolated browser and loopback-only dummy server to test the exact no-body POST or same-origin request shape under the browser's local-network policy. Never infer live reachability from a TestClient fixture.",
+      "deployment": "Ask the owner to inspect the actual launch or trusted embedding configuration without probing the service or displaying secrets: determine whether an admitted authority is bound, whether ordinary routes are served with an empty token, whether another OS UID can reach that listener, and whether ingress constrains Host/Origin. Do not access production databases, credentials or infrastructure during the audit."
+    },
+    "verdict": "needs_validation"
+  },
+  {
+    "fingerprint": "app/computer/screenshot.py:shared-temp-output",
+    "title": "Shared temporary screenshot namespace may redirect capture output across OS users",
+    "description": "Capture trusts an existing fixed jarvis_screenshots directory under the effective temporary root and uses a predictable second-resolution PNG name. If a different OS principal can precreate or populate that namespace and the installed PNG writer follows existing paths, one later victim capture may disclose synthetic screen bytes through an attacker-controlled output or overwrite a victim-writable dummy file. Source establishes the path trust gap, but private temporary roots, dependency availability and OS permissions can prevent this result. No capture, separate-UID effect, disclosure or overwrite was demonstrated. Native voice and vision callers make the boundary independent of the separate stock HTTP Authority admission limitation.",
+    "claimed_root_cause": "Generated screenshot storage trusts attacker-influenceable directory and leaf path state without owner/mode validation or descriptor-bound exclusive publication.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "app/computer/screenshot.py",
+        "line": 24,
+        "scope": "capture",
+        "description": "The default fixed temporary namespace is selected; mkdir(exist_ok=True) accepts preexisting filesystem state without determining which OS principal owns it."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/computer/screenshot.py",
+        "line": 27,
+        "scope": "capture",
+        "description": "The output basename depends on the capture second, and an absolute pathname is constructed without opening or pinning its directory or leaf."
+      },
+      {
+        "kind": "sink",
+        "file": "app/computer/screenshot.py",
+        "line": 32,
+        "scope": "capture",
+        "description": "Synthetic or real captured RGB bytes are passed to the installed mss.tools.to_png writer with that pathname as output; the application adds no no-follow or exclusive-create control."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 19,
+        "description": "mss is imported before directory selection or hardware capture; absence prevents this path from executing."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 24,
+        "description": "Temporary root selection is runtime-dependent, and the fixed child directory receives no ownership, permissions or symlink validation."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 27,
+        "description": "The second-resolution output name is predictable and no verified output descriptor is created by the application."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 32,
+        "description": "The installed PNG writer receives a pathname rather than a retained verified descriptor."
+      },
+      {
+        "file": "app/computer/screenshot.py",
+        "line": 42,
+        "description": "The normal execute wrapper refuses real capture in global dry-run mode."
+      },
+      {
+        "file": "app/tools/registry.py",
+        "line": 236,
+        "description": "Strict approval mode requires confirmation even for the Level0 screenshot tool; normal registry dry-run also gates execution."
+      },
+      {
+        "file": "app/brain/tool_params.py",
+        "line": 69,
+        "description": "Ordinary screenshot chat requests construct only monitor parameters; they do not expose arbitrary output_dir input."
+      },
+      {
+        "file": "app/voice/audio_stream.py",
+        "line": 96,
+        "description": "Native voice routes transcripts through the tool-processing helpers directly, without depending exclusively on HTTP application lifespan."
+      },
+      {
+        "file": "app/computer/vision.py",
+        "line": 44,
+        "description": "Screen analysis calls the same capture helper; its later file read at104-105 is pathname-based."
+      },
+      {
+        "file": "requirements-desktop.txt",
+        "line": 40,
+        "description": "Desktop installation declares mss>=9.0.0, which does not establish the exact installed writer implementation or an operational desktop."
+      },
+      {
+        "file": "tests/test_screenshot.py",
+        "line": 52,
+        "description": "The existing capture test replaces the PNG writer with a mock; it cannot establish real writer behavior, cross-UID permissions or shared-temp effects."
+      }
+    ],
+    "blockers": [
+      "The effective desktop temporary root, its ancestor permissions and namespace isolation, and a different OS principal ability to precreate/populate jarvis_screenshots have not been observed. A private per-user temporary root or victim-owned0700 existing directory can defeat this prerequisite.",
+      "The approved local toolchain has no mss desktop dependency. Parent-only static review of upstream MSSv9.0.1 tools.py (blob de3a1afb87cfbdda3e88b7421a66bbba4f2f0b1b, ordinary open(output, wb)) corroborates one version, but does not establish a deployed version, live capture enablement or desktop permission.",
+      "No approved disposable two-UID fixture with the real PNG writer established unauthorized screen-byte read or victim-owned dummy-file overwrite. A same-UID fake-writer demonstration would not resolve that OS-principal boundary."
+    ],
+    "validation_plan": {
+      "local": "Use a separately approved OS-isolated disposable fixture with two dummy UIDs, a synthetic shared temporary root, and an already available approved mss dependency. Mock only pixel acquisition and use the real PNG writer. Predeclare one harmless output and one victim-owned dummy file; allow the lower-trust UID to set up only the synthetic namespace, then invoke one capture as the victim and stop after observing rejection, redirected synthetic bytes or dummy-file overwrite. Compare a victim-owned0700 private-root control. Record effective directory/file modes, applicable OS link protections and writer version. Never access a real desktop, host temporary root, production file or credential, and do not fetch/install dependencies during this audit.",
+      "deployment": "Ask the owner to inspect capture enablement, installed mss version, effective TMPDIR/TEMP or per-user temp directory, directory/ancestor ownership and ACLs, umask and private-temp isolation without displaying screenshots or credentials. Determine whether a different local UID can precreate/populate the generated namespace. No production capture or service probing is requested."
+    },
+    "verdict": "needs_validation"
+  }
+]

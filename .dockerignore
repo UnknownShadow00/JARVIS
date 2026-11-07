@@ -1,0 +1,22 @@
+# Restrict the build context to the inputs explicitly copied by Dockerfile.
+**
+!Dockerfile
+!requirements-core.txt
+!config.yaml.example
+!app/
+!app/**
+!assets/
+!assets/**
+!frontend/
+!frontend/**
+
+# Private/runtime artifacts are never build inputs, including nested copies.
+**/.env
+**/.env.*
+**/*.key
+**/*.pem
+**/*.db
+**/*.sqlite*
+**/__pycache__/
+**/*.py[cod]
+**/node_modules/

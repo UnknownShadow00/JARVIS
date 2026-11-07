@@ -1,0 +1,27 @@
+--- codex1/docs/end_to_end_readiness.md
++++ codex2/docs/end_to_end_readiness.md
+@@ -1,12 +1,4 @@
+ # Offline application execution and readiness
+-
+-Release-candidate update: **all authority routes, including /ready, require a
+-configured bearer even on loopback and in an embedded router**. Empty-token
+-anonymous authority access is retired. The current protected-ancestry, WebSocket,
+-default and release contract is [release_candidate.md](release_candidate.md).
+-Historical Sprint 6 details below are superseded wherever they describe anonymous
+-held-task/readiness access. No deployment or live authorization is granted.
+-
+ 
+ Sprint 6 joins the actual FastAPI lifespan, Authority, queue, scheduler, execution
+ worker, receipts, enrollment, recovery registry and protected witness. The evidence
+@@ -107,8 +99,9 @@
+    automatic adoption, restored activation, history deletion or real migration.
+ 4. A nonempty configured API credential even on loopback, a documented caller
+    identity/scope policy and verified ingress/origin protections. Authority routes
+-   require the configured bearer, including held-task reads, cancellation and
+-   detailed readiness in independently embedded routers. Qualify startup/shutdown and
++   require the configured Bearer credential, including held-task reads and
++   cancellation and independently embedded routers. Empty-token loopback startup
++   does not grant anonymous task authority. Qualify actual startup/shutdown and
+    private data/log handling without invoking production startup now.
+ 5. Physical filesystem/WAL/fsync/rename/quota and actual power-loss qualification
+    on the intended storage. SIGKILL plus disposable SQLite tests are insufficient

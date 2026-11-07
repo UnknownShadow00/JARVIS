@@ -1,0 +1,20 @@
+[
+  {
+    "id": "D7",
+    "title": "Binary frame leaves a stale /ue5 connection entry",
+    "priority": "P2",
+    "source_snapshot": "snapshot-packaged",
+    "source": [
+      "app/server.py:529",
+      "app/server.py:540",
+      "app/server.py:541",
+      "app/comms/ue5_bridge.py:23"
+    ],
+    "artifact": "agents/hunt-packaged-safety/artifacts/ue5_binary_cleanup.txt",
+    "harness": "agents/hunt-packaged-safety/scratch/ue5_binary_cleanup.py",
+    "observed": "One credentialed in-memory /ue5 session sent the single binary byte 0x78. receive_text raised KeyError and the manager retained one entry after session exit. A normal disconnect retained zero. No lifespan, real socket, browser, other UID, connection flood or shared-service outage was tested.",
+    "boundary": "Per-session input/cleanup reliability defect. No unauthorized data access, authentication bypass, privilege gain or shared-service denial was demonstrated. Later broadcasts can remove dead connections.",
+    "fix": "Validate the accepted frame type and always disconnect in finally, including unexpected exceptions and cancellation. Apply explicit connection/send/size limits.",
+    "regression": "Send one binary frame and cancel one accepted session; assert a defined close/error and no retained entry after each."
+  }
+]

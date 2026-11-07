@@ -1,0 +1,1625 @@
+--- before/PROJECT_STATUS.md
++++ after/PROJECT_STATUS.md
+@@ -1,4 +1,14 @@
+ # JARVIS Project Status
++
++Latest source/offline sprint: [authority enrollment and branch verification](tasks/jarvis-authority-enrollment-r1/REPORT.md).
++Normal Authority opens refuse missing/incomplete stores and implicit legacy
++approval. An explicit disposable offline ceremony creates authenticated genesis,
++durable receipts and an external witness; restart verifies custody and continuity.
++Read-only restored-branch verification emits a proposal with no activation.
++Unprovisioned default startup now fails closed; trusted embedding/key/witness
++provisioning is an activation prerequisite. UNKNOWN work remains unresolved.
++Exact current tests, crash evidence, benchmarks and limitations are in the report;
++earlier entries below retain their historical source/evidence scope.
+ 
+ Latest audit durability sprint (2026-11-05 America/Chicago; UTC evidence
+ 2026-11-06): [audit disaster recovery](tasks/jarvis-audit-disaster-recovery-r1/REPORT.md).
+--- before/README.md
++++ after/README.md
+@@ -11,6 +11,12 @@
+ JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enabled, tool-using, screen-aware, automation-capable, and designed to run entirely on your own machine. The backend is Python/FastAPI, the model stack is local via Ollama, and the long-term system layers in autonomy, vision, memory, HUD interfaces, and cinematic presence without depending on cloud APIs. The API binds to localhost by default; LAN or Tailscale access must be enabled intentionally.
+ 
+ ## Feature Matrix
++
++Authority enrollment now requires an explicit offline ceremony; normal startup
++never creates a missing store. [Enrollment and branch guide](docs/authority_enrollment.md)
++describes durable genesis, restart verification and read-only restored-branch
++proposals. Trusted provisioning is required before application startup. See
++[sprint 4 evidence](tasks/jarvis-authority-enrollment-r1/REPORT.md).
+ 
+ | Phase | Name | Status | What exists now |
+ |-------|------|--------|-----------------|
+--- before/app/agent/api.py
++++ after/app/agent/api.py
+@@ -48,7 +48,7 @@
+     try:
+         return operation()
+     except AuthorityError as exc:
+-        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_", "restore_", "archive_attestation_")):
++        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_", "restore_", "archive_attestation_", "enrollment_", "authority_unenrolled")):
+             code = 503
+         elif exc.code in {"request_conflict", "stale_occurrence"}:
+             code = 409
+--- before/app/agent/authority.py
++++ after/app/agent/authority.py
+@@ -79,7 +79,7 @@
+     A lost commit acknowledgement is reconciled with the original request ID.
+     Storage exceptions poison this instance; reopening is an explicit action.
+     """
+-    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None):
++    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+         self.path = Path(path).absolute()
+         self._closed = False
+         self._poisoned = False
+@@ -91,6 +91,7 @@
+         self._lockfd = None
+         self._ledger = ledger
+         self._ledger_acquired = False
++        self._enrollment_context = enrollment_context
+         if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+             raise AuthorityError("invalid_busy_timeout")
+         # A verified historical restore is an inert artifact, not a runtime
+@@ -98,6 +99,10 @@
+         marker = self.path.parent / "DISPOSABLE.json"
+         if marker.exists() or marker.is_symlink():
+             raise AuthorityError("restore_activation_prohibited")
++        # Opening never enrolls: even initialize=True cannot authorize genesis.
++        # Refuse before creating a directory, writer lock or checkpoint file.
++        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
++            raise AuthorityError("authority_unenrolled_or_missing")
+         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+         for parent in [self.path.parent, *self.path.parent.parents]:
+             if parent.is_symlink():
+@@ -136,14 +141,11 @@
+                     versions = probe.execute("SELECT version FROM meta").fetchall()
+                     expected = {"meta", "ownership", "control", "records", "receipts", "events", "outbox", "simulation_effects", "sqlite_sequence"}
+                     actual = {r[0] for r in probe.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+-                    bootstrap = self._ledger is not None and versions == [] and actual == expected and all(not probe.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone() for table in expected)
+-                    if actual != expected or not bootstrap and (versions != [(1,)] or not probe.execute("SELECT 1 FROM ownership WHERE id=1").fetchone()):
++                    if actual != expected or versions != [(1,)] or not probe.execute("SELECT 1 FROM ownership WHERE id=1").fetchone():
+                         raise AuthorityError("unsupported_schema")
+-                    initialized = not bootstrap
++                    initialized = True
+                     markers = probe.execute("SELECT id FROM records WHERE kind='ledger_config'").fetchall()
+-                    if bootstrap:
+-                        self._ledger.verify(probe, recover=True)
+-                    elif markers:
++                    if markers:
+                         if self._ledger is None:
+                             raise AuthorityError("ledger_checkpoint_required")
+                         if markers != [(self._ledger.store_id,)]:
+@@ -151,6 +153,11 @@
+                         self._ledger.verify(probe, recover=True)
+                     elif self._ledger is not None:
+                         raise AuthorityError("ledger_enrollment_required")
++                    from app.agent.enrollment import verify_authority_enrollment
++                    self._enrollment_status = verify_authority_enrollment(probe, self.path, self._ledger, enrollment_context)
++                    if not self._enrollment_status['verified']:
++                        from app.agent.enrollment import verify_legacy_open
++                        self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                     if legacy_present and not probe.execute("SELECT 1 FROM receipts WHERE operation='import_legacy_snapshot' LIMIT 1").fetchone():
+                         raise AuthorityError("legacy_migration_required")
+                 except sqlite3.Error as exc:
+@@ -159,7 +166,7 @@
+                     probe.close()
+             if legacy_present and not initialized:
+                 raise AuthorityError("legacy_migration_required")
+-            fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
++            fd = os.open(self.path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
+             try:
+                 self._check_file(fd)
+                 self._db_identity = self._identity(os.fstat(fd))
+@@ -171,17 +178,10 @@
+             self._conn.execute("PRAGMA journal_mode=WAL")
+             self._conn.execute("PRAGMA synchronous=FULL")
+             self._conn.execute(f"PRAGMA busy_timeout={busy_ms}")
+-            from app.agent.ledger_schema import SCHEMA_SQL
+-            self._conn.executescript(SCHEMA_SQL)
+-            if self._ledger is not None and not initialized:
+-                self._ledger.verify(self._conn, new=True)
+             self._conn.execute("BEGIN IMMEDIATE")
+-            if self._ledger is not None and not initialized:
+-                self._create("ledger_config", self._ledger.store_id, "__authority__",
+-                             {"store_id": self._ledger.store_id, "checkpoint_required": True, "format": 1})
+             versions = self._conn.execute("SELECT version FROM meta").fetchall()
+             if not versions:
+-                self._conn.execute("INSERT INTO meta VALUES(1)")
++                raise AuthorityError("unsupported_schema")
+             elif len(versions) != 1 or versions[0][0] != 1:
+                 raise AuthorityError("unsupported_schema")
+             row = self._conn.execute("SELECT generation FROM ownership WHERE id=1").fetchone()
+@@ -198,7 +198,7 @@
+                 task["status"] = "unknown"
+                 self._put("task", task["task_id"], task["scope"], task)
+             self._conn.execute("UPDATE outbox SET state='unknown' WHERE state IN ('simulating','execution_claimed')")
+-            self._conn.execute("INSERT INTO events(request_id,data) VALUES(?,?)", (self.owner_id, canonical({"operation": "owner_acquired", "generation": self.generation, "recovered_unknown_count": len(abandoned), "at": datetime.now(UTC).isoformat()})))
++            self._conn.execute("INSERT INTO events(request_id,data) VALUES(?,?)", (self.owner_id, canonical({"operation": "owner_acquired", "generation": self.generation, "recovered_unknown_count": len(abandoned), "at": datetime.now(UTC).isoformat(), "enrollment":self._enrollment_status})))
+             self._commit()
+             directory = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
+             try: os.fsync(directory)
+@@ -238,6 +238,9 @@
+         if self._ledger is not None and not self._conn.in_transaction:
+             try:
+                 self._ledger.verify(self._conn)
++                if self._enrollment_context is not None:
++                    from app.agent.enrollment import verify_authority_enrollment
++                    self._enrollment_status = verify_authority_enrollment(self._conn,self.path,self._ledger,self._enrollment_context)
+             except BaseException:
+                 self._poisoned = True
+                 raise
+@@ -526,7 +529,7 @@
+             if not consistency["consistent"]:
+                 raise AuthorityError("ledger_inconsistent")
+             return {"storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
+-                    "ledger_consistent": True, "disaster_recovery": self._ledger.disaster_status() if self._ledger is not None else {"enabled": False}, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
++                    "ledger_consistent": True, "enrollment": self._enrollment_status, "disaster_recovery": self._ledger.disaster_status() if self._ledger is not None else {"enabled": False}, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
+ 
+     def close(self):
+         with self._mutex:
+--- /dev/null
++++ after/app/agent/branch_verification.py
+@@ -0,0 +1,81 @@
++"""Read-only historical branch continuity and re-anchoring proposals.
++
++There is deliberately no branch activation, re-key, SQL import or registry writer.
++Registry freshness and external parent-reference custody belong to the operator.
++"""
++from datetime import UTC, datetime
++import hashlib
++from pathlib import Path
++import sqlite3
++import uuid
++
++from app.agent.authority import AuthorityError, identifier, instant, text
++from app.agent.archive_restore import ArchiveRestorer, serialized
++from app.agent.enrollment import fingerprint, policy
++from app.agent.ledger import read_file
++
++
++class BranchVerifier:
++    def __init__(self, guard):
++        self.guard = guard
++
++    @serialized
++    def verify(self, directory, request):
++        g = self.guard; g._fence()
++        fields = {'format','branch_id','operator_id','expected_source_head','expected_restore_id',
++                  'expected_database_sha256','expected_source_lineage','expected_key_id',
++                  'issued_at','expires_at','reserved_branch_ids','decision'}
++        if type(request) is not dict or set(request) != fields:
++            raise AuthorityError('branch_invalid_verification_context')
++        if request['format'] != 'jarvis-branch-verification-request-v1' or request['decision'] != 'PROPOSE_ONLY':
++            raise AuthorityError('branch_proposal_only')
++        branch_id = identifier(request['branch_id']); identifier(request['expected_restore_id'])
++        if uuid.UUID(branch_id).version != 4 or branch_id in (g.store_id,request['expected_restore_id']):
++            raise AuthorityError('branch_invalid_identity')
++        text(request['operator_id'],128)
++        start = datetime.fromisoformat(instant(request['issued_at'])); end = datetime.fromisoformat(instant(request['expires_at']))
++        if not 0 < (end-start).total_seconds() <= 300 or not start <= datetime.now(UTC) < end:
++            raise AuthorityError('branch_context_expired')
++        registry = request['reserved_branch_ids']
++        if type(registry) is not list or len(registry)>64 or any(type(x) is not str for x in registry) or len(set(registry)) != len(registry):
++            raise AuthorityError('branch_invalid_registry')
++        for item in registry: identifier(item)
++        if branch_id in registry: raise AuthorityError('branch_identity_already_reserved')
++        head,pending,_ = g.history()
++        if pending or head != request['expected_source_head']:
++            raise AuthorityError('branch_stale_source_reference')
++        if request['expected_key_id'] != g.key_id: raise AuthorityError('branch_key_mismatch')
++        restored = ArchiveRestorer(g).verify_restored(directory)
++        if restored['restore_id'] != request['expected_restore_id'] or restored['database_sha256'] != request['expected_database_sha256']:
++            raise AuthorityError('branch_restored_identity_mismatch')
++        if restored['source_lineage'] != request['expected_source_lineage']:
++            raise AuthorityError('branch_generation_mismatch')
++        db=(Path(directory)/'state.sqlite').absolute()
++        before=db.stat(follow_symlinks=False)
++        raw=read_file(db,64*1024*1024)
++        if hashlib.sha256(raw).hexdigest()!=restored['database_sha256']:
++            raise AuthorityError('branch_artifact_changed')
++        conn = sqlite3.connect(db.as_uri()+'?mode=ro',uri=True)
++        try:
++            # Read original identities; never assign replacement request UUIDs.
++            ids = [row[0] for row in conn.execute('SELECT request_id FROM receipts ORDER BY request_id')]
++        finally: conn.close()
++        after=db.stat(follow_symlinks=False)
++        if (before.st_dev,before.st_ino)!=(after.st_dev,after.st_ino) or raw!=read_file(db,64*1024*1024):
++            raise AuthorityError('branch_artifact_changed')
++        if branch_id in ids:raise AuthorityError('branch_identity_collision')
++        _, final_hash = g._read(g.directory/f"restore-{restored['restore_id']}.final.json")
++        proposal = dict(format='jarvis-inert-reanchoring-proposal-v1',branch_id=branch_id,
++                        original_store_id=g.store_id,restore_id=restored['restore_id'],
++                        parent_checkpoint=restored['source_checkpoint'],parent_lineage=restored['source_lineage'],
++                        verified_source_head=head,restore_final_sha256=final_hash,
++                        database_sha256=restored['database_sha256'],original_request_ids_sha256=fingerprint(ids),
++                        external_context_sha256=fingerprint(request),external_trust_sha256=fingerprint(g.trust_context),
++                        operator_id=request['operator_id'],key_id=g.key_id,policy=policy(g),
++                        execution_enabled=False,activation_authorized=False,decision_required=True,
++                        required_decision='separate_authorized_offline_branch_ceremony',
++                        history_semantics='historical_parent_snapshot_not_source_head_continuation')
++        return {'state':'VERIFIED','verified':True,'proposal':proposal,'proposal_sha256':fingerprint(proposal),
++                'summary':restored['summary'],'original_request_count':len(ids),
++                'registry_written':False,'registry_freshness_externally_required':True,
++                'execution_enabled':False,'operator_decision':'REQUIRED_NO_ACTIVATION_AUTHORIZED'}
+--- /dev/null
++++ after/app/agent/enrollment.py
+@@ -0,0 +1,348 @@
++"""Explicit offline genesis admission. No automatic trust provisioning or resets.
++
++Custody and checkpoint directories and the external reservation are supplied by
++the trusted operator. This implementation only admits disposable offline stores.
++All artifacts and uncertain bootstrap states are retained, never cleaned up.
++"""
++from contextlib import contextmanager
++from datetime import UTC, datetime
++import fcntl
++import hashlib
++import os
++from pathlib import Path
++import sqlite3
++import uuid
++
++from app.agent.authority import AuthorityError, canonical, identifier, instant
++from app.agent.ledger import encode, private_directory, read_file, publish_file, sync_directory, digest_state, strict_json
++from app.agent.ledger_schema import SCHEMA_SQL
++from app.agent.archive_restore import _rename_directory, serialized
++
++EMPTY_HEAD = {'sequence': 0, 'sha256': None, 'checkpoint_hash': '0'*64}
++
++
++def policy(guard):
++    return dict(rollover=guard.rollover_enabled, epoch_capacity=guard.epoch_capacity,
++                max_epochs=guard.max_epochs, recovery=guard.recovery_enabled,
++                schema_sha256=hashlib.sha256(SCHEMA_SQL.encode()).hexdigest())
++
++
++def fingerprint(value):
++    return hashlib.sha256(encode(value)).hexdigest()
++
++
++class OfflineEnrollment:
++    def __init__(self, guard, custody, reservation, permits=None, *, fault_hook=None):
++        self.guard, self.permits = guard, permits
++        self.custody = private_directory(custody)
++        self.reservation = reservation
++        self._fault = fault_hook or (lambda _: None)
++        required = {'format','enrollment_id','store_id','key_id','destination','custody','checkpoints',
++                    'trust_id','policy','initial_checkpoint','issued_at','expires_at','disposable_only'}
++        if type(reservation) is not dict or set(reservation) != required:
++            raise AuthorityError('enrollment_invalid_external_reservation')
++        r = reservation
++        for field in ('enrollment_id','store_id','trust_id'):
++            identifier(r[field])
++            if uuid.UUID(r[field]).version != 4: raise AuthorityError('enrollment_invalid_identity')
++        if len({r['enrollment_id'],r['store_id'],r['trust_id']}) != 3:
++            raise AuthorityError('enrollment_identity_collision')
++        if (r['format'] != 'jarvis-empty-store-reservation-v1' or r['store_id'] != guard.store_id
++            or r['key_id'] != guard.key_id or r['policy'] != policy(guard)
++            or r['initial_checkpoint'] != EMPTY_HEAD or r['disposable_only'] is not True
++            or r['custody'] != str(self.custody) or r['checkpoints'] != str(guard.directory)):
++            raise AuthorityError('enrollment_external_context_mismatch')
++        self.destination = Path(r['destination'])
++        if not self.destination.is_absolute() or '..' in self.destination.parts:
++            raise AuthorityError('enrollment_unsafe_destination')
++        private_directory(self.destination.parent)
++        paths = [self.custody, guard.directory, self.destination]
++        if any(a == b or a.is_relative_to(b) or b.is_relative_to(a) for i,a in enumerate(paths) for b in paths[i+1:]):
++            raise AuthorityError('enrollment_paths_overlap')
++        self.stage = self.destination.parent / ('.enroll-' + r['enrollment_id'] + '.pending')
++        self._validate_interval(r)
++
++    @staticmethod
++    def _validate_interval(body, *, fresh=False):
++        start = datetime.fromisoformat(instant(body['issued_at']))
++        end = datetime.fromisoformat(instant(body['expires_at']))
++        if not 0 < (end-start).total_seconds() <= 300 or fresh and not start <= datetime.now(UTC) < end:
++            raise AuthorityError('enrollment_reservation_expired')
++
++    @property
++    def payload(self):
++        return {'reservation_sha256': fingerprint(self.reservation), 'reservation': self.reservation,
++                'execution_enabled': False}
++
++    @contextmanager
++    def _lock(self):
++        with self.guard._operation_mutex:
++            self.guard._writable()
++            fd = os.open(self.custody/'journal.lock', os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK, 0o600)
++            try:
++                from app.agent.authority import Authority
++                Authority._check_file(fd)
++                try: fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
++                except BlockingIOError as exc: raise AuthorityError('enrollment_owner_busy') from exc
++                yield
++            finally: os.close(fd)
++
++    def _phases(self):
++        inventory = {p.name for p in self.custody.iterdir()}
++        allowed = {'journal.lock','INTENT.json','PREPARED.json','FINAL.json'}
++        if not inventory <= allowed: raise AuthorityError('enrollment_custody_inventory_invalid')
++        phases = {name: self.guard._read(self.custody/(name+'.json'))
++                  for name in ('INTENT','PREPARED','FINAL') if name+'.json' in inventory}
++        if set(phases) not in (set(), {'INTENT'}, {'INTENT','PREPARED'}, {'INTENT','PREPARED','FINAL'}):
++            raise AuthorityError('enrollment_phase_missing')
++        if phases:
++            intent, ih = phases['INTENT']
++            if set(intent) != {'format','reservation','authorization','permit_sha256','execution_enabled'} or intent['format'] != 'jarvis-enrollment-intent-v1' or intent['reservation'] != self.reservation or intent['execution_enabled'] is not False:
++                raise AuthorityError('enrollment_intent_mismatch')
++            auth = intent['authorization']
++            required = {'request_id','principal','scope','command','payload_hash','checkpoint','expires_at','issued_at'}
++            if type(auth) is not dict or set(auth) != required or (auth['request_id'],auth['scope'],auth['command'],auth['payload_hash'],auth['checkpoint']) != (self.reservation['enrollment_id'],'local-service','enroll_authority',fingerprint(self.payload),EMPTY_HEAD) or not self.guard._hash(intent['permit_sha256']):
++                raise AuthorityError('enrollment_authorization_mismatch')
++            self._validate_interval(auth)
++            if 'PREPARED' in phases:
++                prepared, ph = phases['PREPARED']
++                if set(prepared) != {'format','enrollment_id','store_id','intent_sha256','genesis','logical_state','database_sha256','execution_enabled'} or prepared['format'] != 'jarvis-enrollment-prepared-v1' or prepared['intent_sha256'] != ih or prepared['enrollment_id'] != self.reservation['enrollment_id'] or prepared['store_id'] != self.guard.store_id or prepared['execution_enabled'] is not False or prepared['logical_state'] != self._expected(intent) or not self.guard._hash(prepared['database_sha256']):
++                    raise AuthorityError('enrollment_preparation_mismatch')
++                head,pending,history = self.guard.history()
++                if prepared['genesis'] not in history or prepared['genesis']['sequence'] != 1 or prepared['genesis']['sha256'] != prepared['logical_state']['sha256']:
++                    raise AuthorityError('enrollment_genesis_mismatch')
++                if 'FINAL' in phases:
++                    final, _ = phases['FINAL']
++                    if final != self._final_body(prepared, ph): raise AuthorityError('enrollment_final_mismatch')
++        return phases
++
++    def _seed(self, conn, intent):
++        for statement in SCHEMA_SQL.split(';'):
++            if statement.strip(): conn.execute(statement)
++        r = self.reservation; op = r['enrollment_id']; store = r['store_id']
++        conn.execute('INSERT INTO meta VALUES(1)')
++        conn.execute('INSERT INTO ownership VALUES(1,0,?)', ('UNENROLLED:'+op,))
++        conn.execute('INSERT INTO control VALUES(1,0,0)')
++        conn.execute('INSERT INTO records VALUES(?,?,?,?)', ('ledger_config',store,'__authority__',canonical({'store_id':store,'checkpoint_required':True,'format':1})))
++        data = {'enrollment_id':op,'custody':str(self.custody),'reservation_sha256':fingerprint(r),
++                'destination':str(self.destination),'key_id':self.guard.key_id,'policy':policy(self.guard)}
++        conn.execute('INSERT INTO records VALUES(?,?,?,?)', ('authority_enrollment',op,'__authority__',canonical(data)))
++        receipt = {'request_id':op,'scope':'local-service','operation':'enroll_authority',
++                   'payload_hash':hashlib.sha256(canonical(['local-service','enroll_authority',self.payload]).encode()).hexdigest(),
++                   'state':'committed','result':data,'at':intent['authorization']['issued_at'],'owner_generation':0}
++        conn.execute('INSERT INTO receipts VALUES(?,?,?,?,?)', (op,'local-service','enroll_authority',receipt['payload_hash'],canonical(receipt)))
++        conn.execute('INSERT INTO events(request_id,data) VALUES(?,?)', (op,canonical(receipt)))
++
++    def _expected(self, intent):
++        conn = sqlite3.connect(':memory:')
++        try:
++            self._seed(conn,intent)
++            return digest_state(conn)
++        finally: conn.close()
++
++    def _database(self, directory, intent):
++        directory = private_directory(directory)
++        db = directory/'state.sqlite'
++        read_file(db, 1024*1024)
++        conn = sqlite3.connect(db.as_uri()+'?mode=ro',uri=True,isolation_level=None)
++        try:
++            if conn.execute('PRAGMA integrity_check').fetchall() != [('ok',)] or digest_state(conn) != self._expected(intent):
++                raise AuthorityError('enrollment_partial_manual_quarantine')
++            return self.guard.verify(conn,recover=True)
++        except sqlite3.Error as exc: raise AuthorityError('enrollment_partial_manual_quarantine') from exc
++        finally: conn.close()
++
++    def enroll(self, actor, permit, *, disposable=False):
++        from app.agent.authority import Authority
++        if not disposable or Authority._scope(actor) != 'local-service' or self.permits is None:
++            raise AuthorityError('enrollment_explicit_offline_authorization_required')
++        with self._lock():
++            if self._phases(): raise AuthorityError('enrollment_exists_reconcile')
++            self._validate_interval(self.reservation,fresh=True)
++            if self.destination.exists() or self.destination.is_symlink() or self.stage.exists() or self.stage.is_symlink():
++                raise AuthorityError('enrollment_destination_not_exclusive')
++            head,pending,_ = self.guard.history()
++            if head != EMPTY_HEAD or pending: raise AuthorityError('enrollment_prior_history_present')
++            auth = self.permits.verify(permit,actor,self.reservation['enrollment_id'],'enroll_authority',self.payload)
++            if auth['checkpoint'] != EMPTY_HEAD: raise AuthorityError('enrollment_initial_anchor_mismatch')
++            intent = dict(format='jarvis-enrollment-intent-v1',reservation=self.reservation,authorization=auth,
++                          permit_sha256=fingerprint(permit),execution_enabled=False)
++            publish_file(self.custody/'INTENT.json',encode(self.guard.signed(intent)))
++            self._fault('enrollment_intent_durable')
++            return self._continue()
++
++    def reconcile(self):
++        with self._lock(): return self._continue()
++
++    def _continue(self):
++        g = self.guard; phases = self._phases()
++        if not phases: raise AuthorityError('enrollment_unenrolled')
++        if 'FINAL' in phases: return self.verify()
++        intent, ih = phases['INTENT']
++        if 'PREPARED' not in phases:
++            if self.destination.exists() or self.destination.is_symlink(): raise AuthorityError('enrollment_target_conflict')
++            if not self.stage.exists():
++                self.stage.mkdir(mode=0o700); sync_directory(self.stage.parent)
++                self._fault('enrollment_stage_created')
++            private_directory(self.stage)
++            inventory = {p.name for p in self.stage.iterdir()}
++            if not inventory:
++                if os.statvfs(self.stage).f_bavail*os.statvfs(self.stage).f_frsize < 1024*1024: raise AuthorityError('enrollment_storage_exhausted')
++                db = self.stage/'state.sqlite'
++                fd = os.open(db,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600); os.close(fd)
++                self._fault('enrollment_database_created')
++                conn = sqlite3.connect(db,isolation_level=None)
++                try:
++                    conn.execute('PRAGMA synchronous=FULL');conn.execute('PRAGMA journal_mode=DELETE')
++                    conn.execute('BEGIN IMMEDIATE');self._seed(conn,intent)
++                    self._fault('enrollment_before_database_commit')
++                    conn.execute('COMMIT');self._fault('enrollment_database_committed')
++                finally: conn.close()
++                sync_directory(self.stage)
++            elif inventory != {'state.sqlite'}: raise AuthorityError('enrollment_partial_manual_quarantine')
++            db = self.stage/'state.sqlite'
++            # Exact deterministic committed SQL can finish genesis publication.
++            # Any other partial database remains evidence for manual quarantine.
++            raw = read_file(db,1024*1024)
++            conn = sqlite3.connect(db.as_uri()+'?mode=ro',uri=True,isolation_level=None)
++            try:
++                try: exact = conn.execute('PRAGMA integrity_check').fetchall()==[('ok',)] and digest_state(conn)==self._expected(intent)
++                except sqlite3.Error: exact = False
++                if not exact: raise AuthorityError('enrollment_partial_manual_quarantine')
++                head,pending,_ = g.history()
++                if head == EMPTY_HEAD and not pending:
++                    g._head = head
++                    checkpoint = g.prepare(conn);self._fault('enrollment_genesis_intent_durable')
++                    g.finish(checkpoint);self._fault('enrollment_genesis_published')
++                integrity = g.verify(conn,recover=True)
++                if integrity['sequence'] != 1: raise AuthorityError('enrollment_prior_history_present')
++            finally: conn.close()
++            fd=os.open(db,os.O_RDONLY|os.O_NOFOLLOW)
++            try:os.fsync(fd)
++            finally:os.close(fd)
++            prepared = dict(format='jarvis-enrollment-prepared-v1',enrollment_id=self.reservation['enrollment_id'],
++                            store_id=g.store_id,intent_sha256=ih,genesis={k:integrity[k] for k in EMPTY_HEAD},
++                            logical_state=self._expected(intent),database_sha256=hashlib.sha256(raw).hexdigest(),execution_enabled=False)
++            publish_file(self.custody/'PREPARED.json',encode(g.signed(prepared)))
++            self._fault('enrollment_prepared_durable')
++        else: prepared = phases['PREPARED'][0]
++        marker = encode(g.signed(prepared))
++        if self.stage.exists() and self.destination.exists(): raise AuthorityError('enrollment_target_conflict')
++        if not self.destination.exists():
++            inventory = {p.name for p in private_directory(self.stage).iterdir()}
++            if inventory not in ({'state.sqlite'},{'state.sqlite','ENROLLMENT.json'}): raise AuthorityError('enrollment_partial_manual_quarantine')
++            if hashlib.sha256(read_file(self.stage/'state.sqlite',1024*1024)).hexdigest() != prepared['database_sha256']: raise AuthorityError('enrollment_database_substituted')
++            self._database(self.stage,intent)
++            if (self.stage/'ENROLLMENT.json').exists():
++                if read_file(self.stage/'ENROLLMENT.json') != marker: raise AuthorityError('enrollment_marker_mismatch')
++            else: publish_file(self.stage/'ENROLLMENT.json',marker)
++            sync_directory(self.stage);g._writable();self._fault('enrollment_before_publication')
++            _rename_directory(self.stage,self.destination);self._fault('enrollment_target_published')
++        if read_file(self.destination/'ENROLLMENT.json') != marker or hashlib.sha256(read_file(self.destination/'state.sqlite',1024*1024)).hexdigest() != prepared['database_sha256']:
++            raise AuthorityError('enrollment_database_substituted')
++        self._database(self.destination,intent)
++        publish_file(self.custody/'FINAL.json',encode(g.signed(self._final_body(prepared,fingerprint(g.signed(prepared))))))
++        self._fault('enrollment_final_durable')
++        return self.verify()
++
++    def _final_body(self, prepared, ph):
++        return dict(format='jarvis-enrollment-final-v1',enrollment_id=self.reservation['enrollment_id'],store_id=self.guard.store_id,
++                    destination=str(self.destination),prepared_sha256=ph,genesis=prepared['genesis'],
++                    reservation_sha256=fingerprint(self.reservation),execution_enabled=False,state='VERIFIED')
++
++    @serialized
++    def verify(self):
++        phases = self._phases()
++        if 'FINAL' not in phases: raise AuthorityError('enrollment_reconciliation_required')
++        final, fh = phases['FINAL']; prepared = phases['PREPARED'][0]
++        witness = dict(format='jarvis-enrollment-witness-v1',enrollment_id=self.reservation['enrollment_id'],store_id=self.guard.store_id,
++                       custody=str(self.custody),destination=str(self.destination),key_id=self.guard.key_id,final_sha256=fh,
++                       genesis=prepared['genesis'],reservation_sha256=fingerprint(self.reservation),policy=policy(self.guard))
++        db=self.destination/'state.sqlite'
++        if not db.is_file(): raise AuthorityError('enrollment_missing_database_no_recreate')
++        # Fresh no-follow validation also applies after owner takeover; the
++        # original physical genesis hash applies while still at genesis only.
++        raw=read_file(db,32*1024*1024)
++        identity=db.stat(follow_symlinks=False)
++        conn = sqlite3.connect((self.destination/'state.sqlite').as_uri()+'?mode=ro',uri=True,isolation_level=None)
++        try:
++            integrity=self.guard.verify(conn)
++            if integrity['sha256']==prepared['logical_state']['sha256'] and hashlib.sha256(raw).hexdigest()!=prepared['database_sha256']:
++                raise AuthorityError('enrollment_database_substituted')
++            verify_authority_enrollment(conn,self.destination/'state.sqlite',self.guard,witness)
++        finally: conn.close()
++        after=db.stat(follow_symlinks=False)
++        if (identity.st_dev,identity.st_ino)!=(after.st_dev,after.st_ino) or raw!=read_file(db,32*1024*1024):
++            raise AuthorityError('enrollment_database_substituted')
++        return {'state':'VERIFIED','enrollment_id':self.reservation['enrollment_id'],'witness':witness,
++                'receipt':final,'execution_enabled':False,'externally_custodied_witness_required':True}
++
++    @serialized
++    def status(self):
++        phases = self._phases()
++        if not phases:
++            return {'state':'UNENROLLED','verified':False,'execution_enabled':False,
++                    'recommendation':'external_new_store_reservation_and_authenticated_enrollment_required'}
++        if 'FINAL' in phases: return self.verify()
++        return {'state':'RECONCILIATION_REQUIRED' if 'PREPARED' in phases else 'INCOMPLETE',
++                'verified':False,'phases':sorted(phases),'execution_enabled':False,
++                'recommendation':'preserve_all_artifacts_explicit_offline_reconciliation_only'}
++
++
++def verify_authority_enrollment(conn, path, guard, witness):
++    """Called before ordinary owner takeover; never generates replacement trust."""
++    rows = conn.execute("SELECT id,data FROM records WHERE kind='authority_enrollment'").fetchall()
++    marker = Path(path).parent/'ENROLLMENT.json'
++    if not rows:
++        if witness is not None or marker.exists() or marker.is_symlink(): raise AuthorityError('enrollment_identity_missing')
++        return {'state':'LEGACY_UNENROLLED','verified':False}
++    if len(rows) != 1 or guard is None or type(witness) is not dict:
++        raise AuthorityError('enrollment_external_witness_required')
++    custody = private_directory(witness.get('custody',''))
++    intent, _ = guard._read(custody/'INTENT.json')
++    enrollment = OfflineEnrollment(guard,custody,intent.get('reservation'))
++    phases = enrollment._phases()
++    if 'FINAL' not in phases: raise AuthorityError('enrollment_reconciliation_required')
++    final, fh = phases['FINAL']; prepared = phases['PREPARED'][0]
++    expected = dict(format='jarvis-enrollment-witness-v1',enrollment_id=enrollment.reservation['enrollment_id'],store_id=guard.store_id,
++                    custody=str(custody),destination=str(Path(path).parent),key_id=guard.key_id,final_sha256=fh,
++                    genesis=prepared['genesis'],reservation_sha256=fingerprint(enrollment.reservation),policy=policy(guard))
++    if witness != expected or enrollment.destination != Path(path).parent or rows[0][0] != witness['enrollment_id']:
++        raise AuthorityError('enrollment_witness_mismatch')
++    baseline = sqlite3.connect(':memory:')
++    try:
++        enrollment._seed(baseline,phases['INTENT'][0])
++        expected_record=baseline.execute("SELECT id,data FROM records WHERE kind='authority_enrollment'").fetchone()
++        expected_receipt=baseline.execute('SELECT * FROM receipts').fetchone()
++        actual_receipt=conn.execute('SELECT * FROM receipts WHERE request_id=?',(witness['enrollment_id'],)).fetchone()
++        if tuple(rows[0]) != expected_record or actual_receipt is None or tuple(actual_receipt) != expected_receipt:
++            raise AuthorityError('enrollment_receipt_binding_mismatch')
++    finally:baseline.close()
++    if guard.authenticate(strict_json(read_file(marker))) != prepared:
++        raise AuthorityError('enrollment_marker_mismatch')
++    if digest_state(conn)==prepared['logical_state'] and hashlib.sha256(read_file(Path(path),32*1024*1024)).hexdigest()!=prepared['database_sha256']:
++        raise AuthorityError('enrollment_database_substituted')
++    if guard.history()[1] is not None: raise AuthorityError('enrollment_reconciliation_required')
++    return {'state':'VERIFIED','verified':True,'enrollment_id':witness['enrollment_id'],'genesis':prepared['genesis']}
++
++
++def verify_legacy_open(conn,path,approval,head=None):
++    """Explicit compatibility admission, never evidence that a store is new.
++
++No automatic legacy approval or issuance endpoint exists. A fresh externally
++supplied verifier/permit binds the exact existing logical state and destination.
++The subsequent owner event durably records the admitted decision identity.
++"""
++    from app.agent.recovery import OperatorPermits
++    from app.agent.runtime import SERVICE_ACTOR
++    if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
++        raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
++    verifier,permit=approval
++    if type(permit) is not dict or type(permit.get('body')) is not dict:
++        raise AuthorityError('operator_authentication_required')
++    request_id=identifier(permit['body'].get('request_id'))
++    payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
++    auth=verifier.verify(permit,SERVICE_ACTOR,request_id,'open_legacy_authority',payload)
++    if auth['checkpoint']!=(head if head is not None else EMPTY_HEAD):raise AuthorityError('enrollment_legacy_approval_mismatch')
++    return {'state':'LEGACY_APPROVED','verified':False,'open_request_id':request_id,
++            'authorization_sha256':fingerprint(auth),'new_store_enrollment_proven':False}
+--- before/app/agent/operator_cli.py
++++ after/app/agent/operator_cli.py
+@@ -9,7 +9,7 @@
+ import sqlite3
+ from pathlib import Path
+ from app.agent.authority import AuthorityError,identifier
+-from app.agent.ledger import LedgerGuard,strict_json
++from app.agent.ledger import LedgerGuard,strict_json,private_directory
+ from app.agent.recovery import inspect_offline,OperatorPermits
+ from app.agent.runtime import SERVICE_ACTOR
+ 
+@@ -42,6 +42,14 @@
+     modes.add_argument('--restore-archive')
+     modes.add_argument('--reconcile-restore')
+     modes.add_argument('--resume-rollover',action='store_true')
++    modes.add_argument('--enrollment-status',action='store_true')
++    modes.add_argument('--enroll-store',action='store_true')
++    modes.add_argument('--reconcile-enrollment',action='store_true')
++    modes.add_argument('--verify-branch')
++    parser.add_argument('--custody')
++    parser.add_argument('--reservation-fd',type=int)
++    parser.add_argument('--branch-context-fd',type=int)
++    parser.add_argument('--enrollment-witness-fd',type=int)
+     parser.add_argument('--expected-manifest-sha256')
+     parser.add_argument('--disposable-target-parent')
+     parser.add_argument('--operation-id')
+@@ -49,8 +57,9 @@
+     parser.add_argument('--permit-fd',type=int)
+     parser.add_argument('--commit-recovery',action='store_true')
+     args=parser.parse_args(argv)
+-    mutation=bool(args.restore_archive or args.reconcile_restore or args.resume_rollover)
+-    disaster=bool(args.checkpoint_status or args.verify_archive or args.verify_restored or mutation)
++    mutation=bool(args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
++    enrollment=bool(args.enrollment_status or args.enroll_store or args.reconcile_enrollment)
++    disaster=bool(args.checkpoint_status or args.verify_archive or args.verify_restored or args.verify_branch or enrollment or mutation)
+     ledger=None
+     try:
+         configured=(args.checkpoints is not None,args.store_id is not None,args.key_fd is not None)
+@@ -58,21 +67,47 @@
+         if disaster and not all(configured):raise AuthorityError('complete_checkpoint_configuration_required')
+         if mutation and not args.commit_recovery:raise AuthorityError('explicit_recovery_commit_required')
+         if all(configured):
++            if enrollment:private_directory(args.checkpoints)  # Never provision new trust directories.
+             raw=_read_fd(args.key_fd,128)
+             if len(raw)<32:raise AuthorityError('invalid_ledger_key')
+             trust=strict_json(_read_fd(args.trust_fd,16384)) if args.trust_fd is not None else None
+-            ledger=LedgerGuard(args.checkpoints,raw,args.store_id,rollover=args.rollover_enabled,
++            ledger=LedgerGuard(args.checkpoints,raw,args.store_id,initialize=args.enroll_store or args.reconcile_enrollment,rollover=args.rollover_enabled,
+                                epoch_capacity=args.epoch_capacity,max_epochs=args.max_epochs,recovery=disaster or args.disaster_recovery_enabled or args.rollover_enabled,trust_context=trust)
+         if not disaster:
+             if not args.database:raise AuthorityError('database_path_required')
+-            result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,task_id=args.task_id,limit=args.limit,offset=args.offset)
++            witness=strict_json(_read_fd(args.enrollment_witness_fd,16384)) if args.enrollment_witness_fd is not None else None
++            result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,enrollment_context=witness,task_id=args.task_id,limit=args.limit,offset=args.offset)
+             success=result['consistent']
+         else:
+             # This opens only the existing protected journal lock. No source DB
+             # is opened or created. An active application owner excludes this CLI.
+             coordinate=Path(args.disposable_target_parent) if args.disposable_target_parent else ledger.directory.parent/'.operator-coordination'
++            if args.enrollment_status and not (ledger.directory/'journal.lock').exists():
++                if any(ledger.directory.iterdir()) or args.custody is None or any(private_directory(args.custody).iterdir()):
++                    raise AuthorityError('enrollment_missing_initial_anchor_lock')
++                from app.agent.enrollment import OfflineEnrollment
++                result=OfflineEnrollment(ledger,args.custody,strict_json(_read_fd(args.reservation_fd,16384))).status()
++                print(json.dumps(result,indent=2));return 1
+             ledger.acquire(coordinate/'unused.sqlite',readonly=not mutation)
+-            if args.checkpoint_status:
++            if enrollment:
++                from app.agent.enrollment import OfflineEnrollment
++                if not args.custody:raise AuthorityError('enrollment_custody_required')
++                reservation=strict_json(_read_fd(args.reservation_fd,16384))
++                service=OfflineEnrollment(ledger,args.custody,reservation)
++                if args.operation_id is not None and args.operation_id!=reservation['enrollment_id']:
++                    raise AuthorityError('enrollment_invalid_identity')
++                if args.enrollment_status:
++                    result=service.status();success=result['state']=='VERIFIED'
++                elif args.reconcile_enrollment:
++                    result=service.reconcile();success=True
++                else:
++                    permits=OperatorPermits(_read_fd(args.operator_key_fd,128))
++                    permit=strict_json(_read_fd(args.permit_fd,65536))
++                    result=OfflineEnrollment(ledger,args.custody,reservation,permits).enroll(SERVICE_ACTOR,permit,disposable=True);success=True
++            elif args.verify_branch:
++                from app.agent.branch_verification import BranchVerifier
++                result=BranchVerifier(ledger).verify(args.verify_branch,strict_json(_read_fd(args.branch_context_fd,16384)));success=True
++            elif args.checkpoint_status:
+                 result=ledger.disaster_status();success=True
+             else:
+                 from app.agent.archive_restore import ArchiveRestorer
+@@ -101,6 +136,7 @@
+         print(json.dumps(result,indent=2));return 0 if success else 1
+     except (AuthorityError,OSError,sqlite3.Error) as exc:
+         print(json.dumps({'verified':False,'error':exc.code if isinstance(exc,AuthorityError) else 'operator_io_unavailable',
++            'state':'RECONCILIATION_REQUIRED' if mutation else 'BLOCKED',
+             'recommendation':'preserve_artifacts_and_protected_anchors_no_automatic_retry',
+             'mutation_outcome':'reconciliation_required' if mutation else 'none','operation_id':args.operation_id or args.reconcile_restore,
+             'execution_enabled':False}))
+--- before/app/agent/recovery.py
++++ after/app/agent/recovery.py
+@@ -113,8 +113,23 @@
+             if type(event) is not dict:raise AuthorityError('invalid_event')
+             if event.get('operation')=='owner_acquired':
+                 identifier(row['request_id'])
+-                if set(event)!={'operation','generation','recovered_unknown_count','at'} or type(event['generation']) is not int or event['generation']<1 or type(event['recovered_unknown_count']) is not int or event['recovered_unknown_count']<0:
++                base={'operation','generation','recovered_unknown_count','at'}
++                if set(event) not in (base,base|{'enrollment'}) or type(event['generation']) is not int or event['generation']<1 or type(event['recovered_unknown_count']) is not int or event['recovered_unknown_count']<0:
+                     raise AuthorityError('invalid_owner_event')
++                if 'enrollment' in event:
++                    admission=event['enrollment']
++                    if type(admission) is not dict:raise AuthorityError('invalid_owner_event')
++                    if admission.get('state')=='VERIFIED':
++                        if set(admission)!={'state','verified','enrollment_id','genesis'} or admission['verified'] is not True:
++                            raise AuthorityError('invalid_owner_event')
++                        identifier(admission['enrollment_id'])
++                        if type(admission['genesis']) is not dict or set(admission['genesis'])!={'sequence','sha256','checkpoint_hash'} or admission['genesis']['sequence']!=1:
++                            raise AuthorityError('invalid_owner_event')
++                    elif admission.get('state')=='LEGACY_APPROVED':
++                        if set(admission)!={'state','verified','open_request_id','authorization_sha256','new_store_enrollment_proven'} or admission['verified'] is not False or admission['new_store_enrollment_proven'] is not False or not re.fullmatch('[0-9a-f]{64}',admission['authorization_sha256']):
++                            raise AuthorityError('invalid_owner_event')
++                        identifier(admission['open_request_id'])
++                    else:raise AuthorityError('invalid_owner_event')
+                 instant(event['at'])
+                 if event['generation']<=owner_generation:issue('owner_generation_order',row['request_id'])
+                 owner_generation=event['generation'];last_owner=(event['generation'],row['request_id'])
+@@ -252,6 +267,7 @@
+                     'occurrence_summaries':result['occurrence_summaries'][offset:offset+limit],
+                     'schedules':result['schedules'][offset:offset+limit],'exports':result['exports'][offset:offset+limit],
+                     'next_offset':offset+limit if offset+limit<total else None,'ledger_integrity':integrity,
++                    'enrollment':a._enrollment_status,
+                     'recovery_mutations_publicly_enabled':False,'disaster_recovery':a._ledger.disaster_status() if a._ledger is not None else {'enabled':False}}
+ 
+     def retention_plan(self, actor, *, older_than, limit=100):
+@@ -472,7 +488,7 @@
+                                       lambda scope:{**payload,'execution_enabled':False})
+ 
+ 
+-def inspect_offline(database, actor, *, ledger=None, **options):
++def inspect_offline(database, actor, *, ledger=None, enrollment_context=None, **options):
+     """Quiesced diagnostic only: SQLite mode=ro, no owner takeover or recovery.
+ 
+     Refuses a running owner. Does not initialize directories, databases, locks,
+@@ -506,7 +522,9 @@
+             if [r[0] for r in markers]!=[ledger.store_id]:raise AuthorityError('ledger_store_mismatch')
+             ledger.verify(conn)
+         elif ledger is not None:raise AuthorityError('ledger_enrollment_required')
+-        shim=SimpleNamespace(_conn=conn,_mutex=threading.RLock(),_scope=Authority._scope,_ledger=ledger,_fence=lambda:None)
++        from app.agent.enrollment import verify_authority_enrollment
++        enrollment_status=verify_authority_enrollment(conn,path,ledger,enrollment_context)
++        shim=SimpleNamespace(_conn=conn,_mutex=threading.RLock(),_scope=Authority._scope,_ledger=ledger,_fence=lambda:None,_enrollment_status=enrollment_status)
+         return OperatorRecovery(shim).diagnose(actor,**options)
+     except (OSError,sqlite3.Error) as exc:
+         raise AuthorityError('offline_diagnostic_storage_unavailable') from exc
+--- before/app/agent/reporter.py
++++ after/app/agent/reporter.py
+@@ -24,6 +24,8 @@
+         summary = (f"Ledger integrity {integrity}; consistency issues {len(report['issues'])}; "
+                    f"unpublished exports {report['unpublished_exports']}; automatic retry disabled.")
+         disaster = report.get("disaster_recovery", {})
++        enrollment = report.get("enrollment", {}).get("state", "UNENROLLED")
++        summary += f"Enrollment {enrollment}; "
+         if "epoch" in disaster:
+             states = {state: sum(item["status"] == state for item in disaster["restores"])
+                       for state in ("committed", "prepared", "incomplete")}
+--- before/docs/audit_disaster_recovery.md
++++ after/docs/audit_disaster_recovery.md
+@@ -1,4 +1,10 @@
+ # Offline audit continuity and disposable restore
++
++Current [enrollment and branch verification](authority_enrollment.md) adds a
++separate explicit genesis ceremony and read-only restored-branch proposals.
++Normal missing-store creation is disabled. The earlier legacy bootstrap crash
++limitation below is now handled by that ceremony when deterministic committed
++seed evidence exists; arbitrary partial SQL still requires quarantine.
+ 
+ This is an opt-in local embedding capability. It enables no real executor,
+ provider, production service or runtime migration. Reproduction and exact results
+--- /dev/null
++++ after/docs/authority_enrollment.md
+@@ -0,0 +1,164 @@
++# Explicit offline authority enrollment and branch verification
++
++Current implementation and exact reproduction evidence are in the
++[sprint 4 packet](../tasks/jarvis-authority-enrollment-r1/REPORT.md).
++No production startup, runtime migration, real executor, provider or actual
++restored-branch re-anchoring is authorized or performed.
++
++## Normal opening is never enrollment
++
++`Authority(path)` refuses missing, zero-byte and schema-only databases. Missing
++paths are rejected before mkdir, writer-lock or checkpoint creation. Its opening
++path uses no O_CREAT or schema DDL. `LedgerGuard(initialize=True)` is not permission
++to create a new Authority or silently replace a missing store.
++
++Enrolled stores require an explicitly supplied `enrollment_context` witness and
++the correct guard before owner takeover. Missing/altered custody phases, marker,
++original receipt or genesis continuity block opening. Subsequent operations check
++the same custody evidence before admission/dispatch. Default runtime startup does
++not load or generate keys, witnesses or approvals: a trusted offline embedding
++must bind an already verified Authority. Unprovisioned default startup fails closed.
++
++Pre-existing unmarked stores also refuse normal opening by default. A trusted
++embedding may explicitly supply a fresh `legacy_approval=(OperatorPermits, permit)`
++capability for `open_legacy_authority`. Its payload binds the absolute database
++path, exact logical state and execution_disabled; its checkpoint binds the verified
++current head (or EMPTY_HEAD for an unguarded legacy store). The owner-acquired audit
++event records the admitted request and authorization fingerprint. Diagnostics say
++`LEGACY_APPROVED`, `verified=false`, `new_store_enrollment_proven=false`.
++
++This caller-supplied verifier is a trusted in-process capability, not independent
++authentication of historical legacy provenance. There is no automatic approval,
++environment bypass, public issuance endpoint or legacy-opening CLI mutation. Local
++Python code and verifier/key provisioning remain trusted. Explicit test fixtures
++use this compatibility admission only for historical queue regressions; new
++enrollment/security tests use the real ceremony and ordinary constructor directly.
++
++## External reservation and custody
++
++`OfflineEnrollment` accepts only an explicitly disposable offline reservation.
++The caller provisions separate private checkpoint and custody directories, an
++exclusive absent destination under a private parent, a store key, and an independent
++expected reservation. The product creates no replacement key/trust context.
++
++Reservation format is `jarvis-empty-store-reservation-v1`; fields are `enrollment_id`,
++`store_id`, `trust_id` (distinct UUID4s), `key_id`, absolute `destination`, `custody`,
++`checkpoints`, `policy`, `initial_checkpoint`, `issued_at`, `expires_at`, and
++`disposable_only=true`. Policy binds original fixed-schema hash, rollover flag,
++epoch capacity, max generations and recovery flag. The initial checkpoint is
++sequence0, sha256=null, checkpoint_hash=64 zeroes. Reservation validity is at most
++300 seconds. The expected reservation is an external trust assertion, not proof
++that locally missing files have never existed.
++
++Admission additionally requires a fresh local-service `OperatorPermits` grant for
++`enroll_authority`, same enrollment UUID, empty checkpoint and exact payload:
++`reservation`, `reservation_sha256`, `execution_enabled=false`. The custody intent
++permanently consumes that admission in this dedicated directory. Existing targets,
++stages, consumed/conflicting identities, prior checkpoint history, unsafe paths
++and incompatible policies fail closed. Checkpoint and custody locks serialize
++independent processes. Ordinary opens cannot acquire a new store during any phase.
++
++## Genesis and recovery phases
++
++Intent is signed and durable before stage/database creation. A fixed trusted SQL
++schema, metadata, disabled control, ledger marker, enrollment record, committed
++receipt and matching audit event are constructed in one FULL-synchronous DELETE
++journal transaction. All seed values come from the admitted reservation/decision;
++no retry chooses a new UUID, owner or timestamp. The initial owner is an explicitly
++non-live generation0 sentinel. Genesis authenticates this complete deterministic
++logical state; it does not anchor an unaudited empty schema.
++
++PREPARED binds intent, genesis checkpoint, logical digest and physical database
++hash. Stage bytes/identity and signed ENROLLMENT marker are checked before atomic
++no-replace directory publication, followed by target revalidation and FINAL.
++The resulting externally retained witness binds the final hash, genesis, store,
++enrollment UUID, key, destination, reservation and policy. The first ordinary open
++requires this witness and advances the non-live owner to generation1 with a new
++checkpoint. It does not enable execution or resume restored work.
++
++Recovery is explicitly bounded:
++
++| Durable state | Behavior |
++|---|---|
++| No intent | UNENROLLED; fresh reservation/admission required |
++| Intent only or empty stage | Explicit reconciliation may finish the same deterministic admission |
++| Partial SQL/zero DB/unexpected stage inventory | INCOMPLETE/BLOCKED; preserve for manual quarantine, no rebuild/reset |
++| Exact committed seed, genesis incomplete | Finish only authenticated matching genesis/checkpoint publication |
++| PREPARED and exact stage | RECONCILIATION_REQUIRED; verify and publish with no replace |
++| Target published, final missing | Verify exact prepared bytes and finish the same final receipt |
++| FINAL, database missing/substituted | BLOCKED; never recreate |
++| FINAL, matching descendant ledger | VERIFIED against current checkpoints and original enrollment evidence |
++
++An admitted decision can continue after its short permit expires; it cannot admit
++a different operation. Partial files/checkpoints are never deleted to clear a
++failure. Storage/permission failures preserve evidence. A pending state is not an
++established success. SIGKILL tests cover these transitions; physical power-loss
++durability is not claimed.
++
++## Offline CLI
++
++The provider-free `app.agent.operator_cli` accepts `--enrollment-status`,
++`--enroll-store`, and `--reconcile-enrollment`. Supply the original checkpoint
++policy, `--custody`, and public expected reservation JSON via `--reservation-fd`.
++Checkpoint keys use `--key-fd`. Mutations require `--commit-recovery`; new admission
++also requires `--operator-key-fd` and `--permit-fd`. Descriptors must be inherited
++FDs >=3, with bounded reads. Key/permit bytes are not CLI/environment values.
++All trust directories must already exist; none are provisioned by these modes.
++Read-only database diagnostics can accept `--enrollment-witness-fd`.
++
++The guarded application demonstration exercises actual FD handoff and CLI calls.
++Do not point development commands at real stores or sealed evidence. No HTTP
++enrollment/restore/completion endpoint is mounted.
++
++## Restored-branch verification
++
++`BranchVerifier` and CLI `--verify-branch DIR --branch-context-fd FD` are read-only.
++They require the original store key, external checkpoint trust reference, protected
++restore intent/prepared/final evidence, source completion attestation and a fresh
++external branch-verification request. The request supplies branch UUID4, operator
++label, exact expected current source head, restore ID, database hash, key identity,
++generation lineage and externally maintained reserved branch IDs (max64). Its
++validity is at most300 seconds and decision must be `PROPOSE_ONLY`.
++
++The verifier rechecks archive provenance through the protected manifest attestation,
++restore continuity, current inert artifact bytes and original identities. It
++rejects stale source references, incompatible anchors/generations, copied targets,
++damaged receipts/DB, replacement races and IDs conflicting with store/restore/
++original request identities or the supplied registry. All original UUIDs, UNKNOWN,
++held work and cancellation uncertainty are preserved. The source/archive medium
++need not still be available when the protected prepared evidence is intact; this
++does not claim the medium's current bytes were checked again.
++
++Output includes detailed consistency summary and a reproducible proposal hash.
++The manifest binds the historical parent checkpoint/lineage, current source head,
++restore-final hash, database digest, original-request-ID digest, expected external
++contexts, operator label and policy. It explicitly states a historical parent
++snapshot is not continuation of the source head. `activation_authorized=false`,
++`execution_enabled=false` and a separate operator decision is required. No branch
++registry, database, checkpoint, lock sidecar or re-anchored history is written.
++
++The operator label is metadata, not a granted execution identity. A read-only
++proposal is not a signed approval. Registry freshness/completeness and external
++context custody are operator responsibilities; duplicates absent from that
++trusted inventory cannot be globally detected by a stateless verifier. Actual
++branch admission/re-anchoring remains a separate authorization boundary.
++
++## Limits and activation prerequisites
++
++Local HMAC files, in-process capabilities and colocated receipts do not defeat
++privileged/same-UID key compromise or coordinated DB-and-anchor rollback. Keep
++the reservation, final witness, latest checkpoint reference, registry, keys and
++clock under independently protected custody. A genesis witness proves only its
++ancestor; supply a newer protected minimum reference to detect later rollback.
++
++Existing snapshot/restore/export/checkpoint limits and no-deletion policy remain.
++Enrollment accepts only the small deterministic seed (1MiB read bound before
++publication); later verification is subject to the32MiB logical/source read bound.
++These bounds are not a physical filesystem/WAL quota. Unrecognized partial stages
++require investigation; no arbitrary damaged-genesis repair or key rotation exists.
++
++Live use still requires explicit authorization, independently protected OS
++identities/storage/custody/time, real permit/key provisioning, qualified dependency
++closure, broader regressions, approved enrollment/capacity/retention policy and
++deployment review. Real restored-branch re-anchoring, production genesis resets,
++real migrations and executor activation are not implemented or authorized here.
+--- before/docs/operator_recovery.md
++++ after/docs/operator_recovery.md
+@@ -3,6 +3,11 @@
+ Real execution remains disabled. This interface never retries uncertain work,
+ accepts caller completion results or deletes protected history.
+ The reproduction harness uses only disposable databases and synthetic credentials.
++
++Current enrollment/startup behavior is described in [the enrollment guide](authority_enrollment.md).
++Ordinary `Authority` no longer creates stores; explicit offline enrollment or
++trusted legacy compatibility admission is required. This supersedes the earlier
++bootstrap description below.
+ 
+ Sprint 3 adds opt-in checkpoint generations and authenticated restoration into
+ exclusive inert disposable artifacts. See [audit disaster recovery](audit_disaster_recovery.md)
+@@ -45,7 +50,8 @@
+ 
+ `LedgerGuard` is an explicitly supplied local embedding dependency. A new
+ `Authority(..., ledger=guard)` receives an external HMAC key and store UUID;
+-`initialize=True` permits initial creation only. Existing unguarded ledgers refuse
++`initialize=True` permits low-level checkpoint initialization only and cannot
++authorize normal Authority creation. Existing unguarded ledgers refuse
+ implicit enrollment. A marker in the existing records table makes a guarded
+ store refuse opening without its guard. No schema migration or key provisioning
+ of a real store is performed by these APIs or this sprint.
+--- before/docs/task_api.md
++++ after/docs/task_api.md
+@@ -2,6 +2,11 @@
+ 
+ The authority stores decisions, held work, and opt-in synthetic execution results.
+ Real execution is disabled; no real adapter can be registered.
++Authority startup now requires an existing verified enrollment witness or explicit
++trusted legacy compatibility admission. Missing/incomplete authority state returns
++unavailable and is never created by a task request. Operator diagnostics/reporting
++expose enrollment state. Enrollment and read-only branch proposal are offline CLI
++operations only; see [the enrollment contract](authority_enrollment.md).
+ Authenticated diagnostics additionally expose checkpoint generation and restore
+ receipt phase counts. A committed restore receipt does not verify current artifact
+ bytes or complete a task. Archive restore remains an explicitly authorized offline
+--- before/tests/audit_process_actor.py
++++ after/tests/audit_process_actor.py
+@@ -4,8 +4,10 @@
+ from pathlib import Path
+ import sys,time
+ if not Path('/input/source').is_dir():raise SystemExit('isolated runner required')
+-sys.path[:0]=['/input/source','/deps']
++sys.path[:0]=['/input/source','/input','/deps']
+ from app.agent.authority import Authority
++sys.path.insert(0,'/input')
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.ledger import LedgerGuard
+ from app.agent.recovery import OperatorPermits,RecoveryActions
+ from app.agent.archive_restore import ArchiveRestorer
+--- /dev/null
++++ after/tests/enrollment_fixtures.py
+@@ -0,0 +1,33 @@
++"""Synthetic external provisioning fixtures; not application trust generation."""
++from datetime import UTC,datetime,timedelta
++from pathlib import Path
++import uuid
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import OperatorPermits
++from app.agent.enrollment import OfflineEnrollment, EMPTY_HEAD, policy
++from app.agent.runtime import SERVICE_ACTOR
++
++KEY=b'synthetic-sprint4-ledger-key-000000000000'
++OPKEY=b'synthetic-sprint4-operator-key-000000000'
++def uid(): return str(uuid.uuid4())
++
++def build(root, *, fault_hook=None):
++    root=Path(root);root.mkdir(mode=0o700,parents=True,exist_ok=True)
++    for name in ('custody','anchors'):(root/name).mkdir(mode=0o700)
++    g=LedgerGuard(root/'anchors',KEY,uid(),initialize=True,rollover=True,epoch_capacity=4,recovery=True)
++    now=datetime.now(UTC)
++    r=dict(format='jarvis-empty-store-reservation-v1',enrollment_id=uid(),store_id=g.store_id,key_id=g.key_id,
++           destination=str(root/'new-store'),custody=str(root/'custody'),checkpoints=str(g.directory),trust_id=uid(),
++           policy=policy(g),initial_checkpoint=EMPTY_HEAD,issued_at=(now-timedelta(seconds=1)).isoformat(),
++           expires_at=(now+timedelta(minutes=4)).isoformat(),disposable_only=True)
++    permits=OperatorPermits(OPKEY);service=OfflineEnrollment(g,root/'custody',r,permits,fault_hook=fault_hook)
++    permit=permits.issue(request_id=r['enrollment_id'],principal='synthetic-operator',scope=SERVICE_ACTOR.scope,
++                         command='enroll_authority',payload=service.payload,checkpoint=EMPTY_HEAD,
++                         issued_at=r['issued_at'],expires_at=r['expires_at'])
++    g.acquire(root/'new-store/state.sqlite')
++    return service,permit
++
++def reopen(root,reservation,*,fault_hook=None):
++    g=LedgerGuard(Path(root)/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
++    g.acquire(Path(root)/'new-store/state.sqlite')
++    return OfflineEnrollment(g,Path(root)/'custody',reservation,fault_hook=fault_hook)
+--- /dev/null
++++ after/tests/enrollment_process_actor.py
+@@ -0,0 +1,17 @@
++"""Independent synthetic enrollment process, guarded runner only."""
++import json
++import sys
++import time
++from pathlib import Path
++sys.path[:0]=['/input/source','/input/tests','/input','/deps']
++from enrollment_fixtures import build
++from app.agent.runtime import SERVICE_ACTOR
++c=json.loads(Path(sys.argv[1]).read_text());root=Path(c['root'])
++def fault(stage):
++    if stage==c['stage']:
++        (root/'ready').write_text(stage)
++        while True:time.sleep(.02)
++s,p=build(root,fault_hook=fault)
++s.guard._fault=fault
++(root/'reservation.json').write_text(json.dumps(s.reservation))
++s.enroll(SERVICE_ACTOR,p,disposable=True)
+--- before/tests/execution_process_actor.py
++++ after/tests/execution_process_actor.py
+@@ -8,6 +8,8 @@
+     raise SystemExit('isolated runner required')
+ sys.path[:0] = ['/input/source', '/deps']
+ from app.agent.authority import Authority
++sys.path.insert(0,'/input')
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.execution import ExecutionPipeline, SimulatedPolicy
+ from app.agent.runtime import SERVICE_ACTOR
+ 
+--- before/tests/ledger_process_actor.py
++++ after/tests/ledger_process_actor.py
+@@ -7,8 +7,10 @@
+ import time
+ 
+ if not Path('/input/source').is_dir():raise SystemExit('isolated runner required')
+-sys.path[:0]=['/input/source','/deps']
++sys.path[:0]=['/input/source','/input','/deps']
+ from app.agent.authority import Authority
++sys.path.insert(0,'/input')
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.execution import ExecutionPipeline, SimulatedPolicy, phase_id
+ from app.agent.ledger import LedgerGuard
+ from app.agent.recovery import RecoveryActions, OperatorPermits
+--- /dev/null
++++ after/tests/synthetic_authority.py
+@@ -0,0 +1,68 @@
++"""Explicit legacy fixture setup for pre-enrollment queue regression contracts.
++
++Not an enrollment API. New enrollment/security tests import the real Authority
++directly. This creates known synthetic legacy SQL fixtures, never real stores or
++production bootstrap capabilities. The product constructor never creates a DB.
++"""
++from pathlib import Path
++import os
++import sqlite3
++from datetime import UTC,datetime,timedelta
++import uuid
++from app.agent.authority import Authority as RealAuthority, canonical
++from app.agent.ledger_schema import SCHEMA_SQL
++
++
++def seed_legacy_fixture(path, ledger=None):
++    path=Path(path).absolute()
++    if path.exists() or path.is_symlink(): return
++    if ledger is not None and (not ledger.initialize or ledger._fd is not None): return
++    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
++    fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
++    conn=sqlite3.connect(path,isolation_level=None)
++    try:
++        conn.executescript(SCHEMA_SQL)
++        conn.execute('INSERT INTO meta VALUES(1)')
++        conn.execute("INSERT INTO ownership VALUES(1,0,'synthetic-legacy-fixture')")
++        conn.execute('INSERT INTO control VALUES(1,0,0)')
++        if ledger is not None:
++            conn.execute('INSERT INTO records VALUES(?,?,?,?)',('ledger_config',ledger.store_id,'__authority__',canonical({'store_id':ledger.store_id,'checkpoint_required':True,'format':1})))
++            ledger.acquire(path)
++            try:
++                head,pending,_=ledger.history()
++                assert head['sequence']==0 and pending is None
++                ledger._head=head
++                ledger.finish(ledger.prepare(conn))
++            finally:ledger.close()
++    finally:conn.close()
++
++
++def fixture_authority(path, **kwargs):
++    if not any(Path(p).exists() or Path(p).is_symlink() for p in kwargs.get('legacy_paths',())):
++        seed_legacy_fixture(path,kwargs.get('ledger'))
++    if 'enrollment_context' not in kwargs:
++        from app.agent.recovery import OperatorPermits
++        from app.agent.ledger import digest_state
++        from app.agent.enrollment import EMPTY_HEAD
++        from app.agent.authority import AuthorityError
++        try:
++            conn=sqlite3.connect(Path(path).absolute().as_uri()+'?mode=ro',uri=True)
++            try:payload={'database':str(Path(path).absolute()),'logical_state':digest_state(conn),'execution_enabled':False}
++            finally:conn.close()
++            now=datetime.now(UTC);verifier=OperatorPermits(b'synthetic-legacy-fixture-approval-key-0000')
++            checkpoint=EMPTY_HEAD;ledger=kwargs.get('ledger')
++            if ledger is not None:
++                owned=ledger._fd is not None
++                try:
++                    if not owned:ledger.acquire(path)
++                    probe=sqlite3.connect(Path(path).absolute().as_uri()+'?mode=ro',uri=True)
++                    try:ledger.verify(probe,recover=True)
++                    finally:probe.close()
++                    checkpoint=ledger.history()[0]
++                finally:
++                    if not owned:ledger.close()
++            permit=verifier.issue(request_id=str(uuid.uuid4()),principal='synthetic-legacy-fixture',scope='local-service',
++                command='open_legacy_authority',payload=payload,checkpoint=checkpoint,issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++            kwargs['legacy_approval']=(verifier,permit)
++        except (OSError,sqlite3.Error,AuthorityError):pass
++    return RealAuthority(path,**kwargs)
+--- before/tests/test_audit_disaster.py
++++ after/tests/test_audit_disaster.py
+@@ -5,6 +5,7 @@
+ import uuid
+ import pytest
+ from app.agent.authority import Authority,AuthorityError
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.ledger import LedgerGuard
+ from app.agent.recovery import OperatorPermits,RecoveryActions
+ from app.agent.runtime import SERVICE_ACTOR as ACTOR
+@@ -361,7 +362,7 @@
+ 
+ def test_guard_cannot_be_shared_by_two_authorities(env):
+     a,g,actions,permits,paths=env
+-    with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):Authority(paths['parent']/'other'/'db',ledger=g)
++    with pytest.raises(AuthorityError,match='authority_unenrolled_or_missing'):Authority(paths['parent']/'other'/'db',ledger=g)
+     assert a.readiness()['ledger_integrity']['verified']
+ 
+ 
+--- before/tests/test_audit_disaster_app.py
++++ after/tests/test_audit_disaster_app.py
+@@ -8,6 +8,7 @@
+ from app import server
+ from app.agent import runtime
+ from app.agent.authority import Authority
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.ledger import LedgerGuard
+ from app.agent.recovery import OperatorPermits,RecoveryActions
+ from app.agent.archive_restore import ArchiveRestorer
+--- /dev/null
++++ after/tests/test_authority_enrollment.py
+@@ -0,0 +1,308 @@
++"""Production enrollment/branch checks use real Authority; no fixture bootstrap."""
++from datetime import UTC,datetime,timedelta
++import hashlib
++import json
++import os
++from pathlib import Path
++import sqlite3
++import subprocess
++import sys
++import time
++import pytest
++from app.agent.authority import Authority,AuthorityError
++from app.agent.enrollment import OfflineEnrollment,EMPTY_HEAD
++from app.agent.ledger import LedgerGuard,encode,digest_state
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++from enrollment_fixtures import build,reopen,uid,KEY,OPKEY
++
++
++@pytest.fixture
++def env(tmp_path):
++    service,permit=build(tmp_path/'case')
++    yield service,permit
++    service.guard.close()
++
++
++def opened(service, result):
++    service.guard.close()
++    g=LedgerGuard(service.guard.directory,KEY,service.guard.store_id,rollover=True,epoch_capacity=4,recovery=True)
++    return Authority(service.destination/'state.sqlite',ledger=g,enrollment_context=result['witness'],allow_simulation=True)
++
++
++def test_enroll_genesis_receipt_restart_verification(env):
++    s,permit=env;result=s.enroll(ACTOR,permit,disposable=True)
++    assert result['state']=='VERIFIED' and result['witness']['genesis']['sequence']==1
++    assert s.verify()==result
++    a=opened(s,result)
++    try:
++        assert a.generation==1 and a.readiness()['enrollment']['state']=='VERIFIED'
++        receipt=a.receipt(ACTOR,s.reservation['enrollment_id'])
++        assert receipt['operation']=='enroll_authority' and receipt['owner_generation']==0
++        a.submit(ACTOR,uid(),'held offline')
++    finally:a.close()
++    a=opened(s,result)
++    try:assert a.generation==2 and len(a.list_tasks(ACTOR))==1
++    finally:a.close()
++
++
++@pytest.mark.parametrize('kind',['absent','zero','schema'])
++def test_plain_authority_never_creates_or_completes_store(tmp_path,kind):
++    path=tmp_path/'missing'/'state.sqlite'
++    if kind!='absent':
++        path.parent.mkdir(mode=0o700);path.write_bytes(b'');path.chmod(0o600)
++        if kind=='schema':
++            from app.agent.ledger_schema import SCHEMA_SQL
++            c=sqlite3.connect(path);c.executescript(SCHEMA_SQL);c.close()
++    before={str(p):p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
++    with pytest.raises(AuthorityError):Authority(path)
++    assert {str(p):p.read_bytes() for p in tmp_path.rglob('*') if p.is_file() and not p.name.endswith('.writer.lock')}==before
++    if kind=='absent':assert not path.parent.exists()
++
++
++@pytest.mark.parametrize('fault',['permit','trust','existing','history','scope','explicit'])
++def test_invalid_new_store_admission_is_refused(env,fault):
++    s,p=env
++    if fault=='permit':p['hmac_sha256']='0'*64
++    if fault=='trust':s.reservation['key_id']='0'*64
++    if fault=='existing':s.destination.mkdir(mode=0o700)
++    if fault=='history':
++        # Checkpoint evidence cannot be mistaken for a fresh empty authority.
++        (s.guard.directory/'00000001.intent.json').write_text('{}')
++        (s.guard.directory/'00000001.intent.json').chmod(0o600)
++    if fault=='scope':
++        from app.agent.authority import Actor
++        actor=Actor('untrusted')
++    else:actor=ACTOR
++    with pytest.raises(AuthorityError):s.enroll(actor,p,disposable=fault!='explicit')
++    assert not (s.custody/'INTENT.json').exists()
++
++
++def test_missing_database_final_never_recreates(env):
++    s,p=env;r=s.enroll(ACTOR,p,disposable=True)
++    (s.destination/'state.sqlite').rename(s.destination/'state.sqlite.unavailable')
++    with pytest.raises(AuthorityError,match='enrollment_missing_database_no_recreate'):s.reconcile()
++    with pytest.raises(AuthorityError,match='authority_unenrolled_or_missing'):Authority(s.destination/'state.sqlite')
++    assert not (s.destination/'state.sqlite').exists()
++
++
++@pytest.mark.parametrize('damage',['witness','marker','final','prepared','database','key'])
++def test_enrollment_identity_and_phase_corruption_refused(env,damage):
++    s,p=env;r=s.enroll(ACTOR,p,disposable=True)
++    if damage=='witness':r['witness']['final_sha256']='0'*64
++    elif damage in ('final','prepared'):(s.custody/(damage.upper()+'.json')).rename(s.custody/(damage.upper()+'.missing'))
++    elif damage=='marker':(s.destination/'ENROLLMENT.json').write_bytes(b'{}')
++    elif damage=='database':
++        c=sqlite3.connect(s.destination/'state.sqlite');c.execute("UPDATE control SET epoch=123");c.commit();c.close()
++    elif damage=='key':
++        s.guard.close();g=LedgerGuard(s.guard.directory,b'wrong-synthetic-key-0000000000000000000',s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True)
++        with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite',ledger=g,enrollment_context=r['witness'])
++        return
++    with pytest.raises(AuthorityError):opened(s,r)
++
++
++def test_enrolled_store_requires_external_witness(env):
++    s,p=env;s.enroll(ACTOR,p,disposable=True);s.guard.close()
++    g=LedgerGuard(s.guard.directory,KEY,s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True)
++    with pytest.raises(AuthorityError,match='enrollment_external_witness_required'):Authority(s.destination/'state.sqlite',ledger=g)
++
++
++STAGES=['enrollment_intent_durable','enrollment_stage_created','enrollment_database_created',
++        'enrollment_before_database_commit','enrollment_database_committed','enrollment_genesis_intent_durable',
++        'enrollment_genesis_published','enrollment_prepared_durable','enrollment_before_publication',
++        'enrollment_target_published','enrollment_final_durable','checkpoint_before_publication','checkpoint_published']
++
++
++@pytest.mark.parametrize('stage',STAGES)
++def test_independent_sigkill_enrollment(tmp_path,stage):
++    root=tmp_path/'case';root.mkdir(mode=0o700)
++    command={'root':str(root),'stage':stage};config=root/'command.json';config.write_text(json.dumps(command))
++    with (root/'out').open('w') as out,(root/'err').open('w') as err:
++        child=subprocess.Popen([sys.executable,'-I','-B','-S',str(Path(__file__).with_name('enrollment_process_actor.py')),str(config)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,env={'LANG':'C.UTF-8'},close_fds=True)
++        try:
++            until=time.monotonic()+4
++            while not (root/'ready').exists() and child.poll() is None and time.monotonic()<until:time.sleep(.01)
++            assert (root/'ready').exists(),(root/'err').read_text()
++            if stage=='enrollment_intent_durable':
++                reservation=json.loads((root/'reservation.json').read_text())
++                contender=LedgerGuard(root/'anchors',KEY,reservation['store_id'],rollover=True,epoch_capacity=4,recovery=True)
++                with pytest.raises(AuthorityError,match='checkpoint_owner_busy'):contender.acquire(root/'new-store/state.sqlite')
++            child.kill();child.wait(timeout=1);assert child.returncode<0
++        finally:
++            if child.poll() is None:child.kill()
++            child.wait(timeout=1)
++    reservation=json.loads((root/'reservation.json').read_text());s=reopen(root,reservation)
++    try:
++        # No ordinary open may create a store during the unfinished ceremony.
++        if stage!='enrollment_final_durable':
++            with pytest.raises(AuthorityError):Authority(s.destination/'state.sqlite')
++        if stage in ('enrollment_database_created','enrollment_before_database_commit'):
++            with pytest.raises(AuthorityError):s.reconcile()
++            assert not s.destination.exists() and s.stage.exists()
++        else:
++            result=s.reconcile();assert result['state']=='VERIFIED'
++            a=opened(s,result)
++            try:assert a.readiness()['enrollment']['verified'] and a.generation==1
++            finally:a.close()
++    finally:s.guard.close()
++
++
++@pytest.mark.parametrize('errno_value',[28,13])
++def test_enrollment_publication_storage_errors_preserve_recovery(env,errno_value,monkeypatch):
++    s,p=env
++    import app.agent.enrollment as module
++    original=module._rename_directory
++    monkeypatch.setattr(module,'_rename_directory',lambda *args:(_ for _ in ()).throw(OSError(errno_value,'synthetic storage failure')))
++    with pytest.raises(OSError):s.enroll(ACTOR,p,disposable=True)
++    assert (s.custody/'PREPARED.json').exists() and not s.destination.exists()
++    monkeypatch.setattr(module,'_rename_directory',original)
++    assert s.reconcile()['state']=='VERIFIED'
++
++
++def test_enrollment_durable_admission_expiry_and_duplicate(env,monkeypatch):
++    s,p=env;s._fault=lambda stage:(_ for _ in ()).throw(RuntimeError('stop')) if stage=='enrollment_intent_durable' else None
++    with pytest.raises(RuntimeError):s.enroll(ACTOR,p,disposable=True)
++    s._fault=lambda _:None
++    monkeypatch.setattr(s.permits,'verify',lambda *a:(_ for _ in ()).throw(AssertionError('must use durable admission')))
++    assert s.reconcile()['state']=='VERIFIED'
++    with pytest.raises(AuthorityError,match='enrollment_exists_reconcile'):s.enroll(ACTOR,p,disposable=True)
++
++
++@pytest.fixture
++def branch(env):
++    from app.agent.recovery import RecoveryActions,OperatorPermits
++    from app.agent.execution import ExecutionPipeline,SimulatedPolicy
++    from app.agent.archive_restore import ArchiveRestorer
++    s,p=env;result=s.enroll(ACTOR,p,disposable=True);a=opened(s,result)
++    g=a._ledger;s.guard=g
++    permits=OperatorPermits(OPKEY);actions=RecoveryActions(a,permits)
++    root=s.destination.parent;exports=root/'exports';exports.mkdir(mode=0o700)
++    targets=root/'targets';targets.mkdir(mode=0o700)
++    pipeline=ExecutionPipeline(a,SimulatedPolicy(ACTOR.scope),enabled=True)
++    op=uid();now=datetime.now(UTC)
++    pipeline.submit(ACTOR,op,'uncertain restored work','synthetic.echo',{'value':'not dispatched'},(now+timedelta(minutes=2)).isoformat())
++    pipeline._claim(ACTOR,op);pipeline._unknown(ACTOR,op,a.generation,'unknown');a.cancel(ACTOR,uid(),op)
++    def grant(request,command,payload):
++        now=datetime.now(UTC)
++        return permits.issue(request_id=request,principal='synthetic-operator',scope=ACTOR.scope,command=command,payload=payload,checkpoint=g.history()[0],issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=1)).isoformat())
++    export_id=uid();export=actions.export(ACTOR,export_id,exports,grant(export_id,'export_ledger',{'export_id':export_id,'destination':str(exports)}))
++    now=datetime.now(UTC);g.trust_context=g.trust_reference(valid_from=(now-timedelta(seconds=1)).isoformat(),expires_at=(now+timedelta(minutes=3)).isoformat())
++    restore_id=uid();manifest=export['export']['manifest_sha256']
++    restored=ArchiveRestorer(g,permits).restore(ACTOR,restore_id,exports/export_id,targets,manifest,grant(restore_id,'restore_archive',{'export_id':export_id,'manifest_sha256':manifest,'target_parent':str(targets),'restore_id':restore_id}),disposable=True)
++    request=dict(format='jarvis-branch-verification-request-v1',branch_id=uid(),operator_id='synthetic-offline-operator',
++                 expected_source_head=g.history()[0],expected_restore_id=restore_id,expected_database_sha256=restored['database_sha256'],
++                 expected_source_lineage=restored['source_lineage'],expected_key_id=g.key_id,
++                 issued_at=now.isoformat(),expires_at=(now+timedelta(minutes=2)).isoformat(),reserved_branch_ids=[],decision='PROPOSE_ONLY')
++    yield a,targets/restore_id,request,op,result
++    a.close()
++
++
++def tree_bytes(root):
++    return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and not p.is_symlink()}
++
++
++def test_branch_continuity_proposal_is_readonly_and_preserves_unknown(branch):
++    from app.agent.branch_verification import BranchVerifier
++    a,target,request,op,enrollment=branch
++    before=tree_bytes(target.parent.parent)
++    result=BranchVerifier(a._ledger).verify(target,request)
++    assert tree_bytes(target.parent.parent)==before
++    assert result['state']=='VERIFIED' and result['summary']['unknown']==1 and result['summary']['cancel_requested']==1
++    assert result['proposal']['original_store_id']==a._ledger.store_id
++    assert not result['proposal']['activation_authorized'] and not result['proposal']['execution_enabled']
++    assert BranchVerifier(a._ledger).verify(target,request)['proposal_sha256']==result['proposal_sha256']
++    assert a.get_task(ACTOR,op)['status']=='unknown'
++
++
++@pytest.mark.parametrize('damage',['head','restore','digest','generation','key','expired','duplicate','activate','registry','marker','database','phase','copy'])
++def test_branch_invalid_or_stale_state_is_refused(branch,damage):
++    from app.agent.branch_verification import BranchVerifier
++    import shutil
++    a,target,r,op,enrollment=branch
++    if damage=='head':a.submit(ACTOR,uid(),'descendant makes old verification context stale')
++    elif damage=='restore':r['expected_restore_id']=uid()
++    elif damage=='digest':r['expected_database_sha256']='0'*64
++    elif damage=='generation':r['expected_source_lineage']['epoch']+=1
++    elif damage=='key':r['expected_key_id']='0'*64
++    elif damage=='expired':r['expires_at']=(datetime.now(UTC)-timedelta(seconds=1)).isoformat()
++    elif damage=='duplicate':r['reserved_branch_ids']=[r['branch_id']]
++    elif damage=='activate':r['decision']='ACTIVATE'
++    elif damage=='registry':r['reserved_branch_ids']=[uid()]*65
++    elif damage=='marker':(target/'DISPOSABLE.json').write_text('{}')
++    elif damage=='database':
++        db=target/'state.sqlite';db.chmod(0o600)
++        c=sqlite3.connect(db);c.execute('UPDATE control SET epoch=456');c.commit();c.close();db.chmod(0o400)
++    elif damage=='phase':(a._ledger.directory/f"restore-{r['expected_restore_id']}.prepared.json").unlink()
++    elif damage=='copy':
++        copy=target.parent.parent/'duplicate';copy.mkdir(mode=0o700);shutil.copytree(target,copy/target.name);target=copy/target.name
++    before=tree_bytes(target.parent.parent)
++    with pytest.raises(AuthorityError):BranchVerifier(a._ledger).verify(target,r)
++    assert tree_bytes(target.parent.parent)==before
++
++
++def test_deleted_final_after_owner_open_blocks_dispatch(env):
++    s,p=env;r=s.enroll(ACTOR,p,disposable=True);a=opened(s,r)
++    try:
++        (s.custody/'FINAL.json').rename(s.custody/'FINAL.missing')
++        with pytest.raises(AuthorityError):a.submit(ACTOR,uid(),'must remain unadmitted')
++        assert a._poisoned
++    finally:a.close()
++
++
++def test_unmarked_schema_requires_explicit_legacy_capability(tmp_path):
++    from synthetic_authority import seed_legacy_fixture,fixture_authority
++    path=tmp_path/'legacy/state.sqlite';seed_legacy_fixture(path)
++    with pytest.raises(AuthorityError,match='enrollment_or_explicit_legacy_approval_required'):Authority(path)
++    a=fixture_authority(path)
++    try:
++        assert a.readiness()['enrollment']['state']=='LEGACY_APPROVED'
++        assert a.readiness()['enrollment']['new_store_enrollment_proven'] is False
++    finally:a.close()
++
++
++@pytest.mark.parametrize('kind',['symlink','physical_rewrite'])
++def test_finalized_genesis_physical_binding_is_verified(env,kind):
++    s,p=env;s.enroll(ACTOR,p,disposable=True);db=s.destination/'state.sqlite'
++    if kind=='symlink':
++        saved=s.destination.parent/'copied.sqlite';db.rename(saved);db.symlink_to(saved)
++    else:
++        # A legal SQLite VACUUM changes file layout/header while retaining rows.
++        c=sqlite3.connect(db);c.execute('VACUUM');c.close()
++    with pytest.raises(AuthorityError):s.verify()
++
++
++def test_branch_replacement_between_verification_and_id_read_is_refused(branch,monkeypatch):
++    import app.agent.branch_verification as module
++    a,target,r,op,enrollment=branch
++    original=module.sqlite3.connect;count=0
++    def race(path,*args,**kwargs):
++        nonlocal count
++        if str(path).startswith((target/'state.sqlite').as_uri()):
++            count+=1
++            if count==2:
++                replacement=target/'race.sqlite';replacement.write_bytes((target/'state.sqlite').read_bytes());replacement.chmod(0o400)
++                os.replace(replacement,target/'state.sqlite')
++        return original(path,*args,**kwargs)
++    monkeypatch.setattr(module.sqlite3,'connect',race)
++    with pytest.raises(AuthorityError,match='branch_artifact_changed'):module.BranchVerifier(a._ledger).verify(target,r)
++
++
++def test_branch_cannot_reuse_an_original_operation_uuid(branch):
++    from app.agent.branch_verification import BranchVerifier
++    a,target,r,op,enrollment=branch;r['branch_id']=op
++    with pytest.raises(AuthorityError,match='branch_identity_collision'):BranchVerifier(a._ledger).verify(target,r)
++
++
++@pytest.mark.parametrize('change',['domain_collision','policy','target','anchor'])
++def test_external_reservation_replacement_refused(env,change):
++    s,p=env;r=dict(s.reservation)
++    if change=='domain_collision':r['trust_id']=r['store_id']
++    elif change=='policy':r['policy']={**r['policy'],'epoch_capacity':5}
++    elif change=='target':r['destination']='../outside'
++    elif change=='anchor':r['initial_checkpoint']={**EMPTY_HEAD,'sequence':1}
++    with pytest.raises(AuthorityError):OfflineEnrollment(s.guard,s.custody,r,s.permits)
++
++
++def test_invalid_actor_does_not_create_an_intent(env):
++    s,p=env
++    with pytest.raises(AuthorityError,match='invalid_actor'):s.enroll(object(),p,disposable=True)
++    assert not (s.custody/'INTENT.json').exists()
+--- before/tests/test_cancel_token.py
++++ after/tests/test_cancel_token.py
+@@ -4,6 +4,19 @@
+ 
+ from app.brain.cancel_token import CancelToken, current_token
+ from app.server import app
++import pytest
++
++
++@pytest.fixture(autouse=True)
++def explicit_disposable_authority(tmp_path):
++    from app.agent import runtime
++    from synthetic_authority import fixture_authority
++    previous,worker=runtime._authority,runtime._execution_worker
++    runtime._authority=runtime._execution_worker=None
++    runtime.bind_authority(fixture_authority(tmp_path/'cancel/state.sqlite'))
++    try:yield
++    finally:
++        runtime.close_authority();runtime._authority=previous;runtime._execution_worker=worker
+ 
+ 
+ def setup_function() -> None:
+--- /dev/null
++++ after/tests/test_enrollment_app.py
+@@ -0,0 +1,58 @@
++"""Actual application routes/status with an authenticated enrolled disposable DB."""
++import httpx
++import pytest
++from app import server
++from app.agent import runtime
++from app.agent.authority import Authority,AuthorityError
++from app.agent.ledger import LedgerGuard
++from enrollment_fixtures import build,uid,KEY
++
++@pytest.fixture
++def bound(tmp_path,monkeypatch):
++    previous,worker=runtime._authority,runtime._execution_worker
++    runtime._authority=runtime._execution_worker=None
++    s,p=build(tmp_path/'case');result=s.enroll(runtime.SERVICE_ACTOR,p,disposable=True);s.guard.close()
++    g=LedgerGuard(s.guard.directory,KEY,s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True)
++    a=Authority(s.destination/'state.sqlite',ledger=g,enrollment_context=result['witness'])
++    runtime.bind_authority(a)
++    monkeypatch.setattr(server.settings.server,'api_token','synthetic-enrollment-app')
++    yield a,s
++    runtime.close_authority();runtime._authority=previous;runtime._execution_worker=worker
++
++@pytest.mark.asyncio
++async def test_authenticated_operator_diagnostics_show_verified_enrollment(bound):
++    a,s=bound
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic') as client:
++        assert (await client.get('/operator/diagnostics')).status_code==401
++        response=await client.get('/operator/diagnostics',headers={'Authorization':'Bearer synthetic-enrollment-app'})
++        assert response.status_code==200 and response.json()['enrollment']['state']=='VERIFIED'
++        assert (await client.post('/operator/enrollment',json={},headers={'Authorization':'Bearer synthetic-enrollment-app'})).status_code==404
++
++@pytest.mark.asyncio
++async def test_missing_custody_receipt_blocks_public_admission(bound):
++    a,s=bound;before=a._conn.execute('SELECT COUNT(*) FROM receipts').fetchone()[0]
++    (s.custody/'FINAL.json').rename(s.custody/'FINAL.missing')
++    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-enrollment-app'}) as client:
++        response=await client.post('/tasks',json={'request_id':uid(),'goal':'must be blocked'})
++        assert response.status_code==503 and not response.json()['automatic_retry']
++    assert a._conn.execute('SELECT COUNT(*) FROM receipts').fetchone()[0]==before
++
++@pytest.mark.asyncio
++async def test_reporter_labels_enrollment_without_claiming_execution(bound):
++    from app.agent.reporter import reporter
++    result=await reporter.build_report()
++    assert 'Enrollment VERIFIED' in result
++    assert bound[0].readiness()['execution_enabled'] is False
++
++@pytest.mark.asyncio
++async def test_default_runtime_missing_store_is_unavailable_and_never_created(tmp_path,monkeypatch):
++    previous,worker=runtime._authority,runtime._execution_worker
++    runtime._authority=runtime._execution_worker=None
++    monkeypatch.setattr(runtime,'PROJECT_ROOT',tmp_path/'unprovisioned')
++    monkeypatch.setattr(server.settings.server,'api_token','')
++    try:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic') as client:
++            result=await client.get('/tasks')
++            assert result.status_code==503 and result.json()['error']=='authority_unenrolled_or_missing'
++        assert not (tmp_path/'unprovisioned').exists()
++    finally:runtime._authority=previous;runtime._execution_worker=worker
+--- before/tests/test_execution_pipeline.py
++++ after/tests/test_execution_pipeline.py
+@@ -13,6 +13,7 @@
+ import pytest
+ 
+ from app.agent.authority import Actor, Authority, AuthorityError
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.execution import (DisabledExecutor, ExecutionPipeline, ExecutionWorker,
+                                  ExecutorRegistry, SimulatedPolicy, SyntheticExecutor, phase_id)
+ from app.agent import runtime
+--- before/tests/test_operator_app.py
++++ after/tests/test_operator_app.py
+@@ -9,6 +9,7 @@
+ import pytest
+ 
+ from app.agent.authority import Authority
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.execution import ExecutionPipeline, SimulatedPolicy
+ from app.agent.ledger import LedgerGuard
+ from app.agent import runtime
+--- before/tests/test_operator_ledger.py
++++ after/tests/test_operator_ledger.py
+@@ -9,6 +9,7 @@
+ import pytest
+ 
+ from app.agent.authority import Authority, AuthorityError
++from synthetic_authority import fixture_authority as Authority
+ from app.agent.execution import ExecutionPipeline, SimulatedPolicy, phase_id
+ from app.agent.ledger import LedgerGuard, encode, strict_json
+ from app.agent.recovery import OperatorRecovery, OperatorPermits, RecoveryActions
+--- before/tests/test_reporter.py
++++ after/tests/test_reporter.py
+@@ -8,6 +8,7 @@
+ import uuid
+ 
+ from app.agent.authority import Authority
++from synthetic_authority import fixture_authority as Authority
+ from app.agent import runtime
+ from app.agent.runtime import SERVICE_ACTOR as A
+ from app.agent.simulation import Simulator
+--- before/tests/test_server_auth.py
++++ after/tests/test_server_auth.py
+@@ -6,6 +6,18 @@
+ from app.server import app
+ 
+ client = TestClient(app)
++
++
++@pytest.fixture(autouse=True)
++def explicit_disposable_authority(tmp_path):
++    from app.agent import runtime
++    from synthetic_authority import fixture_authority
++    previous,worker=runtime._authority,runtime._execution_worker
++    runtime._authority=runtime._execution_worker=None
++    runtime.bind_authority(fixture_authority(tmp_path/'auth/state.sqlite'))
++    try:yield
++    finally:
++        runtime.close_authority();runtime._authority=previous;runtime._execution_worker=worker
+ 
+ 
+ @pytest.fixture

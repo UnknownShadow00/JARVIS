@@ -1,0 +1,17 @@
+# Reviewed future transient-unit properties; NOT installed or started.
+[Unit]
+Description=VM164 r2 cooperative temporary-root cleanup
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/usr/bin/python3.14 -I -B -S /run/vm164-bootstrap-media-r2/BOOT.PY close-unit
+TimeoutStartSec=90s
+TimeoutStopSec=5s
+KillMode=control-group
+SendSIGKILL=yes
+MemoryMax=96M
+TasksMax=16
+UMask=0077
+StandardInput=null
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,167 @@
+--- snapshot-current/app/agent/recovery_decisions.py
++++ snapshot-final/app/agent/recovery_decisions.py
+@@ -165,7 +165,7 @@
+             return conn
+         except sqlite3.Error as exc:
+             conn.close()
+-            if self.database.with_name(self.database.name+'-journal').exists():
++            if getattr(exc,'sqlite_errorname','') in {'SQLITE_READONLY_ROLLBACK','SQLITE_READONLY_RECOVERY'}:
+                 raise AuthorityError('recovery_sqlite_reconciliation_required') from exc
+             raise
+         except BaseException:
+@@ -213,6 +213,7 @@
+         for index,(event,digest) in enumerate(events):
+             if index<=committed_count:
+                 saved_proposals=strict_json(encode(proposals));saved_witness=witness
++                self._validate_reference(witness['checkpoint'],at=event['admitted_at'],history_state=history_state)
+                 command=event['command']; result=event['result']
+                 if (command=='initialize') != (index==0):
+                     raise AuthorityError('recovery_registry_initialization_invalid')
+@@ -373,6 +374,9 @@
+ 
+     def _validate_proposal(self, event):
+         p=event['result']['proposal']; r=event['payload']['verification_request']
++        start,end=interval(r['issued_at'],r['expires_at'],fresh=False)
++        if not start<=datetime.fromisoformat(instant(event['admitted_at']))<end:
++            raise AuthorityError('recovery_proposal_context_expired')
+         if fingerprint(event['result'])!=event['payload']['verification_sha256']:
+             raise AuthorityError('recovery_proposal_result_binding_mismatch')
+         if (p['branch_id']!=r['branch_id'] or p['original_store_id']!=self.guard.store_id
+@@ -450,7 +454,19 @@
+             or event['payload']!=payload or event['permit']!=permit
+             or self._path(event['sequence'],'final').exists()):
+             raise AuthorityError('recovery_sqlite_reconciliation_binding_mismatch')
+-        read_file(journal,32*1024*1024)
++        raw=read_file(journal,32*1024*1024)
++        try:
++            self._load()  # Strictly read-only proof of the committed prefix.
++        except AuthorityError as exc:
++            if exc.code!='recovery_sqlite_reconciliation_required':raise
++            if raw[:8]!=bytes.fromhex('d9d505f920a163d7'):
++                raise AuthorityError('recovery_sqlite_journal_unresolved') from exc
++        else:
++            if raw and raw[:8]!=b'\0'*8:
++                raise AuthorityError('recovery_sqlite_journal_unresolved')
++            # A validated non-hot journal is retired by the original transaction
++            # through SQLite's normal COMMIT. Never manually unlink a journal.
++            return
+         self._fence();self.guard._writable()
+         conn=self._connect(write=True)
+         try:
+@@ -460,7 +476,26 @@
+         if journal.exists():
+             raise AuthorityError('recovery_sqlite_journal_unresolved')
+         sync_directory(self.directory)
++        self._load()
+         self._fault('recovery_sqlite_journal_recovered')
++
++    def _admission_time(self, event, witness, history_state, proposals):
++        # Final lightweight time checks after expensive verification. Publication
++        # uses this admission timestamp; no full scan occurs after it is chosen.
++        self._historical_authorization(event)
++        self._validate_reference(witness['checkpoint'],at=event['admitted_at'],history_state=history_state)
++        body=event['payload'];command=event['command']
++        at=datetime.fromisoformat(instant(event['admitted_at']))
++        if command=='propose':
++            context=body['verification_request']
++            start,end=interval(context['issued_at'],context['expires_at'],fresh=False)
++            if not start<=at<end:raise AuthorityError('recovery_proposal_context_expired')
++        elif command=='decide':
++            self._decision_result(body,proposals,event['permit']['body'],at=event['admitted_at'])
++        elif command=='renew':
++            for reference in (body['previous_witness']['checkpoint'],body['next_reference']):
++                start,end=interval(reference['valid_from'],reference['expires_at'],fresh=False,bound=86400)
++                if not start<=at<end:raise AuthorityError('recovery_decision_expired')
+ 
+     @evidence_errors
+     def apply(self, actor, request_id, command, payload, permit, *, initialize=False):
+@@ -497,8 +532,11 @@
+                        'previous_sha256':events[-1][1] if events else ZERO,'request_id':request_id,
+                        'command':command,'payload':payload,'permit':permit,'checkpoint':head,'result':result,
+                        'execution_enabled':False,'activation_authorized':False,'admitted_at':datetime.now(UTC).isoformat()}
++                history_state=self.guard.history()
+                 self._historical_authorization(event)
+-                self._derive(events+[(event,'0'*64)],len(events),self.guard.history())
++                self._derive(events+[(event,'0'*64)],len(events),history_state)
++                event['admitted_at']=datetime.now(UTC).isoformat()
++                self._admission_time(event,witness,history_state,proposals)
+                 if len(encode(self.guard.signed(event)))>65000: raise AuthorityError('recovery_payload_bound')
+                 self._fence();publish_file(self._path(event['sequence'],'intent'),encode(self.guard.signed(event)))
+                 digest=fingerprint(self.guard.signed(event)); self._fault('recovery_intent_durable')
+--- snapshot-current/docs/recovery_decisions.md
++++ snapshot-final/docs/recovery_decisions.md
+@@ -39,6 +39,9 @@
+ cannot be reapproved. Decision validity is at most 300 seconds and cannot outlive
+ the authorizing permit. Restart evaluates predecessor expiry at each historical
+ admission time, so a later genuine permit cannot bypass an expired predecessor.
++The final admission timestamp is chosen after expensive verification, with
++lightweight permit/witness/context/decision/predecessor checks immediately before
++publication. Delayed validation cannot publish an already expired admission.
+ No decision changes activation status.
+ 
+ ## Commit, interruption and reconciliation
+@@ -56,7 +59,11 @@
+ `recovery_sqlite_reconciliation_required`; read-only inspection performs no rollback.
+ Only the exact independently authenticated last durable admission, matching original
+ UUID/command/payload/permit and no final receipt, can authorize SQLite to roll back
+-its own uncommitted spilled pages. Full protected-history and SQL validation then
++its own uncommitted spilled pages. A complete DB-independent protected inventory,
++chain, permit, state-machine and external-reference validation precedes every
++recovery writable open. Corrupt or foreign history refuses without SQLite writes.
++A proven non-hot zero-header journal is retired only by SQLite's ordinary original
++transaction; it is never manually unlinked. Full protected-history and SQL validation then
+ run before the original event is republished.
+ 
+ An incomplete tail blocks new mutations until its original operation is explicitly
+--- snapshot-current/tests/test_recovery_decisions.py
++++ snapshot-final/tests/test_recovery_decisions.py
+@@ -536,3 +536,49 @@
+     before=s.inspect()['event_count']
+     with pytest.raises(AuthorityError,match='historical_authorization_invalid'):s.apply(ACTOR,op,'propose',body,p)
+     assert s.inspect()['event_count']==before and not s._path(2,'intent').exists()
++
++
++def test_witness_expiring_during_expensive_derive_never_publishes(registry,monkeypatch):
++    import app.agent.recovery_decisions as module
++    s,*_=registry;op=uid();body=publication_payload(s.guard,registry[2],registry[3])
++    p=grant(s.guard,op,'propose',body,seconds=299)
++    shift=[0]
++    class Clock(datetime):
++        @classmethod
++        def now(cls,tz=None):return datetime.now(tz)+timedelta(seconds=shift[0])
++    monkeypatch.setattr(module,'datetime',Clock)
++    original=s._derive
++    def delayed(events,committed_count,history_state):
++        result=original(events,committed_count,history_state)
++        if len(events)>committed_count:shift[0]=130
++        return result
++    monkeypatch.setattr(s,'_derive',delayed)
++    with pytest.raises(AuthorityError,match='recovery_witness_admission_expired'):s.apply(ACTOR,op,'propose',body,p)
++    assert not s._path(2,'intent').exists()
++
++
++def test_proposal_context_expiring_during_derive_never_publishes(registry,monkeypatch):
++    s,*_=registry;r=copy.deepcopy(registry[3]);r['issued_at'],r['expires_at']=times(.3)
++    body=publication_payload(s.guard,registry[2],r);op=uid();p=grant(s.guard,op,'propose',body)
++    original=s._derive
++    def delayed(events,committed_count,history_state):
++        result=original(events,committed_count,history_state)
++        if len(events)>committed_count:time.sleep(.35)
++        return result
++    monkeypatch.setattr(s,'_derive',delayed)
++    with pytest.raises(AuthorityError,match='proposal_context_expired'):s.apply(ACTOR,op,'propose',body,p)
++    assert not s._path(2,'intent').exists()
++
++
++def test_predecessor_expiring_during_derive_never_publishes(registry,monkeypatch):
++    s,*_=registry;pid,_,_,_=proposal(registry)
++    pending,body,p=decision(s,pid,'PENDING',seconds=.5);s.apply(ACTOR,pending,'decide',body,p)
++    approved,body,p=decision(s,pid,'APPROVED',pending)
++    original=s._derive
++    def delayed(events,committed_count,history_state):
++        result=original(events,committed_count,history_state)
++        if len(events)>committed_count:time.sleep(.55)
++        return result
++    monkeypatch.setattr(s,'_derive',delayed)
++    with pytest.raises(AuthorityError,match='decision_conflict'):s.apply(ACTOR,approved,'decide',body,p)
++    assert not s._path(4,'intent').exists()

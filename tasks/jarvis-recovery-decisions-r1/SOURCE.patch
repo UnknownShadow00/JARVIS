@@ -1,0 +1,1675 @@
+--- before/PROJECT_STATUS.md
++++ source/PROJECT_STATUS.md
+@@ -1,6 +1,13 @@
+ # JARVIS Project Status
+ 
+-Latest source/offline sprint: [authority enrollment and branch verification](tasks/jarvis-authority-enrollment-r1/REPORT.md).
++Latest offline sprint: [durable recovery decisions and protected witness renewal](tasks/jarvis-recovery-decisions-r1/REPORT.md).
++Separate SQLite/protected journals retain verified proposals, authenticated synthetic
++decisions and receipts; restart rechecks both HMAC keys and original UUID/payload
++bindings. Witnesses advance against externally retained ancestry without activating
++restored tasks. Detailed history requires operator authentication; readiness exposes
++aggregate counts. Source-bound new results and remaining limits are in that report.
++
++Previous source/offline sprint: [authority enrollment and branch verification](tasks/jarvis-authority-enrollment-r1/REPORT.md).
+ Normal Authority opens refuse missing/incomplete stores and implicit legacy
+ approval. An explicit disposable offline ceremony creates authenticated genesis,
+ durable receipts and an external witness; restart verifies custody and continuity.
+--- before/README.md
++++ source/README.md
+@@ -11,6 +11,11 @@
+ JARVIS is a local-first AI assistant inspired by Tony Stark's JARVIS: voice-enabled, tool-using, screen-aware, automation-capable, and designed to run entirely on your own machine. The backend is Python/FastAPI, the model stack is local via Ollama, and the long-term system layers in autonomy, vision, memory, HUD interfaces, and cinematic presence without depending on cloud APIs. The API binds to localhost by default; LAN or Tailscale access must be enabled intentionally.
+ 
+ ## Feature Matrix
++
++Recovery proposals and decisions now have a durable authenticated offline registry,
++protected witness renewal, explicit crash reconciliation and non-activating receipts.
++See the [recovery decision guide](docs/recovery_decisions.md) and
++[sprint 5 evidence](tasks/jarvis-recovery-decisions-r1/REPORT.md).
+ 
+ Authority enrollment now requires an explicit offline ceremony; normal startup
+ never creates a missing store. [Enrollment and branch guide](docs/authority_enrollment.md)
+--- before/app/agent/api.py
++++ source/app/agent/api.py
+@@ -48,7 +48,7 @@
+     try:
+         return operation()
+     except AuthorityError as exc:
+-        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_", "restore_", "archive_attestation_", "enrollment_", "authority_unenrolled")):
++        if exc.code in UNAVAILABLE or exc.code.startswith(("ledger_", "checkpoint_", "restore_", "archive_attestation_", "enrollment_", "recovery_", "authority_unenrolled")):
+             code = 503
+         elif exc.code in {"request_conflict", "stale_occurrence"}:
+             code = 409
+--- before/app/agent/authority.py
++++ source/app/agent/authority.py
+@@ -79,7 +79,7 @@
+     A lost commit acknowledgement is reconciled with the original request ID.
+     Storage exceptions poison this instance; reopening is an explicit action.
+     """
+-    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
++    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None, recovery_registry=None):
+         self.path = Path(path).absolute()
+         self._closed = False
+         self._poisoned = False
+@@ -90,6 +90,9 @@
+         self._conn = None
+         self._lockfd = None
+         self._ledger = ledger
++        self._recovery_registry = recovery_registry
++        if recovery_registry is not None and (ledger is None or recovery_registry.guard is not ledger):
++            raise AuthorityError("recovery_registry_guard_mismatch")
+         self._ledger_acquired = False
+         self._enrollment_context = enrollment_context
+         if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+@@ -520,6 +523,19 @@
+             return mapping
+         return self._mutate(actor, request_id, "import_legacy_snapshot", dict(tasks=tasks, schedules=schedules, evidence=evidence), effect)
+ 
++    def recovery_decision_status(self, *, detailed=False):
++        if self._recovery_registry is None:
++            return {"configured": False, "execution_enabled": False, "activation_authorized": False}
++        result = self._recovery_registry.inspect()
++        if detailed:
++            return {"configured": True, **result}
++        return {"configured": True, "state": result["state"], "verified": result["verified"],
++                "proposal_counts": {state: sum(p["state"] == state for p in result["proposals"])
++                                    for state in ("PENDING", "APPROVED", "REJECTED", "EXPIRED", "REVOKED")},
++                "incomplete_witness_renewal": result["incomplete_witness_renewal"],
++                "witness_state": result["witness_state"],
++                "execution_enabled": False, "activation_authorized": False}
++
+     def readiness(self):
+         with self._mutex:
+             self._fence()
+@@ -528,7 +544,10 @@
+             consistency = analyze(snapshot(self), "local-service")
+             if not consistency["consistent"]:
+                 raise AuthorityError("ledger_inconsistent")
+-            return {"storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
++            decisions = self.recovery_decision_status()
++            if decisions.get("configured") and not decisions["verified"]:
++                raise AuthorityError("recovery_reconciliation_required")
++            return {"recovery_decisions": decisions, "storage_ready": True, "owner_generation": self.generation, "execution_enabled": False, "reconciliation_required": self._conn.execute("SELECT COUNT(*) FROM outbox WHERE state='unknown'").fetchone()[0], "ledger_integrity": integrity,
+                     "ledger_consistent": True, "enrollment": self._enrollment_status, "disaster_recovery": self._ledger.disaster_status() if self._ledger is not None else {"enabled": False}, "operator_recovery": {k: consistency[k] for k in ("failed", "unknown", "cancel_requested", "unresolved", "unpublished_exports")}}
+ 
+     def close(self):
+@@ -537,8 +556,12 @@
+                 return
+             self._closed = True
+             try:
+-                if self._conn is not None:
+-                    self._conn.close()
++                try:
++                    if self._recovery_registry is not None:
++                        self._shutdown_recovery_status = self._recovery_registry.inspect()
++                finally:
++                    if self._conn is not None:
++                        self._conn.close()
+             finally:
+                 if self._lockfd is not None:
+                     os.close(self._lockfd)
+--- before/app/agent/branch_verification.py
++++ source/app/agent/branch_verification.py
+@@ -1,6 +1,6 @@
+ """Read-only historical branch continuity and re-anchoring proposals.
+ 
+-There is deliberately no branch activation, re-key, SQL import or registry writer.
++There is deliberately no branch activation, re-key or SQL import here.
+ Registry freshness and external parent-reference custody belong to the operator.
+ """
+ from datetime import UTC, datetime
+@@ -59,17 +59,22 @@
+         try:
+             # Read original identities; never assign replacement request UUIDs.
+             ids = [row[0] for row in conn.execute('SELECT request_id FROM receipts ORDER BY request_id')]
++            occurrences = [row[0] for row in conn.execute("SELECT id FROM records WHERE kind='occurrence' ORDER BY id")]
++            tasks = [row[0] for row in conn.execute("SELECT id FROM records WHERE kind='task' ORDER BY id")]
+         finally: conn.close()
+         after=db.stat(follow_symlinks=False)
+         if (before.st_dev,before.st_ino)!=(after.st_dev,after.st_ino) or raw!=read_file(db,64*1024*1024):
+             raise AuthorityError('branch_artifact_changed')
+-        if branch_id in ids:raise AuthorityError('branch_identity_collision')
++        if branch_id in ids+occurrences+tasks:raise AuthorityError('branch_identity_collision')
++        intent, _ = g._read(g.directory/f"restore-{restored['restore_id']}.intent.json")
+         _, final_hash = g._read(g.directory/f"restore-{restored['restore_id']}.final.json")
+         proposal = dict(format='jarvis-inert-reanchoring-proposal-v1',branch_id=branch_id,
+                         original_store_id=g.store_id,restore_id=restored['restore_id'],
+                         parent_checkpoint=restored['source_checkpoint'],parent_lineage=restored['source_lineage'],
+                         verified_source_head=head,restore_final_sha256=final_hash,
+                         database_sha256=restored['database_sha256'],original_request_ids_sha256=fingerprint(ids),
++                        original_request_ids=ids,original_occurrence_ids=occurrences,original_task_ids=tasks,
++                        source_archive=intent['archive'],source_manifest_sha256=intent['manifest_sha256'],
+                         external_context_sha256=fingerprint(request),external_trust_sha256=fingerprint(g.trust_context),
+                         operator_id=request['operator_id'],key_id=g.key_id,policy=policy(g),
+                         execution_enabled=False,activation_authorized=False,decision_required=True,
+--- before/app/agent/checkpoint_epochs.py
++++ source/app/agent/checkpoint_epochs.py
+@@ -180,7 +180,7 @@
+             if ctx['epoch']>epoch or ranges[ctx['epoch']]['rollover_hash']!=ctx['rollover_hash'] or ctx['head']['sequence'] and ctx['head'] not in result:
+                 raise AuthorityError('checkpoint_external_reference_mismatch')
+             selected=ranges[ctx['epoch']]
+-            if ctx['head']['sequence'] and not (selected['start']<=ctx['head']['sequence']<=selected['end'] or selected['start']>selected['end'] and ctx['head']['sequence']==selected['start']-1):
++            if ctx['head']['sequence'] and not (selected['start']<=ctx['head']['sequence']<=selected['end'] or ctx['epoch']>0 and ctx['head']['sequence']==selected['start']-1):
+                 raise AuthorityError('checkpoint_external_reference_mismatch')
+         return head,pending,result
+ 
+--- before/app/agent/operator_cli.py
++++ source/app/agent/operator_cli.py
+@@ -46,6 +46,15 @@
+     modes.add_argument('--enroll-store',action='store_true')
+     modes.add_argument('--reconcile-enrollment',action='store_true')
+     modes.add_argument('--verify-branch')
++    modes.add_argument('--recovery-registry-status',action='store_true')
++    modes.add_argument('--initialize-recovery-registry',action='store_true')
++    modes.add_argument('--publish-recovery-proposal')
++    modes.add_argument('--record-recovery-decision',action='store_true')
++    modes.add_argument('--renew-recovery-witness',action='store_true')
++    modes.add_argument('--reconcile-recovery-operation',action='store_true')
++    parser.add_argument('--registry-config-fd',type=int)
++    parser.add_argument('--registry-reference-fd',type=int)
++    parser.add_argument('--recovery-payload-fd',type=int)
+     parser.add_argument('--custody')
+     parser.add_argument('--reservation-fd',type=int)
+     parser.add_argument('--branch-context-fd',type=int)
+@@ -57,9 +66,11 @@
+     parser.add_argument('--permit-fd',type=int)
+     parser.add_argument('--commit-recovery',action='store_true')
+     args=parser.parse_args(argv)
+-    mutation=bool(args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
++    registry=bool(args.recovery_registry_status or args.initialize_recovery_registry or args.publish_recovery_proposal or args.record_recovery_decision or args.renew_recovery_witness or args.reconcile_recovery_operation)
++    registry_mutation=registry and not args.recovery_registry_status
++    mutation=bool(registry_mutation or args.restore_archive or args.reconcile_restore or args.resume_rollover or args.enroll_store or args.reconcile_enrollment)
+     enrollment=bool(args.enrollment_status or args.enroll_store or args.reconcile_enrollment)
+-    disaster=bool(args.checkpoint_status or args.verify_archive or args.verify_restored or args.verify_branch or enrollment or mutation)
++    disaster=bool(registry or args.checkpoint_status or args.verify_archive or args.verify_restored or args.verify_branch or enrollment or mutation)
+     ledger=None
+     try:
+         configured=(args.checkpoints is not None,args.store_id is not None,args.key_fd is not None)
+@@ -89,7 +100,29 @@
+                 result=OfflineEnrollment(ledger,args.custody,strict_json(_read_fd(args.reservation_fd,16384))).status()
+                 print(json.dumps(result,indent=2));return 1
+             ledger.acquire(coordinate/'unused.sqlite',readonly=not mutation)
+-            if enrollment:
++            if registry:
++                from app.agent.recovery_decisions import RecoveryRegistry
++                config=strict_json(_read_fd(args.registry_config_fd,16384))
++                reference=strict_json(_read_fd(args.registry_reference_fd,16384))
++                permits=OperatorPermits(_read_fd(args.operator_key_fd,128))
++                service=RecoveryRegistry(ledger,config,reference,permits)
++                if args.recovery_registry_status:
++                    result=service.inspect(args.operation_id);success=result['verified']
++                else:
++                    permit=strict_json(_read_fd(args.permit_fd,65536))
++                    payload=strict_json(_read_fd(args.recovery_payload_fd,65536))
++                    if args.initialize_recovery_registry:command='initialize'
++                    elif args.publish_recovery_proposal:command='propose'
++                    elif args.record_recovery_decision:command='decide'
++                    elif args.renew_recovery_witness:command='renew'
++                    else:
++                        if set(payload)!={'command','payload'}:raise AuthorityError('recovery_reconciliation_payload_required')
++                        command=payload['command'];payload=payload['payload']
++                    if args.publish_recovery_proposal and payload.get('directory')!=str(Path(args.publish_recovery_proposal).absolute()):
++                        raise AuthorityError('recovery_proposal_path_mismatch')
++                    result=service.apply(SERVICE_ACTOR,identifier(args.operation_id),command,payload,permit,initialize=command=='initialize')
++                    success=True
++            elif enrollment:
+                 from app.agent.enrollment import OfflineEnrollment
+                 if not args.custody:raise AuthorityError('enrollment_custody_required')
+                 reservation=strict_json(_read_fd(args.reservation_fd,16384))
+--- before/app/agent/recovery.py
++++ source/app/agent/recovery.py
+@@ -267,7 +267,7 @@
+                     'occurrence_summaries':result['occurrence_summaries'][offset:offset+limit],
+                     'schedules':result['schedules'][offset:offset+limit],'exports':result['exports'][offset:offset+limit],
+                     'next_offset':offset+limit if offset+limit<total else None,'ledger_integrity':integrity,
+-                    'enrollment':a._enrollment_status,
++                    'enrollment':a._enrollment_status,'recovery_decisions':a.recovery_decision_status(detailed=True),
+                     'recovery_mutations_publicly_enabled':False,'disaster_recovery':a._ledger.disaster_status() if a._ledger is not None else {'enabled':False}}
+ 
+     def retention_plan(self, actor, *, older_than, limit=100):
+@@ -317,7 +317,8 @@
+                   expires_at=instant(expires_at),issued_at=instant(issued_at))
+         return {'body':body,'hmac_sha256':hmac.new(self._key,encode(body),hashlib.sha256).hexdigest()}
+ 
+-    def verify(self, permit, actor, request_id, command, payload):
++    def authenticate(self, permit):
++        """Verify historical HMAC evidence without granting current authorization."""
+         if type(permit) is not dict or set(permit)!={'body','hmac_sha256'} or type(permit['body']) is not dict:
+             raise AuthorityError('operator_authentication_required')
+         body=permit['body']
+@@ -326,6 +327,11 @@
+         mac=permit['hmac_sha256']
+         if type(mac) is not str or not re.fullmatch('[0-9a-f]{64}',mac) or not hmac.compare_digest(mac,hmac.new(self._key,encode(body),hashlib.sha256).hexdigest()):
+             raise AuthorityError('operator_authentication_failed')
++        text(body['principal'],128)
++        return body
++
++    def verify(self, permit, actor, request_id, command, payload):
++        body=self.authenticate(permit)
+         now=datetime.now(UTC);start=datetime.fromisoformat(instant(body['issued_at']));end=datetime.fromisoformat(instant(body['expires_at']))
+         if not start<=now<end or not 0<(end-start).total_seconds()<=300:
+             raise AuthorityError('operator_permit_expired')
+@@ -524,7 +530,8 @@
+         elif ledger is not None:raise AuthorityError('ledger_enrollment_required')
+         from app.agent.enrollment import verify_authority_enrollment
+         enrollment_status=verify_authority_enrollment(conn,path,ledger,enrollment_context)
+-        shim=SimpleNamespace(_conn=conn,_mutex=threading.RLock(),_scope=Authority._scope,_ledger=ledger,_fence=lambda:None,_enrollment_status=enrollment_status)
++        shim=SimpleNamespace(_conn=conn,_mutex=threading.RLock(),_scope=Authority._scope,_ledger=ledger,_fence=lambda:None,_enrollment_status=enrollment_status,
++                             recovery_decision_status=lambda **_: {'configured':False,'execution_enabled':False,'activation_authorized':False})
+         return OperatorRecovery(shim).diagnose(actor,**options)
+     except (OSError,sqlite3.Error) as exc:
+         raise AuthorityError('offline_diagnostic_storage_unavailable') from exc
+--- before/app/agent/recovery_decisions.py
++++ source/app/agent/recovery_decisions.py
+@@ -0,0 +1,567 @@
++"""Disposable offline recovery journal. Approval never grants execution capability.
++
++SQLite is an index of protected append-only admissions, not the trust root. External
++custody of configuration, latest reference, keys and time is required. Same-UID or
++coordinated rollback of all custody is outside this contract. No production keys,
++activation, task updates or executor imports occur here.
++"""
++from contextlib import contextmanager
++from datetime import UTC, datetime
++import fcntl
++from functools import wraps
++import hashlib
++import os
++from pathlib import Path
++import sqlite3
++import uuid
++
++from app.agent.authority import Authority, AuthorityError, canonical, identifier, instant
++from app.agent.enrollment import fingerprint
++from app.agent.ledger import encode, private_directory, read_file, publish_file, sync_directory, strict_json
++
++ZERO = '0' * 64
++SCHEMA = 'CREATE TABLE events(sequence INTEGER PRIMARY KEY, request_id TEXT NOT NULL UNIQUE, envelope TEXT NOT NULL)'
++
++
++def evidence_errors(method):
++    @wraps(method)
++    def checked(*args, **kwargs):
++        try:return method(*args, **kwargs)
++        except (KeyError, TypeError, ValueError, IndexError, OverflowError, RecursionError) as exc:
++            raise AuthorityError('recovery_evidence_invalid') from exc
++    return checked
++
++
++def interval(start, end, *, fresh=True, bound=300):
++    a, b = datetime.fromisoformat(instant(start)), datetime.fromisoformat(instant(end))
++    if not 0 < (b-a).total_seconds() <= bound or fresh and not a <= datetime.now(UTC) < b:
++        raise AuthorityError('recovery_decision_expired')
++    return a, b
++
++
++@evidence_errors
++def verify_receipt(guard, receipt, *, registry_id, request_id, payload_sha256, event_sha256, permits):
++    """Independent offline HMAC verification; expired evidence remains historical.
++
++    Expected identities/digest come from external custody, never from this receipt.
++    HMAC verification requires trusted shared keys, not a public-key signature.
++    """
++    if type(receipt) is not dict or set(receipt) != {'event','commit'}:
++        raise AuthorityError('recovery_receipt_invalid')
++    event = guard.authenticate(receipt['event']); commit = guard.authenticate(receipt['commit'])
++    if (fingerprint(receipt['event']) != event_sha256 or event.get('registry_id') != registry_id
++        or event.get('request_id') != request_id or fingerprint(event.get('payload')) != payload_sha256
++        or commit != RecoveryRegistry.commit_body(event, event_sha256)):
++        raise AuthorityError('recovery_receipt_binding_mismatch')
++    auth = permits.authenticate(event['permit'])
++    if (auth['request_id'], auth['command'], auth['payload_hash'], auth['checkpoint'], auth['scope']) != (
++        request_id, 'recovery_'+event['command'], payload_sha256, event['checkpoint'], 'local-service'):
++        raise AuthorityError('recovery_receipt_authorization_mismatch')
++    interval(auth['issued_at'], auth['expires_at'], fresh=False)
++    return {'verified': True, 'principal': auth['principal'], 'historical_evidence_only': True,
++            'execution_enabled': False, 'activation_authorized': False}
++
++
++class RecoveryRegistry:
++    @evidence_errors
++    def __init__(self, guard, config, external_reference, permits=None, *, fault_hook=None):
++        self.guard, self.permits = guard, permits
++        if permits is None:
++            raise AuthorityError('recovery_operator_verifier_required')
++        self._fault = fault_hook or (lambda _: None)
++        fields = {'format','registry_id','store_id','key_id','database','custody','checkpoints',
++                  'initial_reference','capacity','disposable_only'}
++        if type(config) is not dict or set(config) != fields:
++            raise AuthorityError('recovery_registry_configuration_required')
++        self.config = strict_json(encode(config))
++        c = self.config
++        identifier(c['registry_id'])
++        if (uuid.UUID(c['registry_id']).version != 4 or c['registry_id'] == guard.store_id
++            or c['format'] != 'jarvis-recovery-registry-v1' or c['store_id'] != guard.store_id
++            or c['key_id'] != guard.key_id or c['checkpoints'] != str(guard.directory)
++            or c['disposable_only'] is not True or type(c['capacity']) is not int or not 4 <= c['capacity'] <= 256):
++            raise AuthorityError('recovery_registry_context_mismatch')
++        self.database = Path(c['database'])
++        if not self.database.is_absolute() or '..' in self.database.parts:
++            raise AuthorityError('recovery_registry_unsafe_path')
++        self.directory = private_directory(self.database.parent)
++        self.stage = self.directory / ('.registry-' + c['registry_id'] + '.pending')
++        self.custody = private_directory(c['custody'])
++        paths = (self.directory, self.custody, guard.directory)
++        if any(a == b or a.is_relative_to(b) or b.is_relative_to(a) for i,a in enumerate(paths) for b in paths[i+1:]):
++            raise AuthorityError('recovery_registry_custody_not_separate')
++        if guard.trust_context is None or external_reference is None:
++            raise AuthorityError('recovery_external_custody_required')
++        self.reference = strict_json(encode(external_reference))
++        self._pid = os.getpid()
++        self._active_lock_identity = None
++        self._paths_identity = [(p.stat().st_dev,p.stat().st_ino) for p in paths]
++        r = self.reference
++        if (type(r) is not dict or set(r) != {'registry_id','sequence','event_sha256','witness'}
++            or r['registry_id'] != c['registry_id'] or type(r['sequence']) is not int or r['sequence'] < 0
++            or not guard._hash(r['event_sha256']) or r['sequence'] == 0 and r != self.initial_reference()):
++            raise AuthorityError('recovery_external_reference_invalid')
++
++    def initial_reference(self):
++        return {'registry_id': self.config['registry_id'], 'sequence': 0, 'event_sha256': ZERO,
++                'witness': {'renewal_id': None, 'checkpoint': self.config['initial_reference']}}
++
++    def _fence(self):
++        self.guard._fence()
++        paths = (self.directory, self.custody, self.guard.directory)
++        if self._active_lock_identity is not None:
++            st=(self.custody/'journal.lock').stat(follow_symlinks=False)
++            if (st.st_dev,st.st_ino)!=self._active_lock_identity:
++                raise AuthorityError('recovery_registry_owner_stale')
++        if self._pid != os.getpid() or [(private_directory(p).stat().st_dev,p.stat().st_ino) for p in paths] != self._paths_identity:
++            raise AuthorityError('recovery_registry_owner_stale')
++
++    @contextmanager
++    def _locked(self, *, write=False):
++        with self.guard._operation_mutex:
++            self._fence()
++            if write: self.guard._writable()
++            # Journal lock is deliberately provisioned by authenticated initialize.
++            flags = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK
++            if write: flags |= os.O_CREAT
++            fd = os.open(self.custody/'journal.lock', flags, 0o600)
++            try:
++                Authority._check_file(fd)
++                try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
++                except BlockingIOError as exc: raise AuthorityError('recovery_registry_owner_busy') from exc
++                identity = os.fstat(fd)
++                self._active_lock_identity=(identity.st_dev,identity.st_ino)
++                self._fence()
++                yield
++                current = (self.custody/'journal.lock').stat(follow_symlinks=False)
++                if (identity.st_dev,identity.st_ino) != (current.st_dev,current.st_ino):
++                    raise AuthorityError('recovery_registry_owner_stale')
++            finally:
++                self._active_lock_identity=None
++                os.close(fd)
++
++    def _path(self, sequence, phase):
++        return self.custody / f'{sequence:04}.{phase}.json'
++
++    @staticmethod
++    def commit_body(event, digest):
++        return {'format':'jarvis-recovery-commit-v1', 'registry_id':event['registry_id'],
++                'sequence':event['sequence'], 'request_id':event['request_id'],
++                'event_sha256':digest, 'execution_enabled':False, 'activation_authorized':False}
++
++    def _connect(self, *, write=False):
++        read_file(self.database, 32*1024*1024)
++        before = self.database.stat(follow_symlinks=False)
++        conn = sqlite3.connect(self.database.as_uri()+('?mode=rw' if write else '?mode=ro'), uri=True, isolation_level=None, timeout=.1)
++        after = self.database.stat(follow_symlinks=False)
++        if (before.st_dev,before.st_ino) != (after.st_dev,after.st_ino):
++            conn.close(); raise AuthorityError('recovery_registry_replaced')
++        try:
++            if conn.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
++                raise AuthorityError('recovery_registry_corrupt')
++            schema = conn.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name").fetchall()
++            if schema != [(SCHEMA,)]: raise AuthorityError('recovery_registry_schema_invalid')
++            conn.execute('PRAGMA synchronous=FULL')
++            return conn
++        except sqlite3.Error as exc:
++            conn.close()
++            if getattr(exc,'sqlite_errorname','') in {'SQLITE_READONLY_ROLLBACK','SQLITE_READONLY_RECOVERY'}:
++                raise AuthorityError('recovery_sqlite_reconciliation_required') from exc
++            raise
++        except BaseException:
++            conn.close(); raise
++
++    def _protected_history(self):
++        self._fence(); g = self.guard
++        head, pending, history = g.history()
++        if pending: raise AuthorityError('recovery_checkpoint_incomplete')
++        names = {p.name for p in self.custody.iterdir()}
++        if len(names) > self.config['capacity']*2+1: raise AuthorityError('recovery_registry_capacity')
++        events=[]; commits=[]; expected={'journal.lock'}; previous=ZERO
++        nonce=set()
++        for seq in range(1,self.config['capacity']+1):
++            ip, fp = self._path(seq,'intent'), self._path(seq,'final')
++            if ip.name not in names: break
++            expected.add(ip.name)
++            event, digest = g._read(ip)
++            fields={'format','registry_id','config_sha256','sequence','previous_sha256','request_id','command','payload','permit','checkpoint','result','execution_enabled','activation_authorized','admitted_at'}
++            if (type(event) is not dict or set(event)!=fields or event['format']!='jarvis-recovery-event-v1'
++                or event['registry_id']!=self.config['registry_id'] or event['config_sha256']!=fingerprint(self.config)
++                or type(event['sequence']) is not int or event['sequence']!=seq or event['previous_sha256']!=previous or event['execution_enabled'] is not False
++                or event['activation_authorized'] is not False):
++                raise AuthorityError('recovery_registry_history_conflict')
++            self._historical_authorization(event)
++            identifier(event['request_id'])
++            if event['request_id'] in nonce: raise AuthorityError('recovery_registry_duplicate_nonce')
++            nonce.add(event['request_id'])
++            if event['checkpoint'] not in history: raise AuthorityError('recovery_registry_checkpoint_rollback')
++            if fp.name in names:
++                expected.add(fp.name)
++                commit,_ = g._read(fp)
++                if commit != self.commit_body(event,digest): raise AuthorityError('recovery_registry_commit_invalid')
++                commits.append(g.signed(commit))
++            else: commits.append(None)
++            events.append((event,digest)); previous=digest
++        if names != expected or any(c is None for c in commits[:-1]):
++            raise AuthorityError('recovery_registry_incomplete_history')
++        return events,commits,(head,pending,history)
++
++    def _derive(self, events, committed_count, history_state):
++        # Pure protected-evidence validation; no database open or mutation.
++        head,pending,history=history_state
++        proposals={};witness=self.initial_reference()['witness']
++        for index,(event,digest) in enumerate(events):
++            if index<=committed_count:
++                saved_proposals=strict_json(encode(proposals));saved_witness=witness
++                self._validate_reference(witness['checkpoint'],at=event['admitted_at'],history_state=history_state)
++                command=event['command']; result=event['result']
++                if (command=='initialize') != (index==0):
++                    raise AuthorityError('recovery_registry_initialization_invalid')
++                if command=='propose':
++                    self._validate_proposal(event)
++                    pid=event['request_id']
++                    if pid in proposals or any(p['proposal']['branch_id']==result['proposal']['branch_id'] or p['proposal']['restore_id']==result['proposal']['restore_id'] for p in proposals.values()):
++                        raise AuthorityError('recovery_registry_branch_conflict')
++                    proposals[pid]={'proposal_id':pid,'proposal':result['proposal'],'summary':result['summary'],
++                                    'state':'PENDING','decision_id':None,'authorization_expires_at':None,
++                                    'activation_authorized':False,'execution_enabled':False}
++                elif command=='decide':
++                    p=proposals.get(event['payload']['proposal_id'])
++                    if p is None or p['decision_id']!=event['payload']['previous_decision_id']:
++                        raise AuthorityError('recovery_registry_decision_conflict')
++                    self._decision_result(event['payload'],proposals,event['permit']['body'],at=event['admitted_at'])
++                    if result != {'proposal_id':p['proposal_id'],'state':event['payload']['state'],'activation_authorized':False}:
++                        raise AuthorityError('recovery_decision_result_invalid')
++                    p.update(state=event['payload']['state'],decision_id=event['request_id'],
++                             authorization_expires_at=event['payload']['expires_at'],
++                             principal=event['permit']['body']['principal'])
++                elif command=='renew':
++                    if event['payload']['previous_witness']!=witness: raise AuthorityError('recovery_witness_history_conflict')
++                    if result != {'witness':{'renewal_id':event['request_id'],'checkpoint':event['payload']['next_reference']},'history_preserved':True}:
++                        raise AuthorityError('recovery_witness_result_invalid')
++                    self._renewal_references(event['payload'],at=event['admitted_at'],history_state=(head,pending,history))
++                    witness=result['witness']
++                elif command=='initialize' and index==0:
++                    if event['payload']!=self.config or result!={'initialized':True}:
++                        raise AuthorityError('recovery_registry_initialization_invalid')
++                else:
++                    raise AuthorityError('recovery_registry_history_conflict')
++                if index>=committed_count:
++                    proposals=saved_proposals;witness=saved_witness
++        r=self.reference
++        if r['sequence']>committed_count or r['sequence'] and events[r['sequence']-1][1]!=r['event_sha256']:
++            raise AuthorityError('recovery_registry_external_rollback')
++        # The externally retained renewal must be present at the retained prefix.
++        anchored=self.initial_reference()['witness']
++        for e,_ in events[:r['sequence']]:
++            if e['command']=='renew': anchored=e['result']['witness']
++        if r['witness']!=anchored: raise AuthorityError('recovery_witness_external_mismatch')
++        for p in proposals.values():
++            if p['state'] in {'PENDING','APPROVED'} and p['authorization_expires_at'] and datetime.now(UTC)>=datetime.fromisoformat(instant(p['authorization_expires_at'])):
++                p['state']='EXPIRED'
++        return proposals,witness
++
++    def _load(self):
++        g=self.guard
++        events,commits,history_state=self._protected_history()
++        rows=[]
++        if self.database.exists():
++            conn = self._connect()
++            try: rows=conn.execute('SELECT sequence,request_id,envelope FROM events ORDER BY sequence').fetchall()
++            finally: conn.close()
++        if len(rows)>len(events): raise AuthorityError('recovery_registry_missing_anchor')
++        for index,(event,digest) in enumerate(events):
++            if index<len(rows):
++                if rows[index] != (index+1,event['request_id'],canonical(g.signed(event))):
++                    raise AuthorityError('recovery_registry_database_conflict')
++            elif commits[index] is not None or index != len(events)-1:
++                raise AuthorityError('recovery_registry_database_rollback')
++        proposals,witness=self._derive(events,len(rows),history_state)
++        return events,commits,rows,proposals,witness,history_state[0]
++
++    def _receipt(self, event, digest):
++        commit,_=self.guard._read(self._path(event['sequence'],'final'))
++        return {'event':self.guard.signed(event),'commit':self.guard.signed(commit)}
++
++    @evidence_errors
++    def inspect(self, request_id=None):
++        if request_id is not None: identifier(request_id)
++        with self._locked():
++            events,commits,rows,proposals,witness,head=self._load()
++            pending=bool(events and (commits[-1] is None or len(rows)<len(events)))
++            reference={'registry_id':self.config['registry_id'],'sequence':len(rows),
++                       'event_sha256':events[len(rows)-1][1] if rows else ZERO,'witness':witness}
++            minimum=witness['checkpoint']
++            now=datetime.now(UTC)
++            witness_current=datetime.fromisoformat(instant(minimum['valid_from']))<=now<datetime.fromisoformat(instant(minimum['expires_at']))
++            result={'state':'RECONCILIATION_REQUIRED' if pending else 'VERIFIED' if witness_current else 'WITNESS_EXPIRED',
++                    'verified':not pending and witness_current,'history_verified':True,
++                    'witness_state':'VERIFIED' if witness_current else 'EXPIRED',
++                    'proposals':list(proposals.values()),'reference':reference,'event_count':len(rows),
++                    'incomplete_witness_renewal':bool(pending and events[-1][0]['command']=='renew'),
++                    'execution_enabled':False,'activation_authorized':False,'external_effects':'UNKNOWN_NEVER_RETRY',
++                    'automatic_retry':False}
++            if request_id is not None:
++                found=next(((i,e,d) for i,(e,d) in enumerate(events) if e['request_id']==request_id),None)
++                if found is None: result['operation_state']='PROPOSAL_NEVER_COMMITTED'
++                else:
++                    i,e,d=found
++                    result['operation_state']='NEVER_COMMITTED' if i>=len(rows) else 'COMMITTED_ACKNOWLEDGMENT_UNKNOWN' if commits[i] is None else 'DURABLE_RECEIPT_ACKNOWLEDGMENT_UNKNOWN'
++                    result['receipt']=self._receipt(e,d) if commits[i] else None
++            return result
++
++    def _validate_reference(self, reference, *, current=False, at=None, history_state=None):
++        g=self.guard
++        if type(reference) is not dict or set(reference)!={'store_id','key_id','epoch','rollover_hash','head','valid_from','expires_at'}:
++            raise AuthorityError('recovery_witness_invalid')
++        start,end=interval(reference['valid_from'],reference['expires_at'],fresh=at is None,bound=300 if current else 86400)
++        if at is not None and not start<=datetime.fromisoformat(instant(at))<end:
++            raise AuthorityError('recovery_witness_admission_expired')
++        if (reference['store_id'],reference['key_id'])!=(g.store_id,g.key_id):
++            raise AuthorityError('recovery_witness_key_mismatch')
++        head,pending,history=g.history() if history_state is None else history_state
++        epoch=reference['epoch']
++        if type(epoch) is not int or not 0<=epoch<len(g._epoch_ranges) or reference['head'] not in history or g._epoch_ranges[epoch]['rollover_hash']!=reference['rollover_hash']:
++            raise AuthorityError('recovery_witness_rollback')
++        selected=g._epoch_ranges[epoch]
++        sequence=reference['head']['sequence']
++        # A generation link authenticates its preceding head, including after growth.
++        if not (selected['start']<=sequence<=selected['end'] or epoch>0 and sequence==selected['start']-1):
++            raise AuthorityError('recovery_witness_generation_mismatch')
++        if current and reference!=g.trust_reference(valid_from=reference['valid_from'],expires_at=reference['expires_at']):
++            raise AuthorityError('recovery_witness_not_current')
++
++    def _renewal_references(self, payload, *, at=None, history_state=None):
++        prev=payload['previous_witness']['checkpoint']; nxt=payload['next_reference']
++        self._validate_reference(prev,at=at,history_state=history_state)
++        self._validate_reference(nxt,current=at is None,at=at,history_state=history_state)
++        interval(nxt['valid_from'],nxt['expires_at'],fresh=False)
++        if not prev['epoch']<=nxt['epoch']<=prev['epoch']+1 or nxt['head']['sequence']<prev['head']['sequence']:
++            raise AuthorityError('recovery_witness_generation_bound')
++        if nxt['head']==prev['head'] and nxt['epoch']==prev['epoch']:
++            raise AuthorityError('recovery_witness_no_progress')
++
++    def _prepare_initial_database(self, event):
++        # Dedicated staging belongs only to this authenticated initialization.
++        # Empty/schema-only stages can finish; unknown content is quarantined.
++        if not self.stage.exists():
++            fd=os.open(self.stage,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
++            self._fault('recovery_initial_stage_created')
++        read_file(self.stage,32*1024*1024)
++        conn=sqlite3.connect(self.stage,isolation_level=None)
++        try:
++            conn.execute('PRAGMA synchronous=FULL');conn.execute('PRAGMA journal_mode=DELETE')
++            if conn.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:
++                raise AuthorityError('recovery_registry_partial_quarantine')
++            schema=conn.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name").fetchall()
++            if schema not in ([],[(SCHEMA,)]): raise AuthorityError('recovery_registry_partial_quarantine')
++            if schema and conn.execute('SELECT COUNT(*) FROM events').fetchone()[0]:
++                raise AuthorityError('recovery_registry_partial_quarantine')
++            conn.execute('BEGIN IMMEDIATE')
++            if not schema:conn.execute(SCHEMA)
++            self._fault('recovery_initial_before_schema_commit')
++            conn.execute('COMMIT');self._fault('recovery_initial_schema_committed')
++        finally:conn.close()
++        sync_directory(self.directory)
++
++    def _historical_authorization(self, event):
++        auth=self.permits.authenticate(event['permit'])
++        start,end=interval(auth['issued_at'],auth['expires_at'],fresh=False)
++        at=datetime.fromisoformat(instant(event['admitted_at']))
++        if (not start<=at<end or (auth['request_id'],auth['scope'],auth['command'],auth['payload_hash'],auth['checkpoint']) !=
++            (event['request_id'],'local-service','recovery_'+event['command'],fingerprint(event['payload']),event['checkpoint'])):
++            raise AuthorityError('recovery_historical_authorization_invalid')
++
++    def _validate_proposal(self, event):
++        p=event['result']['proposal']; r=event['payload']['verification_request']
++        start,end=interval(r['issued_at'],r['expires_at'],fresh=False)
++        if not start<=datetime.fromisoformat(instant(event['admitted_at']))<end:
++            raise AuthorityError('recovery_proposal_context_expired')
++        if fingerprint(event['result'])!=event['payload']['verification_sha256']:
++            raise AuthorityError('recovery_proposal_result_binding_mismatch')
++        if (p['branch_id']!=r['branch_id'] or p['original_store_id']!=self.guard.store_id
++            or p['restore_id']!=r['expected_restore_id'] or p['database_sha256']!=r['expected_database_sha256']
++            or p['parent_lineage']!=r['expected_source_lineage'] or p['verified_source_head']!=r['expected_source_head']
++            or r['expected_source_head']!=event['checkpoint'] or p['external_context_sha256']!=fingerprint(r) or p['activation_authorized'] is not False
++            or p['execution_enabled'] is not False or fingerprint(p['original_request_ids'])!=p['original_request_ids_sha256']):
++            raise AuthorityError('recovery_proposal_history_invalid')
++
++    def _decision_result(self, payload, proposals, auth, *, at=None):
++        if set(payload)!={'proposal_id','proposal_sha256','state','valid_from','expires_at','previous_decision_id'}:
++            raise AuthorityError('recovery_decision_invalid')
++        p=proposals.get(identifier(payload['proposal_id']))
++        if p is None: raise AuthorityError('recovery_proposal_not_found')
++        if payload['proposal_sha256']!=fingerprint(p['proposal']):
++            raise AuthorityError('recovery_decision_proposal_binding_mismatch')
++        effective=p['state']
++        now=datetime.now(UTC) if at is None else datetime.fromisoformat(instant(at))
++        if effective in {'PENDING','APPROVED'} and p['authorization_expires_at'] and now>=datetime.fromisoformat(instant(p['authorization_expires_at'])):
++            effective='EXPIRED'
++        allowed={'PENDING':{'APPROVED','REJECTED','REVOKED'},'APPROVED':{'REVOKED'},'EXPIRED':{'REVOKED'}}
++        # An explicit pending decision records the reviewer while awaiting approval.
++        states=allowed.get(effective,set()) | ({'PENDING'} if p['decision_id'] is None else set())
++        if payload['previous_decision_id']!=p['decision_id'] or payload['state'] not in states:
++            raise AuthorityError('recovery_decision_conflict')
++        begin,end=interval(payload['valid_from'],payload['expires_at'],fresh=at is None)
++        if at is not None and not begin<=datetime.fromisoformat(instant(at))<end:
++            raise AuthorityError('recovery_decision_admission_expired')
++        if end>datetime.fromisoformat(instant(auth['expires_at'])):
++            raise AuthorityError('recovery_decision_outlives_permit')
++        return {'proposal_id':p['proposal_id'],'state':payload['state'],'activation_authorized':False}
++
++    def _result(self, command, payload, request_id, proposals, witness, auth):
++        if command=='initialize':
++            if payload!=self.config: raise AuthorityError('recovery_registry_context_mismatch')
++            self._validate_reference(self.config['initial_reference'],current=True)
++            return {'initialized':True}
++        if command=='propose':
++            if set(payload)!={'directory','verification_request','verification_sha256'}: raise AuthorityError('recovery_proposal_invalid')
++            from app.agent.branch_verification import BranchVerifier
++            verified=BranchVerifier(self.guard).verify(payload['directory'],payload['verification_request'])
++            proposal=verified['proposal']
++            if any(p['proposal']['branch_id']==proposal['branch_id'] or p['proposal']['restore_id']==proposal['restore_id'] for p in proposals.values()):
++                raise AuthorityError('recovery_proposal_conflict')
++            if request_id in proposal['original_request_ids']+proposal['original_occurrence_ids']+proposal['original_task_ids']+[proposal['branch_id'],proposal['original_store_id'],proposal['restore_id']]:
++                raise AuthorityError('recovery_proposal_identity_collision')
++            result={'proposal':proposal,'summary':verified['summary']}
++            if fingerprint(result)!=payload['verification_sha256']:
++                raise AuthorityError('recovery_proposal_result_binding_mismatch')
++            return result
++        if command=='decide':
++            return self._decision_result(payload,proposals,auth)
++        if command=='renew':
++            if set(payload)!={'previous_witness','next_reference'}: raise AuthorityError('recovery_witness_invalid')
++            if payload['previous_witness']!=witness or self.reference['witness']!=witness:
++                raise AuthorityError('recovery_witness_stale_substitution')
++            nxt=payload['next_reference']
++            self._renewal_references(payload)
++            return {'witness':{'renewal_id':request_id,'checkpoint':nxt},'history_preserved':True}
++        raise AuthorityError('recovery_command_invalid')
++
++    def _recover_sqlite_journal(self, request_id, command, payload, permit):
++        journal=self.database.with_name(self.database.name+'-journal')
++        if not journal.exists():return
++        # SQLite may need a writable open to roll back spilled, uncommitted
++        # pages. Admit that open only for the exact independently authenticated
++        # last intent. Read-only inspection never invokes this path.
++        events,commits,history_state=self._protected_history()
++        if not events or commits[-1] is not None:
++            raise AuthorityError('recovery_sqlite_reconciliation_required')
++        self._derive(events,len(events)-1,history_state)
++        event,_=events[-1]
++        if (event['registry_id']!=self.config['registry_id'] or event['config_sha256']!=fingerprint(self.config)
++            or event['request_id']!=request_id or event['command']!=command
++            or event['payload']!=payload or event['permit']!=permit
++            or self._path(event['sequence'],'final').exists()):
++            raise AuthorityError('recovery_sqlite_reconciliation_binding_mismatch')
++        raw=read_file(journal,32*1024*1024)
++        try:
++            self._load()  # Strictly read-only proof of the committed prefix.
++        except AuthorityError as exc:
++            if exc.code!='recovery_sqlite_reconciliation_required':raise
++            if raw[:8]!=bytes.fromhex('d9d505f920a163d7'):
++                raise AuthorityError('recovery_sqlite_journal_unresolved') from exc
++        else:
++            if raw and raw[:8]!=b'\0'*8:
++                raise AuthorityError('recovery_sqlite_journal_unresolved')
++            # A validated non-hot journal is retired by the original transaction
++            # through SQLite's normal COMMIT. Never manually unlink a journal.
++            return
++        self._fence();self.guard._writable()
++        conn=self._connect(write=True)
++        try:
++            if conn.execute('PRAGMA integrity_check').fetchall()!=[('ok',)]:
++                raise AuthorityError('recovery_registry_corrupt')
++        finally:conn.close()
++        if journal.exists():
++            raise AuthorityError('recovery_sqlite_journal_unresolved')
++        sync_directory(self.directory)
++        self._load()
++        self._fault('recovery_sqlite_journal_recovered')
++
++    def _admission_time(self, event, witness, history_state, proposals):
++        # Final lightweight time checks after expensive verification. Publication
++        # uses this admission timestamp; no full scan occurs after it is chosen.
++        self._historical_authorization(event)
++        self._validate_reference(witness['checkpoint'],at=event['admitted_at'],history_state=history_state)
++        body=event['payload'];command=event['command']
++        at=datetime.fromisoformat(instant(event['admitted_at']))
++        if command=='propose':
++            context=body['verification_request']
++            start,end=interval(context['issued_at'],context['expires_at'],fresh=False)
++            if not start<=at<end:raise AuthorityError('recovery_proposal_context_expired')
++        elif command=='decide':
++            self._decision_result(body,proposals,event['permit']['body'],at=event['admitted_at'])
++        elif command=='renew':
++            for reference in (body['previous_witness']['checkpoint'],body['next_reference']):
++                start,end=interval(reference['valid_from'],reference['expires_at'],fresh=False,bound=86400)
++                if not start<=at<end:raise AuthorityError('recovery_decision_expired')
++
++    @evidence_errors
++    def apply(self, actor, request_id, command, payload, permit, *, initialize=False):
++        if Authority._scope(actor)!='local-service' or self.permits is None:
++            raise AuthorityError('recovery_offline_authentication_required')
++        payload=strict_json(encode(payload));permit=strict_json(encode(permit))
++        identifier(request_id)
++        if uuid.UUID(request_id).version!=4 or request_id in {self.config['registry_id'],self.guard.store_id}:
++            raise AuthorityError('recovery_request_identity_invalid')
++        if type(payload) is not dict or len(encode(payload))>48000:
++            raise AuthorityError('recovery_payload_bound')
++        with self._locked(write=True):
++            self._recover_sqlite_journal(request_id,command,payload,permit)
++            events,commits,rows,proposals,witness,head=self._load()
++            found=next(((e,d) for e,d in events if e['request_id']==request_id),None)
++            if found:
++                event,digest=found
++                if event['command']!=command or event['payload']!=payload or event['permit']!=permit:
++                    raise AuthorityError('recovery_request_conflict')
++                if commits[event['sequence']-1] is not None:
++                    return {'receipt':self._receipt(event,digest),'replayed':True,'execution_enabled':False}
++            else:
++                if len(rows)!=len(events) or commits and commits[-1] is None:
++                    raise AuthorityError('recovery_reconciliation_required')
++                if len(events)>=self.config['capacity']: raise AuthorityError('recovery_registry_capacity')
++                if (not events)!=(initialize and command=='initialize'):
++                    raise AuthorityError('recovery_registry_initialization_required')
++                interval(witness['checkpoint']['valid_from'],witness['checkpoint']['expires_at'],bound=86400)
++                auth=self.permits.verify(permit,actor,request_id,'recovery_'+command,payload)
++                if auth['checkpoint']!=head: raise AuthorityError('recovery_stale_operator_permit')
++                result=self._result(command,payload,request_id,proposals,witness,auth)
++                event={'format':'jarvis-recovery-event-v1','registry_id':self.config['registry_id'],
++                       'config_sha256':fingerprint(self.config),'sequence':len(events)+1,
++                       'previous_sha256':events[-1][1] if events else ZERO,'request_id':request_id,
++                       'command':command,'payload':payload,'permit':permit,'checkpoint':head,'result':result,
++                       'execution_enabled':False,'activation_authorized':False,'admitted_at':datetime.now(UTC).isoformat()}
++                history_state=self.guard.history()
++                self._historical_authorization(event)
++                self._derive(events+[(event,'0'*64)],len(events),history_state)
++                event['admitted_at']=datetime.now(UTC).isoformat()
++                self._admission_time(event,witness,history_state,proposals)
++                if len(encode(self.guard.signed(event)))>65000: raise AuthorityError('recovery_payload_bound')
++                self._fence();publish_file(self._path(event['sequence'],'intent'),encode(self.guard.signed(event)))
++                digest=fingerprint(self.guard.signed(event)); self._fault('recovery_intent_durable')
++            seq=event['sequence']
++            if seq>len(rows):
++                initial = not self.database.exists()
++                if initial:
++                    if seq!=1: raise AuthorityError('recovery_registry_missing_database')
++                    self._prepare_initial_database(event)
++                    from app.agent.archive_restore import _rename_directory
++                    # Atomic no-replace publication for a single regular file too.
++                    _rename_directory(self.stage,self.database)
++                    self._fault('recovery_database_published')
++                    conn=self._connect(write=True);conn.execute('BEGIN IMMEDIATE')
++                else:
++                    conn=self._connect(write=True);conn.execute('BEGIN IMMEDIATE')
++                try:
++                    self._fence()
++                    conn.execute('INSERT INTO events VALUES(?,?,?)',(seq,request_id,canonical(self.guard.signed(event))))
++                    self._fault('recovery_before_sql_commit')
++                    conn.execute('COMMIT'); self._fault('recovery_sql_committed')
++                finally: conn.close()
++                sync_directory(self.directory)
++            self._fence();self.guard._writable()
++            publish_file(self._path(seq,'final'),encode(self.guard.signed(self.commit_body(event,digest))))
++            self._fault('recovery_receipt_durable')
++            return {'receipt':self._receipt(event,digest),'replayed':found is not None,
++                    'execution_enabled':False,'activation_authorized':False}
+--- before/app/agent/reporter.py
++++ source/app/agent/reporter.py
+@@ -24,6 +24,9 @@
+         summary = (f"Ledger integrity {integrity}; consistency issues {len(report['issues'])}; "
+                    f"unpublished exports {report['unpublished_exports']}; automatic retry disabled.")
+         disaster = report.get("disaster_recovery", {})
++        decisions = report.get("recovery_decisions", {})
++        if decisions.get("configured"):
++            summary += f" Recovery decisions {decisions['state']}; approvals do not activate tasks. "
+         enrollment = report.get("enrollment", {}).get("state", "UNENROLLED")
+         summary += f"Enrollment {enrollment}; "
+         if "epoch" in disaster:
+--- before/app/agent/runtime.py
++++ source/app/agent/runtime.py
+@@ -34,8 +34,10 @@
+             raise AuthorityError("execution_worker_must_stop")
+         _execution_worker = None
+         if _authority is not None:
+-            _authority.close()
+-            _authority = None
++            try:
++                _authority.close()
++            finally:
++                _authority = None
+ 
+ 
+ def bind_offline_execution(policy, *, max_pending=128):
+--- before/docs/audit_disaster_recovery.md
++++ source/docs/audit_disaster_recovery.md
+@@ -133,3 +133,12 @@
+ identities/storage, externally custodied keys/anchors and clock, approved policy,
+ qualified dependencies, enrollment/branch recovery and separately authorized
+ deployment/executor qualification. This guide authorizes none of those actions.
++
++## Subsequent offline recovery milestone
++
++[Durable recovery decisions and witness renewal](recovery_decisions.md) adds a
++separate synthetic SQLite registry and authenticated non-activating operator
++decisions. Source/archive/manifest/generation and original UUID bindings remain
++protected. Existing sealed evidence and original enrollment witnesses are retained;
++renewal advances a separately custodied checkpoint minimum, without key rotation
++or branch activation.
+--- before/docs/authority_enrollment.md
++++ source/docs/authority_enrollment.md
+@@ -162,3 +162,12 @@
+ closure, broader regressions, approved enrollment/capacity/retention policy and
+ deployment review. Real restored-branch re-anchoring, production genesis resets,
+ real migrations and executor activation are not implemented or authorized here.
++
++## Subsequent offline recovery milestone
++
++[Durable recovery decisions and witness renewal](recovery_decisions.md) adds a
++separate synthetic SQLite registry and authenticated non-activating operator
++decisions. Source/archive/manifest/generation and original UUID bindings remain
++protected. Existing sealed evidence and original enrollment witnesses are retained;
++renewal advances a separately custodied checkpoint minimum, without key rotation
++or branch activation.
+--- before/docs/operator_recovery.md
++++ source/docs/operator_recovery.md
+@@ -151,3 +151,11 @@
+ All prior serial-broker/VM164/no-NIC/Gate6K prerequisites remain unchanged. Real
+ execution, providers, production startup, credentials and infrastructure are not
+ authorized or activated by an offline pass.
++
++## Durable recovery decisions
++
++See [recovery decisions and witness renewal](recovery_decisions.md) for the separate
++disposable registry, authenticated proposal/decision permits, inherited-descriptor
++CLI modes, protected renewal and restart reconciliation. Approval never activates
++restored work. Readiness carries aggregate state; detailed history requires operator
++authentication. The previous evidence packet remains historical and immutable.
+--- before/docs/recovery_decisions.md
++++ source/docs/recovery_decisions.md
+@@ -0,0 +1,131 @@
++# Offline recovery decisions and protected witness renewal
++
++This implementation admits **disposable synthetic state only**. It never activates
++restored branches, starts executors, resumes schedules or changes source tasks.
++Approval is historical operator evidence; it is not an execution capability.
++
++The separate SQLite registry indexes an append-only protected intent/commit journal.
++Supply a private registry-data directory, a separate private custody directory, an
++existing checkpoint guard, externally retained configuration and latest registry
++reference, and distinct checkpoint and operator HMAC verifiers. There is no default
++key, trust discovery, production enrollment, schema migration or public mutation API.
++The operator must retain the returned current reference outside registry authority.
++Same-UID/key compromise, secure time and coordinated rollback of all external
++custody remain explicit trust assumptions. HMAC is shared-key authentication, not a
++public-key signature. Neither ordinary files nor a local checksum prove external
++custody against a privileged attacker.
++
++## Data and authorization
++
++Each proposal has a caller-retained canonical v4 UUID distinct from branch/source
++identities. The original authority, branch, restore, archive path/manifest digest,
++checkpoint generation/head, database digest and original request/task/occurrence
++UUIDs remain bound to the verified report. Conflicting branch or restore identities
++are refused. The proposal permit binds `verification_sha256`, the hash of the
++complete `{proposal, summary}` result, as well as the original verification request
++and restore path. Import and verification never imply approval.
++
++Every mutation has a separate short-lived operator HMAC permit bound to request ID,
++command, exact payload, local-service scope, principal and source checkpoint. Replay
++requires the identical UUID, payload and original permit. Fresh commands require
++fresh authorization. Historical evidence is authenticated independently with the
++operator key at every restart, even after expiry; expiry never refreshes on replay.
++
++Proposal states are PENDING, APPROVED, REJECTED, EXPIRED and REVOKED. Decisions use
++compare-and-swap against the previous decision UUID and bind the complete proposal
++hash. Pending decisions record review without approval. Approval/rejection require
++an unresolved pending proposal; approval can subsequently be revoked. Expired
++authorization remains historical and can be revoked. Rejected and revoked proposals
++cannot be reapproved. Decision validity is at most 300 seconds and cannot outlive
++the authorizing permit. Restart evaluates predecessor expiry at each historical
++admission time, so a later genuine permit cannot bypass an expired predecessor.
++The final admission timestamp is chosen after expensive verification, with
++lightweight permit/witness/context/decision/predecessor checks immediately before
++publication. Delayed validation cannot publish an already expired admission.
++No decision changes activation status.
++
++## Commit, interruption and reconciliation
++
++Publication order is signed intent + fsync, SQLite FULL transaction commit, signed
++commit receipt + fsync, then response. First-time SQLite schema creation uses a
++dedicated staged database and atomic no-replace publication. Only exact empty or
++schema-only authenticated initialization stages can continue; arbitrary contents
++are quarantined without deletion.
++
++Read-only inspection distinguishes absent request, admitted but never committed,
++committed with receipt/acknowledgment unknown, and durable receipt with acknowledgment
++unknown. HTTP delivery cannot establish whether an acknowledgment reached its caller.
++A hot SQLite rollback journal is reported as
++`recovery_sqlite_reconciliation_required`; read-only inspection performs no rollback.
++Only the exact independently authenticated last durable admission, matching original
++UUID/command/payload/permit and no final receipt, can authorize SQLite to roll back
++its own uncommitted spilled pages. A complete DB-independent protected inventory,
++chain, permit, state-machine and external-reference validation precedes every
++recovery writable open. Corrupt or foreign history refuses without SQLite writes.
++A proven non-hot zero-header journal is retired only by SQLite's ordinary original
++transaction; it is never manually unlinked. Full protected-history and SQL validation then
++run before the original event is republished.
++
++An incomplete tail blocks new mutations until its original operation is explicitly
++reconciled. Continuation authenticates the original durable admission and only
++finishes its exact local SQL/receipt publication. It never invokes external work.
++UNKNOWN effects stay UNKNOWN and never generate an automatic retry.
++
++Missing anchors, SQL/journal conflicts, rolled-back databases, foreign custody
++inventory, stale locks, incorrect keys and external references fail closed. Partial
++publication files are preserved and require explicit forensic quarantine; they are
++never treated as an intent or receipt. Replay reuses one completely verified checkpoint-history snapshot while holding
++the guard mutex; it does not rescan the same protected chain for each renewal.
++Capacity is finite (4–256 events), with no
++pruning or deletion. SQLite files are bounded to 32 MiB and evidence to 65 KiB/event.
++
++## Witnesses
++
++A registry reference contains its registry UUID, committed sequence/event digest and
++latest witness. Renewal verifies the previous externally retained witness and full
++protected checkpoint ancestry, then binds the next witness to the exact current
++source head, key and epoch/rollover hash. One renewal can advance at most one epoch.
++A new committed checkpoint or epoch is required. Missing or expired custody cannot
++be silently replaced with local state. Inspection reports WITNESS_EXPIRED while
++retaining a separate historical-integrity result; fresh mutations and configured
++application readiness refuse expired witnesses. This retains the same synthetic key; it does
++not rotate production keys or replace the original enrollment witness.
++
++Witness publication uses the same SQLite/journal transaction protocol. Concurrent
++renewals compare the prior witness, so only one can win. Preserve the old reference
++and renewal receipt; obtain the newly verified reference through offline inspection
++and transfer it into external custody. Renewal receipts can be independently
++verified with `verify_receipt`, trusted expected identities/digests and both HMAC
++verifiers. Historical verification alone never authorizes activation.
++
++## CLI and application
++
++`python -m app.agent.operator_cli` exposes these additional modes:
++
++- `--initialize-recovery-registry`
++- `--publish-recovery-proposal /absolute/disposable/restore`
++- `--record-recovery-decision`
++- `--renew-recovery-witness`
++- `--reconcile-recovery-operation`
++- `--recovery-registry-status`
++
++Supply existing checkpoint flags plus `--registry-config-fd`,
++`--registry-reference-fd` and `--operator-key-fd`, including for read-only historical
++authentication. Mutation additionally requires `--commit-recovery`, `--operation-id`,
++`--permit-fd` and `--recovery-payload-fd`. Reconciliation's payload is an object with
++`command` and the original `payload`; use the original permit unchanged. Descriptor
++values are inherited explicitly; there is no credential-path/environment fallback.
++See the retained synthetic CLI demonstration for exact JSON examples and handoff.
++
++Trusted offline embedding may supply `recovery_registry=` to `Authority`, bound to
++the identical checkpoint guard. Startup/readiness verifies it and blocks incomplete
++publication. Shutdown performs a final read-only inspection while still releasing
++storage ownership on failure. Readiness returns aggregate counts only. Detailed
++history appears in authenticated operator diagnostics and read-only offline CLI.
++Reporter text explicitly distinguishes approvals from activation. Existing archive
++verification remains read-only and proposal publication re-verifies the restored
++artifact; neither creates an executable branch. No HTTP approval/completion/witness
++mutation route is mounted.
++
++SIGKILL and injected ENOSPC tests demonstrate process crash and transaction recovery,
++not physical power-loss qualification or production readiness.
+--- before/tests/recovery_process_actor.py
++++ source/tests/recovery_process_actor.py
+@@ -0,0 +1,49 @@
++"""Run only inside the guarded cage, against explicit disposable state."""
++import json
++import sys
++import time
++from pathlib import Path
++sys.path[:0]=['/input/source','/input/tests','/input','/deps']
++from app.agent.ledger import LedgerGuard
++from app.agent.recovery import OperatorPermits
++from app.agent.recovery_decisions import RecoveryRegistry
++from app.agent.runtime import SERVICE_ACTOR
++from enrollment_fixtures import KEY,OPKEY
++c=json.loads(Path(sys.argv[1]).read_text());root=Path(c['root'])
++active_connection=None
++def fault(stage):
++    if stage==c['stage']:
++        if c.get('force_hot_journal'):
++            # Force real page spill before COMMIT, including overwritten prior
++            # pages. Recovery must use SQLite's durable original rollback data.
++            active_connection.execute("UPDATE events SET envelope=envelope || ?",('synthetic-uncommitted-pages'*5000,))
++        (root/'ready').write_text(stage)
++        while True:time.sleep(.02)
++if c['stage'].startswith('partial_'):
++    import os
++    import app.agent.recovery_decisions as module
++    original_publish=module.publish_file
++    phase=c['stage'].split('_',1)[1]
++    def partial(path,raw):
++        if path.name.endswith('.'+phase+'.json'):
++            fd=os.open(path.parent/'.stage-interrupted-witness',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
++            os.write(fd,raw[:len(raw)//2]);os.fsync(fd);os.close(fd)
++            fault(c['stage'])
++        return original_publish(path,raw)
++    module.publish_file=partial
++g=LedgerGuard(c['config']['checkpoints'],KEY,c['config']['store_id'],rollover=True,epoch_capacity=4,recovery=True,trust_context=c['trust'])
++g.acquire(c['config']['database'])
++try:
++    s=RecoveryRegistry(g,c['config'],c['reference'],OperatorPermits(OPKEY),fault_hook=fault)
++    if c.get('force_hot_journal'):
++        original_connect=s._connect
++        def spill(*,write=False):
++            global active_connection
++            conn=original_connect(write=write)
++            if write:
++                conn.execute('PRAGMA cache_size=1');conn.execute('PRAGMA cache_spill=1')
++                active_connection=conn
++            return conn
++        s._connect=spill
++    s.apply(SERVICE_ACTOR,c['operation_id'],c['command'],c['payload'],c['permit'],initialize=c['command']=='initialize')
++finally:g.close()
+--- before/tests/test_recovery_decisions.py
++++ source/tests/test_recovery_decisions.py
+@@ -0,0 +1,584 @@
++"""Real SQLite/guard/restore tests; execute only with the disposable offline runner."""
++from datetime import UTC, datetime, timedelta
++import copy
++import errno
++import hashlib
++import json
++import os
++from pathlib import Path
++import signal
++import sqlite3
++import subprocess
++import sys
++import time
++from concurrent.futures import ThreadPoolExecutor
++import pytest
++
++from app.agent.authority import AuthorityError
++from app.agent.ledger import LedgerGuard, encode
++from app.agent.enrollment import fingerprint
++from app.agent.recovery import OperatorPermits
++from app.agent.recovery_decisions import RecoveryRegistry, verify_receipt
++from app.agent.runtime import SERVICE_ACTOR as ACTOR
++from enrollment_fixtures import uid, KEY, OPKEY
++from test_authority_enrollment import branch, env
++
++
++def times(seconds=120):
++    now=datetime.now(UTC)
++    return (now-timedelta(seconds=1)).isoformat(),(now+timedelta(seconds=seconds)).isoformat()
++
++
++def grant(g, request_id, command, payload, *, principal='synthetic-sprint5-reviewer', seconds=120):
++    start,end=times(seconds)
++    return OperatorPermits(OPKEY).issue(request_id=request_id,principal=principal,scope=ACTOR.scope,
++        command='recovery_'+command,payload=payload,checkpoint=g.history()[0],issued_at=start,expires_at=end)
++
++
++def reference(g):
++    start,end=times()
++    return g.trust_reference(valid_from=start,expires_at=end)
++
++
++@pytest.fixture
++def registry(branch):
++    a,target,request,unknown,enrollment=branch;g=a._ledger
++    root=target.parent.parent
++    for name in ('registry-data','registry-custody'):(root/name).mkdir(mode=0o700)
++    config={'format':'jarvis-recovery-registry-v1','registry_id':uid(),'store_id':g.store_id,'key_id':g.key_id,
++            'database':str(root/'registry-data/registry.sqlite'),'custody':str(root/'registry-custody'),
++            'checkpoints':str(g.directory),'initial_reference':reference(g),'capacity':128,'disposable_only':True}
++    external={'registry_id':config['registry_id'],'sequence':0,'event_sha256':'0'*64,
++              'witness':{'renewal_id':None,'checkpoint':config['initial_reference']}}
++    service=RecoveryRegistry(g,config,external,OperatorPermits(OPKEY))
++    op=uid();result=service.apply(ACTOR,op,'initialize',config,grant(g,op,'initialize',config),initialize=True)
++    yield service,a,target,request,unknown,result
++
++
++def publication_payload(g,target,request):
++    from app.agent.branch_verification import BranchVerifier
++    verified=BranchVerifier(g).verify(target,request)
++    return {'directory':str(target),'verification_request':request,
++            'verification_sha256':fingerprint({'proposal':verified['proposal'],'summary':verified['summary']})}
++
++
++def proposal(env):
++    s,a,target,r,unknown,_=env
++    op=uid();payload=publication_payload(s.guard,target,r)
++    p=grant(s.guard,op,'propose',payload)
++    return op,payload,p,s.apply(ACTOR,op,'propose',payload,p)
++
++
++def decision(s, proposal_id, state='APPROVED', previous=None, seconds=60):
++    start,end=times(seconds)
++    proposal=next(p for p in s.inspect()['proposals'] if p['proposal_id']==proposal_id)
++    payload={'proposal_id':proposal_id,'proposal_sha256':fingerprint(proposal['proposal']),'state':state,'valid_from':start,'expires_at':end,'previous_decision_id':previous}
++    op=uid();p=grant(s.guard,op,'decide',payload)
++    return op,payload,p
++
++
++def renew(s,a):
++    external=s.inspect()['reference']
++    s.reference=external
++    # Use real protected generation rollover; no tasks or executor are resumed.
++    a.submit(ACTOR,uid(),'held synthetic checkpoint advance')
++    op=uid();payload={'previous_witness':external['witness'],'next_reference':reference(s.guard)}
++    return op,payload,grant(s.guard,op,'renew',payload)
++
++
++def test_restore_proposal_decision_receipt_restart(registry):
++    s,a,target,r,unknown,_=registry
++    op,payload,p,created=proposal(registry)
++    before=a.get_task(ACTOR,unknown)
++    status=s.inspect(op);assert status['proposals'][0]['state']=='PENDING'
++    item=status['proposals'][0]['proposal']
++    assert unknown in item['original_request_ids'] and item['source_manifest_sha256']
++    assert item['original_occurrence_ids']==sorted(item['original_occurrence_ids'])
++    d,body,permit=decision(s,op)
++    result=s.apply(ACTOR,d,'decide',body,permit)
++    evidence=result['receipt'];event=evidence['event']['body']
++    assert verify_receipt(s.guard,evidence,registry_id=s.config['registry_id'],request_id=d,
++        payload_sha256=fingerprint(body),event_sha256=fingerprint(evidence['event']),permits=OperatorPermits(OPKEY))['verified']
++    restarted=RecoveryRegistry(s.guard,s.config,s.inspect()['reference'],OperatorPermits(OPKEY))
++    assert restarted.inspect(d)['proposals'][0]['state']=='APPROVED'
++    assert restarted.apply(ACTOR,d,'decide',body,permit)['replayed']
++    assert a.get_task(ACTOR,unknown)==before
++    assert event['result']['activation_authorized'] is False
++    assert not restarted.inspect()['activation_authorized']
++    from app.agent.authority import Authority
++    with pytest.raises(AuthorityError,match='restore_activation_prohibited'):Authority(target/'state.sqlite')
++
++
++def test_replay_identical_only_and_branch_duplicate(registry):
++    s,*_=registry
++    op,payload,p,result=proposal(registry)
++    assert s.apply(ACTOR,op,'propose',payload,p)['receipt']==result['receipt']
++    changed=copy.deepcopy(payload);changed['verification_request']['branch_id']=uid()
++    with pytest.raises(AuthorityError,match='request_conflict'):s.apply(ACTOR,op,'propose',changed,p)
++    changed=publication_payload(s.guard,registry[2],changed['verification_request'])
++    op2=uid()
++    with pytest.raises(AuthorityError,match='proposal_conflict'):s.apply(ACTOR,op2,'propose',payload,grant(s.guard,op2,'propose',payload))
++    with pytest.raises(AuthorityError,match='proposal_conflict'):s.apply(ACTOR,op2,'propose',changed,grant(s.guard,op2,'propose',changed))
++
++
++@pytest.mark.parametrize('state',['PENDING','REJECTED','APPROVED'])
++def test_decision_states_and_revocation(registry,state):
++    s,*_=registry;op,_,_,_=proposal(registry)
++    d,payload,p=decision(s,op,state)
++    s.apply(ACTOR,d,'decide',payload,p)
++    assert s.inspect()['proposals'][0]['state']==state
++    d2,p2,k2=decision(s,op,'REVOKED',d)
++    if state=='REJECTED':
++        with pytest.raises(AuthorityError,match='decision_conflict'):s.apply(ACTOR,d2,'decide',p2,k2)
++    else:
++        s.apply(ACTOR,d2,'decide',p2,k2)
++        assert s.inspect()['proposals'][0]['state']=='REVOKED'
++        d3,p3,k3=decision(s,op,'APPROVED',d2)
++        with pytest.raises(AuthorityError,match='decision_conflict'):s.apply(ACTOR,d3,'decide',p3,k3)
++
++
++@pytest.mark.parametrize('attack',['wrong_key','forged','missing','expired','wrong_operator_scope','outlives','wrong_checkpoint','future'])
++def test_invalid_authorization_fails_before_admission(registry,attack):
++    from app.agent.authority import Actor
++    s,*_=registry;op,_,_,_=proposal(registry);d,body,p=decision(s,op)
++    actor=ACTOR
++    if attack=='wrong_key': p=OperatorPermits(b'x'*32).issue(**{k:v for k,v in p['body'].items() if k!='payload_hash'},payload=body)
++    elif attack=='forged':p['body']['principal']='forged-identity'
++    elif attack=='missing':p=None
++    elif attack=='expired':
++        start,end=times(-10);p=OperatorPermits(OPKEY).issue(request_id=d,principal='synthetic',scope=ACTOR.scope,command='recovery_decide',payload=body,checkpoint=s.guard.history()[0],issued_at=(datetime.now(UTC)-timedelta(seconds=30)).isoformat(),expires_at=end)
++    elif attack=='wrong_operator_scope':actor=Actor('remote-client')
++    elif attack=='outlives': body['expires_at']=(datetime.now(UTC)+timedelta(seconds=290)).isoformat();p=grant(s.guard,d,'decide',body)
++    elif attack=='wrong_checkpoint':p=OperatorPermits(OPKEY).issue(request_id=d,principal='synthetic',scope=ACTOR.scope,command='recovery_decide',payload=body,checkpoint={},issued_at=p['body']['issued_at'],expires_at=p['body']['expires_at'])
++    elif attack=='future':body['valid_from']=(datetime.now(UTC)+timedelta(seconds=5)).isoformat();p=grant(s.guard,d,'decide',body)
++    before=s.inspect()['event_count']
++    with pytest.raises(AuthorityError):s.apply(actor,d,'decide',body,p)
++    assert s.inspect()['event_count']==before
++
++
++@pytest.mark.parametrize('attack',['event','commit','wrong_key','wrong_request','wrong_digest'])
++def test_forged_receipts(registry,attack):
++    s,*_=registry;op,_,_,_=proposal(registry);d,body,p=decision(s,op)
++    receipt=s.apply(ACTOR,d,'decide',body,p)['receipt'];digest=fingerprint(receipt['event']);expected=d
++    permits=OperatorPermits(OPKEY)
++    if attack=='event':receipt['event']['body']['result']['activation_authorized']=True
++    elif attack=='commit':receipt['commit']['body']['sequence']+=1
++    elif attack=='wrong_key':permits=OperatorPermits(b'wrong synthetic key'*3)
++    elif attack=='wrong_request':expected=uid()
++    else:digest='0'*64
++    with pytest.raises(AuthorityError):verify_receipt(s.guard,receipt,registry_id=s.config['registry_id'],request_id=expected,payload_sha256=fingerprint(body),event_sha256=digest,permits=permits)
++
++
++def test_concurrent_proposals_and_decisions(registry):
++    s,*_=registry
++    op=uid();payload=publication_payload(s.guard,registry[2],registry[3]);p=grant(s.guard,op,'propose',payload)
++    with ThreadPoolExecutor(max_workers=2) as pool:
++        results=list(pool.map(lambda _:s.apply(ACTOR,op,'propose',payload,p),range(2)))
++    assert sum(x['replayed'] for x in results)==1
++    requests=[decision(s,op,state) for state in ('APPROVED','REJECTED')]
++    def apply(item):
++        d,b,p=item
++        try:s.apply(ACTOR,d,'decide',b,p);return 'won'
++        except AuthorityError as exc:return exc.code
++    with ThreadPoolExecutor(max_workers=2) as pool:out=list(pool.map(apply,requests))
++    assert sorted(out)==['recovery_decision_conflict','won']
++
++
++def test_witness_renewal_new_generation_restart_and_stale_substitution(registry):
++    s,a,*_=registry;old=s.inspect()['reference']
++    while s.guard._epoch==old['witness']['checkpoint']['epoch']:
++        a.submit(ACTOR,uid(),'held generation advance')
++    op,payload,p=renew(s,a)
++    result=s.apply(ACTOR,op,'renew',payload,p)
++    current=s.inspect()['reference']
++    assert current['witness']['renewal_id']==op and current['witness']['checkpoint']['epoch']==1+old['witness']['checkpoint']['epoch']
++    assert result['receipt']['event']['body']['result']['history_preserved']
++    restarted=RecoveryRegistry(s.guard,s.config,current,OperatorPermits(OPKEY))
++    assert restarted.inspect()['verified']
++    bad=copy.deepcopy(payload);bad['next_reference']=reference(s.guard);op2=uid()
++    with pytest.raises(AuthorityError,match='stale_substitution'):s.apply(ACTOR,op2,'renew',bad,grant(s.guard,op2,'renew',bad))
++    assert s.apply(ACTOR,op,'renew',payload,p)['replayed']
++
++
++@pytest.mark.parametrize('attack',['missing_custody','wrong_generation','wrong_key','rollback','missing_anchor','stale_external','expired'])
++def test_witness_renewal_trust_attacks(registry,attack):
++    s,a,*_=registry;op,body,p=renew(s,a)
++    if attack=='missing_custody':
++        with pytest.raises(AuthorityError,match='external_custody'):RecoveryRegistry(s.guard,s.config,None,s.permits)
++        return
++    if attack=='wrong_generation':body['next_reference']['epoch']+=1
++    elif attack=='wrong_key':body['next_reference']['key_id']='0'*64
++    elif attack=='rollback':body['next_reference']=s.config['initial_reference']
++    elif attack=='missing_anchor':
++        (s.guard._checkpoint_directory(1)/'00000001.final.json').unlink()
++    elif attack=='stale_external':s.reference['witness']['renewal_id']=uid()
++    elif attack=='expired':body['next_reference']['expires_at']=(datetime.now(UTC)-timedelta(seconds=1)).isoformat()
++    with pytest.raises(AuthorityError):s.apply(ACTOR,op,'renew',body,grant(s.guard,op,'renew',body))
++
++
++@pytest.mark.parametrize('damage',['missing_anchor','missing_row','corrupt_database','unknown_custody','external_ahead','missing_database','stale_guard'])
++def test_registry_corruption_rollback_and_incomplete_history(registry,damage):
++    s,*_=registry;op,_,_,_=proposal(registry)
++    if damage=='missing_anchor':s._path(2,'intent').unlink()
++    elif damage=='missing_row':
++        conn=sqlite3.connect(s.database);conn.execute('DELETE FROM events WHERE sequence=2');conn.commit();conn.close()
++    elif damage=='corrupt_database':
++        with s.database.open('r+b') as f:f.write(b'not a SQLite database')
++    elif damage=='unknown_custody':(s.custody/'unknown-partial').write_text('preserve')
++    elif damage=='external_ahead':s.reference['sequence']=999
++    elif damage=='missing_database':s.database.rename(s.database.with_suffix('.missing'))
++    elif damage=='stale_guard':s.guard._pid=-1
++    with pytest.raises((AuthorityError,sqlite3.Error)):s.inspect()
++
++
++def test_enospc_preserves_admission_and_exact_retry(registry,monkeypatch):
++    import app.agent.recovery_decisions as module
++    s,*_=registry;op=uid();body=publication_payload(s.guard,registry[2],registry[3]);p=grant(s.guard,op,'propose',body)
++    original=module.publish_file
++    def full(path,raw):
++        if path.name.endswith('.final.json'):raise OSError(errno.ENOSPC,'synthetic disk full')
++        return original(path,raw)
++    monkeypatch.setattr(module,'publish_file',full)
++    with pytest.raises(OSError):s.apply(ACTOR,op,'propose',body,p)
++    assert s.inspect(op)['operation_state']=='COMMITTED_ACKNOWLEDGMENT_UNKNOWN'
++    monkeypatch.setattr(module,'publish_file',original)
++    assert s.apply(ACTOR,op,'propose',body,p)['replayed']
++
++
++def child_case(registry,command,stage):
++    s,a,target,r,unknown,_=registry
++    if command=='propose':
++        op=uid();body=publication_payload(s.guard,target,r);p=grant(s.guard,op,command,body)
++    elif command=='decide':
++        pid,_,_,_=proposal(registry);op,body,p=decision(s,pid)
++    else:op,body,p=renew(s,a)
++    case={'config':s.config,'reference':s.reference,'trust':s.guard.trust_context,'command':command,
++          'operation_id':op,'payload':body,'permit':p,'stage':stage,'root':str(s.directory.parent)}
++    path=s.directory.parent/'child.json';path.write_text(json.dumps(case));path.chmod(0o600)
++    a.close()
++    process=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/recovery_process_actor.py',str(path)])
++    ready=s.directory.parent/'ready';end=time.monotonic()+8
++    try:
++        while not ready.exists() and time.monotonic()<end and process.poll() is None:time.sleep(.01)
++        assert ready.exists(),process.poll()
++        # A competing independent writer cannot acquire the protected journal.
++        competitor=LedgerGuard(s.guard.directory,KEY,s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True,trust_context=case['trust'])
++        try:
++            with pytest.raises(AuthorityError,match='owner_busy'):competitor.acquire(s.database)
++        finally:competitor.close()
++        process.kill();process.wait(timeout=5);assert process.returncode==-signal.SIGKILL
++    finally:
++        if process.poll() is None:process.kill();process.wait(timeout=5)
++    g=LedgerGuard(s.guard.directory,KEY,s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True,trust_context=case['trust'])
++    g.acquire(s.database)
++    restarted=RecoveryRegistry(g,s.config,s.reference,OperatorPermits(OPKEY))
++    try:
++        status=restarted.inspect(op)
++        expected='NEVER_COMMITTED' if stage in {'recovery_intent_durable','recovery_before_sql_commit'} else 'COMMITTED_ACKNOWLEDGMENT_UNKNOWN' if stage=='recovery_sql_committed' else 'DURABLE_RECEIPT_ACKNOWLEDGMENT_UNKNOWN'
++        assert status['operation_state']==expected
++        result=restarted.apply(ACTOR,op,command,body,p)
++        assert result['replayed'] and restarted.inspect(op)['verified']
++        with pytest.raises(AuthorityError,match='request_conflict'):restarted.apply(ACTOR,op,command,{**body,'changed':True},p)
++        record={'command':command,'stage':stage,'exitcode':process.returncode,'before':status['operation_state'],
++                'after':restarted.inspect(op),'original_request_id':op,'payload_sha256':fingerprint(body)}
++        evidence=Path('/work/CRASH-RECOVERY.jsonl')
++        with evidence.open('a') as f:f.write(json.dumps(record)+'\n')
++    finally:g.close()
++
++
++@pytest.mark.parametrize('command',['propose','decide','renew'])
++@pytest.mark.parametrize('stage',['recovery_intent_durable','recovery_before_sql_commit','recovery_sql_committed','recovery_receipt_durable'])
++def test_independent_sigkill_registry_reconciliation(registry,command,stage):
++    child_case(registry,command,stage)
++
++
++def test_expired_decision_remains_historical_and_can_be_revoked(registry):
++    s,*_=registry;op,_,_,_=proposal(registry)
++    d,body,p=decision(s,op,seconds=.15)
++    saved=s.apply(ACTOR,d,'decide',body,p)
++    time.sleep(.18)
++    assert s.inspect()['proposals'][0]['state']=='EXPIRED'
++    # Replay acknowledges history and cannot refresh its authorization period.
++    assert s.apply(ACTOR,d,'decide',body,p)['receipt']==saved['receipt']
++    d2,b2,p2=decision(s,op,'REVOKED',d)
++    s.apply(ACTOR,d2,'decide',b2,p2)
++    assert s.inspect()['proposals'][0]['state']=='REVOKED'
++
++
++def test_checkpoint_key_cannot_forge_operator_authorization_on_restart(registry):
++    s,*_=registry;pid,_,_,_=proposal(registry);op,body,p=decision(s,pid)
++    s.apply(ACTOR,op,'decide',body,p)
++    event,_=s.guard._read(s._path(3,'intent'))
++    event['permit']['body']['principal']='forged-with-only-checkpoint-key'
++    # An attacker with the checkpoint key can sign a consistent SQL+journal
++    # rewrite, but still lacks the separately custodied operator HMAC key.
++    raw=encode(s.guard.signed(event));s._path(3,'intent').write_bytes(raw)
++    commit=s.guard.signed(s.commit_body(event,fingerprint(s.guard.signed(event))))
++    s._path(3,'final').write_bytes(encode(commit))
++    conn=sqlite3.connect(s.database)
++    conn.execute('UPDATE events SET envelope=? WHERE sequence=3',(json.dumps(s.guard.signed(event),sort_keys=True,separators=(',',':')),))
++    conn.commit();conn.close()
++    with pytest.raises(AuthorityError,match='operator_authentication_failed'):s.inspect()
++
++
++def test_signed_decision_cannot_be_rebound_to_changed_proposal(registry):
++    s,*_=registry;op,_,_,_=proposal(registry);d,body,p=decision(s,op)
++    body['proposal_sha256']='0'*64
++    with pytest.raises(AuthorityError,match='proposal_binding'):s.apply(ACTOR,d,'decide',body,grant(s.guard,d,'decide',body))
++
++
++def test_sqlite_disk_full_transaction_rolls_back_and_reconciles(registry,monkeypatch):
++    s,*_=registry;op=uid();body=publication_payload(s.guard,registry[2],registry[3]);p=grant(s.guard,op,'propose',body)
++    original=s._connect
++    def bounded(*,write=False):
++        conn=original(write=write)
++        if write:
++            pages=conn.execute('PRAGMA page_count').fetchone()[0]
++            conn.execute(f'PRAGMA max_page_count={pages}')
++        return conn
++    monkeypatch.setattr(s,'_connect',bounded)
++    with pytest.raises(sqlite3.OperationalError,match='full'):s.apply(ACTOR,op,'propose',body,p)
++    assert s.inspect(op)['operation_state']=='NEVER_COMMITTED'
++    monkeypatch.setattr(s,'_connect',original)
++    assert s.apply(ACTOR,op,'propose',body,p)['replayed']
++
++
++def test_stale_custody_lock_before_commit_is_fenced(registry):
++    s,*_=registry;op=uid();body=publication_payload(s.guard,registry[2],registry[3]);p=grant(s.guard,op,'propose',body)
++    def replace(stage):
++        if stage=='recovery_intent_durable':
++            (s.custody/'journal.lock').rename(s.custody/'stale.lock')
++            fd=os.open(s.custody/'journal.lock',os.O_CREAT|os.O_EXCL|os.O_RDWR,0o600);os.close(fd)
++    s._fault=replace
++    with pytest.raises(AuthorityError,match='owner_stale'):s.apply(ACTOR,op,'propose',body,p)
++
++
++def test_readonly_inspection_has_identical_storage_bytes(registry):
++    s,*_=registry;proposal(registry)
++    def image():return {str(p):hashlib.sha256(p.read_bytes()).hexdigest() for root in (s.directory,s.custody,s.guard.directory) for p in root.rglob('*') if p.is_file()}
++    before=image();s.inspect();assert image()==before
++
++
++@pytest.mark.parametrize('stage',['recovery_initial_stage_created','recovery_initial_before_schema_commit','recovery_initial_schema_committed','recovery_database_published'])
++def test_independent_sigkill_initialization_publication(branch,stage):
++    a,target,r,unknown,_=branch;g=a._ledger;root=target.parent.parent
++    for name in ('registry-data','registry-custody'):(root/name).mkdir(mode=0o700)
++    config={'format':'jarvis-recovery-registry-v1','registry_id':uid(),'store_id':g.store_id,'key_id':g.key_id,
++            'database':str(root/'registry-data/registry.sqlite'),'custody':str(root/'registry-custody'),
++            'checkpoints':str(g.directory),'initial_reference':reference(g),'capacity':128,'disposable_only':True}
++    ext={'registry_id':config['registry_id'],'sequence':0,'event_sha256':'0'*64,'witness':{'renewal_id':None,'checkpoint':config['initial_reference']}}
++    s=RecoveryRegistry(g,config,ext,OperatorPermits(OPKEY))
++    op=uid();p=grant(g,op,'initialize',config)
++    case={'config':config,'reference':ext,'trust':g.trust_context,'command':'initialize','operation_id':op,
++          'payload':config,'permit':p,'stage':stage,'root':str(root)}
++    path=root/'child.json';path.write_text(json.dumps(case));path.chmod(0o600);a.close()
++    proc=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/recovery_process_actor.py',str(path)])
++    try:
++        end=time.monotonic()+8
++        while not (root/'ready').exists() and time.monotonic()<end and proc.poll() is None:time.sleep(.01)
++        assert (root/'ready').exists();proc.kill();proc.wait(timeout=5)
++        assert proc.returncode==-signal.SIGKILL
++    finally:
++        if proc.poll() is None:proc.kill();proc.wait(timeout=5)
++    new=LedgerGuard(g.directory,KEY,g.store_id,rollover=True,epoch_capacity=4,recovery=True,trust_context=case['trust']);new.acquire(s.database)
++    try:
++        s=RecoveryRegistry(new,config,ext,OperatorPermits(OPKEY))
++        assert s.inspect(op)['operation_state']=='NEVER_COMMITTED'
++        assert s.apply(ACTOR,op,'initialize',config,p,initialize=True)['replayed']
++        assert s.inspect()['verified']
++        with Path('/work/CRASH-RECOVERY.jsonl').open('a') as f:f.write(json.dumps({'command':'initialize','stage':stage,'exitcode':proc.returncode,'after':s.inspect(),'original_request_id':op})+'\n')
++    finally:new.close()
++
++
++def test_empty_generation_witness_stays_valid_after_generation_grows(registry):
++    s,a,*_=registry
++    s.reference=s.inspect()['reference'];g=s.guard
++    g._head=g.history()[0];g.rollover()
++    nxt=reference(g);op=uid();body={'previous_witness':s.reference['witness'],'next_reference':nxt}
++    s.apply(ACTOR,op,'renew',body,grant(g,op,'renew',body))
++    assert s.inspect()['verified']
++    g.trust_context=nxt
++    a.submit(ACTOR,uid(),'first held checkpoint in renewed generation')
++    assert s.inspect()['verified'] and a.readiness()['ledger_integrity']['verified']
++
++
++def test_conflicting_concurrent_renewals_only_one_commits(registry):
++    s,a,*_=registry;op,body,p=renew(s,a);op2=uid();p2=grant(s.guard,op2,'renew',body)
++    def attempt(item):
++        ident,permit=item
++        try:s.apply(ACTOR,ident,'renew',body,permit);return 'committed'
++        except AuthorityError as exc:return exc.code
++    with ThreadPoolExecutor(max_workers=2) as pool:results=list(pool.map(attempt,[(op,p),(op2,p2)]))
++    assert sorted(results)==['committed','recovery_witness_stale_substitution']
++
++
++@pytest.mark.parametrize('phase',['intent','final'])
++def test_independent_sigkill_during_partial_witness_publication(registry,phase):
++    s,a,*_=registry;op,body,p=renew(s,a)
++    case={'config':s.config,'reference':s.reference,'trust':s.guard.trust_context,'command':'renew',
++          'operation_id':op,'payload':body,'permit':p,'stage':'partial_'+phase,'root':str(s.directory.parent)}
++    path=s.directory.parent/'child.json';path.write_text(json.dumps(case));path.chmod(0o600);a.close()
++    proc=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/recovery_process_actor.py',str(path)])
++    try:
++        end=time.monotonic()+8
++        while not (s.directory.parent/'ready').exists() and time.monotonic()<end and proc.poll() is None:time.sleep(.01)
++        assert (s.directory.parent/'ready').exists();proc.kill();proc.wait(timeout=5)
++        assert proc.returncode==-signal.SIGKILL
++    finally:
++        if proc.poll() is None:proc.kill();proc.wait(timeout=5)
++    g=LedgerGuard(s.guard.directory,KEY,s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True,trust_context=case['trust']);g.acquire(s.database)
++    try:
++        restarted=RecoveryRegistry(g,s.config,s.reference,OperatorPermits(OPKEY))
++        partial=s.custody/'.stage-interrupted-witness';before=partial.read_bytes()
++        with pytest.raises(AuthorityError,match='incomplete_history'):restarted.inspect()
++        assert partial.read_bytes()==before and before
++        with Path('/work/CRASH-RECOVERY.jsonl').open('a') as f:f.write(json.dumps({'command':'renew','stage':case['stage'],'exitcode':proc.returncode,'result':'REFUSED_PRESERVED_PARTIAL_MANUAL_QUARANTINE','original_request_id':op})+'\n')
++    finally:g.close()
++
++
++def test_registry_capacity_is_bounded_without_deletion(registry):
++    original,a,target,r,*_=registry
++    root=original.directory.parent
++    for name in ('bounded-data','bounded-custody'):(root/name).mkdir(mode=0o700)
++    config={**original.config,'registry_id':uid(),'capacity':4,'database':str(root/'bounded-data/state.sqlite'),'custody':str(root/'bounded-custody')}
++    ext={'registry_id':config['registry_id'],'sequence':0,'event_sha256':'0'*64,'witness':{'renewal_id':None,'checkpoint':config['initial_reference']}}
++    s=RecoveryRegistry(original.guard,config,ext,OperatorPermits(OPKEY));op=uid()
++    s.apply(ACTOR,op,'initialize',config,grant(s.guard,op,'initialize',config),initialize=True)
++    pid=uid();body=publication_payload(s.guard,target,r);s.apply(ACTOR,pid,'propose',body,grant(s.guard,pid,'propose',body))
++    pending,pb,pp=decision(s,pid,'PENDING');s.apply(ACTOR,pending,'decide',pb,pp)
++    approved,ab,ap=decision(s,pid,'APPROVED',pending);s.apply(ACTOR,approved,'decide',ab,ap)
++    rid,rb,rp=decision(s,pid,'REVOKED',approved)
++    with pytest.raises(AuthorityError,match='capacity'):s.apply(ACTOR,rid,'decide',rb,rp)
++    assert s.inspect()['event_count']==4 and len(list(s.custody.glob('*.final.json')))==4
++
++
++def test_replay_projects_predecessor_expiry_at_each_admission(registry):
++    s,*_=registry;pid,_,_,_=proposal(registry)
++    pending,body,p=decision(s,pid,'PENDING',seconds=.15)
++    s.apply(ACTOR,pending,'decide',body,p);time.sleep(.18)
++    approved,payload,permit=decision(s,pid,'APPROVED',pending)
++    with pytest.raises(AuthorityError,match='decision_conflict'):s.apply(ACTOR,approved,'decide',payload,permit)
++    # Consistent ledger-key forgery with a genuine later operator permit must
++    # still reproduce predecessor expiry when the registry restarts.
++    events,_,_,_,_,head=s._load()
++    event={'format':'jarvis-recovery-event-v1','registry_id':s.config['registry_id'],
++        'config_sha256':fingerprint(s.config),'sequence':4,'previous_sha256':events[-1][1],
++        'request_id':approved,'command':'decide','payload':payload,'permit':permit,'checkpoint':head,
++        'result':{'proposal_id':pid,'state':'APPROVED','activation_authorized':False},
++        'execution_enabled':False,'activation_authorized':False,'admitted_at':datetime.now(UTC).isoformat()}
++    signed=s.guard.signed(event)
++    s._path(4,'intent').write_bytes(encode(signed));s._path(4,'intent').chmod(0o600)
++    s._path(4,'final').write_bytes(encode(s.guard.signed(s.commit_body(event,fingerprint(signed)))));s._path(4,'final').chmod(0o600)
++    from app.agent.authority import canonical
++    conn=sqlite3.connect(s.database);conn.execute('INSERT INTO events VALUES(?,?,?)',(4,approved,canonical(signed)));conn.commit();conn.close()
++    with pytest.raises(AuthorityError,match='decision_conflict'):s.inspect()
++
++
++def test_expired_witness_is_visible_and_blocks_fresh_mutation(registry,monkeypatch):
++    import app.agent.recovery_decisions as module
++    s,a,*_=registry
++    class Future(datetime):
++        @classmethod
++        def now(cls,tz=None):return datetime.now(tz)+timedelta(seconds=130)
++    monkeypatch.setattr(module,'datetime',Future)
++    status=s.inspect()
++    assert status['state']=='WITNESS_EXPIRED' and not status['verified'] and status['history_verified']
++    op=uid();body=publication_payload(s.guard,registry[2],registry[3])
++    with pytest.raises(AuthorityError,match='recovery_decision_expired'):s.apply(ACTOR,op,'propose',body,grant(s.guard,op,'propose',body))
++
++
++@pytest.mark.parametrize('damage',[None,'missing_prior_anchor','foreign_custody','external_ahead'])
++def test_independent_sigkill_hot_sqlite_journal_requires_authenticated_recovery(registry,damage):
++    s,a,*_=registry;op,body,p=renew(s,a)
++    case={'config':s.config,'reference':s.reference,'trust':s.guard.trust_context,'command':'renew',
++        'operation_id':op,'payload':body,'permit':p,'stage':'recovery_before_sql_commit',
++        'force_hot_journal':True,'root':str(s.directory.parent)}
++    path=s.directory.parent/'child.json';path.write_text(json.dumps(case));path.chmod(0o600);a.close()
++    proc=subprocess.Popen([sys.executable,'-I','-B','-S','/input/tests/recovery_process_actor.py',str(path)])
++    try:
++        end=time.monotonic()+8
++        while not (s.directory.parent/'ready').exists() and time.monotonic()<end and proc.poll() is None:time.sleep(.01)
++        assert (s.directory.parent/'ready').exists();proc.kill();proc.wait(timeout=5)
++        assert proc.returncode==-signal.SIGKILL
++    finally:
++        if proc.poll() is None:proc.kill();proc.wait(timeout=5)
++    journal=s.database.with_name(s.database.name+'-journal')
++    raw=journal.read_bytes();assert raw[:8]==bytes.fromhex('d9d505f920a163d7') and len(raw)>4096
++    g=LedgerGuard(s.guard.directory,KEY,s.guard.store_id,rollover=True,epoch_capacity=4,recovery=True,trust_context=case['trust']);g.acquire(s.database)
++    try:
++        restarted=RecoveryRegistry(g,s.config,s.reference,OperatorPermits(OPKEY))
++        before={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in (s.database,journal)}
++        if damage:
++            if damage=='missing_prior_anchor':s._path(1,'intent').unlink()
++            elif damage=='foreign_custody':(s.custody/'foreign-partial').write_bytes(b'preserve')
++            else:restarted.reference['sequence']=999
++            with pytest.raises(AuthorityError):restarted.apply(ACTOR,op,'renew',body,p)
++            assert before=={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in (s.database,journal)}
++            with Path('/work/CRASH-RECOVERY.jsonl').open('a') as f:f.write(json.dumps({'command':'renew','stage':'hot_sqlite_'+damage,'exitcode':proc.returncode,'journal_bytes':len(raw),'result':'PROTECTED_PREFIX_INVALID_NO_SQLITE_WRITES','original_request_id':op})+'\n')
++            return
++        with pytest.raises(AuthorityError,match='sqlite_reconciliation_required'):restarted.inspect()
++        assert before=={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in (s.database,journal)}
++        with pytest.raises(AuthorityError):restarted.apply(ACTOR,op,'renew',body,{})
++        assert journal.read_bytes()==raw
++        result=restarted.apply(ACTOR,op,'renew',body,p)
++        assert result['replayed'] and restarted.inspect()['verified'] and not journal.exists()
++        with Path('/work/CRASH-RECOVERY.jsonl').open('a') as f:f.write(json.dumps({'command':'renew','stage':'hot_sqlite_rollback_journal','exitcode':proc.returncode,'journal_bytes':len(raw),'readonly_unchanged':True,'unauthenticated_recovery_refused':True,'result':'AUTHENTICATED_SQLITE_ROLLBACK_AND_EXACT_REPLAY','original_request_id':op})+'\n')
++    finally:g.close()
++
++
++def test_authorization_expiring_during_validation_never_publishes_intent(registry,monkeypatch):
++    s,*_=registry;op=uid();body=publication_payload(s.guard,registry[2],registry[3])
++    p=grant(s.guard,op,'propose',body,seconds=.3)
++    original=s._result
++    def delayed(*args,**kwargs):
++        result=original(*args,**kwargs);time.sleep(.35);return result
++    monkeypatch.setattr(s,'_result',delayed)
++    before=s.inspect()['event_count']
++    with pytest.raises(AuthorityError,match='historical_authorization_invalid'):s.apply(ACTOR,op,'propose',body,p)
++    assert s.inspect()['event_count']==before and not s._path(2,'intent').exists()
++
++
++def test_witness_expiring_during_expensive_derive_never_publishes(registry,monkeypatch):
++    import app.agent.recovery_decisions as module
++    s,*_=registry;op=uid();body=publication_payload(s.guard,registry[2],registry[3])
++    p=grant(s.guard,op,'propose',body,seconds=299)
++    shift=[0]
++    class Clock(datetime):
++        @classmethod
++        def now(cls,tz=None):return datetime.now(tz)+timedelta(seconds=shift[0])
++    monkeypatch.setattr(module,'datetime',Clock)
++    original=s._derive
++    def delayed(events,committed_count,history_state):
++        result=original(events,committed_count,history_state)
++        if len(events)>committed_count:shift[0]=130
++        return result
++    monkeypatch.setattr(s,'_derive',delayed)
++    with pytest.raises(AuthorityError,match='recovery_witness_admission_expired'):s.apply(ACTOR,op,'propose',body,p)
++    assert not s._path(2,'intent').exists()
++
++
++def test_proposal_context_expiring_during_derive_never_publishes(registry,monkeypatch):
++    s,*_=registry;r=copy.deepcopy(registry[3]);r['issued_at'],r['expires_at']=times(.3)
++    body=publication_payload(s.guard,registry[2],r);op=uid();p=grant(s.guard,op,'propose',body)
++    original=s._derive
++    def delayed(events,committed_count,history_state):
++        result=original(events,committed_count,history_state)
++        if len(events)>committed_count:time.sleep(.35)
++        return result
++    monkeypatch.setattr(s,'_derive',delayed)
++    with pytest.raises(AuthorityError,match='proposal_context_expired'):s.apply(ACTOR,op,'propose',body,p)
++    assert not s._path(2,'intent').exists()
++
++
++def test_predecessor_expiring_during_derive_never_publishes(registry,monkeypatch):
++    s,*_=registry;pid,_,_,_=proposal(registry)
++    pending,body,p=decision(s,pid,'PENDING',seconds=.5);s.apply(ACTOR,pending,'decide',body,p)
++    approved,body,p=decision(s,pid,'APPROVED',pending)
++    original=s._derive
++    def delayed(events,committed_count,history_state):
++        result=original(events,committed_count,history_state)
++        if len(events)>committed_count:time.sleep(.55)
++        return result
++    monkeypatch.setattr(s,'_derive',delayed)
++    with pytest.raises(AuthorityError,match='decision_conflict'):s.apply(ACTOR,approved,'decide',body,p)
++    assert not s._path(4,'intent').exists()

@@ -1,0 +1,86 @@
+{
+  "run": "runs/20261106T033626577872Z/RUN.json",
+  "test_source": "../../tests/test_operator_ledger.py",
+  "independent_helper": "../../tests/ledger_process_actor.py",
+  "new_sigkill_cases": [
+    {
+      "mode": "bootstrap",
+      "stage": "checkpoint_intent_durable",
+      "result": "PASS"
+    },
+    {
+      "mode": "mutation",
+      "stage": "checkpoint_intent_durable",
+      "result": "PASS"
+    },
+    {
+      "mode": "mutation",
+      "stage": "ledger_database_committed",
+      "result": "PASS"
+    },
+    {
+      "mode": "mutation",
+      "stage": "checkpoint_published",
+      "result": "PASS"
+    },
+    {
+      "mode": "export",
+      "stage": "export_row_written",
+      "result": "PASS"
+    },
+    {
+      "mode": "export",
+      "stage": "export_data_durable",
+      "result": "PASS"
+    },
+    {
+      "mode": "export",
+      "stage": "export_before_audit_publication",
+      "result": "PASS"
+    },
+    {
+      "mode": "retention",
+      "stage": "checkpoint_intent_durable",
+      "result": "PASS"
+    },
+    {
+      "mode": "retention",
+      "stage": "ledger_database_committed",
+      "result": "PASS"
+    },
+    {
+      "mode": "reconcile",
+      "stage": "before_commit",
+      "result": "PASS"
+    },
+    {
+      "mode": "reconcile",
+      "stage": "ledger_database_committed",
+      "result": "PASS"
+    }
+  ],
+  "outcomes": {
+    "precommit": "authenticated prior state, rollback/no false success",
+    "postcommit": "authenticated intended state, finalize checkpoint",
+    "partial_export": "rejected; no automatic regeneration",
+    "complete_export_missing_audit": "same-ID audit-only reconciliation from durable original authorization after simulated permit expiry",
+    "archive_preparation": "atomic bounded decision, no history deletion",
+    "restart_reconciliation": "UNKNOWN/evidence preserved or original publication preserved; no executor redispatch"
+  },
+  "storage_failure_tests": [
+    "checkpoint final-publication ENOSPC",
+    "export manifest ENOSPC",
+    "export quota",
+    "free-space exhaustion",
+    "logical ledger bound",
+    "staging inventory bound"
+  ],
+  "corruption_tests": [
+    "physical SQLite header",
+    "task/receipt/event/outbox/owner consistency",
+    "invalid identities/nested fields/timestamps",
+    "checkpoint HMAC/truncation/gap/missing anchors",
+    "older database against current external anchors",
+    "authenticated malformed manifest"
+  ]
+}

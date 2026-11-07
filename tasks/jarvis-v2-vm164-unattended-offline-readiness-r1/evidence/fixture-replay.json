@@ -1,0 +1,294 @@
+{
+  "status": "PASS_SYNTHETIC_CLI_CASES",
+  "cases": [
+    {
+      "fixture": "attached-restored-boot.json",
+      "expected_accept": true,
+      "pass": true,
+      "exitcode": 0,
+      "receipt": {
+        "status": "PASS_OFFLINE_CONSISTENCY_ONLY",
+        "source_kind": "synthetic",
+        "reference_time_utc": "2026-11-06T18:00:30+00:00",
+        "bundle_sha256": "56f83d7caa4d0d1111c32e9385667ce915dd59185a6fe3217de30e47335bf946",
+        "snapshots": [
+          {
+            "id": "synthetic_0",
+            "state": "preflight_attached",
+            "snapshot_sha256": "0614dfac88f3e20838dfd6a33a7cd32b9992f9cc0d1e2bd7e4afe152bb54bacb",
+            "config_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "readback_sha256": {
+              "config": "5e80c50603e2c049d6234871a2edb387a6c6578dc477fa4d2d8bcfa273709fe2",
+              "status": "a32d2661533eeeffed8c79149feb7212f1baf76eb1ffa4aed1e849e98343fe99",
+              "pending": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+          }
+        ],
+        "live_evidence": false,
+        "origin_authenticated": false,
+        "atomic_readback_proven": false,
+        "guest_media_absence_verified": false,
+        "watchdog_or_cleanup_verified": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false,
+        "input_bytes_sha256": "a8fc7b371b3e329609ad6fb7d5b5080e50e5983383105ce69a74611d2e8dbeca",
+        "clock_source": "explicit_replay"
+      }
+    },
+    {
+      "fixture": "attached-auto-boot.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "DISK_ONLY_BOOT_REQUIRED",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "unknown-iso.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "EXACT_MEDIA_REQUIRED",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "wrong-uuid.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "VM_IDENTITY",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "wrong-serial.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "DISK_IDENTITY",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "unexpected-nic.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "UNREVIEWED_CONFIG_FIELD",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "agent-enabled.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "AGENT_DISABLED_REQUIRED",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "digest-mismatch.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "CONFIG_DIGEST_MISMATCH",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "running-instead-of-stopped.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "VMID_OR_STATE",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "pending-only-ejection.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "PENDING_OPERATION",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "missing-agent-field.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "MISSING_CONFIG_FIELDS",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "truncated-readback.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "MALFORMED_JSON",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "stale-readback.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "LATEST_EVIDENCE_STALE",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "valid-then-invalid.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "UNREVIEWED_CONFIG_FIELD",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    },
+    {
+      "fixture": "synthetic-running-ejected.json",
+      "expected_accept": true,
+      "pass": true,
+      "exitcode": 0,
+      "receipt": {
+        "status": "PASS_OFFLINE_CONSISTENCY_ONLY",
+        "source_kind": "synthetic",
+        "reference_time_utc": "2026-11-06T18:00:30+00:00",
+        "bundle_sha256": "01fde063c65b10df3cc7fd53699b0b9d32a08cfcf9d71e4a3b7d8c876010be5d",
+        "snapshots": [
+          {
+            "id": "synthetic_0",
+            "state": "preflight_attached",
+            "snapshot_sha256": "0614dfac88f3e20838dfd6a33a7cd32b9992f9cc0d1e2bd7e4afe152bb54bacb",
+            "config_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "readback_sha256": {
+              "config": "5e80c50603e2c049d6234871a2edb387a6c6578dc477fa4d2d8bcfa273709fe2",
+              "status": "a32d2661533eeeffed8c79149feb7212f1baf76eb1ffa4aed1e849e98343fe99",
+              "pending": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+          },
+          {
+            "id": "synthetic_10",
+            "state": "debug_attached",
+            "snapshot_sha256": "4529aa92b76507fa09090e72cae352f891a588eafa0523e61b4a3a229f5817fb",
+            "config_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "readback_sha256": {
+              "config": "5e80c50603e2c049d6234871a2edb387a6c6578dc477fa4d2d8bcfa273709fe2",
+              "status": "784cc71d2111827f77876e1d25ac486c1f1da89f9fc1f3dd2e8e8990a2c0952c",
+              "pending": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+          },
+          {
+            "id": "synthetic_20",
+            "state": "debug_empty",
+            "snapshot_sha256": "8f95f7897837e9c6f49043f3cbece14ce96f32dc9c26a0636c5792c51397fa0d",
+            "config_digest": "38801292761f57163fcc3abf8b07438d5a2041f6",
+            "readback_sha256": {
+              "config": "50108396a6ec43e01ba23c07284cce32f679e5ecf5379ab2850d4d34fa59598c",
+              "status": "784cc71d2111827f77876e1d25ac486c1f1da89f9fc1f3dd2e8e8990a2c0952c",
+              "pending": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            }
+          }
+        ],
+        "live_evidence": false,
+        "origin_authenticated": false,
+        "atomic_readback_proven": false,
+        "guest_media_absence_verified": false,
+        "watchdog_or_cleanup_verified": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false,
+        "input_bytes_sha256": "3b3b2d3993a37f000538a1168f18b711bb45ff548292fc3f6a46d928ddde154f",
+        "clock_source": "explicit_replay"
+      }
+    },
+    {
+      "fixture": "malformed-envelope.json",
+      "expected_accept": false,
+      "pass": true,
+      "exitcode": 1,
+      "receipt": {
+        "status": "FAIL_OFFLINE_VALIDATION",
+        "reason": "MALFORMED_JSON",
+        "live_evidence": false,
+        "authorization_granted": false,
+        "gate6k_qualified": false,
+        "mutations_performed": false
+      }
+    }
+  ],
+  "live_qualification": false
+}

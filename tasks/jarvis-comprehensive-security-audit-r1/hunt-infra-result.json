@@ -1,0 +1,263 @@
+{
+  "units": [
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3%2Fsrc%2Fentry.py%23broker-worker::tasks%2Fproxmox-automation-phase3%2Fsrc%2Fg6k_serial%2Fruntime.py%23peer_identity::tasks%2Fproxmox-automation-phase3::CLOUD-AND-DEPLOYMENT.md%23Workload%20identity%20overreach",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "tasks/proxmox-automation-phase2/tools/observe.py",
+        "tasks/proxmox-automation-phase2/tools/policy_model.py",
+        "tasks/proxmox-automation-phase3/INSTALLATION.md",
+        "tasks/proxmox-automation-phase3/LIVE-ACCEPTANCE.md",
+        "tasks/proxmox-automation-phase3/deploy/g6k-serial-worker.service",
+        "tasks/proxmox-automation-phase3/deploy/g6k-serial.service",
+        "tasks/proxmox-automation-phase3/deploy/g6k-serial.socket",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/hardening.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/policy.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/provision.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/transport.py",
+        "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+        "tasks/proxmox-automation-phase3/tests/test_ipc.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase2/tools/observe.py",
+            "tasks/proxmox-automation-phase2/tools/policy_model.py",
+            "tasks/proxmox-automation-phase3/INSTALLATION.md",
+            "tasks/proxmox-automation-phase3/LIVE-ACCEPTANCE.md",
+            "tasks/proxmox-automation-phase3/deploy/g6k-serial-worker.service",
+            "tasks/proxmox-automation-phase3/deploy/g6k-serial.service",
+            "tasks/proxmox-automation-phase3/deploy/g6k-serial.socket",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/hardening.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/policy.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/provision.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/transport.py"
+          ],
+          "invariant": "Lower-trust callers can select only the authorized VM164 inspection action and cannot obtain the broader broker credential or guest privileged execution authority.",
+          "method": "source",
+          "result": "Source policy is narrow: policy.py:16-37 validates disabled/expired/target-bound grants; vm_state:40-70 rejects NICs, agent, extra devices/inputs and effective privileges beyond VM164 Audit+Console. transport.py:16-23,241-319 fixes address, TLS name/pinned CA, API paths/methods and serial0; provision.py:25-97 requires operator root/private TTY and exclusively captures the new token. runtime.py:59-82 checks nonroot service identity, protected activation/release/grant and monotonic expiry; worker.py:42-57 has exactly three built-in inspections; hardening.py:19-48 and service units specify no-new-privileges/seccomp/capability/resource isolation. Phase2 policy_model.py is explicitly plan-only; observe.py runs an external installed observer only from main. Actual deployment and effective identity/OS enforcement are deliberately unobserved, not inferred from templates.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/src/g6k_serial/policy.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+            "tasks/proxmox-automation-phase3/tests/test_ipc.py"
+          ],
+          "invariant": "Grant/VM scope and privileged caller policy refuse unsafe selectors before transport.",
+          "method": "local",
+          "result": "Parent ran infra-controls.py in OS sandbox:14 selected tests passed in0.020s; includes disabled/expired/overbroad grants, VM/PVE drift and mocked privileged-account refusal. No actual installed identity or guest/systemd enforcement was qualified.",
+          "artifact": "agents/hunt-infra/artifacts/infra-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3%2Fsrc%2Fentry.py%23broker-worker::tasks%2Fproxmox-automation-phase3%2Fsrc%2Fg6k_serial%2Fruntime.py%23peer_identity::tasks%2Fproxmox-automation-phase3::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Claimed%20principal%20versus%20channel%20identity",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "tasks/proxmox-automation-phase3/src/entry.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/policy.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/worker.py",
+        "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+        "tasks/proxmox-automation-phase3/tests/test_ipc.py",
+        "tasks/proxmox-automation-phase3/tests/test_worker_runtime.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/src/entry.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/policy.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/worker.py",
+            "tasks/proxmox-automation-phase3/tests/test_ipc.py"
+          ],
+          "invariant": "OS peer identity, protected grant and final worker binding must dominate caller-declared fields.",
+          "method": "source",
+          "result": "runtime.py:33-56 takes UID/GID/groups from SO_PEERCRED/SO_PEERGROUPS, requires exact grant UID/GID and no supplementary groups, and rejects privileged account memberships. broker.py:15-37 requires exact actual UID, grant catalog, fresh configuration and revalidation before durable reservation/send. protocol.py:83-90 rejects all fields outside fixed request schema, so request-supplied principal/argv/URL/capability cannot override identity. worker.py:78-94 validates complete context against its fresh metadata/session/grant/caller and consumes the session before inspection. Host client runtime.py:260-287 verifies root/systemd or broker peer and exact reply identity. No alternate unauthenticated privilege route found.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/worker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+            "tasks/proxmox-automation-phase3/tests/test_worker_runtime.py",
+            "tasks/proxmox-automation-phase3/tests/test_ipc.py"
+          ],
+          "invariant": "Actual peer credentials and exact worker binding reject caller-declared privilege.",
+          "method": "local",
+          "result": "Parent sandboxed14-case subset passed: real AF_UNIX socketpair credential query rejects wrong UID; mocked privileged account refused; extra authority/argv fields and altered worker principal/scope/session/action are rejected before inspection. Same-UID fixture is not actual cross-UID qualification.",
+          "artifact": "agents/hunt-infra/artifacts/infra-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3%2Fsrc%2Fentry.py%23broker-worker::tasks%2Fproxmox-automation-phase3%2Fsrc%2Fg6k_serial%2Fruntime.py%23peer_identity::tasks%2Fproxmox-automation-phase3::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Local%20file%20ownership%20and%20TOCTOU",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "tasks/proxmox-automation-phase3/INSTALLATION.md",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/journal.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/provision.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/securefs.py",
+        "tasks/proxmox-automation-phase3/tests/test_storage.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/INSTALLATION.md",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/provision.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/securefs.py",
+            "tasks/proxmox-automation-phase3/tests/test_storage.py"
+          ],
+          "invariant": "A different OS principal must not redirect protected configuration, source, credentials or audit files through writable ancestors, symlinks or linked/special leaves.",
+          "method": "source",
+          "result": "securefs.py:10-40 opens from protected root and walks every component with dir_fd/O_NOFOLLOW, checking allowed owner and absence of group/world write; final leaves require regular/single-link/exact requested mode. read_checked:43-56 bounds descriptor reads. verify_release:66-78 verifies exact source inventory and hashes. journal.py:52-74 checks private state/lock and opens existing SQLite mode=rw without auto-create. provision.py:35-43 retains checked parent fd and creates token.json exclusively relative to it. Later pathname SQLite opens rely on all checked ancestors being root or trusted service owned; same-service-UID tampering is outside intended boundary, not a different-principal exploit. No source path accepts a caller-controlled filename. Proposed root-controlled installation and actual ACL/mount semantics remain deployment assumptions.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/src/g6k_serial/securefs.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3/tests/test_storage.py"
+          ],
+          "invariant": "Symlink/hardlink/writable-parent/wrong-mode substitution and independent lock contention must be refused.",
+          "method": "local",
+          "result": "Parent sandboxed14-case subset passed including test_symlink_hardlink_writable_parent_wrong_mode_refused and independent-instance operation-lock refusal. This is synthetic current-UID validation; no installed path/ACL/mount was tested.",
+          "artifact": "agents/hunt-infra/artifacts/infra-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3%2Fsrc%2Fentry.py%23broker-worker::tasks%2Fproxmox-automation-phase3%2Fsrc%2Fg6k_serial%2Fruntime.py%23peer_identity::tasks%2Fproxmox-automation-phase3::PROTOCOLS-RPC-AND-MESSAGING.md%23Message%20boundary%20and%20canonicalization%20disagreement",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "tasks/proxmox-automation-phase2/tools/policy_model.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/transport.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/worker.py",
+        "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+        "tasks/proxmox-automation-phase3/tests/test_worker_runtime.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase2/tools/policy_model.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/transport.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/worker.py"
+          ],
+          "invariant": "All parsers and consumers must agree on exact target, action, identity, schema, replay context and bounded framing; returned guest data never becomes code.",
+          "method": "source",
+          "result": "protocol.py:43-90 rejects duplicate keys, non-JSON constants, nonprintable bytes, unknown/missing fields, bool/int coercion and noncatalog actions; binding/reply validation:93-158 binds worker machine/boot/release/UID, session, caller, grant, request and challenge. transport.py:71-111 rejects duplicate/ambiguous/oversized HTTP framing; WebSocket:114-175 validates flags, masking direction, fragment/control/size/budget; SerialChannel:178-213 permits only exact startup banner and sends encoded bounded frames, never caller raw bytes. runtime.py:85-107 and worker_loop:206-225 permit one bounded request and exact authenticated receipt/session. worker report schemas are data-only and public results always mark guest_report_untrusted; a compromised guest can fabricate plausible permitted observations by design, not gain execution authority.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/worker.py",
+            "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+            "tasks/proxmox-automation-phase3/tests/test_worker_runtime.py"
+          ],
+          "invariant": "Malformed protocol, action/catalog and identity substitutions cannot reach inspection.",
+          "method": "local",
+          "result": "Parent sandboxed14-case subset passed malformed-wire/structural abuse, privileged action/injection, client-supplied authority/arguments and worker context mismatch cases. No TLS/live transport or guest was involved.",
+          "artifact": "agents/hunt-infra/artifacts/infra-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    },
+    {
+      "coverage_id": "tasks%2Fproxmox-automation-phase3%2Fsrc%2Fentry.py%23broker-worker::tasks%2Fproxmox-automation-phase3%2Fsrc%2Fg6k_serial%2Fruntime.py%23peer_identity::tasks%2Fproxmox-automation-phase3::RESOURCE-EXHAUSTION-AND-AVAILABILITY.md%23Poison-record%20and%20head-of-line%20blocking",
+      "disposition": "covered",
+      "reviewed_paths": [
+        "tasks/proxmox-automation-phase3/README.md",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/journal.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+        "tasks/proxmox-automation-phase3/src/g6k_serial/transport.py",
+        "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+        "tasks/proxmox-automation-phase3/tests/test_storage.py"
+      ],
+      "checks": [
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/README.md",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/protocol.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/transport.py",
+            "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+            "tasks/proxmox-automation-phase3/tests/test_storage.py"
+          ],
+          "invariant": "Malformed or uncertain requests fail closed with bounded resources, durable identities and preserved evidence; retry/new-ID paths must not repeat possible effects.",
+          "method": "source",
+          "result": "Journal reserve commits before possible send; available journal.py:121-128 blocks all work for host RESERVED/UNKNOWN/unacknowledged REPORTED, or worker RESERVED/UNKNOWN, and caps requests at10000. reserve/finish/acknowledge:132-196 use transactions and exact state/UID/request checks. Broker checks unseen before transport, holds thread/flock operation lock and emits UNKNOWN after possible send, never error content. runtime.py:85-110 authenticates before bounded2s request/receipt; host:134-180 has four connection slots, finite joins and active transport shutdown. Protocol/deadline/transport bounds cap request1KiB/frame16KiB/cumulative64KiB/HTTP1MiB/wall5s. Authorized caller withholding a receipt intentionally halts its whole grant; README explicitly documents this safety choice. No distinct lower-privileged principal or unintended shared-service denial was established. No reset/retry/reconciliation API silently erases ambiguity.",
+          "artifact": null
+        },
+        {
+          "agent_id": "hunt-infra",
+          "reviewed_paths": [
+            "tasks/proxmox-automation-phase3/src/g6k_serial/journal.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/broker.py",
+            "tasks/proxmox-automation-phase3/src/g6k_serial/runtime.py",
+            "tasks/proxmox-automation-phase3/tests/test_boundaries.py",
+            "tasks/proxmox-automation-phase3/tests/test_storage.py"
+          ],
+          "invariant": "Replay/new-ID and bad-receipt paths must preserve uncertainty and stop subsequent work.",
+          "method": "local",
+          "result": "Parent sandboxed14-case subset passed replay/new-ID refusal, lost response UNKNOWN preservation, activation/source revocation before/after send, wrong/missing receipt halt and independent writer lock. No live availability/stress testing.",
+          "artifact": "agents/hunt-infra/artifacts/infra-controls.txt"
+        }
+      ],
+      "candidate_fingerprints": [],
+      "unresolved": []
+    }
+  ],
+  "candidates": [],
+  "hardening": [
+    "This review establishes proposed source controls only. Do not equate offline fixtures or service templates to installed cross-UID DAC, actual sudo/polkit/ACL/capability/inherited-FD restrictions, serial exclusivity, systemd/seccomp/egress support, Proxmox compatibility or VM no-NIC qualification. Those operator observations remain NOT RUN and need separate authorization.",
+    "Keep the broker credential outside the submitting UID; VM.Console inherently grants broader PVE console authority than action names. safe_account group checks are necessary but do not prove absence of non-group administrative paths. Do not activate under the current broad Nexus identity.",
+    "Deploy only from independently reviewed root-controlled source/interpreter/dependencies and retain independent source/CA/grant fingerprints. This user-writable candidate repository is not itself an enforced isolation boundary.",
+    "The infrastructure journal hash chain is unkeyed local integrity evidence and has no external antirollback guarantee. Protected service-owned storage and independently retained checkpoints remain necessary; no arbitrary reset/retry is implemented.",
+    "Phase2 observe.py dynamically executes external /home/nexus/.local/bin/g6k-pve164-readonly, whose source/credential/TLS implementation is outside the frozen repository and deliberately not opened or run. Its constant tls_verified=true output does not independently establish that helper behavior. Record this as an external implementation coverage limitation, not a vulnerability.",
+    "A compromised guest can fabricate bounded observations; guest_report_untrusted=true and independent PVE/operator identity checks correctly avoid treating those reports as attestation."
+  ],
+  "uncovered": []
+}

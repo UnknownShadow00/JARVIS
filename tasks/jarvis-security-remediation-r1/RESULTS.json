@@ -1,0 +1,62 @@
+{
+  "final_batches": [
+    {
+      "label": "HTTP, WebSocket, authentication and ancestry",
+      "cases": 109,
+      "artifact": "agents/regression/artifacts/http_regressions_updated_final.txt",
+      "manifest": "runs/regression-http_regressions_updated_final.json",
+      "sha256": "d71c649b71a71c6217c29e00e040af7fb028587da970a0a1c7475ab3458267e9"
+    },
+    {
+      "label": "Execution, scheduler, receipts, CLI and lifecycle",
+      "cases": 33,
+      "artifact": "agents/regression/artifacts/execution_regressions_updated_final.txt",
+      "manifest": "runs/regression-execution_regressions_updated_final.json",
+      "sha256": "e523f65fc0b054a2bbc507f787976fe7c014a917ba0c2308c0634945f549653d"
+    },
+    {
+      "label": "Signed transport and offline publication",
+      "cases": 13,
+      "artifact": "agents/regression/artifacts/transport_regressions_updated_final.txt",
+      "manifest": "runs/regression-transport_regressions_updated_final.json",
+      "sha256": "faea1073717696866c1a33184b95b5f70f75766cf2674f7f1e1e14c1ab0cd7c6"
+    },
+    {
+      "label": "Ledger, rollover, restoration and witness renewal",
+      "cases": 13,
+      "artifact": "agents/regression/artifacts/durability_regressions_final.txt",
+      "manifest": "runs/regression-durability_regressions_final.json",
+      "sha256": "a0584ab9a9bf51d0dc9910e73f866b592027fd98b58d4fa09a10f6372b51b252"
+    }
+  ],
+  "distinct_pytest_cases": 168,
+  "integrated_scenario_groups": [
+    "actual_API_authority_queue_signed_IPC_scheduler_receipts_cancellation_recovery_witness_and_shutdown",
+    "actual_offline_FD_CLI_report_reconciliation_restart_hold_and_separate_authorized_publication_no_redispatch",
+    "same_integrated_history_archive_inert_restore_durable_proposal_approval_no_activation",
+    "legacy_chat_confirm_tool_getters_dictation_and_validation_secret_reflection_fail_closed"
+  ],
+  "integrated_artifact": "agents/integration/artifacts/sprint6_replay_final.txt",
+  "socket_before": "agents/authority/artifacts/authority_socket_probe.txt",
+  "socket_after": "agents/authority/artifacts/authority_socket_final_checked.txt",
+  "uid_qualification": "agents/authority/artifacts/namespace_probe.txt",
+  "source_identity": {
+    "base_head": "f4cac30259a7bf4610add2063679ae49138ee637",
+    "dirty_source": true,
+    "source_revision_sha256": "e5774287b42dd9ad227ec2fe281dd5e48d07ba23fff9366d79d7cc7739024069",
+    "manifest_json_sha256": "b6a51391c4d97012eb5faeb9c0c42f7e836d09dbe0bc7b34aa7f02481ea6344d",
+    "source_files": 398,
+    "app_python_files": 102,
+    "syntax_parsed_python_files": 293,
+    "source_sha_file": "SOURCE.sha256"
+  },
+  "runtime_snapshot": "final",
+  "package_snapshot": "final-2",
+  "nonruntime_difference": "Only .dockerignore added after runtime snapshot; all tested code/test/config bytes identical.",
+  "counts_policy": "Final four batches only; repeated intermediate passes and prior Sprint6 totals are excluded. Four integrated scenario groups and socket/UID experiments are counted separately.",
+  "expected_red_evidence": [
+    "agents/ue5/artifacts/ue5_red.txt",
+    "agents/storage/artifacts/storage_creation_red.txt"
+  ],
+  "intermediate_failures": "Retained HTTP batch exposed a then-different binary close code and inherited group-writable fixture ancestors. Subsequent batch hit thread allocation under fixed cage limits. Policy/tests aligned, cage umask explicitly0077, pure auth dependency made async; final runs pass with unchanged CPU/memory/process/disk limits."
+}

@@ -1,0 +1,102 @@
+........................................................................ [ 68%]
+............F....................                                        [100%]
+=================================== FAILURES ===================================
+_ test_empty_token_authority_access_refused_even_embedded[/operator/diagnostics-GET] _
+/target/tests/test_release_security.py:47: in test_empty_token_authority_access_refused_even_embedded
+    response=TestClient(app).request(method,path,json={'request_id':str(uuid.uuid4()),'goal':'held'})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/starlette/testclient.py:455: in request
+    return super().request(
+/toolchain/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/toolchain/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/toolchain/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/starlette/testclient.py:354: in handle_request
+    raise exc
+/toolchain/starlette/testclient.py:351: in handle_request
+    portal.call(self.app, scope, receive, send)
+/toolchain/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/concurrent/futures/_base.py:443: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/concurrent/futures/_base.py:395: in __get_result
+    raise self._exception
+/toolchain/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/fastapi/applications.py:1163: in __call__
+    await super().__call__(scope, receive, send)
+/toolchain/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/toolchain/starlette/middleware/errors.py:186: in __call__
+    raise exc
+/toolchain/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+/toolchain/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/toolchain/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/toolchain/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/toolchain/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/toolchain/starlette/routing.py:670: in __call__
+    await self.middleware_stack(scope, receive, send)
+/toolchain/fastapi/routing.py:2734: in app
+    await route.handle(scope, receive, send)
+/toolchain/fastapi/routing.py:1780: in handle
+    await self.original_router.handle(scope, receive, send)
+/toolchain/fastapi/routing.py:2789: in handle
+    await included_router._handle_selected(scope, receive, send)
+/toolchain/fastapi/routing.py:1800: in _handle_selected
+    await original_route.handle(scope, receive, send)
+/toolchain/fastapi/routing.py:1279: in handle
+    await app(scope, receive, send)
+/toolchain/fastapi/routing.py:158: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/toolchain/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/toolchain/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/toolchain/fastapi/routing.py:144: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+/toolchain/fastapi/routing.py:481: in app
+    solved_result = await solve_dependencies(
+/toolchain/fastapi/dependencies/utils.py:676: in solve_dependencies
+    solved = await run_in_threadpool(call, **solved_result.values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/starlette/concurrency.py:34: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/toolchain/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/toolchain/anyio/_backends/_asyncio.py:2676: in run_sync_in_worker_thread
+    worker.start()
+/usr/lib/python3.14/threading.py:1005: in start
+    _start_joinable_thread(self._bootstrap, handle=self._os_thread_handle,
+E   RuntimeError: can't start new thread
+=============================== warnings summary ===============================
+../toolchain/fastapi/testclient.py:1
+  /toolchain/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../toolchain/starlette/testclient.py:53
+  /toolchain/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../target/tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[/operator/diagnostics-GET]
+1 failed, 104 passed, 2 warnings in 1.00s

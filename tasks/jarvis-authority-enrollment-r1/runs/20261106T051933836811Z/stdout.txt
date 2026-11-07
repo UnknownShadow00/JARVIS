@@ -1,0 +1,667 @@
+......F..................FFFFFFFFFF......F...F............               [100%]
+=================================== FAILURES ===================================
+______________________________ test_stop_endpoint ______________________________
+
+    def test_stop_endpoint() -> None:
+>       with TestClient(app) as client:
+             ^^^^^^^^^^^^^^^
+
+/input/regressions/test_cancel_token.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/deps/starlette/testclient.py:698: in __enter__
+    portal.call(self.wait_startup)
+/deps/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/concurrent/futures/_base.py:450: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/concurrent/futures/_base.py:395: in __get_result
+    raise self._exception
+/deps/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/deps/starlette/testclient.py:733: in wait_startup
+    await receive()
+/deps/starlette/testclient.py:724: in receive
+    self.task.result()
+/usr/lib/python3.14/concurrent/futures/_base.py:443: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/concurrent/futures/_base.py:395: in __get_result
+    raise self._exception
+/deps/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/deps/starlette/testclient.py:714: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/deps/fastapi/applications.py:1163: in __call__
+    await super().__call__(scope, receive, send)
+/deps/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/deps/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/deps/starlette/middleware/base.py:103: in __call__
+    await self.app(scope, receive, send)
+/deps/starlette/middleware/base.py:103: in __call__
+    await self.app(scope, receive, send)
+app/agent/admission.py:13: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/deps/starlette/middleware/cors.py:80: in __call__
+    await self.app(scope, receive, send)
+/deps/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/deps/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/deps/starlette/routing.py:670: in __call__
+    await self.middleware_stack(scope, receive, send)
+/deps/fastapi/routing.py:2726: in app
+    await self.lifespan(scope, receive, send)
+/deps/starlette/routing.py:648: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+/deps/fastapi/routing.py:240: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+app/server.py:114: in lifespan
+    authority = get_authority()
+                ^^^^^^^^^^^^^^^
+app/agent/runtime.py:17: in get_authority
+    _authority = Authority(PROJECT_ROOT / "data/authority/queue.sqlite", legacy_paths=(PROJECT_ROOT / "data/agent_tasks.json", PROJECT_ROOT / "data/scheduled_jobs.json"))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app/agent/authority.py:160: in __init__
+    self._enrollment_status = verify_legacy_open(probe,self.path,legacy_approval,self._ledger.history()[0] if self._ledger is not None else None)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+conn = <sqlite3.Connection object at 0x7f1325f95d50>
+path = PosixPath('/work/project/data/authority/queue.sqlite'), approval = None
+head = None
+
+    def verify_legacy_open(conn,path,approval,head=None):
+        """Explicit compatibility admission, never evidence that a store is new.
+    
+    No automatic legacy approval or issuance endpoint exists. A fresh externally
+    supplied verifier/permit binds the exact existing logical state and destination.
+    The subsequent owner event durably records the admitted decision identity.
+    """
+        from app.agent.recovery import OperatorPermits
+        from app.agent.runtime import SERVICE_ACTOR
+        if type(approval) is not tuple or len(approval)!=2 or type(approval[0]) is not OperatorPermits:
+>           raise AuthorityError('enrollment_or_explicit_legacy_approval_required')
+E           app.agent.authority.AuthorityError: enrollment_or_explicit_legacy_approval_required
+
+app/agent/enrollment.py:339: AuthorityError
+__________ ReporterCompatibility.test_cancelled_keeps_state_and_flag ___________
+
+self = <test_reporter.ReporterCompatibility testMethod=test_cancelled_keeps_state_and_flag>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324db4e60>
+path = PosixPath('/work/tmp/reader-i30p1yo1/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_claimed_cancellation_is_not_confirmed_prevention __
+
+self = <test_reporter.ReporterCompatibility testMethod=test_claimed_cancellation_is_not_confirmed_prevention>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324db7890>
+path = PosixPath('/work/tmp/reader-ai4bhbaf/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_disabled_comms_send_report_does_not_send_anything _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_disabled_comms_send_report_does_not_send_anything>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324fbc410>
+path = PosixPath('/work/tmp/reader-6s_ouw0j/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_discord_only_uses_synthetic_send_and_keeps_truthful_state _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_discord_only_uses_synthetic_send_and_keeps_truthful_state>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324fbd040>
+path = PosixPath('/work/tmp/reader-66cvshj5/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+______ ReporterCompatibility.test_empty_is_a_snapshot_not_general_health _______
+
+self = <test_reporter.ReporterCompatibility testMethod=test_empty_is_a_snapshot_not_general_health>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324fbdb80>
+path = PosixPath('/work/tmp/reader-0y0p4x76/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_legacy_unknown_cannot_disappear_in_morning_report _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_legacy_unknown_cannot_disappear_in_morning_report>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f13251cfc50>
+path = PosixPath('/work/tmp/reader-8hult6z2/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_pending_is_admitted_held_and_reporting_is_read_only _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_pending_is_admitted_held_and_reporting_is_read_only>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324db73e0>
+path = PosixPath('/work/tmp/reader-x0qcgk3e/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_recovered_unknown_retains_cancellation_uncertainty _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_recovered_unknown_retains_cancellation_uncertainty>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f13251cf890>
+path = PosixPath('/work/tmp/reader-21h7n2h_/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_simulation_completion_is_named_without_real_execution_claim _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_simulation_completion_is_named_without_real_execution_claim>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324db6990>
+path = PosixPath('/work/tmp/reader-ixry42pi/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+_ ReporterCompatibility.test_unavailable_never_falls_back_to_empty_legacy_memory _
+
+self = <test_reporter.ReporterCompatibility testMethod=test_unavailable_never_falls_back_to_empty_legacy_memory>
+
+    async def asyncSetUp(self):
+        self.temporary=tempfile.TemporaryDirectory(prefix='reader-')
+        self.path=Path(self.temporary.name).resolve()/'state.sqlite'
+        self.previous_authority=runtime._authority
+        runtime._authority=None
+>       self.authority=Authority(self.path,allow_simulation=True)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/input/regressions/test_reporter.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <app.agent.authority.Authority object at 0x7f1324db6030>
+path = PosixPath('/work/tmp/reader-l2ncxh5w/state.sqlite')
+allow_simulation = True, busy_ms = 100, fault_hook = None, legacy_paths = ()
+ledger = None, enrollment_context = None, legacy_approval = None
+
+    def __init__(self, path, *, allow_simulation=False, busy_ms=100, fault_hook=None, legacy_paths=(), ledger=None, enrollment_context=None, legacy_approval=None):
+        self.path = Path(path).absolute()
+        self._closed = False
+        self._poisoned = False
+        self._mutex = threading.RLock()
+        self.allow_simulation = allow_simulation is True
+        self._fault = fault_hook or (lambda stage: None)
+        self._pid = os.getpid()
+        self._conn = None
+        self._lockfd = None
+        self._ledger = ledger
+        self._ledger_acquired = False
+        self._enrollment_context = enrollment_context
+        if type(busy_ms) is not int or not 1 <= busy_ms <= 1000:
+            raise AuthorityError("invalid_busy_timeout")
+        # A verified historical restore is an inert artifact, not a runtime
+        # branch. Refuse before creating even the writer-lock sidecar.
+        marker = self.path.parent / "DISPOSABLE.json"
+        if marker.exists() or marker.is_symlink():
+            raise AuthorityError("restore_activation_prohibited")
+        # Opening never enrolls: even initialize=True cannot authorize genesis.
+        # Refuse before creating a directory, writer lock or checkpoint file.
+        if not self.path.is_file() or self.path.is_symlink() or not self.path.stat().st_size:
+>           raise AuthorityError("authority_unenrolled_or_missing")
+E           app.agent.authority.AuthorityError: authority_unenrolled_or_missing
+
+app/agent/authority.py:105: AuthorityError
+________________________ test_auth_disabled_by_default _________________________
+
+    def test_auth_disabled_by_default() -> None:
+        assert settings.server.api_token == ""
+        response = client.get("/tasks")
+>       assert response.status_code == 200
+E       assert 503 == 200
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+/input/regressions/test_server_auth.py:21: AssertionError
+__________________________ test_valid_token_accepted ___________________________
+
+api_token = 'test-secret-token'
+
+    def test_valid_token_accepted(api_token: str) -> None:
+        response = client.get("/tasks", headers={"Authorization": f"Bearer {api_token}"})
+>       assert response.status_code == 200
+E       assert 503 == 200
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+/input/regressions/test_server_auth.py:42: AssertionError
+=============================== warnings summary ===============================
+../../deps/fastapi/testclient.py:1
+  /deps/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../deps/starlette/testclient.py:53
+  /deps/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../../input/regressions/test_cancel_token.py::test_stop_endpoint - app...
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_cancelled_keeps_state_and_flag
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_claimed_cancellation_is_not_confirmed_prevention
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_disabled_comms_send_report_does_not_send_anything
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_discord_only_uses_synthetic_send_and_keeps_truthful_state
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_empty_is_a_snapshot_not_general_health
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_legacy_unknown_cannot_disappear_in_morning_report
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_pending_is_admitted_held_and_reporting_is_read_only
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_recovered_unknown_retains_cancellation_uncertainty
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_simulation_completion_is_named_without_real_execution_claim
+FAILED ../../input/regressions/test_reporter.py::ReporterCompatibility::test_unavailable_never_falls_back_to_empty_legacy_memory
+FAILED ../../input/regressions/test_server_auth.py::test_auth_disabled_by_default
+FAILED ../../input/regressions/test_server_auth.py::test_valid_token_accepted
+13 failed, 45 passed, 2 warnings in 4.47s
+{
+  "status": "BLOCKED_OR_FAILED",
+  "started_at": "2026-11-06T05:19:33.951869+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026532961]",
+    "mnt_namespace": "mnt:[4026532402]",
+    "pid_namespace": "pid:[4026532456]",
+    "net_namespace": "net:[4026532459]",
+    "ipc_namespace": "ipc:[4026532407]",
+    "uts_namespace": "uts:[4026532403]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051933836811Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051933836811Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-authority-enrollment-r1/runs/20261106T051933836811Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "native_execution": {
+    "pydantic_core._pydantic_core": {
+      "path": "/deps/pydantic_core/_pydantic_core.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "189fe5feb2b829cb99ea089c7372c2b1a8592b2f2df6b46b4113af2dc61bcdac"
+    },
+    "yaml._yaml": {
+      "path": "/deps/yaml/_yaml.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "458bd0cb0030102b9bcffb7689696ac87bedcbd5384bc4c7883e7bbe0ce4e0a1"
+    },
+    "psutil._psutil_linux": {
+      "path": "/deps/psutil/_psutil_linux.abi3.so",
+      "sha256": "8085c743a77f6059be6d18d54317ccce2e715425bb5f15aa8835770463d6b9fd"
+    }
+  },
+  "synthetic_config_sha256": "5e612eac50912879db95088e5bfffb479ae247c829f465cde26968a861a44af0",
+  "entrypoint_origin": "/work/project/app/main.py",
+  "server_origin": "/work/project/app/server.py",
+  "regressions": {
+    "collected": 58,
+    "failed": 13,
+    "skipped": 0,
+    "exitstatus": 1
+  },
+  "error_type": "AssertionError",
+  "error": "",
+  "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 446, in <module>\n    assert code==0 and counts['skipped']==0\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+  "finished_at": "2026-11-06T05:19:44.125487+00:00"
+}

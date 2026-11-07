@@ -1,0 +1,19 @@
+--- codex1/tests/test_obsidian_tool.py
++++ codex2/tests/test_obsidian_tool.py
+@@ -87,14 +87,13 @@
+ 
+ 
+ def test_obsidian_is_registered_and_configured() -> None:
+-    from app.config import CONFIG_PATH
+-    loaded = load_settings(CONFIG_PATH.with_name("config.yaml.example"))
++    loaded = load_settings()
+ 
+     assert loaded.tools.obsidian_enabled is False
+     assert loaded.tools.obsidian_vault_path == "./jarvis-vault"
+     assert "obsidian" in registry.TOOLS
+     assert "obsidian" in mcp_client.WHITELISTED_SERVERS
+-    assert mcp_client.status("obsidian")["configured"]["command"].startswith("npx obsidian-mcp ")
++    assert mcp_client.status("obsidian")["configured"]["command"] == "npx obsidian-mcp ./jarvis-vault"
+ 
+ 
+ def test_obsidian_route_and_action_tag_params() -> None:

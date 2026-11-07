@@ -16,6 +16,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -32,7 +33,8 @@ from app.brain.tool_params import build_tool_params as _tool_params
 from app.brain.tool_params import is_cancel_command as _is_cancel_command
 from app.agent.scheduler import scheduler
 from app.agent.api import router as authority_router
-from app.agent.runtime import close_authority, get_authority
+from app.agent.admission import AdmissionBodyLimit
+from app.agent.runtime import close_authority, get_authority, get_execution_worker
 from app.agent.sensor_store import add_reading, get_readings, list_nodes
 from app.config import settings
 from app.config_check import check_startup
@@ -52,10 +54,19 @@ from app.voice.tts import tts
 class ConnectionManager:
     def __init__(self) -> None:
         self.active: list[WebSocket] = []
+        self._accepting = 0
 
-    async def connect(self, ws: WebSocket) -> None:
-        await ws.accept()
-        self.active.append(ws)
+    async def connect(self, ws: WebSocket) -> bool:
+        if len(self.active) + self._accepting >= 32:
+            await ws.close(code=1008, reason="connection_bound")
+            return False
+        self._accepting += 1
+        try:
+            await ws.accept()
+            self.active.append(ws)
+            return True
+        finally:
+            self._accepting -= 1
 
     def disconnect(self, ws: WebSocket) -> None:
         if ws in self.active:
@@ -65,7 +76,7 @@ class ConnectionManager:
         dead = []
         for ws in self.active:
             try:
-                await ws.send_json(data)
+                await asyncio.wait_for(ws.send_json(data), timeout=2)
             except Exception:
                 dead.append(ws)
         for ws in dead:
@@ -115,9 +126,15 @@ async def lifespan(app: FastAPI):
     voice_started = False
     idle_started = False
     startup_check = None
+    execution_worker = get_execution_worker()
     try:
         authority.readiness()
+        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token:
+            from app.agent.authority import AuthorityError
+            raise AuthorityError("transport_client_authentication_required")
         await scheduler.start()
+        if execution_worker is not None:
+            await execution_worker.start()
         _register_runtime_callbacks()
         resource_manager.mark_activity("server_start")
         await resource_manager.start_idle_monitor()
@@ -146,12 +163,23 @@ async def lifespan(app: FastAPI):
             audit.log("server_stop", {"host": settings.server.host, "port": settings.server.port})
         finally:
             try:
-                await scheduler.stop()
+                if execution_worker is not None:
+                    await execution_worker.stop()
             finally:
-                close_authority()
+                try:
+                    await scheduler.stop()
+                finally:
+                    close_authority()
 
 
 app = FastAPI(title="JARVIS", version="0.1.0", lifespan=lifespan)
+
+
+@app.exception_handler(RequestValidationError)
+async def bounded_validation_error(request, exc):
+    # Never reflect submitted credentials/authorization evidence into responses.
+    return JSONResponse(status_code=422,content={"error":"invalid_request","automatic_retry":False})
+
 _pwa_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "pwa")
 if os.path.isdir(_pwa_dir):
     app.mount("/pwa", StaticFiles(directory=_pwa_dir, html=True), name="pwa")
@@ -164,6 +192,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(AdmissionBodyLimit)
 
 
 _RESOURCE_ACTIVITY_EXEMPT_PREFIXES = ("/health", "/resource", "/pwa")
@@ -229,6 +258,8 @@ async def resource_activity_middleware(request: Request, call_next):  # noqa: AN
 @app.middleware("http")
 async def api_token_middleware(request: Request, call_next):  # noqa: ANN001, ANN201
     if not settings.server.api_token:
+        if request.url.path=="/stop":
+            return JSONResponse(status_code=401,content={"error":"operator_authentication_required"})
         return await call_next(request)
     path = request.url.path
     if path in _AUTH_EXEMPT_EXACT or any(path.startswith(prefix) for prefix in _AUTH_EXEMPT_PREFIXES):
@@ -312,27 +343,12 @@ async def resource_status() -> dict[str, Any]:
 
 
 @app.post("/resource/sleep/light")
-async def resource_light_sleep() -> dict[str, Any]:
-    result = await resource_manager.light_sleep(reason="api")
-    return asdict(result)
-
-
 @app.post("/resource/sleep/deep")
-async def resource_deep_sleep(terminate_processes: bool = False) -> dict[str, Any]:
-    result = await resource_manager.deep_sleep(reason="api", terminate_processes=terminate_processes)
-    return asdict(result)
-
-
 @app.post("/resource/wake")
-async def resource_wake(preload_primary_model: bool | None = None) -> dict[str, Any]:
-    result = await resource_manager.wake(reason="api", preload_primary_model=preload_primary_model)
-    return asdict(result)
-
-
 @app.post("/resource/shutdown")
-async def resource_shutdown(terminate_processes: bool = False) -> dict[str, Any]:
-    result = await resource_manager.deep_sleep(reason="api_shutdown", terminate_processes=terminate_processes)
-    return asdict(result)
+async def resource_mutation_unavailable() -> Any:
+    # HTTP identity alone is not independent host-control authorization.
+    return JSONResponse(status_code=403,content={"error":"offline_operator_control_required","automatic_retry":False})
 
 
 @app.get("/health/tools")
@@ -386,6 +402,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
 async def stop_response() -> dict[str, str]:
     current_token.cancel()
     tts.stop()
+    worker = get_execution_worker()
+    if worker is not None:
+        await worker.stop()
     return {"status": "stopped"}
 
 
@@ -445,17 +464,30 @@ async def sensors() -> dict[str, list[str]]:
 async def ws_endpoint(websocket: WebSocket) -> None:
     if await _reject_unauthorized_websocket(websocket, settings.server.websocket_path):
         return
-    await manager.connect(websocket)
-    audit.log("ws_connect", {"client": str(websocket.client)})
-
     try:
+        if not await manager.connect(websocket):
+            return
+        audit.log("ws_connect", {"client": str(websocket.client)})
         while True:
-            raw = await websocket.receive_text()
+            frame = await websocket.receive()
+            if frame["type"] == "websocket.disconnect":
+                return
+            raw = frame.get("text")
+            if type(raw) is not str:
+                await websocket.close(code=1008, reason="text_required")
+                return
+            if len(raw)>8192 or len(raw.encode('utf-8'))>8192:
+                await websocket.close(code=1009,reason="message_bound");return
             try:
                 data = json.loads(raw)
-                message = data.get("message", raw)
             except json.JSONDecodeError:
                 message = raw
+            else:
+                if type(data) is not dict or type(data.get('message')) is not str:
+                    await websocket.close(code=1008,reason="invalid_message");return
+                message=data['message']
+            if not message.strip():
+                await websocket.close(code=1008,reason="invalid_message");return
 
             if not await resource_manager.ensure_awake_for_interaction("websocket"):
                 await websocket.send_json(
@@ -503,8 +535,21 @@ async def ws_endpoint(websocket: WebSocket) -> None:
                 current_token.reset()
                 await manager.broadcast({"type": "listening", "active": False})
     except WebSocketDisconnect:
+        pass
+    finally:
         manager.disconnect(websocket)
         audit.log("ws_disconnect", {"client": str(websocket.client)})
+
+
+_UE5_CLOSE_TIMEOUT = 2.0
+
+
+async def _close_ue5(websocket: WebSocket, *, code: int, reason: str) -> None:
+    try:
+        await asyncio.wait_for(websocket.close(code=code, reason=reason), timeout=_UE5_CLOSE_TIMEOUT)
+    except TimeoutError:
+        # The endpoint's synchronous finally still releases the registration.
+        pass
 
 
 @app.websocket("/ue5")
@@ -513,13 +558,24 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
 
     if await _reject_unauthorized_websocket(websocket, "/ue5"):
         return
-    await ue5_manager.connect(websocket)
-    audit.log("ue5_ws_connect", {"client": str(websocket.client)})
-
     try:
+        if not await ue5_manager.connect(websocket):
+            return
+        audit.log("ue5_ws_connect", {"client": str(websocket.client)})
         while True:
-            await websocket.receive_text()
+            frame = await websocket.receive()
+            if frame["type"] == "websocket.disconnect":
+                return
+            raw = frame.get("text")
+            if type(raw) is not str:
+                await _close_ue5(websocket, code=1008, reason="text_required")
+                return
+            if len(raw) > 8192 or len(raw.encode("utf-8")) > 8192:
+                await _close_ue5(websocket, code=1009, reason="message_bound")
+                return
     except WebSocketDisconnect:
+        pass
+    finally:
         ue5_manager.disconnect(websocket)
         audit.log("ue5_ws_disconnect", {"client": str(websocket.client)})
 
@@ -578,86 +634,8 @@ async def _process(message: str):  # type: ignore[return]
 
     intent_result: RouterResult = intent_router.classify(message)
 
-    if intent_result.intent == "use_tool" and intent_result.suggested_tool:
-        tool_name = intent_result.suggested_tool
-        params = _build_tool_params_traced(tool_name, message)
-        filler_manager.play_for_tool(tool_name)
-
-        try:
-            result = registry.call(tool_name, params)
-            if result.dry_run:
-                return dry_run_narration(tool_name, params), intent_result
-            context = str(result.output)[:1000]
-        except ToolError as exc:
-            if _is_confirmation_required_error(exc):
-                request_id = str(uuid.uuid4())[:8]
-                _pending_confirmations[request_id] = {
-                    "tool": tool_name,
-                    "params": params,
-                    "trace_id": current_trace_id(),
-                }
-                approval_msg = (
-                    f"JARVIS approval required [{request_id}]: Run {tool_name} "
-                    f"with {params}? POST /confirm/{request_id} to approve."
-                )
-                try:
-                    from app.comms.discord_bot import discord_bot
-                    from app.comms.telegram_bot import telegram_bot
-
-                    tasks = []
-                    if getattr(settings.comms, "discord_channel_id", None):
-                        tasks.append(discord_bot.send_message(approval_msg))
-                    if getattr(settings.comms, "telegram_chat_id", None):
-                        tasks.append(telegram_bot.send_message(approval_msg))
-                    if tasks:
-                        await asyncio.gather(*tasks, return_exceptions=True)
-                except Exception:
-                    pass
-                audit.log(
-                    "approval_gate_triggered",
-                    {"request_id": request_id, "tool": tool_name, "params": params},
-                )
-                emit_event(
-                    "confirmation",
-                    component="app.server",
-                    status="required",
-                    metadata={
-                        "request_id": request_id,
-                        "tool": tool_name,
-                        "confirmation_required": True,
-                        "parameter_keys": list(params),
-                    },
-                )
-                context = (
-                    f"Confirmation request sent to your devices, sir. "
-                    f"Use /confirm/{request_id} to approve."
-                )
-            else:
-                context = str(exc)
-
-        messages = build_prompt(message, context=context)
-        decision = _plan_traced(message, intent_result.intent)
-        try:
-            raw_reply = await llm_client.chat(
-                messages,
-                model=decision.model,
-                think=decision.think,
-                num_predict=decision.num_predict,
-            )
-        except OllamaConnectionError as exc:
-            raw_reply = f"Unable to reach Ollama, sir. {exc}"
-
-        return finalize_reply(str(raw_reply)), intent_result
-
-    if intent_result.intent == "confirm_action":
-        emit_event(
-            "confirmation",
-            component="app.server",
-            status="required",
-            metadata={"confirmation_required": True},
-        )
-        reply = f"That action requires your confirmation, sir. Shall I proceed with: {message}?"
-        return finalize_reply(reply), intent_result
+    if intent_result.intent in {"use_tool","confirm_action","vision"}:
+        return finalize_reply("Real tool execution is disabled. Synthetic execution requires an independently authorized durable request."),intent_result
 
     if intent_result.intent == "respond":
         direct_reply = try_direct_reply(message)
@@ -676,30 +654,6 @@ async def _process(message: str):  # type: ignore[return]
             )
         except OllamaConnectionError as exc:
             raw_reply = f"Unable to reach Ollama for deep reasoning, sir. {exc}"
-        return finalize_reply(str(raw_reply)), intent_result
-
-    if intent_result.intent == "vision":
-        params = _build_tool_params_traced("vision", message)
-        filler_manager.play_for_tool("vision")
-        try:
-            result = registry.call("vision", params)
-            if result.dry_run:
-                return dry_run_narration("vision", params), intent_result
-            context = str(result.output)[:1500]
-        except ToolError as exc:
-            context = f"Vision tool unavailable: {exc}"
-
-        messages = build_prompt(message, context=context)
-        decision = _plan_traced(message, intent_result.intent)
-        try:
-            raw_reply = await llm_client.chat(
-                messages,
-                model=decision.model,
-                think=decision.think,
-                num_predict=decision.num_predict,
-            )
-        except OllamaConnectionError as exc:
-            raw_reply = f"Unable to reach Ollama for vision reasoning, sir. {exc}"
         return finalize_reply(str(raw_reply)), intent_result
 
     if intent_result.intent == "retrieve_memory":
@@ -736,55 +690,6 @@ def _is_confirmation_required_error(exc: ToolError) -> bool:
     return "Requires user confirmation" in message or "confirmation" in message.lower()
 
 
-@app.post("/confirm/{request_id}", response_model=None)
-async def confirm_request(request_id: str) -> Any:
-    pending = _pending_confirmations.pop(request_id, None)
-    correlated_trace_id = str(pending.get("trace_id")) if pending and pending.get("trace_id") else None
-    with start_trace(
-        origin="user_direct",
-        component="app.server",
-        transport="http_confirmation",
-        trace_id=correlated_trace_id,
-    ):
-        if pending is None:
-            return JSONResponse(status_code=404, content={"error": "Unknown or expired request"})
-
-        tool_name = str(pending["tool"])
-        params = dict(pending["params"])
-
-        emit_event(
-            "confirmation",
-            component="app.server",
-            status="confirmed",
-            metadata={"request_id": request_id, "tool": tool_name, "confirmation_required": False},
-        )
-        try:
-            result = registry.call(tool_name, params, confirmed=True)
-        except ToolError as exc:
-            return {"error": str(exc)}
-
-        done_msg = f"JARVIS approved [{request_id}]: {tool_name} executed. Result: {str(result.output)[:200]}"
-        try:
-            from app.comms.discord_bot import discord_bot
-            from app.comms.telegram_bot import telegram_bot
-
-            tasks = []
-            if getattr(settings.comms, "discord_channel_id", None):
-                tasks.append(discord_bot.send_message(done_msg))
-            if getattr(settings.comms, "telegram_chat_id", None):
-                tasks.append(telegram_bot.send_message(done_msg))
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception:
-            pass
-
-        audit.log(
-            "approval_gate_confirmed",
-            {"request_id": request_id, "tool": tool_name, "output": str(result.output)[:500]},
-        )
-        return {"confirmed": True, "tool": tool_name, "output": str(result.output)}
-
-
 async def _process_stream(message: str):  # type: ignore[return]
     from app.brain.router import RouterResult
 
@@ -798,36 +703,7 @@ async def _process_stream(message: str):  # type: ignore[return]
 
     intent_result: RouterResult = intent_router.classify(message)
 
-    if intent_result.intent == "use_tool" and intent_result.suggested_tool:
-        tool_name = intent_result.suggested_tool
-        params = _build_tool_params_traced(tool_name, message)
-
-        try:
-            result = registry.call(tool_name, params)
-            if result.dry_run:
-                return None
-            context = str(result.output)[:1000]
-        except ToolError:
-            return None
-
-        messages = build_prompt(message, context=context)
-        decision = _plan_traced(message, intent_result.intent)
-        try:
-            raw_reply = await llm_client.chat(
-                messages,
-                model=decision.model,
-                stream=True,
-                think=decision.think,
-                num_predict=decision.num_predict,
-            )
-        except OllamaConnectionError:
-            return None
-
-        if hasattr(raw_reply, "__aiter__"):
-            return raw_reply, intent_result
-        return None
-
-    if intent_result.intent == "confirm_action":
+    if intent_result.intent in {"use_tool","confirm_action","vision"}:
         return None
 
     if intent_result.intent == "respond":

@@ -1,0 +1,85 @@
+{
+  "checks": [
+    {
+      "case": "scheduler-regression",
+      "status": "PASS",
+      "versions": {
+        "before": {
+          "contract_satisfied": false,
+          "gate_exit": 1,
+          "counts": {
+            "PASS": 0,
+            "FAIL": 1,
+            "ERROR": 0,
+            "SKIP": 0
+          }
+        },
+        "after": {
+          "contract_satisfied": true,
+          "gate_exit": 0,
+          "counts": {
+            "PASS": 1,
+            "FAIL": 0,
+            "ERROR": 0,
+            "SKIP": 0,
+            "INCOMPLETE": 0
+          }
+        }
+      }
+    },
+    {
+      "case": "early-exit",
+      "status": "PASS",
+      "versions": {
+        "before": {
+          "contract_satisfied": false,
+          "gate_exit": 0,
+          "counts": {
+            "PASS": 1,
+            "FAIL": 0,
+            "ERROR": 0,
+            "SKIP": 0
+          }
+        },
+        "after": {
+          "contract_satisfied": true,
+          "gate_exit": 1,
+          "counts": {
+            "PASS": 0,
+            "FAIL": 0,
+            "ERROR": 0,
+            "SKIP": 0,
+            "INCOMPLETE": 1
+          }
+        }
+      }
+    },
+    {
+      "case": "leak",
+      "status": "PASS",
+      "versions": {
+        "before": {
+          "contract_satisfied": false,
+          "gate_exit": 1,
+          "counts": {
+            "PASS": 0,
+            "FAIL": 1,
+            "ERROR": 0,
+            "SKIP": 0
+          }
+        },
+        "after": {
+          "contract_satisfied": true,
+          "gate_exit": 1,
+          "counts": {
+            "PASS": 0,
+            "FAIL": 1,
+            "ERROR": 0,
+            "SKIP": 0,
+            "INCOMPLETE": 0
+          }
+        }
+      }
+    }
+  ]
+}

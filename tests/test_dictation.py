@@ -25,7 +25,7 @@ def _contains_text(value, needle: str) -> bool:  # noqa: ANN001
     return False
 
 
-def test_dictation_writes_clipboard_without_raw_audit(monkeypatch) -> None:
+def test_dictation_refuses_clipboard_without_raw_audit(monkeypatch) -> None:
     secret = "private wiring note"
     copied: list[str] = []
     events: list[tuple[str, dict]] = []
@@ -36,10 +36,10 @@ def test_dictation_writes_clipboard_without_raw_audit(monkeypatch) -> None:
     monkeypatch.setattr(dictation_module, "pyperclip", SimpleNamespace(copy=copied.append))
     monkeypatch.setattr(dictation_module.audit, "log", lambda event, data: events.append((event, data)))
 
-    assert Dictation().handle_transcript(f"  {secret}  ") is True
+    assert Dictation().handle_transcript(f"  {secret}  ") is False
 
-    assert copied == [secret]
-    assert events[-1] == ("dictation_handled", {"chars": len(secret), "type_out": False})
+    assert copied == []
+    assert events[-1] == ("dictation_blocked", {"reason":"independent_authorization_required", "type_out":False})
     assert not any(_contains_text(data, secret) for _event, data in events)
 
 
@@ -55,13 +55,13 @@ def test_dictation_type_out_requires_flag_and_live_mode(monkeypatch) -> None:
     monkeypatch.setattr(dictation_module, "pyautogui", SimpleNamespace(write=typed.append))
     monkeypatch.setattr(dictation_module.audit, "log", lambda *_args, **_kwargs: None)
 
-    assert Dictation().handle_transcript("type this") is True
-    assert typed == ["type this"]
+    assert Dictation().handle_transcript("type this") is False
+    assert typed == []
 
     typed.clear()
     monkeypatch.setattr(settings.safety, "dry_run", True)
 
-    assert Dictation().handle_transcript("do not type this") is True
+    assert Dictation().handle_transcript("do not type this") is False
     assert typed == []
 
 
@@ -75,7 +75,7 @@ def test_dictation_gracefully_degrades_without_optional_dependencies(monkeypatch
     monkeypatch.setattr(dictation_module.audit, "log", lambda event, data: events.append((event, data)))
 
     assert Dictation().handle_transcript("clipboard unavailable") is False
-    assert ("dictation_unavailable", {"chars": 21, "dependency": "pyperclip"}) in events
+    assert ("dictation_blocked", {"reason":"independent_authorization_required", "type_out":False}) in events
 
 
 def test_push_to_talk_manager_tracks_dictation_hotkey(monkeypatch) -> None:

@@ -1,5 +1,61 @@
 # JARVIS Project Status
 
+Current offline application milestone: [secure execution integration and readiness](tasks/jarvis-end-to-end-readiness-r1/REPORT.md).
+The actual application now integrates signed synthetic IPC, durable receipts and
+explicit offline recovery. Real tools, confirmation dispatch, dictation effects
+and host resource mutation controls are closed. Older live-readiness and tool
+results below describe historical source, not this release's live authorization.
+See [the current execution/operator contract](docs/end_to_end_readiness.md).
+
+
+Latest offline sprint: [durable recovery decisions and protected witness renewal](tasks/jarvis-recovery-decisions-r1/REPORT.md).
+Separate SQLite/protected journals retain verified proposals, authenticated synthetic
+decisions and receipts; restart rechecks both HMAC keys and original UUID/payload
+bindings. Witnesses advance against externally retained ancestry without activating
+restored tasks. Detailed history requires operator authentication; readiness exposes
+aggregate counts. Source-bound new results and remaining limits are in that report.
+
+Previous source/offline sprint: [authority enrollment and branch verification](tasks/jarvis-authority-enrollment-r1/REPORT.md).
+Normal Authority opens refuse missing/incomplete stores and implicit legacy
+approval. An explicit disposable offline ceremony creates authenticated genesis,
+durable receipts and an external witness; restart verifies custody and continuity.
+Read-only restored-branch verification emits a proposal with no activation.
+Unprovisioned default startup now fails closed; trusted embedding/key/witness
+provisioning is an activation prerequisite. UNKNOWN work remains unresolved.
+Exact current tests, crash evidence, benchmarks and limitations are in the report;
+earlier entries below retain their historical source/evidence scope.
+
+Latest audit durability sprint (2026-11-05 America/Chicago; UTC evidence
+2026-11-06): [audit disaster recovery](tasks/jarvis-audit-disaster-recovery-r1/REPORT.md).
+Implemented opt-in same-key checkpoint generations, independently supplied trust
+references, durable export attestations, verified transactional reconstruction
+and authenticated offline restore/reconciliation CLI. Restored artifacts remain
+inert; UNKNOWN outcomes and all historical identities are preserved. Current
+source-bound tests, independent review, bounded benchmarks and exact limitations
+are in that report. No protected deletion, runtime migration or live activation.
+
+Latest source/offline recovery sprint (2026-11-05 America/Chicago; UTC evidence
+2026-11-06): [operator recovery and ledger report](tasks/jarvis-operator-ledger-r1/REPORT.md).
+Implemented read-only authenticated diagnostics and quiesced CLI, opt-in protected
+external HMAC checkpoints, bounded integrity-checked exports, audited local
+recovery/archive preparation, and terminal history preservation on schedule stop.
+No protected history deletion, real-store enrollment/migration or live execution.
+Exact current counts, independent review, crash evidence and limitations are in
+the new report; older entries below retain their historical evidence scope.
+
+Latest offline engineering sprint (2026-11-05 America/Chicago; evidence UTC
+2026-11-06): [offline execution report](tasks/jarvis-offline-execution-r1/REPORT.md).
+The actual app now connects explicit synthetic task/schedule admission, simulated
+capability policy, the fenced durable queue, bounded worker, durable result and
+receipt publication, API/CLI/reporter status, cancellation, sleep/stop/wake and
+restart reconciliation. New public mutation IDs are canonical UUID4; deterministic
+internal UUID5 receipts are reserved. No public completion endpoint was added.
+Real executor registration is rejected. No production service, real state migration,
+provider, broker, infrastructure, credentials or Gate6K activity was enabled.
+Final exact source-bound counts and remaining limits are in the new report;
+all earlier paragraphs below describe their historical implementation versions.
+
+
 Latest first-party compatibility continuation (2026-10-31):
 [`tasks/jarvis-client-compatibility-deliverable-r1/JARVIS-CONSOLIDATED-REPORT.md`](tasks/jarvis-client-compatibility-deliverable-r1/JARVIS-CONSOLIDATED-REPORT.md)
 consolidates prior durability/readiness and the scoped143-file caller inventory.

@@ -1,0 +1,48 @@
+--- codex1/.dockerignore
++++ codex2/.dockerignore
+@@ -1,24 +1,22 @@
+-# Source-only context: runtime state, credentials and evidence are never inputs.
+-.git
+-.git/**
+-.env
+-.env.*
+-config.yaml
+-**/config.yaml
+-**/*credential*
++# Restrict the build context to the inputs explicitly copied by Dockerfile.
++**
++!Dockerfile
++!requirements-core.txt
++!config.yaml.example
++!app/
++!app/**
++!assets/
++!assets/**
++!frontend/
++!frontend/**
++
++# Private/runtime artifacts are never build inputs, including nested copies.
++**/.env
++**/.env.*
++**/*.key
+ **/*.pem
+-**/*.key
+-data
+-logs
+-models
+-piper
+-jarvis-vault
+-tasks
+-**/node_modules
+-**/.venv
+-**/venv
+-**/__pycache__
+-**/.pytest_cache
+-*.sqlite
+-*.sqlite-*
+-*.db
++**/*.db
++**/*.sqlite*
++**/__pycache__/
++**/*.py[cod]
++**/node_modules/

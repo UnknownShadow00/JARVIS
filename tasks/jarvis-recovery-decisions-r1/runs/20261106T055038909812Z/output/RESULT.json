@@ -1,0 +1,44 @@
+{
+  "status": "BLOCKED_OR_FAILED",
+  "started_at": "2026-11-06T05:50:39.019171+00:00",
+  "boundaries": {
+    "user_namespace": "user:[4026533031]",
+    "mnt_namespace": "mnt:[4026532971]",
+    "pid_namespace": "pid:[4026532974]",
+    "net_namespace": "net:[4026532978]",
+    "ipc_namespace": "ipc:[4026532973]",
+    "uts_namespace": "uts:[4026532972]",
+    "cap_eff": "0000000000000000",
+    "no_new_privs": "1",
+    "/input/readonly-canary.txt": 30,
+    "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-recovery-decisions-r1/runs/20261106T055038909812Z/outside-canary.txt": 2,
+    "fds": {
+      "0": "/dev/null",
+      "1": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-recovery-decisions-r1/runs/20261106T055038909812Z/stdout.txt",
+      "2": "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-recovery-decisions-r1/runs/20261106T055038909812Z/stderr.txt"
+    },
+    "network_family_2": 101,
+    "network_family_10": 101
+  },
+  "native_execution": {
+    "pydantic_core._pydantic_core": {
+      "path": "/deps/pydantic_core/_pydantic_core.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "189fe5feb2b829cb99ea089c7372c2b1a8592b2f2df6b46b4113af2dc61bcdac"
+    },
+    "yaml._yaml": {
+      "path": "/deps/yaml/_yaml.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "458bd0cb0030102b9bcffb7689696ac87bedcbd5384bc4c7883e7bbe0ce4e0a1"
+    },
+    "psutil._psutil_linux": {
+      "path": "/deps/psutil/_psutil_linux.abi3.so",
+      "sha256": "8085c743a77f6059be6d18d54317ccce2e715425bb5f15aa8835770463d6b9fd"
+    }
+  },
+  "synthetic_config_sha256": "5e612eac50912879db95088e5bfffb479ae247c829f465cde26968a861a44af0",
+  "entrypoint_origin": "/work/project/app/main.py",
+  "server_origin": "/work/project/app/server.py",
+  "error_type": "AttributeError",
+  "error": "'types.SimpleNamespace' object has no attribute 'recovery_decision_status'",
+  "traceback": "Traceback (most recent call last):\n  File \"/input/child.py\", line 436, in <module>\n    asyncio.run(check())\n    ~~~~~~~~~~~^^^^^^^^^\n  File \"/usr/lib/python3.14/asyncio/runners.py\", line 204, in run\n    return runner.run(main)\n           ~~~~~~~~~~^^^^^^\n  File \"/usr/lib/python3.14/asyncio/runners.py\", line 127, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/usr/lib/python3.14/asyncio/base_events.py\", line 719, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"/input/child.py\", line 312, in check\n    assert offline_operator_main(['--database',str(guarded_path),'--checkpoints',str(anchors),'--store-id',store_id,'--key-fd',str(read_fd)])==0\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/project/app/agent/operator_cli.py\", line 90, in main\n    result=inspect_offline(args.database,SERVICE_ACTOR,ledger=ledger,enrollment_context=witness,task_id=args.task_id,limit=args.limit,offset=args.offset)\n  File \"/work/project/app/agent/recovery.py\", line 534, in inspect_offline\n    return OperatorRecovery(shim).diagnose(actor,**options)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/work/project/app/agent/recovery.py\", line 270, in diagnose\n    'enrollment':a._enrollment_status,'recovery_decisions':a.recovery_decision_status(detailed=True),\n                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'types.SimpleNamespace' object has no attribute 'recovery_decision_status'\n",
+  "finished_at": "2026-11-06T05:50:41.953806+00:00"
+}

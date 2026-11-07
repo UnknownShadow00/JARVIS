@@ -1,0 +1,36 @@
+{
+  "generator_sha256": "d33a91dbddcf45a76a89546f40f98b6ebf352642e63f263245f8bd9aecf52ce9",
+  "unit_sha256": "42d812ebf92500ad48a4743efad4bb89bbc5a8883eaa7e323c3eaba16b086361",
+  "cases": {
+    "trusted_tty1": {
+      "pass": true,
+      "files": {
+        "early/debug-shell.service.d/50-tty.conf": {
+          "sha256": "8c2a681de6b5c93537890e12d0cacc6941e1391307eee65b3c36d14109263c9d"
+        },
+        "early/default.target.wants/debug-shell.service": {
+          "symlink": "/usr/lib/systemd/system/debug-shell.service"
+        },
+        "early/getty@tty1.service": {
+          "symlink": "/dev/null"
+        }
+      }
+    },
+    "normal_boot": {
+      "pass": true,
+      "files": {}
+    },
+    "default_tty9": {
+      "pass": true,
+      "files": {
+        "early/default.target.wants/debug-shell.service": {
+          "symlink": "/usr/lib/systemd/system/debug-shell.service"
+        }
+      }
+    }
+  },
+  "actual_guest_generator_verified": false,
+  "system_manager_started_or_called": false,
+  "network_namespace": "isolated",
+  "result": "PASS_3_OFFLINE_GENERATOR_CASES"
+}

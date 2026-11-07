@@ -8,6 +8,7 @@ from unittest.mock import patch, AsyncMock
 import uuid
 
 from app.agent.authority import Authority
+from synthetic_authority import fixture_authority as Authority
 from app.agent import runtime
 from app.agent.runtime import SERVICE_ACTOR as A
 from app.agent.simulation import Simulator

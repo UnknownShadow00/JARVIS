@@ -1,0 +1,34 @@
+{
+  "current_source": "snapshot-current, source-delta.json capture2026-11-06T06:05:16.628282+00:00",
+  "reviewed_current_controls": [
+    {
+      "paths": [
+        "app/agent/recovery_decisions.py",
+        "app/agent/recovery.py"
+      ],
+      "result": "Whole current registry reviewed. Operator authentication is present; protected history validates HMAC, exact request/command/payload/checkpoint and historical admission interval. SQL is an exact index of signed evidence, with incomplete tail/current external reference checks. Decisions bind proposal hash and prior decision ID; expiry is evaluated at historical admission and current display. Approvals remain nonactivating. Exact admitted reconciliation only can recover local SQLite journal; no external execution is resumed."
+    },
+    {
+      "paths": [
+        "app/agent/authority.py",
+        "app/agent/api.py",
+        "app/agent/operator_cli.py"
+      ],
+      "result": "Registry binds through actual Authority constructor parameter to identical ledger guard; ordinary Actor is trusted namespace. Readiness refuses unverified registry and returns aggregates. Detailed diagnostics require configured token/local-service scope. Offline mutation flags require explicit commit before descriptor/path reads; registry payload/permit/identity binding remains in service.apply. No new public mutation route is present."
+    },
+    {
+      "paths": [
+        "jarvis.py",
+        "app/observability/__init__.py",
+        "evals/__init__.py"
+      ],
+      "result": "Unlisted root CLI wrapper only forwards argv to reviewed app.cli.main. Nonempty package initializers are static reexports of already reviewed tracing/evaluation schemas; other app initializers are empty or whitespace. No additional material trust boundary is introduced."
+    }
+  ],
+  "coverage_conclusion": "44 units have owned evidence or explicit external blockers. The second-wave screenshot/process/WebSocket/VAD/helper/lockfile work addresses prior accepted gaps. Current changed/added sources have parent and independent runtime review plus bounded tests recorded. No new source-backed hunter unit or reopened assignment is justified by this critic.",
+  "limits_preserved": [
+    "This stops hunting only; a distinct final-clean coverage critic and independent validation/final verification of proposed needs_validation records remain required.",
+    "No deployed admission, browser policy, real two-UID screenshot, external filesystem custody/ACL/mount or installed dependency/CVE qualification is implied.",
+    "No target code, tests, live services, infrastructure, credentials or external network were accessed by this critic."
+  ]
+}

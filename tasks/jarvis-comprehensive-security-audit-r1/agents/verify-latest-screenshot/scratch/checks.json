@@ -1,0 +1,33 @@
+{
+  "source_snapshot": "snapshot-latest",
+  "profile": "strict",
+  "method": "source",
+  "artifact": null,
+  "target_execution": false,
+  "reviewed_paths": [
+    "app/computer/screenshot.py",
+    "app/computer/vision.py",
+    "app/computer/yolo_detector.py",
+    "app/computer/verifier.py",
+    "app/tools/screenshot.py",
+    "app/tools/vision.py",
+    "app/tools/registry.py",
+    "app/server.py",
+    "app/voice/audio_stream.py",
+    "app/voice/dictation.py",
+    "app/brain/tool_params.py",
+    "app/boot.py",
+    "app/main.py",
+    "app/cli.py",
+    "app/agent/execution.py",
+    "app/agent/execution_transport.py",
+    "app/agent/runtime.py",
+    "tasks/tool_readiness_smoke.py",
+    "requirements-desktop.txt",
+    "tests/test_screenshot.py"
+  ],
+  "search_scope": "All snapshot-latest Python source for capture, screenshot, vision_client, yolo_detector, ActionVerifier, verifier.verify and registry invocation references; independently reread every cited positive line in result.json.",
+  "invariant": "A shared-temp storage claim requires a current application path that invokes victim capture; a dormant helper and trusted manual invocation do not establish that path.",
+  "result": "Rejected current application reachability. Unconditional server and registry refusal blocks native/chat screenshot and vision dispatch; helpers remain unused by active application callers; readiness smoke forces screenshot dry-run; durable execution is exact-type pure synthetic only. No new runtime artifact was needed.",
+  "completion_log_owner": "Parent /root appends this verification to project tasks/loop-log.md."
+}
