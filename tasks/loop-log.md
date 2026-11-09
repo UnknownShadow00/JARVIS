@@ -1657,3 +1657,9 @@ Next: Independent Astra High R2 review of source and exact reproducers; no integ
 - Files changed: tasks/jarvis-v2-independent-r3-audit-20261107/; tasks/loop-log.md append only.
 - Result: APPROVE WITH CONDITIONS; scheduler PASS, enrolled-suite false-PASS gate PASS, sensitive handling PASS. Reviewed worktree clean.
 - Next: Explicit new-module enrollment policy, immutable combined candidate and protected evidence; rerun before separately authorized integration.
+
+## [2026-11-09T03:15:24.225375+00:00] Task Completed
+- Task: Controlled reliability integration rehearsal R1 baseline investigation and safe offline compatibility probe.
+- Files changed: New isolated JARVIS-v2-reliability-integration-rehearsal-r1 worktree, untracked tasks/jarvis-v2-reliability-integration-rehearsal-r1/ packet; canonical tasks/loop-log.md append only. No application source changed.
+- Result: FAIL_WITH_DOCUMENTED_BLOCKERS. Current committed baseline764097552 differs from RC1 in5 safety-relevant app files and lacks readiness CLI/test prerequisite; diagnostic507 cases yield495 pass/12 fail/0 error/skip/incomplete, exit1. No final integration commit or acceptance claimed.
+- Next: Separately authorize RC1 baseline reconciliation and readiness/storage/lifecycle policy decisions; then finalize enrollment and rerun exact combined candidate before independent review.
