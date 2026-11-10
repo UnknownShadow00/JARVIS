@@ -3,7 +3,7 @@ import hashlib
 import json
 from gauntlet_protocol import InvalidEvidence
 
-ENROLLMENT_SHA256 = '89373089a49c99baf893585c8ce3d616676355bcffd7bf758f3c55e861ddae53'
+ENROLLMENT_SHA256 = '287ab432aa03ac8750a6c58257627077c097e80f98794eaf25c058d6acbdcd1f'
 
 def check_enrollment(root, path, expected_digest=ENROLLMENT_SHA256):
     try:
@@ -21,5 +21,6 @@ def check_enrollment(root, path, expected_digest=ENROLLMENT_SHA256):
                 raise ValueError()
             if hashlib.sha256((root/name).read_bytes()).hexdigest()!=entry['sha256']:
                 raise ValueError()
+        return policy
     except (OSError,ValueError,KeyError,TypeError):
         raise InvalidEvidence('test_enrollment_mismatch') from None

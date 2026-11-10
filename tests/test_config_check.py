@@ -27,14 +27,14 @@ def test_example_config_matches_schema() -> None:
     assert example.models.main == "qwen3-nothink"
     assert example.voice.stt_model == "large-v3-turbo"
     assert example.voice.tts_engine == "chatterbox"
-    assert example.voice.dictation_enabled is True
+    assert example.voice.dictation_enabled is False
     assert example.voice.dictation_hotkey == "ctrl+shift+space"
     assert example.voice.dictation_type_out is False
     assert example.server.host == "127.0.0.1"
     assert example.server.remote_access_enabled is False
     assert example.server.enable_voice_on_startup is False
     assert example.server.enable_hotkey_listener is False
-    assert example.resource_mode.enabled is True
+    assert example.resource_mode.enabled is False
     assert example.resource_mode.idle_timeout_minutes == 10
     assert example.resource_mode.deep_sleep_timeout_minutes == 60
     assert example.resource_mode.keep_wake_listener_in_light_sleep is True

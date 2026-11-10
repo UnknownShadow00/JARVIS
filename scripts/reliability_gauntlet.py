@@ -129,6 +129,8 @@ def child(seed, mode, scenario_timeout, run_id):
         files = EXISTING
     elif mode == 'probe':
         files = ['fixtures/reliability_gate_probe.py']
+    elif mode == 'coverage':
+        files = json.loads(Path('/coverage_modules.json').read_text())
     elif mode == 'reconciliation':
         files = ['test_release_security.py', 'test_ue5_security.py', 'test_baseline_enrollment.py']
     elif mode == 'r3':
@@ -163,6 +165,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seed', type=int, default=16401)
     modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--coverage', action='store_true')
     modes.add_argument('--reconciliation', action='store_true')
     modes.add_argument('--r3', action='store_true', help='R3 required inventory regression suite')
     modes.add_argument('--r2', action='store_true', help='R2 scheduler/protocol regression suite')
@@ -178,7 +181,7 @@ def main():
         parser.error('timeouts must be positive and bounded by 600 seconds')
     if args.output.exists():
         parser.error('output already exists; choose a fresh report path')
-    mode = 'reconciliation' if args.reconciliation else 'r3' if args.r3 else 'existing' if args.existing else 'probe' if args.probe else 'r2' if args.r2 else 'case:' + args.probe_case if args.probe_case else 'new'
+    mode = 'coverage' if args.coverage else 'reconciliation' if args.reconciliation else 'r3' if args.r3 else 'existing' if args.existing else 'probe' if args.probe else 'r2' if args.r2 else 'case:' + args.probe_case if args.probe_case else 'new'
     import uuid
     run_id = uuid.uuid4().hex
     root = Path(__file__).resolve().parents[1]
@@ -188,7 +191,7 @@ def main():
                   wall_timeout_seconds=args.timeout, network='isolated namespace', host_access=False)
     # Source identity covers every mounted source/test byte; no private config is mounted.
     inputs = [p for folder in ('app', 'tests') for p in (root / folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
-    inputs += [root / 'scripts/test_enrollment.py', root / 'scripts/test_enrollment.json', root / 'scripts/required_test_inventory.py', root / 'scripts/required_tests.json', root / 'scripts/gauntlet_protocol.py', Path(__file__).resolve(), root / 'config.yaml.example', root / 'pytest.ini']
+    inputs += [root / 'scripts/coverage_modules.json', root / 'scripts/test_enrollment.py', root / 'scripts/test_enrollment.json', root / 'scripts/required_test_inventory.py', root / 'scripts/required_tests.json', root / 'scripts/gauntlet_protocol.py', Path(__file__).resolve(), root / 'config.yaml.example', root / 'pytest.ini']
     report['source_sha256'] = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(inputs)}
     cmd = ['/usr/bin/bwrap', '--unshare-all', '--die-with-parent', '--new-session', '--cap-drop', 'ALL',
            '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin', '--symlink', 'usr/lib', '/lib',
@@ -196,6 +199,14 @@ def main():
            '--ro-bind', str(root / 'app'), '/source/app', '--ro-bind', str(root / 'tests'), '/source/tests',
            '--ro-bind', str(root / 'config.yaml.example'), '/source/config.yaml',
            '--ro-bind', str(root / 'pytest.ini'), '/source/pytest.ini',
+           '--ro-bind', str(root / 'evals'), '/source/evals',
+           '--ro-bind', str(root / 'scripts/sensor_node.py'), '/source/scripts/sensor_node.py',
+           '--ro-bind', str(root / 'config.yaml.example'), '/source/config.yaml.example',
+           '--ro-bind', str(root / 'docker-compose.yml'), '/source/docker-compose.yml',
+           '--ro-bind', str(root / 'frontend/pwa/app.js'), '/source/frontend/pwa/app.js',
+           '--ro-bind', str(root / 'frontend/hologram/app.js'), '/source/frontend/hologram/app.js',
+           '--ro-bind', str(root / 'frontend/electron/preload.js'), '/source/frontend/electron/preload.js',
+           '--ro-bind', str(root / 'scripts/coverage_modules.json'), '/coverage_modules.json',
            '--dir', '/input', '--ro-bind', str(root / 'tests/fixtures/baseline_api.py'), '/input/baseline_api.py',
            '--ro-bind', str(root / 'tests/fixtures/ancestor_hypothesis.py'), '/input/ancestor_hypothesis.py',
            '--symlink', '/source', '/input/source', '--symlink', '/source/tests', '/input/tests',

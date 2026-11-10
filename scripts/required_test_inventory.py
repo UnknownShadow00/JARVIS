@@ -4,7 +4,7 @@ import json
 from gauntlet_protocol import InvalidEvidence, case_identifiers
 
 
-INVENTORY_SHA256 = "cd39d9b7dcb14990ca0bba5fb009e3ff350c3972680cd486f13d16eb3f643b29"
+INVENTORY_SHA256 = "bc7359fc23710f82d780943e15c10a45d4df53380884c84c92699c3bc6139f15"
 
 
 def load_inventory(path, root, mode, *, verify_sources=True, expected_digest=INVENTORY_SHA256):
@@ -25,7 +25,10 @@ def load_inventory(path, root, mode, *, verify_sources=True, expected_digest=INV
         body = json.loads(raw, object_pairs_hook=unique)
         if verify_sources:
             from test_enrollment import check_enrollment
-            check_enrollment(root, root / 'scripts/test_enrollment.json')
+            policy = check_enrollment(root, root / 'scripts/test_enrollment.json')
+            positive_modules = {node.split('::')[0] for name, suite in body['suites'].items()
+                                if name != 'probe' and not name.startswith('case:') for node in suite['nodeids']}
+            require(positive_modules == {name for name, entry in policy['modules'].items() if entry['disposition'] == 'required'})
         require(set(body) == {'version', 'baseline', 'suites'})
         require(body['version'] == 1 and body['baseline'] == 'b199acede69962919933d5bca364a587b1a2e8ca')
         suite = body['suites'][mode]

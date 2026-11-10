@@ -144,9 +144,9 @@ async def test_voice_pipeline_dictation_skips_brain_and_tts(monkeypatch) -> None
     assert handled == ["private transcript"]
 
 
-def test_dictation_config_defaults_present() -> None:
+def test_dictation_config_defaults_require_opt_in() -> None:
     loaded = load_settings()
 
-    assert loaded.voice.dictation_enabled is True
+    assert loaded.voice.dictation_enabled is False
     assert loaded.voice.dictation_hotkey == "ctrl+shift+space"
     assert loaded.voice.dictation_type_out is False

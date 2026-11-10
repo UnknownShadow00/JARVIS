@@ -27,17 +27,22 @@ def main():
         root=Path(tmp)
         for folder in ('app','tests','scripts'):
             shutil.copytree(ROOT/folder,root/folder,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-        for f in ('pytest.ini','config.yaml.example'):shutil.copy2(ROOT/f,root/f)
+        for f in ('pytest.ini','config.yaml.example','docker-compose.yml'):shutil.copy2(ROOT/f,root/f)
+        shutil.copytree(ROOT/'evals',root/'evals',ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+        for f in ('frontend/pwa/app.js','frontend/hologram/app.js','frontend/electron/preload.js'):
+            (root/f).parent.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(ROOT/f,root/f)
         runner=subprocess.check_output(['git','show',BASE+':scripts/reliability_gauntlet.py'],cwd=ROOT,text=True)
-        runner=runner.replace("    elif mode == 'r2':", "    elif mode == 'r3':\n        files = ['test_required_inventory_r3.py']\n    elif mode == 'reconciliation':\n        files = ['test_release_security.py', 'test_ue5_security.py', 'test_baseline_enrollment.py']\n    elif mode == 'r2':")
-        runner=runner.replace("    modes.add_argument('--r2'", "    modes.add_argument('--r3', action='store_true')\n    modes.add_argument('--reconciliation', action='store_true')\n    modes.add_argument('--r2'")
-        runner=runner.replace("mode = 'existing' if args.existing", "mode = 'reconciliation' if args.reconciliation else 'r3' if args.r3 else 'existing' if args.existing")
+        runner=runner.replace("    elif mode == 'r2':", "    elif mode == 'r3':\n        files = ['test_required_inventory_r3.py']\n    elif mode == 'coverage':\n        files = json.loads(Path('/coverage_modules.json').read_text())\n    elif mode == 'reconciliation':\n        files = ['test_release_security.py', 'test_ue5_security.py', 'test_baseline_enrollment.py']\n    elif mode == 'r2':")
+        runner=runner.replace("    modes.add_argument('--r2'", "    modes.add_argument('--r3', action='store_true')\n    modes.add_argument('--coverage', action='store_true')\n    modes.add_argument('--reconciliation', action='store_true')\n    modes.add_argument('--r2'")
+        runner=runner.replace("mode = 'existing' if args.existing", "mode = 'coverage' if args.coverage else 'reconciliation' if args.reconciliation else 'r3' if args.r3 else 'existing' if args.existing")
         runner=runner.replace('print(json.dumps(report, allow_nan=False))', "report['discovered_nodeids'] = [n.removeprefix('/source/') for n in identities]\n    print(json.dumps(report, allow_nan=False))")
         runner=re.sub(r'normalized = validate\(json.loads\(raw, parse_constant=invalid_constant\), run_id=run_id,\s+seed=args.seed, mode=mode, returncode=proc.returncode\)', "discovered = json.loads(raw, parse_constant=invalid_constant)\n            nodeids = discovered.pop('discovered_nodeids')\n            normalized = validate(discovered, run_id=run_id, seed=args.seed, mode=mode, returncode=proc.returncode)\n            normalized['discovered_nodeids'] = nodeids",runner)
         runner=runner.replace("'--size', '67108864'", "'--ro-bind', str(root / 'scripts/required_test_inventory.py'), '/required_test_inventory.py', '--ro-bind', str(root / 'scripts/test_enrollment.py'), '/test_enrollment.py', '--size', '67108864'")
         runner=runner.replace("'--dir', '/input',", "'--dir', '/input', '--ro-bind', str(root / 'tests/fixtures/baseline_api.py'), '/input/baseline_api.py', '--ro-bind', str(root / 'tests/fixtures/ancestor_hypothesis.py'), '/input/ancestor_hypothesis.py',")
+        runner=runner.replace("'--dir', '/input',", "'--ro-bind', str(root / 'evals'), '/source/evals', '--ro-bind', str(root / 'scripts/sensor_node.py'), '/source/scripts/sensor_node.py', '--ro-bind', str(root / 'config.yaml.example'), '/source/config.yaml.example', '--ro-bind', str(root / 'docker-compose.yml'), '/source/docker-compose.yml', '--ro-bind', str(root / 'frontend/pwa/app.js'), '/source/frontend/pwa/app.js', '--ro-bind', str(root / 'frontend/hologram/app.js'), '/source/frontend/hologram/app.js', '--ro-bind', str(root / 'frontend/electron/preload.js'), '/source/frontend/electron/preload.js', '--ro-bind', str(root / 'scripts/coverage_modules.json'), '/coverage_modules.json', "+"'--dir', '/input',")
         (root/'scripts/reliability_gauntlet.py').write_text(runner)
-        modes={'reconciliation':['--reconciliation'], 'new':[], 'r2':['--r2'],'r3':['--r3'],'existing':['--existing'],'probe':['--probe','--scenario-timeout','1']}
+        modes={'coverage':['--coverage'],'reconciliation':['--reconciliation'], 'new':[], 'r2':['--r2'],'r3':['--r3'],'existing':['--existing'],'probe':['--probe','--scenario-timeout','1']}
         cases=('early_setup','early_call','early_teardown','final_exit','skip','crash','interrupt','leak','parameter_secret','empty','worker_crash','partial_output','mismatched_count','session_exit')
         # Probe identities are explicit public fixture identities, not harvested
         # from interrupted executions that cannot produce a terminal report.
@@ -56,7 +61,8 @@ def main():
             nodes=[] if case=='empty' else ['tests/fixtures/reliability_completion_probe.py::'+n+('[SYNTHETIC_PRIVATE_PROBE]' if case=='parameter_secret' else '') for n in names]
             body['suites']['case:'+case]=dict(nodeids=sorted(nodes),sources={})
         for suite in body['suites'].values():
-            paths={n.split('::')[0] for n in suite['nodeids']} | {'pytest.ini', 'config.yaml.example'}
+            paths={n.split('::')[0] for n in suite['nodeids']} | {'pytest.ini', 'config.yaml.example','scripts/coverage_modules.json','scripts/sensor_node.py','docker-compose.yml','frontend/pwa/app.js','frontend/hologram/app.js','frontend/electron/preload.js'}
+            paths.update(str(p.relative_to(ROOT)) for p in (ROOT/'evals').rglob('*') if p.is_file() and '__pycache__' not in p.parts)
             paths.update(str(p.relative_to(ROOT)) for p in (ROOT/'app').rglob('*.py'))
             paths.update(str(p.relative_to(ROOT)) for p in (ROOT/'tests').rglob('conftest.py'))
             suite['sources']={p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in sorted(paths)}
