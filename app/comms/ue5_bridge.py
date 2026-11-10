@@ -28,7 +28,7 @@ class UE5ConnectionManager:
 
     async def connect(self, ws: WebSocket) -> bool:
         if len(self.active) + self._accepting >= 32:
-            await ws.close(code=1008, reason="connection_bound")
+            await self.close(ws, code=1008, reason="connection_bound")
             return False
         self._accepting += 1
         try:
@@ -42,15 +42,26 @@ class UE5ConnectionManager:
         if ws in self.active:
             self.active.remove(ws)
 
+    send_timeout_seconds = 2.0
+
+    async def send(self, ws, data):
+        await asyncio.wait_for(ws.send_json(data), timeout=self.send_timeout_seconds)
+
+    async def close(self, ws, *, code=1011, reason="send_failed"):
+        try:
+            await asyncio.wait_for(ws.close(code=code, reason=reason), timeout=self.send_timeout_seconds)
+            return True
+        except Exception:
+            return False
+
     async def broadcast(self, data: dict[str, Any]) -> None:
-        dead: list[WebSocket] = []
-        for ws in self.active:
+        for ws in tuple(self.active):
             try:
-                await asyncio.wait_for(ws.send_json(data), timeout=2)
+                await self.send(ws, data)
             except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self.disconnect(ws)
+                # Endpoint finally owns registration. Failed/slow live peers
+                # remain counted until their handler actually exits.
+                await self.close(ws)
 
 
 @dataclass(slots=True)

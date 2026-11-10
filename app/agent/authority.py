@@ -68,7 +68,7 @@ def instant(value):
         if dt.tzinfo is None or dt.utcoffset() is None:
             raise ValueError()
         return dt.astimezone(UTC).isoformat()
-    except (ValueError, TypeError, AttributeError) as exc:
+    except (ValueError, TypeError, AttributeError, OverflowError) as exc:
         raise AuthorityError("invalid_time") from exc
 
 

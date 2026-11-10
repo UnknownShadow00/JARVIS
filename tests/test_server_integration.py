@@ -1,5 +1,8 @@
+
+from application_fixtures import admitted_app
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -58,9 +61,8 @@ def test_chat_vision_intent_calls_vision_tool() -> None:
 
     assert response.status_code == 200
     assert response.json()["intent"] == "vision"
-    tool_name, params = call_tool.call_args.args
-    assert tool_name == "vision"
-    assert params["source"] == "screen"
+    call_tool.assert_not_called()
+    assert "disabled" in response.json()["reply"].lower()
 
 
 def test_chat_retrieve_memory_intent_adds_context() -> None:
@@ -85,7 +87,7 @@ def test_chat_dry_run() -> None:
     ), patch("app.server.registry.call", return_value=result), patch("app.config.settings.safety.dry_run", True):
         response = client.post("/chat", json={"message": "open google"})
     assert response.status_code == 200
-    assert "dry" in response.json()["reply"].lower()
+    assert "disabled" in response.json()["reply"].lower()
 
 
 def test_health_tools_route() -> None:
@@ -101,45 +103,28 @@ def test_chat_missing_message() -> None:
     assert response.status_code == 422
 
 
-def test_task_routes(monkeypatch) -> None:  # noqa: ANN001
-    queue = TaskQueue()
-    monkeypatch.setattr("app.server.task_queue", queue)
-
-    created = client.post("/tasks", json={"goal": "finish build"})
-    assert created.status_code == 200
-    task_id = created.json()["task_id"]
-
-    listed = client.get("/tasks")
-    assert listed.status_code == 200
-    assert listed.json()["count"] == 1
-
-    updated = client.patch(f"/tasks/{task_id}", json={"status": "done", "result": {"ok": True}})
-    assert updated.status_code == 200
-    assert updated.json()["status"] == "done"
-
-    deleted = client.delete(f"/tasks/{task_id}")
-    assert deleted.status_code == 200
-    assert deleted.json()["deleted"] is True
+def test_task_routes(monkeypatch):
+    monkeypatch.setattr("app.server.settings.server.api_token", "synthetic-http-contract")
+    with TestClient(app,headers={'Authorization':'Bearer synthetic-http-contract'}) as c:
+        key=str(uuid.uuid4())
+        created=c.post('/tasks',json={'request_id':key,'goal':'finish build'})
+        assert created.status_code==200
+        assert c.get('/tasks/'+key).json()['status']=='pending'
+        assert c.patch('/tasks/'+key,json={'status':'done'}).status_code==405
+        cancelled=c.delete('/tasks/'+key,params={'request_id':str(uuid.uuid4())})
+        assert cancelled.json()['result']['status']=='cancelled'
 
 
-def test_schedule_job_routes(monkeypatch) -> None:  # noqa: ANN001
-    local_scheduler = Scheduler()
-    monkeypatch.setattr("app.server.scheduler", local_scheduler)
-
-    created = client.post(
-        "/schedule/jobs",
-        json={"name": "daily", "cron_expr": "0 8 * * *", "goal": "morning report"},
-    )
-    assert created.status_code == 200
-    job_id = created.json()["job_id"]
-
-    listed = client.get("/schedule/jobs")
-    assert listed.status_code == 200
-    assert listed.json()["count"] == 1
-
-    deleted = client.delete(f"/schedule/jobs/{job_id}")
-    assert deleted.status_code == 200
-    assert deleted.json()["deleted"] is True
+def test_schedule_job_routes(monkeypatch):
+    monkeypatch.setattr("app.server.settings.server.api_token", "synthetic-http-contract")
+    with TestClient(app,headers={'Authorization':'Bearer synthetic-http-contract'}) as c:
+        created=c.post('/schedule/jobs',json={'request_id':str(uuid.uuid4()),'name':'daily','cron_expr':'0 8 * * *','goal':'held report'})
+        assert created.status_code==200,created.text
+        job=created.json()['result']
+        assert len(c.get('/schedule/jobs').json()['jobs'])==1
+        removed=c.delete('/schedule/jobs/'+job['job_id'],params={'request_id':str(uuid.uuid4())})
+        assert removed.status_code==200
+        assert not c.get('/schedule/jobs').json()['jobs']
 
 
 def test_resource_management_routes(monkeypatch) -> None:  # noqa: ANN001

@@ -49,9 +49,9 @@ async def test_default_runtime_missing_store_is_unavailable_and_never_created(tm
     previous,worker=runtime._authority,runtime._execution_worker
     runtime._authority=runtime._execution_worker=None
     monkeypatch.setattr(runtime,'PROJECT_ROOT',tmp_path/'unprovisioned')
-    monkeypatch.setattr(server.settings.server,'api_token','synthetic-unprovisioned-caller')
+    monkeypatch.setattr(server.settings.server,'api_token','synthetic-missing-store')
     try:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-unprovisioned-caller'}) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-missing-store'}) as client:
             result=await client.get('/tasks')
             assert result.status_code==503 and result.json()['error']=='authority_unenrolled_or_missing'
         assert not (tmp_path/'unprovisioned').exists()

@@ -17,7 +17,9 @@ def seed_legacy_fixture(path, ledger=None):
     path=Path(path).absolute()
     if path.exists() or path.is_symlink(): return
     if ledger is not None and (not ledger.initialize or ledger._fd is not None): return
-    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    missing=[];directory=path.parent
+    while not directory.exists():missing.append(directory);directory=directory.parent
+    for directory in reversed(missing):directory.mkdir(mode=0o700)
     fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
     conn=sqlite3.connect(path,isolation_level=None)
     try:

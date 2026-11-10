@@ -17,6 +17,8 @@ class StorageAncestry:
         if '..' in self.path.parts:
             raise AuthorityError('unsafe_storage_ancestor')
         self.identities = self._walk(create=create)
+        if create:
+            self.verify()
 
     def _walk(self, *, create=False):
         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
@@ -31,8 +33,8 @@ class StorageAncestry:
                     except FileNotFoundError:
                         if not create:
                             raise
-                        # The preceding iteration validated this retained parent.
-                        # Refuse races; never follow an absolute mkdir pathname.
+                        # The retained parent has already passed its permission
+                        # checks. Never resolve mkdir through an unchecked path.
                         os.mkdir(part, mode=0o700, dir_fd=fd)
                         next_fd = os.open(part, flags, dir_fd=fd)
                     os.close(fd)
