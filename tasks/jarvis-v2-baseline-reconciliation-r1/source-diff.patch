@@ -2,73 +2,43 @@ diff --git a/app/agent/authority.py b/app/agent/authority.py
 index 26c6170ba..1f23014c1 100644
 --- a/app/agent/authority.py
 +++ b/app/agent/authority.py
-@@ -68,7 +68,7 @@ def instant(value):
-         if dt.tzinfo is None or dt.utcoffset() is None:
-             raise ValueError()
-         return dt.astimezone(UTC).isoformat()
+@@ -71 +71 @@ def instant(value):
 -    except (ValueError, TypeError, AttributeError) as exc:
 +    except (ValueError, TypeError, AttributeError, OverflowError) as exc:
-         raise AuthorityError("invalid_time") from exc
- 
- 
 diff --git a/app/agent/scheduler.py b/app/agent/scheduler.py
 index 746e1c34f..c0c37ab69 100644
 --- a/app/agent/scheduler.py
 +++ b/app/agent/scheduler.py
-@@ -1,4 +1,6 @@
- """One-shot nominal callbacks; admission and last_run share one transaction."""
+@@ -1,0 +2,2 @@
 +import asyncio
 +import inspect
- from datetime import UTC, datetime
- import uuid
- from app.agent.authority import AuthorityError, instant
-@@ -22,6 +24,9 @@ class Scheduler:
-         self._backend = None
-         self._epoch = None
-         self._failure = None
+@@ -24,0 +27,3 @@ class Scheduler:
 +        self._lifecycle = asyncio.Lock()
 +        self._cleanup_task = None
 +        self._cleanup_timeout = 1.0
- 
-     def add_job(self, name, cron_expr, goal, *, request_id, execution=None):
-         a = get_authority()
-@@ -61,11 +66,15 @@ class Scheduler:
-         return get_authority().list_schedules(SERVICE_ACTOR)
- 
-     async def start(self):
+@@ -63,0 +69,6 @@ class Scheduler:
 +        async with self._lifecycle:
 +            await self._start()
 +
 +    async def _start(self):
 +        if self._failure:
 +            raise AuthorityError("scheduler_reconcile_required")
-         if self._backend is not None:
+@@ -65,2 +75,0 @@ class Scheduler:
 -            if self._failure:
 -                raise AuthorityError("scheduler_reconcile_required")
-             return
+@@ -68 +77 @@ class Scheduler:
 -        from apscheduler.schedulers.asyncio import AsyncIOScheduler
 +        from app.agent.scheduler_backend import OwnedAsyncIOScheduler
-         a = get_authority()
-         a.readiness()
-         now = datetime.now(UTC).isoformat()
-@@ -77,35 +86,77 @@ class Scheduler:
-         self._epoch = control["result"]["epoch"]
-         self._failure = None
-         try:
+@@ -80 +89 @@ class Scheduler:
 -            self._backend = AsyncIOScheduler(timezone=UTC)
 +            self._backend = OwnedAsyncIOScheduler(timezone=UTC)
-             for job in jobs:
-                 self._register(job)
-             self._backend.start()
-         except BaseException:
+@@ -85 +94 @@ class Scheduler:
 -            await self.stop()
 +            await self._stop()
-             raise
- 
-     async def stop(self):
+@@ -89 +98 @@ class Scheduler:
 -        backend, self._backend = self._backend, None
 +        # Fence retained callbacks and start attempts before any await.
-+        self._epoch = None
+@@ -90,0 +100,29 @@ class Scheduler:
 +        self._failure = "shutdown_in_progress"
 +        async with self._lifecycle:
 +            await self._stop()
@@ -96,15 +66,11 @@ index 746e1c34f..c0c37ab69 100644
 +                self._failure = "backend_shutdown_failed"
 +
 +    async def _stop(self):
-         self._epoch = None
++        self._epoch = None
 +        self._failure = "shutdown_in_progress"
-         error = None
-         try:
-             get_authority().scheduler_control(SERVICE_ACTOR, str(uuid.uuid4()), False)
-         except BaseException as exc:
-             error = exc
+@@ -96 +133,0 @@ class Scheduler:
 -            self._failure = "durable_stop_unconfirmed"
-         try:
+@@ -98,2 +135,9 @@ class Scheduler:
 -            if backend is not None and backend.running:
 -                backend.shutdown(wait=False)
 +            if self._backend is not None:
@@ -116,27 +82,22 @@ index 746e1c34f..c0c37ab69 100644
 +                # Timeout/caller cancellation must not cancel or abandon the
 +                # cleanup operation. A stop retry awaits the same owned task.
 +                await asyncio.wait_for(asyncio.shield(self._cleanup_task), self._cleanup_timeout)
-         except BaseException:
+@@ -101 +145 @@ class Scheduler:
 -            self._failure = "backend_shutdown_failed"
 +            self._failure = "backend_shutdown_unconfirmed"
-             if error is None:
-                 raise
+@@ -104 +148,4 @@ class Scheduler:
 -            error.add_note("Backend shutdown also failed; local admission is disabled.")
 +            error.add_note("Backend cleanup also remains unconfirmed; restart is fenced.")
 +        else:
 +            self._backend = None
 +            self._cleanup_task = None
-         if error is not None:
+@@ -105,0 +153 @@ class Scheduler:
 +            self._failure = self._failure if self._backend is not None else "durable_stop_unconfirmed"
-             raise error
+@@ -106,0 +155 @@ class Scheduler:
 +        self._failure = None
- 
-     def _register(self, job):
+@@ -108,0 +158,2 @@ class Scheduler:
 +        if self._epoch is None or self._failure:
 +            return
-         if not job["enabled"] or job["removed"]:
-             return
-         from apscheduler.triggers.date import DateTrigger
 diff --git a/app/agent/scheduler_backend.py b/app/agent/scheduler_backend.py
 new file mode 100644
 index 000000000..41383ff24
@@ -226,10 +187,7 @@ diff --git a/app/agent/simulation.py b/app/agent/simulation.py
 index b469eb159..837963a20 100644
 --- a/app/agent/simulation.py
 +++ b/app/agent/simulation.py
-@@ -10,11 +10,19 @@ class Simulator:
-             raise AuthorityError("simulation_disabled")
-         self.authority = authority
- 
+@@ -12,0 +13,8 @@ class Simulator:
 +    def _task(self, task_id, scope):
 +        task = self.authority._get("task", task_id, scope)
 +        # The effect table proves only this legacy SQLite protocol. It cannot
@@ -238,91 +196,40 @@ index b469eb159..837963a20 100644
 +            raise AuthorityError("execution_protocol_mismatch")
 +        return task
 +
-     def claim(self, actor, request_id, task_id):
-         a = self.authority
-         identifier(task_id)
-         def effect(scope):
+@@ -17 +25 @@ class Simulator:
 -            task = a._get("task", task_id, scope)
 +            task = self._task(task_id, scope)
-             row = a._conn.execute("SELECT state FROM outbox WHERE task_id=?", (task_id,)).fetchone()
-             if row[0] != "held" or task["cancel_requested"]:
-                 raise AuthorityError("not_claimable")
-@@ -28,7 +36,7 @@ class Simulator:
-     def apply(self, actor, request_id, task_id, claim_id, generation):
-         a = self.authority
-         def effect(scope):
+@@ -31 +39 @@ class Simulator:
 -            task = a._get("task", task_id, scope)
 +            task = self._task(task_id, scope)
-             row = a._conn.execute("SELECT * FROM outbox WHERE task_id=?", (task_id,)).fetchone()
-             if row["state"] != "simulating" or row["claim_id"] != claim_id or row["generation"] != generation or generation != a.generation:
-                 raise AuthorityError("stale_claim")
-@@ -46,7 +54,7 @@ class Simulator:
-     def acknowledge(self, actor, request_id, task_id, claim_id, generation):
-         a = self.authority
-         def effect(scope):
+@@ -49 +57 @@ class Simulator:
 -            task = a._get("task", task_id, scope)
 +            task = self._task(task_id, scope)
-             row = a._conn.execute("SELECT * FROM outbox WHERE task_id=?", (task_id,)).fetchone()
-             if row["state"] != "simulating" or row["claim_id"] != claim_id or row["generation"] != generation or generation != a.generation:
-                 raise AuthorityError("stale_claim")
-@@ -61,7 +69,7 @@ class Simulator:
-     def reconcile(self, actor, request_id, task_id):
-         a = self.authority
-         def effect(scope):
+@@ -64 +72 @@ class Simulator:
 -            task = a._get("task", task_id, scope)
 +            task = self._task(task_id, scope)
-             row = a._conn.execute("SELECT state,claim_id FROM outbox WHERE task_id=?", (task_id,)).fetchone()
-             if row["state"] != "unknown" or row["claim_id"] is None:
-                 raise AuthorityError("not_unknown")
 diff --git a/app/agent/storage_paths.py b/app/agent/storage_paths.py
 index c0bf33f71..151c998f9 100644
 --- a/app/agent/storage_paths.py
 +++ b/app/agent/storage_paths.py
-@@ -17,6 +17,8 @@ class StorageAncestry:
-         if '..' in self.path.parts:
-             raise AuthorityError('unsafe_storage_ancestor')
-         self.identities = self._walk(create=create)
+@@ -19,0 +20,2 @@ class StorageAncestry:
 +        if create:
 +            self.verify()
- 
-     def _walk(self, *, create=False):
-         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-@@ -31,8 +33,8 @@ class StorageAncestry:
-                     except FileNotFoundError:
-                         if not create:
-                             raise
+@@ -34,2 +36,2 @@ class StorageAncestry:
 -                        # The preceding iteration validated this retained parent.
 -                        # Refuse races; never follow an absolute mkdir pathname.
 +                        # The retained parent has already passed its permission
 +                        # checks. Never resolve mkdir through an unchecked path.
-                         os.mkdir(part, mode=0o700, dir_fd=fd)
-                         next_fd = os.open(part, flags, dir_fd=fd)
-                     os.close(fd)
 diff --git a/app/cli.py b/app/cli.py
 index f4db710e0..3b083e480 100644
 --- a/app/cli.py
 +++ b/app/cli.py
-@@ -31,6 +31,8 @@ def main(argv: list[str] | None = None) -> int:
-             return _wake(args)
-         if args.command == "status":
-             return _status(args)
+@@ -33,0 +34,2 @@ def main(argv: list[str] | None = None) -> int:
 +        if args.command == "ready":
 +            return _ready(args)
-         if args.command == "shutdown":
-             return _shutdown(args)
-         if args.command == "tasks":
-@@ -69,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
- 
-     status = subparsers.add_parser("status", help="Show runtime state and resource report.")
-     status.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+@@ -71,0 +74 @@ def build_parser() -> argparse.ArgumentParser:
 +    subparsers.add_parser("ready", help="Check authenticated authority readiness; exits nonzero when unavailable.")
- 
-     shutdown = subparsers.add_parser("shutdown", help="Unload models and stop JARVIS-owned runtime processes.")
-     shutdown.add_argument("--offline",action="store_true",help="Compatibility flag; cannot authorize local host-control effects.")
-@@ -169,6 +172,20 @@ def _status(args: argparse.Namespace) -> int:
-     return 0
- 
- 
+@@ -171,0 +175,14 @@ def _status(args: argparse.Namespace) -> int:
 +def _ready(args: argparse.Namespace) -> int:
 +    if not settings.server.api_token.strip():
 +        print("Authority readiness requires a configured Bearer credential.", file=sys.stderr)
@@ -337,26 +244,14 @@ index f4db710e0..3b083e480 100644
 +    return 0
 +
 +
- def _shutdown(args: argparse.Namespace) -> int:
-     payload=_post('/resource/shutdown')
-     if payload is None:raise ClientControlError('offline_host_control_disabled_no_local_fallback')
 diff --git a/app/comms/ue5_bridge.py b/app/comms/ue5_bridge.py
 index dac4f5392..9eb344ccb 100644
 --- a/app/comms/ue5_bridge.py
 +++ b/app/comms/ue5_bridge.py
-@@ -28,7 +28,7 @@ class UE5ConnectionManager:
- 
-     async def connect(self, ws: WebSocket) -> bool:
-         if len(self.active) + self._accepting >= 32:
+@@ -31 +31 @@ class UE5ConnectionManager:
 -            await ws.close(code=1008, reason="connection_bound")
 +            await self.close(ws, code=1008, reason="connection_bound")
-             return False
-         self._accepting += 1
-         try:
-@@ -42,15 +42,26 @@ class UE5ConnectionManager:
-         if ws in self.active:
-             self.active.remove(ws)
- 
+@@ -44,0 +45,12 @@ class UE5ConnectionManager:
 +    send_timeout_seconds = 2.0
 +
 +    async def send(self, ws, data):
@@ -369,61 +264,40 @@ index dac4f5392..9eb344ccb 100644
 +        except Exception:
 +            return False
 +
-     async def broadcast(self, data: dict[str, Any]) -> None:
+@@ -46,2 +58 @@ class UE5ConnectionManager:
 -        dead: list[WebSocket] = []
 -        for ws in self.active:
 +        for ws in tuple(self.active):
-             try:
+@@ -49 +60 @@ class UE5ConnectionManager:
 -                await asyncio.wait_for(ws.send_json(data), timeout=2)
 +                await self.send(ws, data)
-             except Exception:
+@@ -51,3 +62,3 @@ class UE5ConnectionManager:
 -                dead.append(ws)
 -        for ws in dead:
 -            self.disconnect(ws)
 +                # Endpoint finally owns registration. Failed/slow live peers
 +                # remain counted until their handler actually exits.
 +                await self.close(ws)
- 
- 
- @dataclass(slots=True)
 diff --git a/app/config.py b/app/config.py
 index ba257d7db..a4a0ffcf3 100644
 --- a/app/config.py
 +++ b/app/config.py
-@@ -137,13 +137,13 @@ class ServerConfig(StrictModel):
- 
- 
- class ResourceModeConfig(StrictModel):
+@@ -140 +140 @@ class ResourceModeConfig(StrictModel):
 -    enabled: bool = True
 +    enabled: bool = False
-     idle_timeout_minutes: int = 10
-     deep_sleep_timeout_minutes: int = 60
-     keep_wake_listener_in_light_sleep: bool = True
-     keep_wake_listener_in_deep_sleep: bool = False
+@@ -145,2 +145,2 @@ class ResourceModeConfig(StrictModel):
 -    auto_light_sleep: bool = True
 -    auto_deep_sleep: bool = True
 +    auto_light_sleep: bool = False
 +    auto_deep_sleep: bool = False
-     stop_server_on_auto_deep_sleep: bool = True
-     preload_primary_model_on_wake: bool = False
-     preload_keep_alive: str = "5m"
 diff --git a/app/server.py b/app/server.py
 index cf829c176..e9679eebe 100644
 --- a/app/server.py
 +++ b/app/server.py
-@@ -58,7 +58,7 @@ class ConnectionManager:
- 
-     async def connect(self, ws: WebSocket) -> bool:
-         if len(self.active) + self._accepting >= 32:
+@@ -61 +61 @@ class ConnectionManager:
 -            await ws.close(code=1008, reason="connection_bound")
 +            await self.close(ws, code=1008, reason="connection_bound")
-             return False
-         self._accepting += 1
-         try:
-@@ -72,26 +72,31 @@ class ConnectionManager:
-         if ws in self.active:
-             self.active.remove(ws)
- 
+@@ -74,0 +75,12 @@ class ConnectionManager:
 +    send_timeout_seconds = 2.0
 +
 +    async def send(self, ws, data):
@@ -436,23 +310,21 @@ index cf829c176..e9679eebe 100644
 +        except Exception:
 +            return False
 +
-     async def broadcast(self, data: dict[str, Any]) -> None:
+@@ -76,2 +88 @@ class ConnectionManager:
 -        dead = []
 -        for ws in self.active:
 +        for ws in tuple(self.active):
-             try:
+@@ -79 +90 @@ class ConnectionManager:
 -                await asyncio.wait_for(ws.send_json(data), timeout=2)
 +                await self.send(ws, data)
-             except Exception:
+@@ -81,3 +92,3 @@ class ConnectionManager:
 -                dead.append(ws)
 -        for ws in dead:
 -            self.disconnect(ws)
 +                # Endpoint finally owns registration. Failed/slow live peers
 +                # remain counted until their handler actually exits.
 +                await self.close(ws)
- 
-     async def disconnect_all(self) -> int:
-         closed = 0
+@@ -87,8 +98,2 @@ class ConnectionManager:
 -        for ws in list(self.active):
 -            try:
 -                await ws.close(code=1001, reason="JARVIS entering sleep mode")
@@ -463,80 +335,37 @@ index cf829c176..e9679eebe 100644
 -                self.disconnect(ws)
 +        for ws in tuple(self.active):
 +            closed += await self.close(ws, code=1001, reason="JARVIS entering sleep mode")
-         return closed
- 
- 
-@@ -129,7 +134,7 @@ async def lifespan(app: FastAPI):
-     execution_worker = get_execution_worker()
-     try:
-         authority.readiness()
+@@ -132 +137 @@ async def lifespan(app: FastAPI):
 -        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token:
 +        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token.strip():
-             from app.agent.authority import AuthorityError
-             raise AuthorityError("transport_client_authentication_required")
-         await scheduler.start()
-@@ -238,11 +243,11 @@ def _ws_origin_allowed(websocket: WebSocket) -> bool:
- async def _reject_unauthorized_websocket(websocket: WebSocket, path: str) -> bool:
-     if not _ws_origin_allowed(websocket):
-         audit.log("ws_origin_rejected", {"path": path, "client": str(websocket.client)})
+@@ -241 +246 @@ async def _reject_unauthorized_websocket(websocket: WebSocket, path: str) -> boo
 -        await websocket.close(code=1008, reason="Origin not allowed")
 +        await manager.close(websocket, code=1008, reason="Origin not allowed")
-         return True
-     if not _ws_authorized(websocket):
-         audit.log("auth_rejected", {"path": path, "client": str(websocket.client)})
+@@ -245 +250 @@ async def _reject_unauthorized_websocket(websocket: WebSocket, path: str) -> boo
 -        await websocket.close(code=1008, reason="Unauthorized")
 +        await manager.close(websocket, code=1008, reason="Unauthorized")
-         return True
-     return False
- 
-@@ -474,23 +479,23 @@ async def ws_endpoint(websocket: WebSocket) -> None:
-                 return
-             raw = frame.get("text")
-             if type(raw) is not str:
+@@ -477 +482 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -                await websocket.close(code=1008, reason="text_required")
 +                await manager.close(websocket, code=1008, reason="text_required")
-                 return
-             if len(raw)>8192 or len(raw.encode('utf-8'))>8192:
+@@ -480 +485 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -                await websocket.close(code=1009,reason="message_bound");return
 +                await manager.close(websocket, code=1009,reason="message_bound");return
-             try:
-                 data = json.loads(raw)
-             except json.JSONDecodeError:
-                 message = raw
-             else:
-                 if type(data) is not dict or type(data.get('message')) is not str:
+@@ -487 +492 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -                    await websocket.close(code=1008,reason="invalid_message");return
 +                    await manager.close(websocket, code=1008,reason="invalid_message");return
-                 message=data['message']
-             if not message.strip():
+@@ -490 +495 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -                await websocket.close(code=1008,reason="invalid_message");return
 +                await manager.close(websocket, code=1008,reason="invalid_message");return
- 
-             if not await resource_manager.ensure_awake_for_interaction("websocket"):
+@@ -493 +498 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -                await websocket.send_json(
 +                await manager.send(websocket,
-                     {
-                         "type": "sleep",
-                         "state": resource_manager.state.value,
-@@ -529,29 +534,20 @@ async def ws_endpoint(websocket: WebSocket) -> None:
-                         "dry_run": settings.safety.dry_run,
-                         "active": is_active(),
-                     }
+@@ -532 +537 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -                    await websocket.send_json(response)
 +                    await manager.send(websocket, response)
-                     await manager.broadcast(response)
-             finally:
-                 current_token.reset()
-                 await manager.broadcast({"type": "listening", "active": False})
-     except WebSocketDisconnect:
-         pass
+@@ -538,0 +544,2 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 +    except TimeoutError:
 +        await manager.close(websocket)
-     finally:
-         manager.disconnect(websocket)
-         audit.log("ws_disconnect", {"client": str(websocket.client)})
- 
- 
+@@ -544,11 +550,0 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 -_UE5_CLOSE_TIMEOUT = 2.0
 -
 -
@@ -548,97 +377,48 @@ index cf829c176..e9679eebe 100644
 -        pass
 -
 -
- @app.websocket("/ue5")
- async def ue5_endpoint(websocket: WebSocket) -> None:
-     from app.comms.ue5_bridge import ue5_manager
-@@ -566,12 +562,15 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
-             frame = await websocket.receive()
-             if frame["type"] == "websocket.disconnect":
-                 return
+@@ -568,0 +565,3 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
 +            if frame.get("bytes") is not None:
 +                await ue5_manager.close(websocket, code=1003, reason="text_frames_required")
 +                return
-             raw = frame.get("text")
-             if type(raw) is not str:
+@@ -571 +570 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
 -                await _close_ue5(websocket, code=1008, reason="text_required")
 +                await ue5_manager.close(websocket, code=1008, reason="text_required")
-                 return
-             if len(raw) > 8192 or len(raw.encode("utf-8")) > 8192:
+@@ -574 +573 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
 -                await _close_ue5(websocket, code=1009, reason="message_bound")
 +                await ue5_manager.close(websocket, code=1009, reason="message_bound")
-                 return
-     except WebSocketDisconnect:
-         pass
 diff --git a/config.yaml.example b/config.yaml.example
 index ac4886ee9..703b75025 100644
 --- a/config.yaml.example
 +++ b/config.yaml.example
-@@ -39,8 +39,8 @@ safety:
-   approval_mode: "balanced"
- 
-   # Dry run: JARVIS narrates what it would do instead of doing it
+@@ -42,2 +42,2 @@ safety:
 -  # Set true during early testing. false for normal operation.
 -  dry_run: false
 +  # Keep true for the offline release candidate; this flag cannot authorize real tools.
 +  dry_run: true
- 
-   # Confidence threshold — below this, JARVIS asks before acting
-   # even on Level 1 actions
-@@ -76,7 +76,7 @@ voice:
- 
-   # Push-to-talk fallback hotkey
-   push_to_talk_key: "ctrl+space"
+@@ -79 +79 @@ voice:
 -  dictation_enabled: true
 +  dictation_enabled: false
-   dictation_hotkey: "ctrl+shift+space"
-   dictation_type_out: false
- 
-@@ -86,7 +86,7 @@ voice:
- 
- # ─── Boot Sequence ───────────────────────────────────────────
- boot:
+@@ -89 +89 @@ boot:
 -  enabled: true
 +  enabled: false
-   music_file: "./assets/audio/boot_intro.wav"
-   music_volume: 0.7
-   animation_delay_ms: 500
-@@ -106,9 +106,8 @@ server:
-   ue5_enabled: false  # set true when UE5 MetaHuman project is running
-   tailscale_hostname: ""   # fill in your Tailscale machine name
-   # Bearer token for all HTTP routes (except /health) and WebSocket connects.
+@@ -109,3 +109,2 @@ server:
 -  # Empty refuses authority routes (tasks, receipts, schedules, execution, /ready).
 -  # Other local assistant interfaces retain legacy local mode; use a private token
 -  # for the whole deployment. A token never enables real tools or host controls.
 +  # Empty/whitespace tokens refuse authority routes, including /ready on loopback.
 +  # Configure a private bearer before controlled testing; real tools remain disabled.
-   # Env override: JARVIS_API_TOKEN
-   api_token: ""
-   remote_access_enabled: false
-@@ -123,13 +122,13 @@ server:
- 
- # Resource management controls ACTIVE, LIGHT_SLEEP, DEEP_SLEEP, and WAKING runtime states.
- resource_mode:
+@@ -126 +125 @@ resource_mode:
 -  enabled: true
 +  enabled: false
-   idle_timeout_minutes: 10
-   deep_sleep_timeout_minutes: 60
-   keep_wake_listener_in_light_sleep: true
-   keep_wake_listener_in_deep_sleep: false
+@@ -131,2 +130,2 @@ resource_mode:
 -  auto_light_sleep: true
 -  auto_deep_sleep: true
 +  auto_light_sleep: false
 +  auto_deep_sleep: false
-   stop_server_on_auto_deep_sleep: true
-   preload_primary_model_on_wake: false
-   preload_keep_alive: "5m"
-@@ -221,6 +220,6 @@ logging:
- 
- # ─── OpenJarvis (Phase 4+ trace optimization) ────────────────
- openjarvis:
+@@ -224 +223 @@ openjarvis:
 -  trace_logging_enabled: true   # Always on — collect data from day one
 +  trace_logging_enabled: false   # Explicit opt-in; avoid retaining sensitive interactions by default.
-   optimization_enabled: false   # Off until 500+ interactions collected
-   traces_dir: "./data/traces"
 diff --git a/scripts/gauntlet_protocol.py b/scripts/gauntlet_protocol.py
 new file mode 100644
 index 000000000..79620fb20
@@ -5267,17 +5047,11 @@ diff --git a/tests/synthetic_authority.py b/tests/synthetic_authority.py
 index 8aa9ad9b7..ac9f7a761 100644
 --- a/tests/synthetic_authority.py
 +++ b/tests/synthetic_authority.py
-@@ -17,7 +17,9 @@ def seed_legacy_fixture(path, ledger=None):
-     path=Path(path).absolute()
-     if path.exists() or path.is_symlink(): return
-     if ledger is not None and (not ledger.initialize or ledger._fd is not None): return
+@@ -20 +20,3 @@ def seed_legacy_fixture(path, ledger=None):
 -    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
 +    missing=[];directory=path.parent
 +    while not directory.exists():missing.append(directory);directory=directory.parent
 +    for directory in reversed(missing):directory.mkdir(mode=0o700)
-     fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
-     conn=sqlite3.connect(path,isolation_level=None)
-     try:
 diff --git a/tests/test_agent_stubs.py b/tests/test_agent_stubs.py
 index cb7d8d4c7..7bfadff40 100644
 --- a/tests/test_agent_stubs.py
@@ -5479,85 +5253,42 @@ diff --git a/tests/test_enrollment_app.py b/tests/test_enrollment_app.py
 index 6e9a92c5f..c0357d6db 100644
 --- a/tests/test_enrollment_app.py
 +++ b/tests/test_enrollment_app.py
-@@ -49,9 +49,9 @@ async def test_default_runtime_missing_store_is_unavailable_and_never_created(tm
-     previous,worker=runtime._authority,runtime._execution_worker
-     runtime._authority=runtime._execution_worker=None
-     monkeypatch.setattr(runtime,'PROJECT_ROOT',tmp_path/'unprovisioned')
+@@ -52 +52 @@ async def test_default_runtime_missing_store_is_unavailable_and_never_created(tm
 -    monkeypatch.setattr(server.settings.server,'api_token','synthetic-unprovisioned-caller')
 +    monkeypatch.setattr(server.settings.server,'api_token','synthetic-missing-store')
-     try:
+@@ -54 +54 @@ async def test_default_runtime_missing_store_is_unavailable_and_never_created(tm
 -        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-unprovisioned-caller'}) as client:
 +        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-missing-store'}) as client:
-             result=await client.get('/tasks')
-             assert result.status_code==503 and result.json()['error']=='authority_unenrolled_or_missing'
-         assert not (tmp_path/'unprovisioned').exists()
 diff --git a/tests/test_execution_pipeline.py b/tests/test_execution_pipeline.py
 index 5395498d7..e3824dffa 100644
 --- a/tests/test_execution_pipeline.py
 +++ b/tests/test_execution_pipeline.py
-@@ -17,15 +17,8 @@ from synthetic_authority import fixture_authority as Authority
- from app.agent.execution import (DisabledExecutor, ExecutionPipeline, ExecutionWorker,
-                                  ExecutorRegistry, SimulatedPolicy, SyntheticExecutor, phase_id)
- from app.agent import runtime
+@@ -20 +19,0 @@ from app.agent import runtime
 -from app.config import settings
- 
- ACTOR = runtime.SERVICE_ACTOR
+@@ -23,6 +21,0 @@ ACTOR = runtime.SERVICE_ACTOR
 -API_HEADERS = {"Authorization": "Bearer synthetic-execution-api-regression"}
 -
 -
 -@pytest.fixture(autouse=True)
 -def authenticated_api_identity(monkeypatch):
 -    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-execution-api-regression')
- 
- 
- def key():
-@@ -33,7 +26,9 @@ def key():
- 
- 
- @pytest.fixture
+@@ -36 +29,3 @@ def key():
 -def env(tmp_path):
 +def env(tmp_path,monkeypatch):
 +    from app.config import settings
 +    monkeypatch.setattr(settings.server,"api_token","synthetic-pipeline-client")
-     a = Authority(tmp_path / 'state' / 'queue.sqlite', allow_simulation=True)
-     p = ExecutionPipeline(a, SimulatedPolicy(ACTOR.scope), enabled=True)
-     yield a, p
-@@ -283,7 +278,7 @@ async def test_real_api_worker_receipts_and_restart(env):
-     app.include_router(router)
-     try:
-         await worker.start()
+@@ -286 +281 @@ async def test_real_api_worker_receipts_and_restart(env):
 -        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
 +        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
-             op = key()
-             body = dict(request_id=op, goal='API pipeline', capability='synthetic.echo', payload={'value': 'through API'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
-             admitted = await client.post('/execution/tasks', json=body)
-@@ -418,7 +413,7 @@ async def test_scheduled_cancellation_policy_and_stopped_admission(env):
-     app.include_router(router)
-     try:
-         await worker.start()
+@@ -421 +416 @@ async def test_scheduled_cancellation_policy_and_stopped_admission(env):
 -        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
 +        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
-             body = dict(request_id=key(), goal='schedule', name='scheduled echo', cron_expr='* * * * *', execution=dict(capability='shell.exec', payload={'value':'no'}))
-             assert (await client.post('/schedule/jobs', json=body)).status_code == 400
-             assert a.list_schedules(ACTOR) == []
-@@ -517,7 +512,7 @@ async def test_admission_body_stream_bound_precedes_json(env):
-     app.include_router(router)
-     app.add_middleware(AdmissionBodyLimit)
-     try:
+@@ -520 +515 @@ async def test_admission_body_stream_bound_precedes_json(env):
 -        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
 +        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
-             response=await client.post('/execution/tasks',content=b'x'*262145)
-             assert response.status_code==413
-             async def chunks():
-@@ -548,7 +543,7 @@ async def test_public_mutations_cannot_reserve_internal_phase_receipts(env):
-         await worker.stop()
-         op=submit(p)['request_id']
-         reserved=phase_id(op,'publish')
+@@ -551 +546 @@ async def test_public_mutations_cannot_reserve_internal_phase_receipts(env):
 -        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
 +        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
-             assert (await client.post('/tasks',json={'request_id':reserved,'goal':'reserve internal receipt'})).status_code==422
-             assert (await client.delete('/tasks/'+op,params={'request_id':reserved})).status_code==422
-             assert (await client.delete('/schedule/jobs/'+op,params={'request_id':reserved})).status_code==422
 diff --git a/tests/test_gauntlet_protocol_r2.py b/tests/test_gauntlet_protocol_r2.py
 new file mode 100644
 index 000000000..91cadc491
@@ -5722,29 +5453,14 @@ diff --git a/tests/test_release_security.py b/tests/test_release_security.py
 index 33e52f6d3..268d90c7a 100644
 --- a/tests/test_release_security.py
 +++ b/tests/test_release_security.py
-@@ -39,7 +39,8 @@ def admitted(tmp_path, monkeypatch):
-     ('/tasks/'+str(uuid.uuid4())+'?request_id='+str(uuid.uuid4()),'DELETE'),
-     ('/requests/'+str(uuid.uuid4()),'GET'),('/schedule/jobs','GET'),('/schedule/jobs','POST'),
-     ('/schedule/jobs/'+str(uuid.uuid4())+'?request_id='+str(uuid.uuid4()),'DELETE'),
+@@ -42 +42,2 @@ def admitted(tmp_path, monkeypatch):
 -    ('/execution/tasks','POST'),('/execution/status','GET'),('/operator/diagnostics','GET')])
 +    ('/ready','GET'),('/execution/tasks','POST'),('/execution/status','GET'),('/operator/diagnostics','GET')],
 +    ids=['tasks-read','tasks-create','task-read','task-cancel','receipt','schedule-read','schedule-create','schedule-remove','ready','execution-create','execution-status','operator-diagnostics'])
- def test_empty_token_authority_access_refused_even_embedded(admitted,monkeypatch,path,method):
-     monkeypatch.setattr(settings.server,'api_token','')
-     app=FastAPI();app.include_router(router)
-@@ -83,7 +84,7 @@ def test_websocket_binary_and_oversize_cleanup(admitted,path,payload):
-         if isinstance(payload,bytes):c.send_bytes(payload)
-         else:c.send_text(payload)
-         with pytest.raises(WebSocketDisconnect) as e:c.receive_json()
+@@ -86 +87 @@ def test_websocket_binary_and_oversize_cleanup(admitted,path,payload):
 -        assert e.value.code in (1008,1009)
 +        assert e.value.code in (1003,1008,1009)
-     assert len(manager.active)==before
- 
- 
-@@ -139,3 +140,103 @@ def test_parent_replaced_with_same_leaf_inodes_fences_writer(tmp_path):
-         with pytest.raises(AuthorityError,match='storage_ancestor_replaced'):a.submit(runtime.SERVICE_ACTOR,str(uuid.uuid4()),'must not write')
-         assert a._poisoned
-     finally:a.close()
+@@ -141,0 +143,100 @@ def test_parent_replaced_with_same_leaf_inodes_fences_writer(tmp_path):
 +
 +
 +@pytest.mark.asyncio
@@ -6237,12 +5953,12 @@ diff --git a/tests/test_scheduler.py b/tests/test_scheduler.py
 index afee5db79..16ff6eb24 100644
 --- a/tests/test_scheduler.py
 +++ b/tests/test_scheduler.py
-@@ -1,56 +1,18 @@
+@@ -1,2 +1,2 @@
 -from __future__ import annotations
 -
 +"""Durable schedules replace independent legacy JSON ScheduledJob objects."""
 +import uuid
- import pytest
+@@ -4,53 +4,15 @@ import pytest
 -
 -from app.agent.scheduler import ScheduledJob, Scheduler
 -
@@ -7148,53 +6864,28 @@ diff --git a/tests/test_server_auth.py b/tests/test_server_auth.py
 index 7575839af..710b9edbe 100644
 --- a/tests/test_server_auth.py
 +++ b/tests/test_server_auth.py
-@@ -27,7 +27,7 @@ def api_token(monkeypatch) -> str:
-     return token
- 
- 
+@@ -30 +30 @@ def api_token(monkeypatch) -> str:
 -def test_blank_token_does_not_grant_task_authority() -> None:
 +def test_empty_token_cannot_access_authority() -> None:
-     assert settings.server.api_token == ""
-     response = client.get("/tasks")
-     assert response.status_code == 401
 diff --git a/tests/test_server_integration.py b/tests/test_server_integration.py
 index df1dcc55d..553115879 100644
 --- a/tests/test_server_integration.py
 +++ b/tests/test_server_integration.py
-@@ -1,5 +1,8 @@
+@@ -0,0 +1,2 @@
 +
 +from application_fixtures import admitted_app
- from types import SimpleNamespace
- from unittest.mock import AsyncMock, patch
+@@ -2,0 +5 @@ from unittest.mock import AsyncMock, patch
 +import uuid
- 
- from fastapi.testclient import TestClient
- 
-@@ -58,9 +61,8 @@ def test_chat_vision_intent_calls_vision_tool() -> None:
- 
-     assert response.status_code == 200
-     assert response.json()["intent"] == "vision"
+@@ -61,3 +64,2 @@ def test_chat_vision_intent_calls_vision_tool() -> None:
 -    tool_name, params = call_tool.call_args.args
 -    assert tool_name == "vision"
 -    assert params["source"] == "screen"
 +    call_tool.assert_not_called()
 +    assert "disabled" in response.json()["reply"].lower()
- 
- 
- def test_chat_retrieve_memory_intent_adds_context() -> None:
-@@ -85,7 +87,7 @@ def test_chat_dry_run() -> None:
-     ), patch("app.server.registry.call", return_value=result), patch("app.config.settings.safety.dry_run", True):
-         response = client.post("/chat", json={"message": "open google"})
-     assert response.status_code == 200
+@@ -88 +90 @@ def test_chat_dry_run() -> None:
 -    assert "dry" in response.json()["reply"].lower()
 +    assert "disabled" in response.json()["reply"].lower()
- 
- 
- def test_health_tools_route() -> None:
-@@ -101,45 +103,28 @@ def test_chat_missing_message() -> None:
-     assert response.status_code == 422
- 
- 
+@@ -104,39 +106,22 @@ def test_chat_missing_message() -> None:
 -def test_task_routes(monkeypatch) -> None:  # noqa: ANN001
 -    queue = TaskQueue()
 -    monkeypatch.setattr("app.server.task_queue", queue)
@@ -7256,9 +6947,6 @@ index df1dcc55d..553115879 100644
 +        removed=c.delete('/schedule/jobs/'+job['job_id'],params={'request_id':str(uuid.uuid4())})
 +        assert removed.status_code==200
 +        assert not c.get('/schedule/jobs').json()['jobs']
- 
- 
- def test_resource_management_routes(monkeypatch) -> None:  # noqa: ANN001
 diff --git a/tests/test_task_queue_callers.py b/tests/test_task_queue_callers.py
 index 575728240..fe40f8c5a 100644
 --- a/tests/test_task_queue_callers.py
@@ -7594,7 +7282,7 @@ diff --git a/tests/test_task_queue_persistence.py b/tests/test_task_queue_persis
 index 13747e5f7..87d2be77c 100644
 --- a/tests/test_task_queue_persistence.py
 +++ b/tests/test_task_queue_persistence.py
-@@ -1,364 +1,31 @@
+@@ -1,20 +1 @@
 -"""Offline source-level checks; deliberately not full application integration.
 -
 -Load the real definitions with only audit/default-singleton wiring isolated. Never
@@ -7616,7 +7304,7 @@ index 13747e5f7..87d2be77c 100644
 -import unittest
 -from unittest import mock
 +"""Receipt-bound persistence replaces retired JSON rewrites and rollback guessing."""
- import uuid
+@@ -22,343 +3,29 @@ import uuid
 -
 -ROOT = Path(__file__).resolve().parents[1]
 -
@@ -7993,7 +7681,7 @@ diff --git a/tests/test_task_queue_store_safety.py b/tests/test_task_queue_store
 index 32c013ec1..38b23f5cb 100644
 --- a/tests/test_task_queue_store_safety.py
 +++ b/tests/test_task_queue_store_safety.py
-@@ -1,264 +1,18 @@
+@@ -1,7 +1 @@
 -"""Offline collision/quarantine regressions; no live application imports."""
 -from __future__ import annotations
 -
@@ -8002,7 +7690,7 @@ index 32c013ec1..38b23f5cb 100644
 -import json
 -import os
 +"""Independent legacy stores are refused before reading or writing their bytes."""
- from pathlib import Path
+@@ -9,256 +3,16 @@ from pathlib import Path
 -import subprocess
 -import sys
 -import tempfile
@@ -8279,46 +7967,19 @@ diff --git a/tests/test_ue5_security.py b/tests/test_ue5_security.py
 index 087faf59a..8a21810b1 100644
 --- a/tests/test_ue5_security.py
 +++ b/tests/test_ue5_security.py
-@@ -72,7 +72,7 @@ def test_valid_text_and_peer_disconnect_cleanup(manager, code):
- def test_binary_frames_close_cleanly(manager, payload):
-     _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
-     assert sent[-1]["type"] == "websocket.close"
+@@ -75 +75 @@ def test_binary_frames_close_cleanly(manager, payload):
 -    assert sent[-1]["code"] == 1008
 +    assert sent[-1]["code"] == 1003
-     assert manager.active == []
- 
- 
-@@ -166,7 +166,7 @@ def test_repeated_hostile_sessions_leave_no_persistent_entries_or_secrets(manage
-             ws.send_bytes(b"x")
-             with pytest.raises(WebSocketDisconnect) as closed:
-                 ws.receive_text()
+@@ -169 +169 @@ def test_repeated_hostile_sessions_leave_no_persistent_entries_or_secrets(manage
 -            assert closed.value.code == 1008
 +            assert closed.value.code == 1003
-         assert manager.active == []
-     assert TOKEN not in repr(events)
-     assert "authorization" not in repr(events).lower()
-@@ -230,7 +230,7 @@ def test_connection_bound_refuses_growth_and_reclaims_capacity(manager):
- 
- 
- def test_slow_close_cannot_retain_registration(manager, monkeypatch):
+@@ -233 +233 @@ def test_slow_close_cannot_retain_registration(manager, monkeypatch):
 -    monkeypatch.setattr(server, "_UE5_CLOSE_TIMEOUT", 0.01)
 +    monkeypatch.setattr(manager, "send_timeout_seconds", 0.01)
- 
-     async def slow(message):
-         if message["type"] == "websocket.close":
-@@ -239,7 +239,7 @@ def test_slow_close_cannot_retain_registration(manager, monkeypatch):
-     _, sent = asyncio.run(exercise([
-         {"type": "websocket.receive", "bytes": b"x"},
-     ], on_send=slow))
+@@ -242 +242 @@ def test_slow_close_cannot_retain_registration(manager, monkeypatch):
 -    assert sent[-1]["code"] == 1008
 +    assert sent[-1]["code"] == 1003
-     assert manager.active == []
- 
- 
-@@ -248,10 +248,9 @@ def test_close_exception_cannot_retain_registration(manager):
-         if message["type"] == "websocket.close":
-             raise RuntimeError("synthetic close failure")
- 
+@@ -251,4 +251,3 @@ def test_close_exception_cannot_retain_registration(manager):
 -    with pytest.raises(RuntimeError, match="synthetic close failure"):
 -        asyncio.run(exercise([
 -            {"type": "websocket.receive", "bytes": b"x"},
@@ -8326,6 +7987,3 @@ index 087faf59a..8a21810b1 100644
 +    asyncio.run(exercise([
 +        {"type": "websocket.receive", "bytes": b"x"},
 +    ], on_send=broken))
-     assert manager.active == []
- 
- 
