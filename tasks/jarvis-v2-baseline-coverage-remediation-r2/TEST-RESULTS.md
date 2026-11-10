@@ -47,3 +47,17 @@ python3 -B tasks/jarvis-v2-baseline-coverage-remediation-r2/accept_snapshot.py /
 ```
 
 The driver records source commit/Git tree, input hashes, required inventory/module-policy digests, snapshot path, all subprocess commands/exits, positive identities/phases and unique/repeat counts. It does not regenerate authority. Snapshot is read-only and outputs separate, owner-restricted. An ordinary source writer or same-UID/root compromise is outside independent-custody guarantees. Review RESULT.json and evidence digests, not only exit0.
+
+
+## Fresh checks during recovery
+
+The committed sealed candidate `18a9d82c1` has the same 266 acceptance-input hashes as tested source `5e1d5af0c`. Fresh tests use the retained read-only snapshot and the existing networkless unprivileged bwrap launcher. `resume-verification/RESULT.json` records commands and all five subprocess exits (all zero); the per-suite JSON records child/gate exits and all phases.
+
+| Fresh suite | Pass | Fail | Error | Skip | Incomplete | Child/gate exit |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| coverage | 217 | 0 | 0 | 0 | 0 | 0 / 0 |
+| reconciliation | 66 | 0 | 0 | 0 | 0 | 0 / 0 |
+
+The 11 adversarial contracts pass again: ten deliberately blocked/failed inner gates (expected exits 1 or 2) and one successful no-regeneration trap (exit 0); the contract driver exits 0. Five disposable-copy integrity probes pass. These are not new application-test identities. All 886 distinct final positives, 379 seeded repeats and the retained 22/14 contract matrices were independently verified from their identities, phases, exits, source bindings and SHA256 manifests before reusing unchanged results. Fresh 283 positives are repeats within 886, not 283 additional cases.
+
+Read-only evidence verification is reproducible locally with `python3 -B tasks/jarvis-v2-baseline-coverage-remediation-r2/verify_recovered_evidence.py`. Fresh checks can be repeated using `run_resume_verification.py NEW_OUTPUT_DIRECTORY`; it refuses an existing output path. It requires the retained source snapshot. For another host, use the full `accept_snapshot.py` command above from a clean commit with qualified existing dependencies. No package installation or network fallback is included.
