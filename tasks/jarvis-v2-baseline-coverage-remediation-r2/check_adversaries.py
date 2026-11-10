@@ -9,6 +9,10 @@ for fault in ('added','deleted','changed','policy_tamper','manifest_tamper','mod
   for folder in ('app','tests','scripts','evals'):shutil.copytree(ROOT/folder,r/folder,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
   for f in ('pytest.ini','config.yaml.example','docker-compose.yml','frontend/pwa/app.js','frontend/hologram/app.js','frontend/electron/preload.js'):
    (r/f).parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/f,r/f)
+  # Only disposable fault copies become writable; source snapshot stays read-only.
+  for copied in r.rglob('*'):
+   if copied.is_dir():copied.chmod(0o700)
+   elif copied.is_file():copied.chmod(0o600)
   policy=r/'scripts/test_enrollment.json';manifest=r/'scripts/required_tests.json';p=json.loads(policy.read_text());m=json.loads(manifest.read_text())
   if fault=='added':(r/'tests/test_not_reviewed.py').write_text("raise RuntimeError('SYNTHETIC_PRIVATE_IMPORT')\n")
   if fault=='deleted':(r/'tests/test_dictation.py').unlink()

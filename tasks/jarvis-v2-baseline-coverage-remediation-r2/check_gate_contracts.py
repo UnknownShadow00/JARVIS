@@ -42,6 +42,10 @@ for name,(kind,body) in selected:
   for folder in ('app','tests','scripts','evals'):shutil.copytree(ROOT/folder,root/folder,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
   for f in ('config.yaml.example','pytest.ini','docker-compose.yml','frontend/pwa/app.js','frontend/hologram/app.js','frontend/electron/preload.js'):
    (root/f).parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/f,root/f)
+  # Only disposable fault copies become writable; source snapshot stays read-only.
+  for copied in root.rglob('*'):
+   if copied.is_dir():copied.chmod(0o700)
+   elif copied.is_file():copied.chmod(0o600)
   runner=root/'scripts/reliability_gauntlet.py'
   if name=='before-astra' or args.baseline_r2:
    for file in ('reliability_gauntlet.py','gauntlet_protocol.py'):
