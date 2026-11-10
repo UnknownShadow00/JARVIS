@@ -14,7 +14,7 @@ SCRIPTS=('gauntlet_protocol.py','reliability_gauntlet.py','reliability_gate_chec
 def files(root):
  result=[f for folder in ('app','tests','evals') for f in (root/folder).rglob('*') if f.is_file() and '__pycache__' not in f.parts]
  result += [root/n for n in PUBLIC_FILES]+[root/'scripts'/n for n in SCRIPTS]
-    result += [root/'tasks/jarvis-v2-baseline-coverage-remediation-r2'/n for n in ('accept_snapshot.py','check_gate_contracts.py','check_adversaries.py')]
+ result += [root/'tasks/jarvis-v2-baseline-coverage-remediation-r2'/n for n in ('accept_snapshot.py','check_gate_contracts.py','check_adversaries.py')]
  return sorted(set(result))
 def hashes(root):return {str(f.relative_to(root)):hashlib.sha256(f.read_bytes()).hexdigest() for f in files(root)}
 before=hashes(ROOT)
