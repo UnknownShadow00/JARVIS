@@ -1,0 +1,17 @@
+# Proposed canonical integration — not executed
+
+Canonical inspected HEAD: `b09fa10a661c9704f51e900ec857a51153cbcbbe` on `docs/p7-d06-d07-passive-review`. Common ancestor with approved source: `b738a473d27471f35df60d31ccd93047bf9d1a6e`. Canonical has newer audit/log commits and an existing uncommitted log entry. The approved source descends from the common development baseline and adds the reconciled security/reliability/test/tooling changes. No fast-forward or replacement of canonical state is appropriate.
+
+Present changed-path sets do not overlap (128 canonical paths,761 approved paths); there are no file/directory prefix collisions and no canonical runtime changes since the common base. No unsafe source conflict was encountered or resolved. This is source/path analysis only; no merge, merge-tree write, index manipulation, cherry-pick, reset, rebase or branch replacement was performed. Full path lists and all nine app differences are in SOURCE-DELTA.json and PRESERVATION.json.
+
+Application API/data assessment: credentialed ready is additive and fail-closed; security-sensitive defaults intentionally require opt-in; storage validation and bounded cleanup strengthen lifecycle semantics. Simulator protocols remain separated, timestamp errors normalized and scheduler callbacks fenced after incomplete cleanup. Authority/persistence SQL schemas have no delta here. Existing tool/confirmation interfaces remain closed. Installed dependencies are compatible with fresh tests; no dependency manifest/package is changed. Live/native integrations remain unqualified.
+
+A separate operator-controlled proposal should:
+
+1. Obtain independent review of this exact rehearsal artifact commit, source commit and outer evidence digest. Preserve the digest independently before accepting evidence custody.
+2. Re-inspect actual canonical HEAD, committed source and working state. Preserve all existing audit artifacts and uncommitted log content; do not stash/reset/overwrite. If canonical differs from this record, compare all changed inputs again. Stop on unresolved authorization/execution/storage/lifecycle conflicts.
+3. After separate authorization to prepare integration, create a NEW proposal worktree from the then-current canonical commit. Use a normal reviewed merge preserving both histories, rather than resetting/replacing development or cherry-picking fixes already present. Do not import sealed host/VM packets or unrelated external task files. Candidate task history is already reviewed; independently decide which review evidence artifacts should accompany a canonical source merge.
+4. Resolve only safely understood documentation conflicts with review; safety-sensitive source conflicts require an explicit decision and new rehearsal. Commit the proposed merge in that isolated proposal only and rerun complete acceptance on its exact combined input tree. Test/evidence additions alone do not authorize code changes.
+5. Present the proposed merge commit, both parents, final tree, fresh complete results and preserved source hashes for separate human canonical-merge authorization. Then, and only then, follow the operator's approved merge procedure. Do not deploy or activate executors as part of that approval.
+
+This candidate is ready to be submitted for that independent/human review. It is not self-approved for canonical merging. A future review may require another exact merged-tree run even if runtime bytes remain identical. Deployment, credentials, host enforcement, VM164 and Gate6K each remain outside this plan's authority.
