@@ -1,0 +1,2595 @@
+[
+  {
+    "module": "tests/boot_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_boot_sequence"
+    ],
+    "assertions": [
+      "assert 'sir' in lower, f\"Report missing 'sir': {report}\"",
+      "assert 'time' in lower, f\"Report missing 'time': {report}\"",
+      "assert 'gpu' in lower, f\"Report missing 'gpu': {report}\"",
+      "assert elapsed < 10, f'Boot sequence took {elapsed:.3f}s (limit 10s)'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "import sys",
+      "import time",
+      "from pathlib import Path",
+      "import pytest",
+      "from app import boot"
+    ],
+    "sha256": "82165bae889fbe59048aa105fcb99559317fb30dfa36f2943611ab998153e8f0"
+  },
+  {
+    "module": "tests/direct_responder_test.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_direct_responder"
+    ],
+    "assertions": [],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "from pathlib import Path",
+      "from app.brain.direct_responder import try_direct_reply"
+    ],
+    "sha256": "413805de1ab9c4935936f73e6fa5dd228af8a1006d062092e40b04e041ca1e72"
+  },
+  {
+    "module": "tests/e2e/test_full_loop.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Functions use mocked router/cancellation/timing fixtures despite e2e label; relevant cancellation boundary should be qualified rather than excluded solely by its marker.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_cancel_token_stops_pipeline",
+      "test_router_returns_respond_intent",
+      "test_full_loop_timing_mock",
+      "test_pipeline_imports"
+    ],
+    "assertions": [
+      "assert token.is_cancelled()",
+      "assert not token.is_cancelled()",
+      "assert result == 'respond'",
+      "assert elapsed < 2.0"
+    ],
+    "imports": [
+      "import time",
+      "import pytest",
+      "from unittest.mock import patch, MagicMock",
+      "from app.brain.cancel_token import CancelToken",
+      "from app.brain.router import IntentRouter",
+      "from app.brain.router import IntentRouter",
+      "from app.brain.cancel_token import current_token",
+      "from app.brain.router import classify_intent",
+      "from app.logs.audit import AuditLog"
+    ],
+    "sha256": "ff738aaed63769fc2a4f7f967b588ea0c8c27c8ff362177ece11a4e915818f10"
+  },
+  {
+    "module": "tests/hardware_smoke_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_live_or_hardware",
+    "test_functions": [
+      "test_tts_speaks",
+      "test_sfx_plays",
+      "test_vad_records",
+      "test_stt_transcribes",
+      "test_wake_word_listens",
+      "test_self_suppression"
+    ],
+    "assertions": [
+      "assert tts_mod.is_speaking is False",
+      "assert isinstance(result, bytes)",
+      "assert isinstance(result, str) and len(result) > 0",
+      "assert isinstance(result, bytes)",
+      "assert transcribe(b'') == ''",
+      "assert isinstance(result, bytes)",
+      "assert result == b''",
+      "assert elapsed < 3.0, f'self-suppression took {elapsed:.2f}s; expected timeout to be honored'",
+      "assert tts_mod.is_speaking is True"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "import time",
+      "from pathlib import Path",
+      "import pytest",
+      "from app.voice.tts import tts",
+      "import app.voice.tts as tts_mod",
+      "from app.voice.sounds import sounds",
+      "from app.voice.vad import record_until_silence",
+      "from app.voice.stt import transcribe",
+      "from app.voice.wake_word import WakeWordDetector",
+      "from app.voice.wake_word import WakeWordDetector",
+      "import app.voice.tts as tts_mod"
+    ],
+    "sha256": "cb943487074d84ee45a54c38706df355226dff2657a8abe33669fffc0b35e4e0"
+  },
+  {
+    "module": "tests/ollama_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [],
+    "assertions": [],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "import time",
+      "from pathlib import Path",
+      "from typing import Any",
+      "import httpx",
+      "from app.config import settings",
+      "from ollama import Client, RequestError"
+    ],
+    "sha256": "570e88e027b9d429b14922cf65b1b85f1424ca8a765c8244525de927b1c3369e"
+  },
+  {
+    "module": "tests/pipeline_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_text_pipeline"
+    ],
+    "assertions": [],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "import sys",
+      "from pathlib import Path",
+      "import pytest",
+      "from app.brain.kill_switch import reset",
+      "from app.config import settings",
+      "from app.server import _process, llm_client"
+    ],
+    "sha256": "5ceaaa2b13342abe5c9b35fd17782b7da8eeb775af68a17e53c69db69fcc1c67"
+  },
+  {
+    "module": "tests/router_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_router_classifies_known_queries",
+      "test_routes_shell",
+      "test_routes_calendar",
+      "test_routes_browser",
+      "test_routes_open_domain_to_browser",
+      "test_routes_screenshot_tool",
+      "test_routes_webcam_vision",
+      "test_routes_deep_reasoning"
+    ],
+    "assertions": [
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'shell'",
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'calendar'",
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'browser'",
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'browser'",
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'screenshot'",
+      "assert result.intent == 'vision'",
+      "assert result.intent == 'deep_reasoning'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "import time",
+      "from pathlib import Path",
+      "from app.brain.router import RouterResult, router"
+    ],
+    "sha256": "c23a00e0eb845646ad9c73826a6f3156d3252d273a66b3e00d9935c6935dec2c"
+  },
+  {
+    "module": "tests/safety_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_gates_and_kill_switch"
+    ],
+    "assertions": [],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "from pathlib import Path",
+      "from types import ModuleType",
+      "from app.brain import kill_switch",
+      "from app.brain.router import RouterResult, router",
+      "from app.config import settings",
+      "from app.tools.registry import ToolError, registry"
+    ],
+    "sha256": "1177a4cf42d3f12e2ba907ec14489326716ef0edec7a2762f441273d88ac3ccb"
+  },
+  {
+    "module": "tests/sounds_test.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_sound_placeholders_dispatch"
+    ],
+    "assertions": [],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "from pathlib import Path",
+      "from app.voice.sounds import SOUND_FILES, sounds"
+    ],
+    "sha256": "f5c4240295db81463981a05fbcf7c4c802b64a1c1959a44c0521e9b207172a33"
+  },
+  {
+    "module": "tests/stress/test_wake_word_stress.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_mock_detection_100_cycles",
+      "test_no_memory_growth_100_cycles"
+    ],
+    "assertions": [
+      "assert p50 < 0.1",
+      "assert p95 < 0.2",
+      "assert p99 < 0.5",
+      "assert growth_mb < 50, f'RSS grew {growth_mb:.1f}MB over {CYCLES} cycles'"
+    ],
+    "imports": [
+      "import time",
+      "import statistics",
+      "import pytest",
+      "import os"
+    ],
+    "sha256": "9cf75b2e4b2a772775c88bf0da2eb90856287b5ceea34dd92c6c8c182e49d610"
+  },
+  {
+    "module": "tests/stt_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_stt_cleanup",
+      "test_stt_cpu_fallback_after_transcribe_error"
+    ],
+    "assertions": [
+      "assert subject.transcribe(b'fake wav') == 'fallback works'",
+      "assert calls == [(None, None, False), ('cpu', 'int8', True)]"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "from pathlib import Path",
+      "from app.voice.stt import stt",
+      "from app.voice.stt import SpeechToText"
+    ],
+    "sha256": "003b5e56bbf8a2e060eb91219895a19c5aa529bed6168acd4ce17498e5deca16"
+  },
+  {
+    "module": "tests/test_apps_tool.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_unknown_app",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert apps.SAFETY_LEVEL == 0",
+      "assert 'dry' in str(result).lower()",
+      "assert isinstance(result, dict)",
+      "assert 'error' in result",
+      "assert ToolRegistry().get('apps') is not None"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from unittest.mock import patch",
+      "from app.tools import apps",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "d9a48dd8fdba3bdc9bec5b3257ca576d331304ce60cd1ddd62b00228c73726c0"
+  },
+  {
+    "module": "tests/test_audio2face.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_build_audio_event",
+      "test_build_viseme_event",
+      "test_manager_not_connected_by_default",
+      "test_broadcast_audio_when_not_connected"
+    ],
+    "assertions": [
+      "assert result['type'] == 'audio'",
+      "assert isinstance(result['data'], str)",
+      "assert result['data']",
+      "assert result['sample_rate'] == 22050",
+      "assert 'timestamp' in result",
+      "assert result['type'] == 'visemes'",
+      "assert result['data'] == [test_viseme]",
+      "assert 'timestamp' in result",
+      "assert audio2face_manager.is_connected() is False"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.comms.audio2face import audio2face_manager, build_audio_event, build_viseme_event"
+    ],
+    "sha256": "1f4012e807f10ccc70bda152df958c31f3ca93f7a6cb60408be091d4c7e37bd4"
+  },
+  {
+    "module": "tests/test_audit_integration_fixes.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_effectful_resource_http_is_inert_even_with_bearer",
+      "test_stop_requires_configured_identity",
+      "test_malformed_websocket_closes_and_removes_manager_entry",
+      "test_cli_post_auth_and_status_failure_never_falls_back",
+      "test_cli_timeout_has_unknown_outcome_and_never_falls_back",
+      "test_cli_unreachable_requires_explicit_offline_control",
+      "test_untracked_same_entrypoint_child_is_never_terminated",
+      "test_only_positive_native_child_lease_allows_signal",
+      "test_vad_continuous_speech_respects_frame_and_callback_queue_bounds",
+      "test_vad_active_capture_cancellation_is_checked_each_frame",
+      "test_dictation_never_touches_desktop_or_logs_transcript",
+      "test_no_server_or_offline_flag_can_start_or_mutate_local_resources"
+    ],
+    "assertions": [
+      "assert response.status_code == 403 and response.json()['error'] == 'offline_operator_control_required'",
+      "assert TestClient(app).post('/stop').status_code == 401",
+      "assert len(manager.active) == original",
+      "assert cli.main(['sleep', '--light', '--offline']) == 1",
+      "assert captured['headers'] == {'Authorization': 'Bearer synthetic-cli-key'}",
+      "assert cli.main(['sleep', '--light', '--offline']) == 1",
+      "assert cli.main(['sleep', '--light']) == 1",
+      "assert Dictation().handle_transcript('synthetic private transcript') is False",
+      "assert 'synthetic private transcript' not in repr(events)",
+      "assert cli.main(args) == 1",
+      "assert resources.terminate_jarvis_processes() == [] and child.poll() is None",
+      "assert child.pid in resources._owned_processes",
+      "assert stream.getnframes() == v.sample_rate * 20 * v.frame_ms // 1000",
+      "assert stream.getnframes() == v.sample_rate * 3 * v.frame_ms // 1000",
+      "assert stopped == [] and child.poll() is None",
+      "assert stopped[0]['pid'] == child.pid and child.poll() is not None"
+    ],
+    "imports": [
+      "from types import SimpleNamespace",
+      "from unittest.mock import Mock, AsyncMock",
+      "import io",
+      "import os",
+      "from pathlib import Path",
+      "import subprocess",
+      "import sys",
+      "import wave",
+      "import pytest",
+      "from fastapi.testclient import TestClient",
+      "from app.server import app, manager",
+      "from app.config import settings",
+      "import app.resource_manager as resources",
+      "import app.cli as cli",
+      "from app.voice.vad import VoiceActivityDetector",
+      "from app.voice.dictation import Dictation",
+      "from starlette.websockets import WebSocketDisconnect",
+      "import httpx",
+      "import httpx",
+      "import httpx",
+      "from app.voice import dictation as module",
+      "import httpx"
+    ],
+    "sha256": "d29390c1aa2c9f9bd75571c97021e8ce4ebeb47a6d26475a0365c62b5d139221"
+  },
+  {
+    "module": "tests/test_boot_events.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_boot_event_shape",
+      "test_morning_report_called",
+      "test_boot_works_no_clients"
+    ],
+    "assertions": [
+      "assert event == {'type': 'boot', 'phase': 'logo', 'message': 'Stark Industries systems initializing...'}",
+      "assert result == report"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from unittest.mock import AsyncMock, Mock",
+      "import pytest",
+      "from app import boot",
+      "from app.server import ConnectionManager"
+    ],
+    "sha256": "ca118b5afac2a83be69fb81b06d5b6338d16173f47f9265353f97cb3ee25e925"
+  },
+  {
+    "module": "tests/test_boot_integration.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_boot_sequence_completes",
+      "test_morning_report_contains_sir",
+      "test_boot_skips_electron_gracefully",
+      "test_boot_ollama_timeout"
+    ],
+    "assertions": [
+      "assert 'sir' in speak.await_args.args[0].lower()"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from contextlib import ExitStack",
+      "from unittest.mock import AsyncMock, Mock, patch",
+      "import httpx",
+      "import pytest",
+      "from app import boot"
+    ],
+    "sha256": "baef39c74471c6542913400321a966c61a16a4afbcf4aadda9db6bb3aa31edd8"
+  },
+  {
+    "module": "tests/test_browser_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_missing_url",
+      "test_unknown_action",
+      "test_open_url",
+      "test_search_action",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert browser_tool.SAFETY_LEVEL == 1",
+      "assert 'dry_run' in result",
+      "assert result['error'] == 'url required'",
+      "assert 'unknown action' in result['error']",
+      "assert opened == ['https://example.com']",
+      "assert opened",
+      "assert 'google.com/search' in opened[0]",
+      "assert 'browser' in registry.TOOLS"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.config import settings",
+      "from app.tools import browser as browser_tool",
+      "from app.tools.registry import registry"
+    ],
+    "sha256": "a1a827e533c62d8d4ae921b3562d1cc0667bffb4ee326e25a576c1268b40785a"
+  },
+  {
+    "module": "tests/test_calendar_tool.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_no_ics_files",
+      "test_execute_with_ics",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert SAFETY_LEVEL == 0",
+      "assert result.get('dry_run') is True",
+      "assert 'events' in result",
+      "assert result['count'] == 0",
+      "assert 'calendar' in registry.TOOLS",
+      "assert result['count'] == 1",
+      "assert result['events'][0]['summary']"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "from datetime import date",
+      "from pathlib import Path",
+      "from types import ModuleType, SimpleNamespace",
+      "from app.config import settings",
+      "from app.tools.calendar import SAFETY_LEVEL, execute",
+      "from app.tools.registry import registry",
+      "from app.tools import calendar"
+    ],
+    "sha256": "743f360c86b7f8c8c5acdcd253d5ba98feb54e23fb6d6b1e14dca8a4ce2b4937"
+  },
+  {
+    "module": "tests/test_ci_config.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_workflow_file_exists",
+      "test_workflow_has_pytest",
+      "test_workflow_excludes_only_manual_or_hardware_markers",
+      "test_workflow_installs_portaudio_before_python_dependencies",
+      "test_issue_templates_exist"
+    ],
+    "assertions": [
+      "assert Path('.github/workflows/tests.yml').exists()",
+      "assert 'pytest' in workflow",
+      "assert 'not manual and not hardware' in workflow",
+      "assert '--ignore=tests/e2e' in workflow",
+      "assert '--ignore=tests/stress' in workflow",
+      "assert '--ignore=tests/perf' in workflow",
+      "assert portaudio_setup < python_dependencies",
+      "assert Path('.github/ISSUE_TEMPLATE/bug_report.md').exists()",
+      "assert Path('.github/ISSUE_TEMPLATE/feature_request.md').exists()"
+    ],
+    "imports": [
+      "from pathlib import Path"
+    ],
+    "sha256": "d10a3295ee9e437cb7c7aabcce5dcb9d4a96ef0f7cf3d5ece8dccda35e3828e6"
+  },
+  {
+    "module": "tests/test_comms_stubs.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_discord_send_disabled",
+      "test_discord_status_disabled",
+      "test_telegram_send_disabled",
+      "test_telegram_status_disabled"
+    ],
+    "assertions": [
+      "assert 'stub' in result",
+      "assert 'stub' in result",
+      "assert 'stub' in result",
+      "assert 'stub' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "from app.comms.discord_bot import discord_bot",
+      "from app.comms.telegram_bot import telegram_bot"
+    ],
+    "sha256": "424b8709bed47bc7bf27e54d820d77e0731bd1d8e06d32589b4b91736a5dff89"
+  },
+  {
+    "module": "tests/test_complexity_router.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_deep_reasoning_uses_thinking_model",
+      "test_trivial_response_uses_router_model"
+    ],
+    "assertions": [
+      "assert decision.tier == 'deep'",
+      "assert decision.think is True",
+      "assert decision.model == 'qwen3:14b'",
+      "assert decision.tier == 'trivial'",
+      "assert decision.model == 'gemma3:4b'",
+      "assert decision.think is False"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.brain.complexity_router import complexity_router"
+    ],
+    "sha256": "67919217d761c6f8d1f58bd0e4e808ec57933cb3014d0123c1a13a7051f138db"
+  },
+  {
+    "module": "tests/test_computer_safety.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_level0_always_allowed",
+      "test_level2_requires_confirmation",
+      "test_level2_with_confirmation",
+      "test_level3_blocked",
+      "test_dry_run_blocks_level1"
+    ],
+    "assertions": [
+      "assert allowed is True",
+      "assert reason == 'ok'",
+      "assert allowed is False",
+      "assert 'confirmation' in reason",
+      "assert allowed is True",
+      "assert reason == 'ok'",
+      "assert allowed is False",
+      "assert reason == 'blocked'",
+      "assert allowed is False",
+      "assert reason == 'dry_run_active'"
+    ],
+    "imports": [
+      "from unittest.mock import patch",
+      "from app.computer.safety import safety_gate"
+    ],
+    "sha256": "82868e17d4df19eb4aef740a777cb13b8a1c93ee6f75d502e0a98398bc99b098"
+  },
+  {
+    "module": "tests/test_computer_use_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_missing_task",
+      "test_no_package"
+    ],
+    "assertions": [
+      "assert computer_use_tool.SAFETY_LEVEL == 2",
+      "assert 'dry_run' in result",
+      "assert 'error' in result",
+      "assert 'error' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import builtins",
+      "from app.config import settings",
+      "from app.tools import computer_use as computer_use_tool"
+    ],
+    "sha256": "f25601afa8be7f4c97876defa7ec6517e41c69a7721361fa0d0470ade79cac1b"
+  },
+  {
+    "module": "tests/test_computer_verifier.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_verify_no_expectation",
+      "test_verify_with_expectation",
+      "test_verify_capture_fails"
+    ],
+    "assertions": [
+      "assert result['verified'] is True",
+      "assert result['screenshot'] == '/tmp/test.png'",
+      "assert result['verified'] is None",
+      "assert result['screenshot'] == '/tmp/test.png'",
+      "assert result['expected'] == 'hello'",
+      "assert result['verified'] is False",
+      "assert result['error'] == 'mss not installed'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.computer.verifier import ActionVerifier"
+    ],
+    "sha256": "d7b96ee14f4878a0029c250cccf9afe47f59486562d97be2d4d750862c755550"
+  },
+  {
+    "module": "tests/test_config_check.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_example_config_matches_schema",
+      "test_non_loopback_host_requires_remote_access_flag",
+      "test_non_loopback_host_rejected_without_api_token",
+      "test_non_loopback_host_allowed_with_remote_access_and_api_token",
+      "test_loopback_host_allows_optional_api_token",
+      "test_remote_access_flag_requires_api_token_even_on_loopback",
+      "test_ollama_base_url_can_be_overridden_for_container",
+      "test_builtin_wake_model_is_available",
+      "test_custom_wake_model_path_missing",
+      "test_piper_binary_missing",
+      "test_piper_model_missing",
+      "test_ollama_unreachable",
+      "test_all_pass"
+    ],
+    "assertions": [
+      "assert example.models.main == 'qwen3-nothink'",
+      "assert example.voice.stt_model == 'large-v3-turbo'",
+      "assert example.voice.tts_engine == 'chatterbox'",
+      "assert example.voice.dictation_enabled is True",
+      "assert example.voice.dictation_hotkey == 'ctrl+shift+space'",
+      "assert example.voice.dictation_type_out is False",
+      "assert example.server.host == '127.0.0.1'",
+      "assert example.server.remote_access_enabled is False",
+      "assert example.server.enable_voice_on_startup is False",
+      "assert example.server.enable_hotkey_listener is False",
+      "assert example.resource_mode.enabled is True",
+      "assert example.resource_mode.idle_timeout_minutes == 10",
+      "assert example.resource_mode.deep_sleep_timeout_minutes == 60",
+      "assert example.resource_mode.keep_wake_listener_in_light_sleep is True",
+      "assert example.resource_mode.keep_wake_listener_in_deep_sleep is False",
+      "assert example.resource_mode.stop_server_on_auto_deep_sleep is True",
+      "assert example.memory.graphiti_enabled is False",
+      "assert example.memory.neo4j_uri == 'bolt://localhost:7687'",
+      "assert example.memory.neo4j_user == 'neo4j'",
+      "assert example.memory.neo4j_password_env == 'NEO4J_PASSWORD'",
+      "assert example.tools.obsidian_enabled is False",
+      "assert example.tools.obsidian_vault_path == './jarvis-vault'",
+      "assert example.routing.embedding_enabled is False",
+      "assert example.routing.embedding_model == 'nomic-embed-text'",
+      "assert example.routing.embedding_top_k == 3",
+      "assert loaded.server.host == '0.0.0.0'",
+      "assert loaded.server.remote_access_enabled is True",
+      "assert loaded.server.host == host",
+      "assert loaded.server.api_token == api_token",
+      "assert loaded.models.ollama_base_url == 'http://ollama:11434'",
+      "assert cc.check_startup()['wake_model'] is True",
+      "assert cc.check_startup()['wake_model'] is False",
+      "assert cc.check_startup()['piper_binary'] is False",
+      "assert cc.check_startup()['piper_model'] is False",
+      "assert cc.check_startup()['ollama_reachable'] is False",
+      "assert all(cc.check_startup().values())",
+      "assert 'server.host must be localhost/loopback' in str(exc)"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "from unittest.mock import Mock",
+      "import httpx",
+      "import pytest",
+      "import yaml",
+      "from app import config_check as cc",
+      "from app.config import load_settings"
+    ],
+    "sha256": "a49b240a408dbcdbe88f52528bad8954a80ced7fda63b777a5c6bcaafa12a0c0"
+  },
+  {
+    "module": "tests/test_dictation.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_dictation_refuses_clipboard_without_raw_audit",
+      "test_dictation_type_out_requires_flag_and_live_mode",
+      "test_dictation_gracefully_degrades_without_optional_dependencies",
+      "test_push_to_talk_manager_tracks_dictation_hotkey",
+      "test_voice_pipeline_dictation_skips_brain_and_tts",
+      "test_dictation_config_defaults_present"
+    ],
+    "assertions": [
+      "assert Dictation().handle_transcript(f'  {secret}  ') is False",
+      "assert copied == []",
+      "assert events[-1] == ('dictation_blocked', {'reason': 'independent_authorization_required', 'type_out': False})",
+      "assert not any((_contains_text(data, secret) for _event, data in events))",
+      "assert Dictation().handle_transcript('type this') is False",
+      "assert typed == []",
+      "assert Dictation().handle_transcript('do not type this') is False",
+      "assert typed == []",
+      "assert Dictation().handle_transcript('clipboard unavailable') is False",
+      "assert ('dictation_blocked', {'reason': 'independent_authorization_required', 'type_out': False}) in events",
+      "assert calls == [('press', 'ctrl+space'), ('release', 'ctrl+space'), ('press', 'ctrl+shift+space'), ('release', 'ctrl+shift+space')]",
+      "assert manager.is_dictation_active() is True",
+      "assert manager.is_dictation_active() is False",
+      "assert dictation_presses == ['down']",
+      "assert dictation_releases == ['up']",
+      "assert unhooked == ['press:ctrl+space', 'release:ctrl+space', 'press:ctrl+shift+space', 'release:ctrl+shift+space']",
+      "assert handled == ['private transcript']",
+      "assert loaded.voice.dictation_enabled is True",
+      "assert loaded.voice.dictation_hotkey == 'ctrl+shift+space'",
+      "assert loaded.voice.dictation_type_out is False"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from types import SimpleNamespace",
+      "from unittest.mock import AsyncMock, Mock",
+      "import pytest",
+      "from app.config import load_settings, settings",
+      "from app.voice import audio_stream",
+      "from app.voice import dictation as dictation_module",
+      "from app.voice.dictation import Dictation",
+      "from app.voice.push_to_talk import PushToTalkManager"
+    ],
+    "sha256": "d192d8120648328012c8ed6cc37a455a04e38e12d701054080b7cfd3a669b9b5"
+  },
+  {
+    "module": "tests/test_discord_bot.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_send_disabled",
+      "test_send_no_discord_lib",
+      "test_send_no_token",
+      "test_send_success"
+    ],
+    "assertions": [
+      "assert 'stub' in result",
+      "assert 'stub' in result",
+      "assert 'error' in result",
+      "assert result['sent'] is True"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "from types import SimpleNamespace",
+      "import app.comms.discord_bot as discord_bot_module",
+      "from app.comms.discord_bot import DiscordBot"
+    ],
+    "sha256": "6dd69cd86f7bdd804162b5680301889b5485aa02e1e79c5e35154fcb7c63d105"
+  },
+  {
+    "module": "tests/test_error_recovery.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_speak_error_no_raise",
+      "test_error_recovery_imports",
+      "test_error_phrases_defined"
+    ],
+    "assertions": [
+      "assert callable(speak_error)",
+      "assert len(phrases) >= 3"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import builtins",
+      "from app.voice.error_recovery import speak_error",
+      "from app.voice.error_recovery import speak_error",
+      "from app.voice import error_recovery"
+    ],
+    "sha256": "1274f5241d8dbdee119ded4d867e5a74b12822e803df9c57738f1ec39ab8b4fe"
+  },
+  {
+    "module": "tests/test_evals_adapter.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_evaluation_request_cannot_contain_golden_metadata",
+      "test_deterministic_adapter_intercepts_every_selected_tool",
+      "test_destructive_shell_is_blocked_before_execution",
+      "test_runner_passes_only_real_request_data_to_adapter",
+      "test_report_generation_is_machine_readable"
+    ],
+    "assertions": [
+      "assert {item.name for item in fields(EvaluationRequest)} == {'user_input', 'context'}",
+      "assert len(grades) == 20",
+      "assert all((not grade.actual['executed'] for grade in grades))",
+      "assert all((not grade.actual['executed_capabilities'] for grade in grades))",
+      "assert len({grade.actual['trace_id'] for grade in grades}) == 20",
+      "assert adapter.interceptor.selections",
+      "assert grade.passed",
+      "assert grade.actual['mode'] == 'refuse'",
+      "assert grade.actual['safety'] == 'blocked'",
+      "assert grade.actual['executed'] is False",
+      "assert adapter.request is not None",
+      "assert vars(adapter.request) == {'user_input': scenario[0].input, 'context': {'origin': 'user_direct', 'content': None}}",
+      "assert 'expected' not in vars(adapter.request)",
+      "assert 'id' not in vars(adapter.request)",
+      "assert decoded['suite'] == 'golden-v1'",
+      "assert decoded['total'] == 20",
+      "assert len(decoded['cases']) == 20"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "from dataclasses import fields",
+      "from pathlib import Path",
+      "from unittest.mock import patch",
+      "from evals.adapter import CurrentJarvisAdapter, EvaluationRequest, ObservedDecision",
+      "from evals.runner import build_report, run_scenarios, write_report",
+      "from evals.schema import load_golden_scenarios"
+    ],
+    "sha256": "ff01aae9ca300c692f3dac8337bec218d0578fcb6e7781ae4364451159960cd1"
+  },
+  {
+    "module": "tests/test_evals_grading.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_parameter_matching_supports_subset_normalization_optional_and_absent",
+      "test_exact_parameter_matching_rejects_extra_fields",
+      "test_must_not_detects_prohibited_selection_and_execution",
+      "test_aggregate_report_keeps_metrics_separate"
+    ],
+    "assertions": [
+      "assert match_parameters(expected, {'app': ' visual studio CODE! ', 'monitor': 0, 'extra': True})",
+      "assert not match_parameters(expected, {'app': 'VS Code', 'monitor': 0, 'token': 'secret'})",
+      "assert match_parameters(expected, {'action': 'open'})",
+      "assert match_parameters(expected, {'action': 'open', 'hint': 'safe'})",
+      "assert not match_parameters(expected, {'action': 'open', 'query': 'Calculator'})",
+      "assert not grade.criteria['must_not']",
+      "assert not grade.criteria['must_not']",
+      "assert report['total'] == 2",
+      "assert report['passed'] == 1",
+      "assert report['failed'] == 1",
+      "assert report['metrics']['mode_accuracy'] == 1.0",
+      "assert report['metrics']['capability_accuracy'] == 0.5"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from evals.adapter import ObservedDecision",
+      "from evals.grader import aggregate_report, grade_scenario, match_parameters",
+      "from evals.schema import ParameterExpectation, parse_scenario"
+    ],
+    "sha256": "2ac345b90d8418d34c344de53a876255ff7c7b398738b12cdd17b436598d9fd2"
+  },
+  {
+    "module": "tests/test_evals_schema.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_golden_suite_has_exactly_twenty_unique_scenarios",
+      "test_origin_provenance_is_representable",
+      "test_duplicate_ids_are_rejected",
+      "test_malformed_scenarios_are_rejected"
+    ],
+    "assertions": [
+      "assert len(scenarios) == 20",
+      "assert len({scenario.id for scenario in scenarios}) == 20",
+      "assert any((s.context.origin == 'derived' for s in load_golden_scenarios(GOLDEN)))",
+      "assert parse_scenario(raw).context.origin == origin"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "from pathlib import Path",
+      "import pytest",
+      "from evals.schema import ScenarioValidationError, load_golden_scenarios, parse_scenario"
+    ],
+    "sha256": "f5425d2cf50bc776fb6158720e7b3ac5aa1ed4ccf4ed962e971838a8e79ce6de"
+  },
+  {
+    "module": "tests/test_files_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_list_allowed_root",
+      "test_read_missing_file",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert files.SAFETY_LEVEL == 1",
+      "assert 'dry' in str(result).lower()",
+      "assert isinstance(result, dict)",
+      "assert 'error' in result",
+      "assert ToolRegistry().get('files') is not None",
+      "assert isinstance(result, list)"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "from pathlib import Path",
+      "from types import SimpleNamespace",
+      "from unittest.mock import PropertyMock, patch",
+      "from app.tools import files",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "0d23c8d0b235508a3efff68cf693a05d09332ce46966c123ca04475dc4eaa962"
+  },
+  {
+    "module": "tests/test_gesture.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_start_no_mediapipe",
+      "test_stop"
+    ],
+    "assertions": [
+      "assert 'error' in result",
+      "assert gesture_controller.stop() == {'stopped': True}"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import builtins",
+      "from app.computer.gesture import gesture_controller"
+    ],
+    "sha256": "d004e04a10d43fea6f5ce94571f20fbc3c655beb597aa4da536b602c4474b412"
+  },
+  {
+    "module": "tests/test_graphiti_client.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_graphiti_disabled_path_returns_stubs",
+      "test_graphiti_enabled_path_uses_env_password_and_mocks",
+      "test_graphiti_server_endpoints_503_when_disabled",
+      "test_graphiti_server_endpoints_use_client_when_enabled",
+      "test_neo4j_compose_service_uses_env_password"
+    ],
+    "assertions": [
+      "assert client.add_episode('hello', 'unit')['stub'] is True",
+      "assert client.query('hello')['results'] == []",
+      "assert client.add_entity('JARVIS', 'Agent')['stub'] is True",
+      "assert client.is_enabled() is False",
+      "assert added == {'added': True, 'result': {'episode': 'unit-test'}}",
+      "assert queried == {'results': [{'text': 'graph question', 'limit': 3}], 'limit': 3}",
+      "assert entity == {'added': True, 'result': {'name': 'JARVIS', 'type': 'Agent'}}",
+      "assert _FakeGraphiti.instances[0].password == 'env-only'",
+      "assert _FakeGraphiti.instances[0].episodes[0]['source'] == 'text'",
+      "assert events[0] == ('graphiti_add_episode', {'chars': 18, 'source': 'unit-test', 'ts': '2026-05-14T12:00:00+00:00'})",
+      "assert add_response.status_code == 503",
+      "assert query_response.status_code == 503",
+      "assert add_response.json() == {'error': 'graphiti_disabled'}",
+      "assert query_response.json() == {'error': 'graphiti_disabled'}",
+      "assert add_response.status_code == 200",
+      "assert add_response.json() == {'added': True, 'text': 'hello graph', 'source': 'test', 'ts': '2026-05-14T12:00:00+00:00'}",
+      "assert query_response.json() == {'results': ['hello'], 'limit': 2}",
+      "assert neo4j['image'].startswith('neo4j:5')",
+      "assert '127.0.0.1:7474:7474' in neo4j['ports']",
+      "assert '127.0.0.1:7687:7687' in neo4j['ports']",
+      "assert 'neo4j_data:/data' in neo4j['volumes']",
+      "assert 'NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}' in neo4j['environment']"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import datetime as dt",
+      "from types import SimpleNamespace",
+      "from fastapi.testclient import TestClient",
+      "import yaml",
+      "from app.config import settings",
+      "from app.memory import graphiti_client as graphiti_module",
+      "from app.memory.graphiti_client import GraphitiClient",
+      "from app.server import app"
+    ],
+    "sha256": "26e62fde14724c2372515a8bf485e958d6dd7cc3ded5dbcc7cf9016c34ee8e24"
+  },
+  {
+    "module": "tests/test_headless_wake.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_immediate_empty_wake_result_is_backed_off_instead_of_spinning",
+      "test_unavailable_retry_uses_exponential_backoff",
+      "test_listener_stop_interrupts_retry_wait",
+      "test_normal_blocking_timeout_has_no_additional_retry_delay",
+      "test_wake_detection_still_wakes_manager_and_thread_exits",
+      "test_missing_audio_dependency_is_rate_limited_and_recovery_is_observable",
+      "test_audit_rotation_bounds_backups_and_keeps_valid_json",
+      "test_audit_logger_continues_after_rotation_and_preserves_important_events",
+      "test_audit_logger_shutdown_is_clean_and_idempotent"
+    ],
+    "assertions": [
+      "assert 2 <= len(fake.calls) <= 5",
+      "assert len(intervals) >= 3",
+      "assert intervals[0] >= 0.015",
+      "assert intervals[1] >= 0.035",
+      "assert intervals[2] >= 0.07",
+      "assert time.monotonic() - started < 0.25",
+      "assert not listener.is_running()",
+      "assert len(fake.calls) >= 4",
+      "assert manager.woke.wait(timeout=1.0)",
+      "assert manager.wake_calls == 1",
+      "assert not listener.is_running()",
+      "assert len(unavailable) == 1",
+      "assert detector.last_listen_outcome == 'unavailable'",
+      "assert len(recovered) == 1",
+      "assert recovered[0][1]['suppressed_repeats'] == 19",
+      "assert all((candidate.exists() for candidate in retained))",
+      "assert not path.with_name('audit.jsonl.3').exists()",
+      "assert rows",
+      "assert all((row['schema_version'] == 2 for row in rows))",
+      "assert any((row['data']['index'] == 29 for row in rows))",
+      "assert not any((row['data']['index'] == 0 for row in rows))",
+      "assert any((row['event_type'] == 'protected_action' for row in rows))",
+      "assert all(('session_id' in row and 'timestamp' in row for row in rows))",
+      "assert not logger._worker.is_alive()",
+      "assert reason == 'wake_listener'",
+      "assert timeout == 3.0",
+      "assert detector.listen(timeout=3.0) == b''"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "import sys",
+      "import threading",
+      "import time",
+      "from pathlib import Path",
+      "import app.resource_manager as resource_module",
+      "import app.voice.wake_word as wake_module",
+      "from app.logs.audit import AuditLogger",
+      "from app.resource_manager import WakeListener",
+      "from app.voice.wake_word import WakeWordDetector"
+    ],
+    "sha256": "953cbf9d23fc2e7ae51649be5f6a03348b2e16aa47e8557ab860d3c8fa1068d4"
+  },
+  {
+    "module": "tests/test_health_check.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_ollama_down",
+      "test_ollama_up",
+      "test_piper_found",
+      "test_piper_missing",
+      "test_builtin_wake_model_is_available",
+      "test_custom_wake_model_path_missing",
+      "test_server_route",
+      "test_detailed_readiness_contains_required_sections",
+      "test_server_readiness_route"
+    ],
+    "assertions": [
+      "assert health_check.check_tools()['ollama'] is False",
+      "assert health_check.check_tools()['ollama'] is True",
+      "assert health_check.check_tools()['piper'] is True",
+      "assert health_check.check_tools()['piper'] is False",
+      "assert health_check.check_tools()['wake_model'] is True",
+      "assert health_check.check_tools()['wake_model'] is False",
+      "assert response.status_code == 200",
+      "assert response.json() == expected",
+      "assert {'ollama', 'piper_binary', 'piper_model', 'piper_config', 'wake_model', 'audio_devices', 'stt_dependency', 'vad_dependency', 'wake_dependency', 'keyboard_dependency'} <= readiness.keys()",
+      "assert all(('available' in item for item in readiness.values()))",
+      "assert response.status_code == 200",
+      "assert response.json() == expected"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "from types import SimpleNamespace",
+      "import httpx",
+      "from fastapi.testclient import TestClient",
+      "from app.server import app",
+      "from app.tools import health_check"
+    ],
+    "sha256": "515fe8c061e4e4c7fa9afbe550c16cb8b9aafc8ab6bec2c578a82cf4a186ff63"
+  },
+  {
+    "module": "tests/test_hologram_files.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_hologram_index_exists",
+      "test_hologram_app_exists",
+      "test_hologram_has_threejs"
+    ],
+    "assertions": [
+      "assert os.path.exists('frontend/hologram/index.html') is True",
+      "assert os.path.exists('frontend/hologram/app.js') is True",
+      "assert 'three' in file.read().lower()"
+    ],
+    "imports": [
+      "import os"
+    ],
+    "sha256": "e366c628b7d51830cd199c80139a39e6a1cb777783abfebf0a224afb847fce8e"
+  },
+  {
+    "module": "tests/test_install_script.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_install_script_exists",
+      "test_install_script_has_smoke_test",
+      "test_powershell_wrapper_exists"
+    ],
+    "assertions": [
+      "assert os.path.exists('scripts/install.py')",
+      "assert os.path.exists('scripts/install.ps1')",
+      "assert 'pytest' in handle.read()"
+    ],
+    "imports": [
+      "import os"
+    ],
+    "sha256": "947ba78971d124c771dc8730a3409733e9a65f0c0889d7a6d20205bc1bc35aac"
+  },
+  {
+    "module": "tests/test_llm_client_payload.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_no_think_payload_defaults",
+      "test_deep_payload_can_enable_thinking"
+    ],
+    "assertions": [
+      "assert payload['think'] is False",
+      "assert payload['options']['num_predict'] == 150",
+      "assert payload['think'] is True",
+      "assert payload['options']['num_predict'] == 700"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.brain.llm_client import LLMClient"
+    ],
+    "sha256": "4ee1bc264a5da52213bc423e717244866b2c85f27aad4edb180e9faaa672bc4c"
+  },
+  {
+    "module": "tests/test_loopback_boundary.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_default_server_and_browser_origins_are_loopback",
+      "test_local_mode_rejects_unsafe_cors_origins",
+      "test_explicit_authenticated_remote_mode_preserves_future_origin_support",
+      "test_all_active_compose_published_ports_bind_host_loopback",
+      "test_browser_client_defaults_are_loopback",
+      "test_sensor_node_default_target_is_loopback"
+    ],
+    "assertions": [
+      "assert ipaddress.ip_address(configured.server.host).is_loopback",
+      "assert configured.server.remote_access_enabled is False",
+      "assert configured.server.cors_origins",
+      "assert '*' not in configured.server.cors_origins",
+      "assert all((_is_loopback_url(origin, schemes={'http', 'https'}) for origin in configured.server.cors_origins))",
+      "assert _is_loopback_url(configured.models.ollama_base_url, schemes={'http', 'https'})",
+      "assert configured.server.host == '0.0.0.0'",
+      "assert configured.server.cors_origins == ['https://jarvis.internal.example']",
+      "assert published == [('ollama', '127.0.0.1:11434:11434'), ('jarvis_backend', '127.0.0.1:8000:8000'), ('neo4j', '127.0.0.1:7474:7474'), ('neo4j', '127.0.0.1:7687:7687')]",
+      "assert _is_loopback_url(sensor_node.DEFAULT_JARVIS_URL, schemes={'http', 'https'})",
+      "assert websocket_urls, f'no WebSocket default found in {path}'",
+      "assert all((_is_loopback_url(url, schemes={'ws', 'wss'}) for url in websocket_urls))",
+      "assert isinstance(mapping, str), f'unsupported port mapping in {service_name}: {mapping!r}'",
+      "assert len(parts) == 3, f'{service_name} must declare host IP: {mapping}'",
+      "assert ipaddress.ip_address(host_ip).is_loopback, f'{service_name} publishes {mapping} on a non-loopback host interface'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import ipaddress",
+      "from pathlib import Path",
+      "import re",
+      "from urllib.parse import urlsplit",
+      "import pytest",
+      "import yaml",
+      "from app.config import load_settings",
+      "from scripts import sensor_node"
+    ],
+    "sha256": "4b1ffa132747838ae177c168a132feba53754b10c97be3ef6e3318266e7c68bc"
+  },
+  {
+    "module": "tests/test_memory_client.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_add_disabled",
+      "test_search_disabled",
+      "test_get_all_disabled",
+      "test_add_enabled_no_mem0",
+      "test_add_enabled_with_mem0"
+    ],
+    "assertions": [
+      "assert 'stub' in result",
+      "assert 'results' in result",
+      "assert 'results' in result",
+      "assert 'stub' in result",
+      "assert 'stub' not in result",
+      "assert result == {'results': []}"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.memory import memory_client as memory_module"
+    ],
+    "sha256": "971d519742fbae17dfb11779046ca487bef19b531d066593ce232811d73cd564"
+  },
+  {
+    "module": "tests/test_memory_stubs.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_memory_add_disabled",
+      "test_memory_search_disabled",
+      "test_memory_get_all",
+      "test_rag_index",
+      "test_rag_query"
+    ],
+    "assertions": [
+      "assert 'stub' in result",
+      "assert result['results'] == []",
+      "assert 'stub' in result",
+      "assert result['stub'] is True",
+      "assert result['indexed'] == 2",
+      "assert 'results' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.memory import rag_client as rag_module",
+      "from app.memory.memory_client import memory_client"
+    ],
+    "sha256": "b4c18a9ca280d5f48ad9c2cf787fe0c9575340f02f92038616481f98e19f1784"
+  },
+  {
+    "module": "tests/test_morning_report.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_compose_returns_string",
+      "test_compose_contains_sir",
+      "test_compose_contains_time"
+    ],
+    "assertions": [
+      "assert isinstance(compose_morning_report(), str)",
+      "assert 'sir' in compose_morning_report().lower()",
+      "assert 'AM' in report or 'PM' in report"
+    ],
+    "imports": [
+      "from app.brain.morning_report import compose_morning_report"
+    ],
+    "sha256": "2451f0630b30d137937694f20d15ea9d9e7c4db35779c94e803dd3b8f1b60cdb"
+  },
+  {
+    "module": "tests/test_mouse_keyboard.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_move_calls_pyautogui",
+      "test_type_calls_pyautogui",
+      "test_execute_unknown_action",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert SAFETY_LEVEL == 2",
+      "assert 'dry' in str(result).lower()",
+      "assert result == {'success': True, 'action': 'move'}",
+      "assert calls == [(10, 20, 0.2)]",
+      "assert result == {'success': True, 'action': 'type'}",
+      "assert calls == [('hello', 0.05)]",
+      "assert result.get('error') == 'unknown action'",
+      "assert ToolRegistry().get('mouse_keyboard') is not None"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from types import SimpleNamespace",
+      "from app.computer import mouse_keyboard",
+      "from app.computer.mouse_keyboard import SAFETY_LEVEL, execute",
+      "from app.config import settings",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "bc54aee4d4043fc1ab2daf545b38eb425e8540451c8d8841eabce0c31adf47f4"
+  },
+  {
+    "module": "tests/test_obsidian_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_obsidian_filesystem_crud_stays_inside_vault",
+      "test_obsidian_blocks_path_traversal",
+      "test_obsidian_mcp_path_is_stubbed_when_enabled",
+      "test_obsidian_is_registered_and_configured",
+      "test_obsidian_route_and_action_tag_params"
+    ],
+    "assertions": [
+      "assert result['dry_run'] is True",
+      "assert result['server'] == 'obsidian'",
+      "assert result['configured']['command'] == f'npx obsidian-mcp {vault_path}'",
+      "assert result['params']['tool'] == 'note_append'",
+      "assert loaded.tools.obsidian_enabled is False",
+      "assert loaded.tools.obsidian_vault_path == './jarvis-vault'",
+      "assert 'obsidian' in registry.TOOLS",
+      "assert 'obsidian' in mcp_client.WHITELISTED_SERVERS",
+      "assert mcp_client.status('obsidian')['configured']['command'] == 'npx obsidian-mcp ./jarvis-vault'",
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'obsidian'",
+      "assert params == {'action': 'note_append', 'path': 'Daily Log', 'content': 'captured detail', 'query': 'captured detail'}",
+      "assert created == {'created': True, 'path': 'Projects/JARVIS Log.md', 'chars': 24}",
+      "assert appended == {'appended': True, 'path': 'Projects/JARVIS Log.md', 'chars': 12}",
+      "assert read['found'] is True",
+      "assert read['content'] == 'Initial [[linked]] note.\\nSecond line.'",
+      "assert search['count'] == 1",
+      "assert search['results'][0]['path'] == 'Projects/JARVIS Log.md'",
+      "assert (vault_path / 'Projects' / 'JARVIS Log.md').is_file()",
+      "assert 'outside the configured vault' in result['error']",
+      "assert not (vault_path.parent / 'outside.md').exists()"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "import uuid",
+      "from pathlib import Path",
+      "import pytest",
+      "from app.config import load_settings, settings",
+      "from app.tools import mcp_client, obsidian",
+      "from app.tools.registry import registry",
+      "from app.brain.router import router",
+      "from app.brain.tool_params import build_tool_params"
+    ],
+    "sha256": "4745d97f96a70fbdd537c22a70eb416421688e7f8bdf3a7a78a50a1c844ceea1"
+  },
+  {
+    "module": "tests/test_perf_baseline.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_baseline_file_exists",
+      "test_baseline_has_benchmarks"
+    ],
+    "assertions": [
+      "assert BASELINE_PATH.exists()",
+      "assert 'benchmarks' in data",
+      "assert 'router_classify_ms' in data['benchmarks']"
+    ],
+    "imports": [
+      "import json",
+      "from pathlib import Path"
+    ],
+    "sha256": "06378f7f2df976667794ae5c27b59674ba6b643cf5dedbc8fc094d60f834a540"
+  },
+  {
+    "module": "tests/test_phase3_integration.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_screenshot_via_chat",
+      "test_mouse_keyboard_confirmation_gate",
+      "test_vision_via_chat",
+      "test_ws_listening_broadcast"
+    ],
+    "assertions": [
+      "assert response.status_code == 200",
+      "assert 'sir' in response.json()['reply'].lower()",
+      "assert response.status_code == 200",
+      "assert isinstance(response.json()['active'], bool)",
+      "assert response.status_code == 200",
+      "assert any((msg.get('type') == 'reply' for msg in messages))"
+    ],
+    "imports": [
+      "from types import SimpleNamespace",
+      "from unittest.mock import AsyncMock, patch",
+      "from fastapi.testclient import TestClient",
+      "from app.server import app",
+      "from app.tools.registry import ToolError, ToolResult"
+    ],
+    "sha256": "ebc21d2023886a4b3db29a2048b31a2d7e54bc330e4495e1626898349c227f07"
+  },
+  {
+    "module": "tests/test_phase8_integrations.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_boot_prefetch_context",
+      "test_project_indexer_disabled_stub",
+      "test_project_indexer_indexes_configured_text_path",
+      "test_mcp_client_rejects_unlisted_server",
+      "test_browser_use_missing_dependency",
+      "test_kasa_status_is_level_zero_missing_dependency",
+      "test_kasa_control_reports_level_one_semantics",
+      "test_cad_returns_dry_run_plan",
+      "test_cli_readiness_checks_known_targets",
+      "test_phase8_tools_registered"
+    ],
+    "assertions": [
+      "assert context['pending_tasks'] == 4",
+      "assert context['last_project'] == 'voice'",
+      "assert context['recent_errors'] == 2",
+      "assert context['gpu_temp'] == 55",
+      "assert result['stub'] is True",
+      "assert result['indexed'] == 0",
+      "assert result['indexed'] == 1",
+      "assert result['error'] == 'server_not_whitelisted'",
+      "assert result['dry_run'] is True",
+      "assert result['available'] is False",
+      "assert 'BROWSER_AGENT' in result['action_tag']",
+      "assert kasa.SAFETY_LEVEL == 0",
+      "assert result['safety_level'] == 0",
+      "assert result['available'] is False",
+      "assert result['safety_level'] == 1",
+      "assert result['dry_run'] is True",
+      "assert cad.SAFETY_LEVEL == 2",
+      "assert result['dry_run'] is True",
+      "assert result['plan']",
+      "assert result['orcaslicer_available'] is False",
+      "assert result['checks']['ffmpeg']['available'] is True",
+      "assert name in registry.TOOLS"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "from pathlib import Path",
+      "from types import SimpleNamespace",
+      "from unittest.mock import Mock",
+      "import pytest",
+      "from app import boot",
+      "from app.memory import project_indexer",
+      "from app.tools import browser_use, cad, kasa, mcp_client",
+      "from app.tools.cli import readiness as cli_readiness",
+      "from app.tools.registry import registry"
+    ],
+    "sha256": "3f8e4b89d80a8ab08769d50cfa87e6a545854feb9f0b9e6ea505bec6c59d17cf"
+  },
+  {
+    "module": "tests/test_planner.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_task_plan_fields",
+      "test_fallback_mode",
+      "test_llm_mode_valid_json",
+      "test_llm_mode_bad_json",
+      "test_singleton"
+    ],
+    "assertions": [
+      "assert plan.goal == 'test'",
+      "assert result.steps == ['do something'] and result.estimated_turns == 1",
+      "assert len(result.steps) > 0",
+      "assert result.steps == ['do something']",
+      "assert p1 is p2"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.brain.llm_client import OllamaConnectionError, llm_client",
+      "from app.brain.planner import TaskPlan, planner",
+      "from app.brain.planner import planner as p1, planner as p2"
+    ],
+    "sha256": "f4a17236d36d121a3ed5600b2a6bbe11538d9abdd6a47e97c03152cb1bffcf01"
+  },
+  {
+    "module": "tests/test_pre_server_readiness.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_build_checks_includes_expected_commands",
+      "test_build_checks_can_skip_full_tests",
+      "test_main_returns_nonzero_when_a_check_fails",
+      "test_main_returns_zero_when_checks_pass"
+    ],
+    "assertions": [
+      "assert names == ['full pytest', 'python dependency audit', 'python dependency consistency', 'electron dependency audit', 'readiness report', 'tool readiness smoke']",
+      "assert checks[0].command[:4] == [pre_server_readiness.sys.executable, '-m', 'pytest', '-q']",
+      "assert [check.name for check in checks][0] == 'python dependency audit'",
+      "assert all((check.name != 'full pytest' for check in checks))",
+      "assert exit_code == 1",
+      "assert 'FAIL' in output",
+      "assert exit_code == 0",
+      "assert 'PASS' in output"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from tasks import pre_server_readiness"
+    ],
+    "sha256": "c78b33325a86931f4b688dc3755738f1235671a2e958f3c1e0e17974c0cb49a1"
+  },
+  {
+    "module": "tests/test_procedural_memory.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_list_skills_reads_markdown_bullets",
+      "test_add_skill_deduplicates",
+      "test_prompt_context_limits_entries"
+    ],
+    "assertions": [
+      "assert memory.list_skills() == ['Check local files first.', 'Use type hints.']",
+      "assert memory.add_skill('Use type hints.') is True",
+      "assert memory.add_skill('Use type hints.') is False",
+      "assert memory.list_skills() == ['Use type hints.']",
+      "assert memory.prompt_context(limit=2) == 'Procedural memory:\\n- one\\n- two'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "from pathlib import Path",
+      "from app.memory.procedural import ProceduralMemory"
+    ],
+    "sha256": "9f51876201823c57dfe026adf076d61a7c9ef3fcba02cadc66ea8b5349aeec1d"
+  },
+  {
+    "module": "tests/test_prompts_memory.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_build_prompt_includes_procedural_memory"
+    ],
+    "assertions": [
+      "assert 'Procedural memory' in messages[0]['content']",
+      "assert 'Check power rails first.' in messages[0]['content']"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "from pathlib import Path",
+      "from app.brain import prompts",
+      "from app.memory.procedural import ProceduralMemory"
+    ],
+    "sha256": "a25b2fc5d89a4eaa6659f485a2eacf12277b569e4ea8bf5e0bb0446afa019f98"
+  },
+  {
+    "module": "tests/test_ptt_and_killswitch.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_ptt_bypasses_model",
+      "test_ptt_plays_listening_sound",
+      "test_ptt_during_listen_window_records_audio",
+      "test_trigger_sets_inactive",
+      "test_trigger_fires_callbacks",
+      "test_reset_restores_active",
+      "test_double_trigger_idempotent"
+    ],
+    "assertions": [
+      "assert kill_switch.JARVIS_ACTIVE is False",
+      "assert kill_switch.JARVIS_ACTIVE is True",
+      "assert kill_switch.JARVIS_ACTIVE is False",
+      "assert wake_word.listen() == b'pttaudio'",
+      "assert detector.listen(timeout=0.2) == b'pttaudio'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "from unittest.mock import MagicMock, patch",
+      "from app.brain import kill_switch",
+      "from app.voice.wake_word import wake_word"
+    ],
+    "sha256": "63320d3d24bcf965096010e0c43c2c1bb4e6ef837f27b58c7f44d8001f043e10"
+  },
+  {
+    "module": "tests/test_push_to_talk.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_ptt_manager_instantiates",
+      "test_ptt_not_active_by_default",
+      "test_ptt_callback_registration"
+    ],
+    "assertions": [
+      "assert manager.is_active() is False"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.voice.push_to_talk import PushToTalkManager"
+    ],
+    "sha256": "5e83cab1b21b2bd6969402c7e7268be66f5099d9315a98bdab4f6f8b6fe96cdc"
+  },
+  {
+    "module": "tests/test_pwa_glasses.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_glasses_toggle_in_html",
+      "test_glasses_mode_in_js"
+    ],
+    "assertions": [
+      "assert 'glasses-toggle' in content",
+      "assert 'glassesMode' in content",
+      "assert 'jarvis_glasses_mode' in content"
+    ],
+    "imports": [
+      "from pathlib import Path"
+    ],
+    "sha256": "4130b57904e4ca03ce7099c5996fe66f5ad9656b11aae9940454e7d35a3e4efd"
+  },
+  {
+    "module": "tests/test_pwa_serve.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_pwa_mount_exists",
+      "test_pwa_files_exist",
+      "test_pwa_manifest_is_scoped_to_pwa_mount",
+      "test_pwa_does_not_store_or_transport_api_credentials"
+    ],
+    "assertions": [
+      "assert mounts",
+      "assert os.path.exists('frontend/pwa/index.html')",
+      "assert os.path.exists('frontend/pwa/app.js')",
+      "assert os.path.exists('frontend/pwa/manifest.json')",
+      "assert os.path.exists('frontend/pwa/sw.js')",
+      "assert manifest['start_url'] == './'",
+      "assert manifest['scope'] == './'",
+      "assert 'jarvis_api_token' not in script",
+      "assert 'TOKEN_KEY' not in script",
+      "assert 'withTokenParam' not in script",
+      "assert 'Authorization' not in script",
+      "assert '?token=' not in script",
+      "assert 'Enter API token' not in script"
+    ],
+    "imports": [
+      "import os",
+      "import json",
+      "from pathlib import Path",
+      "from app.server import app"
+    ],
+    "sha256": "704fbc4efc61999622971e8c4ff46805f53340cdc0d3a668845f573f6bcd6570"
+  },
+  {
+    "module": "tests/test_rag_client.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_index_no_chromadb",
+      "test_query_no_chromadb",
+      "test_index_with_chromadb",
+      "test_query_with_chromadb",
+      "test_index_error",
+      "test_query_disabled_by_config"
+    ],
+    "assertions": [
+      "assert 'stub' in result",
+      "assert 'stub' in result",
+      "assert result == {'indexed': 2, 'total': 2}",
+      "assert result['results'] == ['doc1']",
+      "assert 'error' in result",
+      "assert result['stub'] is True",
+      "assert result['reason'] == 'disabled'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from unittest.mock import Mock",
+      "from app.memory import rag_client as rag_module"
+    ],
+    "sha256": "5344f0fcb428fac65ac0dfc82dd9758895a4e785096bf501e28b867b95471fe6"
+  },
+  {
+    "module": "tests/test_readiness_report.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_readiness_report_returns_zero_when_required_checks_pass",
+      "test_readiness_report_returns_nonzero_when_required_check_fails"
+    ],
+    "assertions": [
+      "assert exit_code == 0",
+      "assert 'All required readiness checks passed' in output",
+      "assert exit_code == 1",
+      "assert 'need attention' in output"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from tasks import readiness_report"
+    ],
+    "sha256": "5fc4b6f5e12b4acc19c68cfb98f217083c00f7613b1eaf664e61890f14b0fedd"
+  },
+  {
+    "module": "tests/test_resource_manager.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_light_sleep_unloads_services_and_keeps_wake_listener",
+      "test_deep_sleep_stops_wake_listener_and_processes",
+      "test_wake_starts_required_services_and_optionally_preloads",
+      "test_unload_ollama_model_uses_keep_alive_zero",
+      "test_resource_report_sums_loaded_model_vram_and_process_memory",
+      "test_classify_jarvis_process_matches_runtime_workers"
+    ],
+    "assertions": [
+      "assert manager.state == RuntimeState.LIGHT_SLEEP",
+      "assert result.previous_state == 'ACTIVE'",
+      "assert ('python_unload', True) in calls",
+      "assert 'wake_listener_started' in calls",
+      "assert {'voice_stopped', 'scheduler_stopped', 'ui_closed', 'ollama_unloaded', 'cuda_released'} <= set(result.actions)",
+      "assert manager.state == RuntimeState.DEEP_SLEEP",
+      "assert ('python_unload', False) in calls",
+      "assert 'wake_listener_stopped' in calls",
+      "assert 'wake_unloaded' in result.actions",
+      "assert 'terminated_processes:1' in result.actions",
+      "assert manager.state == RuntimeState.ACTIVE",
+      "assert result.previous_state == 'LIGHT_SLEEP'",
+      "assert 'wake_listener_stopped' in calls",
+      "assert {'scheduler_started', 'primary_preloaded'} <= set(result.actions)",
+      "assert unload_ollama_model('qwen3-nothink') is True",
+      "assert posted['json'] == {'model': 'qwen3-nothink', 'prompt': '', 'stream': False, 'keep_alive': 0}",
+      "assert report['estimated_vram_mb'] == 8192.0",
+      "assert report['jarvis_rss_ram_mb'] == 100.0",
+      "assert report['jarvis_committed_ram_mb'] == 250.0",
+      "assert report['running_jarvis_processes'][0]['role'] == 'fastapi_server'",
+      "assert classify_jarvis_process('python.exe', 'python -m uvicorn app.main:app', None) is None",
+      "assert classify_jarvis_process('python.exe', 'python -m uvicorn app.main:app', Mock(cwd=lambda: str(resource_module.PROJECT_ROOT))) == 'fastapi_server'",
+      "assert classify_jarvis_process('python.exe', 'python scripts/sensor_node.py', None) is None",
+      "assert classify_jarvis_process('python.exe', 'python -m pytest', None) is None"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "from unittest.mock import Mock",
+      "import pytest",
+      "from app.config import settings",
+      "import app.resource_manager as resource_module",
+      "from app.resource_manager import ResourceManager, RuntimeState, classify_jarvis_process, unload_ollama_model"
+    ],
+    "sha256": "96022d1eae1f8f1c3393ea7bae45311e5bccc3f04c532c96bd2204c2919e3332"
+  },
+  {
+    "module": "tests/test_restic_scripts.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_restic_scripts_exist_and_use_strict_shell_mode",
+      "test_backup_fails_clearly_without_repository_variable",
+      "test_exclusions_keep_audit_history_but_remove_reproducible_payloads"
+    ],
+    "assertions": [
+      "assert result.returncode != 0",
+      "assert 'RESTIC_REPOSITORY is required' in result.stderr",
+      "assert 'models/' in exclusions",
+      "assert 'piper/' in exclusions",
+      "assert 'node_modules/' in exclusions",
+      "assert 'tasks/tmp*.wav' in exclusions",
+      "assert 'logs/audit.jsonl' not in {line.strip() for line in exclusions.splitlines() if line.strip() and (not line.lstrip().startswith('#'))}",
+      "assert script.exists()",
+      "assert 'set -euo pipefail' in script.read_text(encoding='utf-8')"
+    ],
+    "imports": [
+      "import os",
+      "import subprocess",
+      "from pathlib import Path"
+    ],
+    "sha256": "fb6ec4992db5be9a092a742d76160d36c5fdbe73f1d8b7adfb0bc668199e4bb3"
+  },
+  {
+    "module": "tests/test_screenshot.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_mss_not_installed",
+      "test_capture_creates_file",
+      "test_execute_success"
+    ],
+    "assertions": [
+      "assert SAFETY_LEVEL == 0",
+      "assert result.get('dry_run') is True",
+      "assert 'error' in result",
+      "assert result['path'] == '/tmp/fake.png'",
+      "assert Path(path).exists()",
+      "assert path.endswith('.png')"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import builtins",
+      "import shutil",
+      "import sys",
+      "from pathlib import Path",
+      "from types import ModuleType, SimpleNamespace",
+      "from app.computer.screenshot import SAFETY_LEVEL, capture, execute",
+      "from app.config import settings"
+    ],
+    "sha256": "e653636981114fa7c504a73bbd54753d540874a4b9f0d5672c0c1ebccc97d8b8"
+  },
+  {
+    "module": "tests/test_screenshot_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_registered",
+      "test_capture_imports_error"
+    ],
+    "assertions": [
+      "assert screenshot_tool.SAFETY_LEVEL == 0",
+      "assert 'dry_run' in result",
+      "assert ToolRegistry().get('screenshot') is not None",
+      "assert result == {'error': 'mss not installed'}"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.config import settings",
+      "from app.tools import screenshot as screenshot_tool",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "085b672b47fa6b935e2be9f59c36bb8f6d35dd4c5094c67eefd118df73f0569a"
+  },
+  {
+    "module": "tests/test_self_suppression.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_suppression_flag_exists",
+      "test_suppression_blocks_detection_while_speaking",
+      "test_suppression_allows_detection_when_silent",
+      "test_short_reply_suppressed",
+      "test_long_reply_suppressed",
+      "test_contains_hey_jarvis_suppressed",
+      "test_suppression_resets_after_tts",
+      "test_overlap_silence_suppressed",
+      "test_concurrent_speaking_and_listening",
+      "test_suppression_does_not_affect_push_to_talk"
+    ],
+    "assertions": [
+      "assert hasattr(wake_word_module, 'is_speaking')",
+      "assert callable(wake_word_module.is_speaking)",
+      "assert result == b''",
+      "assert result == b'wake-audio'",
+      "assert result == b''",
+      "assert result == b''",
+      "assert result == b''",
+      "assert result == b'captured-audio'",
+      "assert model.predict.call_count == 1",
+      "assert result == b''",
+      "assert speaker_done.is_set()",
+      "assert result_box['result'] == b''",
+      "assert speaking_state is True",
+      "assert silent_state is True"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "import threading",
+      "import time",
+      "from types import SimpleNamespace",
+      "from unittest.mock import Mock, patch",
+      "import pytest",
+      "from app.config import settings",
+      "from app.voice import tts as tts_module",
+      "from app.voice.push_to_talk import PushToTalkManager",
+      "from app.voice.wake_word import WakeWordDetector",
+      "import app.voice.wake_word as wake_word_module"
+    ],
+    "sha256": "aea052dfd663c778f769ca11b281b7651005a303ebbc8256bba9229d6e72518e"
+  },
+  {
+    "module": "tests/test_sensor_endpoints.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_post_sensor_data",
+      "test_get_sensor_readings",
+      "test_list_sensors"
+    ],
+    "assertions": [
+      "assert response.status_code == 200",
+      "assert response.json()['received'] is True",
+      "assert response.status_code == 200",
+      "assert 'readings' in response.json()",
+      "assert response.status_code == 200",
+      "assert 'nodes' in response.json()"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from fastapi.testclient import TestClient",
+      "from app.agent import sensor_store",
+      "from app.server import app"
+    ],
+    "sha256": "cfade045d60413b35c2f3dbf3320ddca751c88fb7dbaaa534faa26ab5e9ed054"
+  },
+  {
+    "module": "tests/test_sensor_store.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_add_and_get_reading",
+      "test_list_nodes",
+      "test_max_readings",
+      "test_get_unknown_node"
+    ],
+    "assertions": [
+      "assert len(readings) == 1",
+      "assert readings[0]['readings']['cpu_temp'] == 45.0",
+      "assert 'node-a' in sensor_store.list_nodes()",
+      "assert len(sensor_store.get_readings('overflow-node', 200)) == 100",
+      "assert sensor_store.get_readings('nonexistent') == []"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.agent import sensor_store"
+    ],
+    "sha256": "aa86b8cf4d1f01216190feca054854e0329b5513f770dad05b4af7de96583ba6"
+  },
+  {
+    "module": "tests/test_shell_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_missing_command",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert SAFETY_LEVEL == 2",
+      "assert 'error' in result",
+      "assert ToolRegistry().get('shell') is not None",
+      "assert 'dry' in result.lower()",
+      "assert result.get('dry_run') is True"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from unittest.mock import patch",
+      "from app.tools.registry import ToolRegistry",
+      "from app.tools.shell import SAFETY_LEVEL",
+      "from app.tools.shell import execute",
+      "from app.tools.shell import execute"
+    ],
+    "sha256": "72e5ef2e0c1c7e6df2af6665ac6aa3daa2a20260a454648f7d2322e3a0be92c4"
+  },
+  {
+    "module": "tests/test_switch_models.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_switch_models_exists",
+      "test_4070ti_profile_sets_14b",
+      "test_5090_profile_sets_32b"
+    ],
+    "assertions": [
+      "assert SCRIPT_PATH.is_file()",
+      "assert 'Switched to 4070ti profile.' in result.stdout",
+      "assert '14b' in config['models']['main']",
+      "assert '14b' in config['models']['coder']",
+      "assert 'Switched to 5090 profile.' in result.stdout",
+      "assert '32b' in config['models']['main']",
+      "assert '32b' in config['models']['coder']",
+      "assert config['models']['vision'] == 'qwen3-vl'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import shutil",
+      "import subprocess",
+      "import sys",
+      "from pathlib import Path",
+      "import yaml"
+    ],
+    "sha256": "4657ef81d9539d299ba7d5ebf9976ca6871619bebe233731ee56de2228cab0ae"
+  },
+  {
+    "module": "tests/test_system_stats_tool.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_returns_expected_keys",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert system_stats.SAFETY_LEVEL == 0",
+      "assert 'dry' in str(result).lower()",
+      "assert isinstance(result, dict)",
+      "assert {'cpu_percent', 'ram_total_gb', 'disk_total_gb'} <= result.keys()",
+      "assert ToolRegistry().get('system_stats') is not None"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from unittest.mock import patch",
+      "from app.tools import system_stats",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "daf64d602091b9ab834b00a6c5c10ee65dcc9706e700c675939bf5bb3ebc8179"
+  },
+  {
+    "module": "tests/test_tailscale.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_tailscale_not_installed",
+      "test_tailscale_parse_success",
+      "test_tailscale_timeout",
+      "test_network_status_endpoint"
+    ],
+    "assertions": [
+      "assert result['available'] is False",
+      "assert result['available'] is True",
+      "assert result['self_ip'] == '100.x.x.x'",
+      "assert result['peers'] == 1",
+      "assert result['available'] is False",
+      "assert response.status_code == 200",
+      "assert 'tailscale' in response.json()"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "import subprocess",
+      "from types import SimpleNamespace",
+      "from fastapi.testclient import TestClient",
+      "from app.server import app",
+      "from app.network import tailscale",
+      "from app.network import tailscale",
+      "from app.network import tailscale",
+      "from app.network import tailscale"
+    ],
+    "sha256": "e92f480fc92d52eb794187f82db4b1660fc9cd301d6b83687e1bed57e66f8a4a"
+  },
+  {
+    "module": "tests/test_telegram_bot.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_send_disabled",
+      "test_send_no_lib",
+      "test_send_no_token",
+      "test_send_success"
+    ],
+    "assertions": [
+      "assert 'stub' in result",
+      "assert 'stub' in result",
+      "assert 'error' in result",
+      "assert result['sent'] is True"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "from types import SimpleNamespace",
+      "import app.comms.telegram_bot as telegram_bot_module",
+      "from app.comms.telegram_bot import TelegramBot"
+    ],
+    "sha256": "96488dc3cb5ab8d33cb21d2106b99a77ea4cf6d1f52bca7d769f3fb08d63c737"
+  },
+  {
+    "module": "tests/test_tool_embeddings.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_embedding_selector_ranks_tools_with_mocked_ollama",
+      "test_router_flag_off_keeps_existing_route",
+      "test_router_flag_on_can_replace_ambiguous_tool"
+    ],
+    "assertions": [
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'web_search'",
+      "assert result.intent == 'use_tool'",
+      "assert result.suggested_tool == 'calendar'",
+      "assert 'Embedding selector chose calendar' in result.reasoning",
+      "assert selected == 'calendar'",
+      "assert cached['model'] == 'nomic-embed-text'",
+      "assert set(cached['tools']) == {'calendar', 'web_search'}"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import json",
+      "import uuid",
+      "from pathlib import Path",
+      "import pytest",
+      "from app.brain import router as router_module",
+      "from app.brain import tool_embeddings",
+      "from app.config import settings",
+      "from app.tools import registry as registry_module"
+    ],
+    "sha256": "243ba48ec5d8ac1e5b232c0b20507e9a8cc3d4599f7962547cb552f59be70d80"
+  },
+  {
+    "module": "tests/test_tool_readiness_smoke.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_run_smoke_all_passes",
+      "test_main_returns_nonzero_for_failure",
+      "test_main_returns_zero_for_pass"
+    ],
+    "assertions": [
+      "assert results",
+      "assert all((result.passed for result in results))",
+      "assert exit_code == 1",
+      "assert 'FAIL' in output",
+      "assert exit_code == 0",
+      "assert 'PASS' in output"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from tasks import tool_readiness_smoke"
+    ],
+    "sha256": "1de3f20554174423dcb40ce75b7eb8bf5b575c8494baa8acdda66664a5c19ef7"
+  },
+  {
+    "module": "tests/test_tracing.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_trace_id_is_generated_stable_and_uuid4",
+      "test_different_requests_get_different_trace_ids",
+      "test_concurrent_requests_do_not_leak_trace_ids",
+      "test_parent_child_relationship_and_non_negative_durations",
+      "test_failing_span_records_error_and_propagates_original_exception",
+      "test_audit_entry_includes_active_trace_and_remains_backward_compatible",
+      "test_span_metadata_drops_secret_values_and_unknown_fields",
+      "test_jsonl_records_have_required_schema_fields",
+      "test_trace_write_failure_warns_but_does_not_break_processing",
+      "test_tool_trace_records_keys_not_values",
+      "test_small_max_size_rotates_trace_file",
+      "test_tracing_overhead_is_small_for_local_noop_spans",
+      "test_chat_entry_point_creates_one_request_trace",
+      "test_confirmation_continues_original_trace"
+    ],
+    "assertions": [
+      "assert current_trace_id() is None",
+      "assert current_trace_id() is None",
+      "assert first != second",
+      "assert seen['first'][0] == seen['first'][1]",
+      "assert seen['second'][0] == seen['second'][1]",
+      "assert seen['first'][0] != seen['second'][0]",
+      "assert child_start['parent_span_id'] == parent",
+      "assert child_end['status'] == 'ok'",
+      "assert child_end['duration_ms'] >= 0",
+      "assert captured.value is error",
+      "assert failing['status'] == 'error'",
+      "assert failing['error_type'] == 'RuntimeError'",
+      "assert 'credential-shaped' not in trace_path.read_text(encoding='utf-8')",
+      "assert rows[0]['trace_id'] == trace_id",
+      "assert rows[0]['schema_version'] == 2",
+      "assert 'trace_id' not in rows[1]",
+      "assert rows[1]['event_type'] == 'startup_event'",
+      "assert secret not in content",
+      "assert event['parameter_keys'] == ['api_token', 'command']",
+      "assert 'api_token' not in event",
+      "assert 'authorization' not in event",
+      "assert 'params' not in event",
+      "assert rows",
+      "assert all((required <= row.keys() for row in rows))",
+      "assert all((row['schema_version'] == 1 for row in rows))",
+      "assert result == 42",
+      "assert 'Failed to persist JARVIS trace span' in caplog.text",
+      "assert result.output == 'ok'",
+      "assert secret not in trace_path.read_text(encoding='utf-8')",
+      "assert tool_end['parameter_keys'] == ['query', 'token']",
+      "assert trace_path.exists()",
+      "assert trace_path.with_name('spans.jsonl.1').exists()",
+      "assert overhead_ms < 20.0",
+      "assert response.reply == 'Hello, sir.'",
+      "assert len(request_starts) == 1",
+      "assert request_starts[0]['transport'] == 'http'",
+      "assert result['confirmed'] is True",
+      "assert rows",
+      "assert {row['trace_id'] for row in rows} == {original_trace}",
+      "assert any((row['stage'] == 'confirmation' and row['status'] == 'confirmed' for row in rows))",
+      "assert uuid.UUID(trace_id).version == 4",
+      "assert current_trace_id() == trace_id",
+      "assert current_trace_id() == trace_id"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "import json",
+      "import time",
+      "import uuid",
+      "from pathlib import Path",
+      "from types import ModuleType",
+      "from unittest.mock import AsyncMock, patch",
+      "import pytest",
+      "from app.brain.router import RouterResult",
+      "from app.config import settings",
+      "from app.logs.audit import AuditLogger",
+      "from app.observability import tracing",
+      "from app.observability.tracing import current_trace_id, emit_event, start_trace, trace_span",
+      "from app.tools.registry import ToolRegistry",
+      "from app import server",
+      "from app import server",
+      "from app.tools.registry import ToolResult"
+    ],
+    "sha256": "55ce754f486e5d7c0bba90cb200cc26e48d56f785570914554d9611ed116c054"
+  },
+  {
+    "module": "tests/test_tts_chatterbox.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_chatterbox_unavailable_fallback",
+      "test_piper_fallback_strips_paralinguistics",
+      "test_chatterbox_available_generates",
+      "test_get_chatterbox_caches_model"
+    ],
+    "assertions": [
+      "assert fallback_calls == ['Fallback test.']",
+      "assert ('tts_unavailable', {'engine': 'chatterbox', 'reason': 'import_error_fallback'}) in events",
+      "assert fallback_calls == ['Certainly, sir .']",
+      "assert generated == ['Generate this.']",
+      "assert ('tts_chatterbox', {'text_length': len('Generate this.')}) in events",
+      "assert first is model",
+      "assert second is model",
+      "assert calls == ['cuda']",
+      "assert isinstance(wav, _FakeTensor)",
+      "assert device == 'cuda'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "import tempfile",
+      "import pytest",
+      "from app.voice import tts as tts_module"
+    ],
+    "sha256": "9bbff699098924651f1af428ce611c5e9b7560e40994faf716b089326414a91c"
+  },
+  {
+    "module": "tests/test_ue5_bridge.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_build_emotion_neutral",
+      "test_build_emotion_success",
+      "test_parse_emotion_found",
+      "test_parse_emotion_missing"
+    ],
+    "assertions": [
+      "assert result['animation'] == 'Idle_01'",
+      "assert result['animation'] == 'React_Happy'",
+      "assert result['intensity'] == 0.8",
+      "assert result == 'success'",
+      "assert result is None"
+    ],
+    "imports": [
+      "from app.comms.ue5_bridge import build_emotion_event, parse_emotion_from_reply"
+    ],
+    "sha256": "3fbfd62ea8c6cfd7ebe2b632f79a33b36c8d1e75395372531a7cf3ea34d5c071"
+  },
+  {
+    "module": "tests/test_vad_timeout.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_live_or_hardware",
+    "test_functions": [
+      "test_no_speech_returns_empty",
+      "test_result_type_is_bytes",
+      "test_short_timeout_exits_fast"
+    ],
+    "assertions": [
+      "assert _run(0.3) == b''",
+      "assert isinstance(_run(0.3), bytes)",
+      "assert result == b''",
+      "assert elapsed < 3.0"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import time",
+      "from unittest.mock import MagicMock, patch",
+      "import pytest",
+      "from app.voice.vad import vad"
+    ],
+    "sha256": "d8d71fdfd7efd84e2fe8a79b1b097cad486e5a08258a57d7b878cf3bb648b467"
+  },
+  {
+    "module": "tests/test_vision.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_screen_analysis",
+      "test_dry_run",
+      "test_webcam_not_implemented",
+      "test_unknown_source"
+    ],
+    "assertions": [
+      "assert vision.SAFETY_LEVEL == 0",
+      "assert result['analysis'] == 'a desktop'",
+      "assert result['image_path'] == '/tmp/test.png'",
+      "assert 'dry_run' in result",
+      "assert 'error' in result",
+      "assert 'phase' in result",
+      "assert 'error' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.computer import vision",
+      "from app.config import settings"
+    ],
+    "sha256": "3617a0263abab92c3042e979b8fd24a09f28ec4a1a8a0ca06bd3e67dd6610dca"
+  },
+  {
+    "module": "tests/test_vision_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_registered",
+      "test_unknown_source"
+    ],
+    "assertions": [
+      "assert vision_tool.SAFETY_LEVEL == 0",
+      "assert 'dry_run' in result",
+      "assert ToolRegistry().get('vision') is not None",
+      "assert 'error' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.config import settings",
+      "from app.tools import vision as vision_tool",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "cc3fb8ddb1207c037bfe6242944138a4447aeb9b7c8efb2318495e4c6273deac"
+  },
+  {
+    "module": "tests/test_vision_vlm.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_dry_run_screen",
+      "test_screen_calls_ollama",
+      "test_webcam_no_opencv",
+      "test_unknown_source"
+    ],
+    "assertions": [
+      "assert 'dry_run' in result",
+      "assert result['analysis'] == 'a desktop'",
+      "assert 'error' in result",
+      "assert 'error' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from app.computer import vision",
+      "from app.config import settings"
+    ],
+    "sha256": "c2283bf2818ae0483c99eddff03928d81e272ca25471f83312de04233c95663a"
+  },
+  {
+    "module": "tests/test_wake_diag.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_script_compiles",
+      "test_has_main_guard",
+      "test_csv_columns",
+      "test_summary_keys"
+    ],
+    "assertions": [
+      "assert '__main__' in contents",
+      "assert CSV_COLUMNS == ['timestamp_ms', 'score', 'detected']",
+      "assert 'max_score' in result and 'detection_count' in result"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import py_compile",
+      "from pathlib import Path",
+      "from scripts.wake_diag import CSV_COLUMNS, summarize"
+    ],
+    "sha256": "214a2c10a59c497824aa8787412495f2c41e64d803b29c85903586c5f9cee1a8"
+  },
+  {
+    "module": "tests/test_web_search_tool.py",
+    "classification": "Safe and relevant: enroll/port",
+    "reason": "Direct safety/authentication/resource/input-validation/tool-boundary relevance; fixtures may need adaptation and selected public-file mounts.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_safety_level",
+      "test_dry_run",
+      "test_no_ddgs",
+      "test_fetch_bad_url",
+      "test_registered"
+    ],
+    "assertions": [
+      "assert web_search.SAFETY_LEVEL == 0",
+      "assert 'dry' in str(result).lower()",
+      "assert isinstance(result, dict)",
+      "assert 'error' in result",
+      "assert isinstance(result, dict)",
+      "assert 'error' in result",
+      "assert ToolRegistry().get('web_search') is not None"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import builtins",
+      "from unittest.mock import patch",
+      "from app.tools import web_search",
+      "from app.tools.registry import ToolRegistry"
+    ],
+    "sha256": "cf2e0db89d4f1f7bf12a6d5af6b45354ca47f426ed36a6c8a0643203e2d5193d"
+  },
+  {
+    "module": "tests/test_yolo_detector.py",
+    "classification": "Safe but out of scope",
+    "reason": "Source contains isolated mocked or deterministic checks for subsystems not changed by this reconciliation; exclusion acceptable for this narrow rehearsal, not a repository-wide PASS.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_dry_run",
+      "test_no_ultralytics",
+      "test_detect_with_mocked_model",
+      "test_detect_error"
+    ],
+    "assertions": [
+      "assert result['dry_run'] is True",
+      "assert 'error' in result",
+      "assert 'ultralytics' in result['error']",
+      "assert 'detections' in result",
+      "assert result['detections'] == []",
+      "assert 'error' in result",
+      "assert result['error'] == 'model failed'"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "from types import SimpleNamespace",
+      "from app.computer.yolo_detector import yolo_detector",
+      "from app.config import settings"
+    ],
+    "sha256": "b2b10beb59ba02dcc104d6756c1d42e4d17980abe76930f05a1625541a58baaf"
+  },
+  {
+    "module": "tests/tts_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_speak_stream_yields_sentences"
+    ],
+    "assertions": [
+      "assert observed_speaking",
+      "assert tts_module.is_speaking is False"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import asyncio",
+      "import sys",
+      "from pathlib import Path",
+      "import pytest",
+      "from app.voice import tts as tts_module"
+    ],
+    "sha256": "aec3965fac33957857d1c073dfbb5e12e7605b6c70f1cd84432bd620c9b069a9"
+  },
+  {
+    "module": "tests/vad_test.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_vad_wav_packaging"
+    ],
+    "assertions": [
+      "assert wav.getnchannels() == 1",
+      "assert wav.getframerate() == 16000",
+      "assert wav.getsampwidth() == 2"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "import wave",
+      "from io import BytesIO",
+      "from pathlib import Path",
+      "from app.voice.vad import vad"
+    ],
+    "sha256": "0ccd3d10e2bbcb6034f7668c059571c5eeeef3db519ad3b6d1ce4baadb1308b5"
+  },
+  {
+    "module": "tests/voice_pipeline_test.py",
+    "classification": "Unclear: investigate before enrollment",
+    "reason": "Potential audio/process/script/startup dependencies need a targeted call-path review before running.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_voice_pipeline_stop_is_responsive"
+    ],
+    "assertions": [
+      "assert pipeline._thread is not None",
+      "assert calls, 'wake_word.listen was not called'",
+      "assert all((timeout == 0.01 for timeout in calls))",
+      "assert not pipeline._thread.is_alive()"
+    ],
+    "imports": [
+      "from __future__ import annotations",
+      "import time",
+      "from app.voice.audio_stream import VoicePipeline",
+      "from app.voice import audio_stream"
+    ],
+    "sha256": "371cb9b8595ad50f931e92b2816b8891bc04bff2139a07a8ee8788b7a00a1f7a"
+  },
+  {
+    "module": "tests/wake_word_test.py",
+    "classification": "Unsafe/live-dependent: exclude",
+    "reason": "Legacy smoke or live client/hardware path can call audio/provider/runtime startup; do not execute wholesale.",
+    "original_disposition": "excluded_offline_scope",
+    "test_functions": [
+      "test_wake_word_score_and_suppression_flag"
+    ],
+    "assertions": [],
+    "imports": [
+      "from __future__ import annotations",
+      "import sys",
+      "from pathlib import Path",
+      "from app.voice import tts as tts_module",
+      "from app.voice.wake_word import wake_word"
+    ],
+    "sha256": "68d7dde8533491b952b450c5e8df8b81fee2c2aec24fdc3a8898712347d9cf89"
+  }
+]
