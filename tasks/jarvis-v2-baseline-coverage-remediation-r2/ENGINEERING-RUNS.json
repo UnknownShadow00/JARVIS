@@ -1,0 +1,61 @@
+[
+  {
+    "name": "reconciliation",
+    "command": [
+      "python3",
+      "-B",
+      "scripts/reliability_gauntlet.py",
+      "--reconciliation",
+      "--output",
+      "tasks/jarvis-v2-baseline-coverage-remediation-r2/engineering-reconciliation.json"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "r3",
+    "command": [
+      "python3",
+      "-B",
+      "scripts/reliability_gauntlet.py",
+      "--r3",
+      "--output",
+      "tasks/jarvis-v2-baseline-coverage-remediation-r2/engineering-r3.json"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "r2",
+    "command": [
+      "python3",
+      "-B",
+      "scripts/reliability_gauntlet.py",
+      "--r2",
+      "--output",
+      "tasks/jarvis-v2-baseline-coverage-remediation-r2/engineering-r2.json"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "original",
+    "command": [
+      "python3",
+      "-B",
+      "scripts/reliability_gauntlet.py",
+      "--output",
+      "tasks/jarvis-v2-baseline-coverage-remediation-r2/engineering-original.json"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "coverage",
+    "command": [
+      "python3",
+      "-B",
+      "scripts/reliability_gauntlet.py",
+      "--coverage",
+      "--output",
+      "tasks/jarvis-v2-baseline-coverage-remediation-r2/engineering-coverage.json"
+    ],
+    "exit": 0
+  }
+]

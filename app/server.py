@@ -58,7 +58,7 @@ class ConnectionManager:
 
     async def connect(self, ws: WebSocket) -> bool:
         if len(self.active) + self._accepting >= 32:
-            await ws.close(code=1008, reason="connection_bound")
+            await self.close(ws, code=1008, reason="connection_bound")
             return False
         self._accepting += 1
         try:
@@ -72,26 +72,31 @@ class ConnectionManager:
         if ws in self.active:
             self.active.remove(ws)
 
+    send_timeout_seconds = 2.0
+
+    async def send(self, ws, data):
+        await asyncio.wait_for(ws.send_json(data), timeout=self.send_timeout_seconds)
+
+    async def close(self, ws, *, code=1011, reason="send_failed"):
+        try:
+            await asyncio.wait_for(ws.close(code=code, reason=reason), timeout=self.send_timeout_seconds)
+            return True
+        except Exception:
+            return False
+
     async def broadcast(self, data: dict[str, Any]) -> None:
-        dead = []
-        for ws in self.active:
+        for ws in tuple(self.active):
             try:
-                await asyncio.wait_for(ws.send_json(data), timeout=2)
+                await self.send(ws, data)
             except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self.disconnect(ws)
+                # Endpoint finally owns registration. Failed/slow live peers
+                # remain counted until their handler actually exits.
+                await self.close(ws)
 
     async def disconnect_all(self) -> int:
         closed = 0
-        for ws in list(self.active):
-            try:
-                await ws.close(code=1001, reason="JARVIS entering sleep mode")
-                closed += 1
-            except Exception:
-                pass
-            finally:
-                self.disconnect(ws)
+        for ws in tuple(self.active):
+            closed += await self.close(ws, code=1001, reason="JARVIS entering sleep mode")
         return closed
 
 
@@ -129,7 +134,7 @@ async def lifespan(app: FastAPI):
     execution_worker = get_execution_worker()
     try:
         authority.readiness()
-        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token:
+        if execution_worker is not None and execution_worker.pipeline.transport is not None and not settings.server.api_token.strip():
             from app.agent.authority import AuthorityError
             raise AuthorityError("transport_client_authentication_required")
         await scheduler.start()
@@ -238,11 +243,11 @@ def _ws_origin_allowed(websocket: WebSocket) -> bool:
 async def _reject_unauthorized_websocket(websocket: WebSocket, path: str) -> bool:
     if not _ws_origin_allowed(websocket):
         audit.log("ws_origin_rejected", {"path": path, "client": str(websocket.client)})
-        await websocket.close(code=1008, reason="Origin not allowed")
+        await manager.close(websocket, code=1008, reason="Origin not allowed")
         return True
     if not _ws_authorized(websocket):
         audit.log("auth_rejected", {"path": path, "client": str(websocket.client)})
-        await websocket.close(code=1008, reason="Unauthorized")
+        await manager.close(websocket, code=1008, reason="Unauthorized")
         return True
     return False
 
@@ -474,23 +479,23 @@ async def ws_endpoint(websocket: WebSocket) -> None:
                 return
             raw = frame.get("text")
             if type(raw) is not str:
-                await websocket.close(code=1008, reason="text_required")
+                await manager.close(websocket, code=1008, reason="text_required")
                 return
             if len(raw)>8192 or len(raw.encode('utf-8'))>8192:
-                await websocket.close(code=1009,reason="message_bound");return
+                await manager.close(websocket, code=1009,reason="message_bound");return
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 message = raw
             else:
                 if type(data) is not dict or type(data.get('message')) is not str:
-                    await websocket.close(code=1008,reason="invalid_message");return
+                    await manager.close(websocket, code=1008,reason="invalid_message");return
                 message=data['message']
             if not message.strip():
-                await websocket.close(code=1008,reason="invalid_message");return
+                await manager.close(websocket, code=1008,reason="invalid_message");return
 
             if not await resource_manager.ensure_awake_for_interaction("websocket"):
-                await websocket.send_json(
+                await manager.send(websocket,
                     {
                         "type": "sleep",
                         "state": resource_manager.state.value,
@@ -529,27 +534,18 @@ async def ws_endpoint(websocket: WebSocket) -> None:
                         "dry_run": settings.safety.dry_run,
                         "active": is_active(),
                     }
-                    await websocket.send_json(response)
+                    await manager.send(websocket, response)
                     await manager.broadcast(response)
             finally:
                 current_token.reset()
                 await manager.broadcast({"type": "listening", "active": False})
     except WebSocketDisconnect:
         pass
+    except TimeoutError:
+        await manager.close(websocket)
     finally:
         manager.disconnect(websocket)
         audit.log("ws_disconnect", {"client": str(websocket.client)})
-
-
-_UE5_CLOSE_TIMEOUT = 2.0
-
-
-async def _close_ue5(websocket: WebSocket, *, code: int, reason: str) -> None:
-    try:
-        await asyncio.wait_for(websocket.close(code=code, reason=reason), timeout=_UE5_CLOSE_TIMEOUT)
-    except TimeoutError:
-        # The endpoint's synchronous finally still releases the registration.
-        pass
 
 
 @app.websocket("/ue5")
@@ -566,12 +562,15 @@ async def ue5_endpoint(websocket: WebSocket) -> None:
             frame = await websocket.receive()
             if frame["type"] == "websocket.disconnect":
                 return
+            if frame.get("bytes") is not None:
+                await ue5_manager.close(websocket, code=1003, reason="text_frames_required")
+                return
             raw = frame.get("text")
             if type(raw) is not str:
-                await _close_ue5(websocket, code=1008, reason="text_required")
+                await ue5_manager.close(websocket, code=1008, reason="text_required")
                 return
             if len(raw) > 8192 or len(raw.encode("utf-8")) > 8192:
-                await _close_ue5(websocket, code=1009, reason="message_bound")
+                await ue5_manager.close(websocket, code=1009, reason="message_bound")
                 return
     except WebSocketDisconnect:
         pass

@@ -10,11 +10,19 @@ class Simulator:
             raise AuthorityError("simulation_disabled")
         self.authority = authority
 
+    def _task(self, task_id, scope):
+        task = self.authority._get("task", task_id, scope)
+        # The effect table proves only this legacy SQLite protocol. It cannot
+        # authorize or reconcile an ExecutionPipeline operation.
+        if "execution" in task:
+            raise AuthorityError("execution_protocol_mismatch")
+        return task
+
     def claim(self, actor, request_id, task_id):
         a = self.authority
         identifier(task_id)
         def effect(scope):
-            task = a._get("task", task_id, scope)
+            task = self._task(task_id, scope)
             row = a._conn.execute("SELECT state FROM outbox WHERE task_id=?", (task_id,)).fetchone()
             if row[0] != "held" or task["cancel_requested"]:
                 raise AuthorityError("not_claimable")
@@ -28,7 +36,7 @@ class Simulator:
     def apply(self, actor, request_id, task_id, claim_id, generation):
         a = self.authority
         def effect(scope):
-            task = a._get("task", task_id, scope)
+            task = self._task(task_id, scope)
             row = a._conn.execute("SELECT * FROM outbox WHERE task_id=?", (task_id,)).fetchone()
             if row["state"] != "simulating" or row["claim_id"] != claim_id or row["generation"] != generation or generation != a.generation:
                 raise AuthorityError("stale_claim")
@@ -46,7 +54,7 @@ class Simulator:
     def acknowledge(self, actor, request_id, task_id, claim_id, generation):
         a = self.authority
         def effect(scope):
-            task = a._get("task", task_id, scope)
+            task = self._task(task_id, scope)
             row = a._conn.execute("SELECT * FROM outbox WHERE task_id=?", (task_id,)).fetchone()
             if row["state"] != "simulating" or row["claim_id"] != claim_id or row["generation"] != generation or generation != a.generation:
                 raise AuthorityError("stale_claim")
@@ -61,7 +69,7 @@ class Simulator:
     def reconcile(self, actor, request_id, task_id):
         a = self.authority
         def effect(scope):
-            task = a._get("task", task_id, scope)
+            task = self._task(task_id, scope)
             row = a._conn.execute("SELECT state,claim_id FROM outbox WHERE task_id=?", (task_id,)).fetchone()
             if row["state"] != "unknown" or row["claim_id"] is None:
                 raise AuthorityError("not_unknown")

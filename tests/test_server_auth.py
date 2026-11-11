@@ -27,7 +27,7 @@ def api_token(monkeypatch) -> str:
     return token
 
 
-def test_blank_token_does_not_grant_task_authority() -> None:
+def test_empty_token_cannot_access_authority() -> None:
     assert settings.server.api_token == ""
     response = client.get("/tasks")
     assert response.status_code == 401

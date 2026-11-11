@@ -72,7 +72,7 @@ def test_valid_text_and_peer_disconnect_cleanup(manager, code):
 def test_binary_frames_close_cleanly(manager, payload):
     _, sent = asyncio.run(exercise([{"type": "websocket.receive", "bytes": payload}]))
     assert sent[-1]["type"] == "websocket.close"
-    assert sent[-1]["code"] == 1008
+    assert sent[-1]["code"] == 1003
     assert manager.active == []
 
 
@@ -166,7 +166,7 @@ def test_repeated_hostile_sessions_leave_no_persistent_entries_or_secrets(manage
             ws.send_bytes(b"x")
             with pytest.raises(WebSocketDisconnect) as closed:
                 ws.receive_text()
-            assert closed.value.code == 1008
+            assert closed.value.code == 1003
         assert manager.active == []
     assert TOKEN not in repr(events)
     assert "authorization" not in repr(events).lower()
@@ -230,7 +230,7 @@ def test_connection_bound_refuses_growth_and_reclaims_capacity(manager):
 
 
 def test_slow_close_cannot_retain_registration(manager, monkeypatch):
-    monkeypatch.setattr(server, "_UE5_CLOSE_TIMEOUT", 0.01)
+    monkeypatch.setattr(manager, "send_timeout_seconds", 0.01)
 
     async def slow(message):
         if message["type"] == "websocket.close":
@@ -239,7 +239,7 @@ def test_slow_close_cannot_retain_registration(manager, monkeypatch):
     _, sent = asyncio.run(exercise([
         {"type": "websocket.receive", "bytes": b"x"},
     ], on_send=slow))
-    assert sent[-1]["code"] == 1008
+    assert sent[-1]["code"] == 1003
     assert manager.active == []
 
 
@@ -248,10 +248,9 @@ def test_close_exception_cannot_retain_registration(manager):
         if message["type"] == "websocket.close":
             raise RuntimeError("synthetic close failure")
 
-    with pytest.raises(RuntimeError, match="synthetic close failure"):
-        asyncio.run(exercise([
-            {"type": "websocket.receive", "bytes": b"x"},
-        ], on_send=broken))
+    asyncio.run(exercise([
+        {"type": "websocket.receive", "bytes": b"x"},
+    ], on_send=broken))
     assert manager.active == []
 
 

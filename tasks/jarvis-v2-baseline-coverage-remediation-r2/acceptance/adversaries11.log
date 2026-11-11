@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-baseline-coverage-remediation-r2/tasks/jarvis-v2-baseline-coverage-remediation-r2/check_adversaries.py", line 13, in <module>
+    if fault=='added':(r/'tests/test_not_reviewed.py').write_text("raise RuntimeError('SYNTHETIC_PRIVATE_IMPORT')\n")
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 810, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 772, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/tmp/jarvis-coverage-adversary-vcv_r5de/tests/test_not_reviewed.py'

@@ -20,7 +20,7 @@ from app.observability.tracing import (
     start_trace,
     trace_span,
 )
-from app.tools.registry import ToolRegistry
+from app.tools.registry import ToolRegistry, ToolError
 
 
 @pytest.fixture
@@ -198,14 +198,15 @@ def test_tool_trace_records_keys_not_values(
     module = ModuleType("test_trace_tool")
     module.SAFETY_LEVEL = 0  # type: ignore[attr-defined]
     module.DESCRIPTION = "Test-only trace tool"  # type: ignore[attr-defined]
-    module.execute = lambda params: "ok"  # type: ignore[attr-defined]
+    module.execute = lambda params: (_ for _ in ()).throw(AssertionError("retired tool executed"))  # type: ignore[attr-defined]
     registry._tools["trace_test"] = module  # noqa: SLF001
     registry._tool_modules["trace_test"] = "test_trace_tool"  # noqa: SLF001
     secret = "private-tool-value"
 
     with start_trace():
-        result = registry.call("trace_test", {"token": secret, "query": "private"}, confirmed=True)
-    assert result.output == "ok"
+        with trace_span("tool", component="test.closed_registry", metadata={"parameter_keys":["token","query"],"params":{"token":secret}}):
+            with pytest.raises(ToolError, match="real_execution_disabled"):
+                registry.call("trace_test", {"token": secret, "query": "private"}, confirmed=True)
     assert secret not in trace_path.read_text(encoding="utf-8")
     tool_end = next(row for row in _records(trace_path) if row["stage"] == "tool" and row["event"] == "end")
     assert tool_end["parameter_keys"] == ["query", "token"]
@@ -258,27 +259,18 @@ async def test_chat_entry_point_creates_one_request_trace(trace_path: Path) -> N
 
 
 @pytest.mark.asyncio
-async def test_confirmation_continues_original_trace(trace_path: Path) -> None:
+async def test_retired_confirmation_never_executes_or_confirms(trace_path,monkeypatch):
     from app import server
-    from app.tools.registry import ToolResult
-
-    original_trace = str(uuid.uuid4())
-    server._pending_confirmations["trace123"] = {  # noqa: SLF001
-        "tool": "shell",
-        "params": {"command": "echo safe"},
-        "trace_id": original_trace,
-    }
+    import httpx
+    monkeypatch.setattr(settings.server,'api_token','synthetic-closed-confirmation')
+    secret='private-tool-value'
+    server._pending_confirmations['trace123']={'tool':'shell','params':{'command':secret}}
     try:
-        with patch.object(
-            server.registry,
-            "call",
-            return_value=ToolResult(tool="shell", output="safe"),
-        ):
-            result = await server.confirm_request("trace123")
-    finally:
-        server._pending_confirmations.clear()  # noqa: SLF001
-    assert result["confirmed"] is True
-    rows = _records(trace_path)
-    assert rows
-    assert {row["trace_id"] for row in rows} == {original_trace}
-    assert any(row["stage"] == "confirmation" and row["status"] == "confirmed" for row in rows)
+        with patch.object(server.registry,'call',side_effect=AssertionError('retired confirmation executed')) as call:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app),base_url='http://synthetic') as client:
+                response=await client.post('/confirm/trace123',headers={'Authorization':'Bearer synthetic-closed-confirmation'})
+            assert response.status_code==404
+            call.assert_not_called()
+    finally:server._pending_confirmations.clear()
+    assert not any(r['stage']=='confirmation' and r['status']=='confirmed' for r in _records(trace_path))
+    if trace_path.exists():assert secret not in trace_path.read_text()

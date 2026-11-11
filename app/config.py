@@ -137,13 +137,13 @@ class ServerConfig(StrictModel):
 
 
 class ResourceModeConfig(StrictModel):
-    enabled: bool = True
+    enabled: bool = False
     idle_timeout_minutes: int = 10
     deep_sleep_timeout_minutes: int = 60
     keep_wake_listener_in_light_sleep: bool = True
     keep_wake_listener_in_deep_sleep: bool = False
-    auto_light_sleep: bool = True
-    auto_deep_sleep: bool = True
+    auto_light_sleep: bool = False
+    auto_deep_sleep: bool = False
     stop_server_on_auto_deep_sleep: bool = True
     preload_primary_model_on_wake: bool = False
     preload_keep_alive: str = "5m"

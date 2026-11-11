@@ -17,15 +17,8 @@ from synthetic_authority import fixture_authority as Authority
 from app.agent.execution import (DisabledExecutor, ExecutionPipeline, ExecutionWorker,
                                  ExecutorRegistry, SimulatedPolicy, SyntheticExecutor, phase_id)
 from app.agent import runtime
-from app.config import settings
 
 ACTOR = runtime.SERVICE_ACTOR
-API_HEADERS = {"Authorization": "Bearer synthetic-execution-api-regression"}
-
-
-@pytest.fixture(autouse=True)
-def authenticated_api_identity(monkeypatch):
-    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-execution-api-regression')
 
 
 def key():
@@ -33,7 +26,9 @@ def key():
 
 
 @pytest.fixture
-def env(tmp_path):
+def env(tmp_path,monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings.server,"api_token","synthetic-pipeline-client")
     a = Authority(tmp_path / 'state' / 'queue.sqlite', allow_simulation=True)
     p = ExecutionPipeline(a, SimulatedPolicy(ACTOR.scope), enabled=True)
     yield a, p
@@ -283,7 +278,7 @@ async def test_real_api_worker_receipts_and_restart(env):
     app.include_router(router)
     try:
         await worker.start()
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
             op = key()
             body = dict(request_id=op, goal='API pipeline', capability='synthetic.echo', payload={'value': 'through API'}, expires_at=(datetime.now(UTC)+timedelta(minutes=1)).isoformat())
             admitted = await client.post('/execution/tasks', json=body)
@@ -418,7 +413,7 @@ async def test_scheduled_cancellation_policy_and_stopped_admission(env):
     app.include_router(router)
     try:
         await worker.start()
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic', headers=API_HEADERS) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
             body = dict(request_id=key(), goal='schedule', name='scheduled echo', cron_expr='* * * * *', execution=dict(capability='shell.exec', payload={'value':'no'}))
             assert (await client.post('/schedule/jobs', json=body)).status_code == 400
             assert a.list_schedules(ACTOR) == []
@@ -517,7 +512,7 @@ async def test_admission_body_stream_bound_precedes_json(env):
     app.include_router(router)
     app.add_middleware(AdmissionBodyLimit)
     try:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
             response=await client.post('/execution/tasks',content=b'x'*262145)
             assert response.status_code==413
             async def chunks():
@@ -548,7 +543,7 @@ async def test_public_mutations_cannot_reserve_internal_phase_receipts(env):
         await worker.stop()
         op=submit(p)['request_id']
         reserved=phase_id(op,'publish')
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers=API_HEADERS) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://synthetic',headers={'Authorization':'Bearer synthetic-pipeline-client'}) as client:
             assert (await client.post('/tasks',json={'request_id':reserved,'goal':'reserve internal receipt'})).status_code==422
             assert (await client.delete('/tasks/'+op,params={'request_id':reserved})).status_code==422
             assert (await client.delete('/schedule/jobs/'+op,params={'request_id':reserved})).status_code==422

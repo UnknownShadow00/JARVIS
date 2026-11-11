@@ -14,8 +14,8 @@ from app.tools.registry import registry
 pytestmark = pytest.mark.unit
 
 
-def _scratch_vault() -> Path:
-    return Path("tasks") / f".obsidian-test-{uuid.uuid4().hex}"
+def _scratch_vault(tmp_path: Path) -> Path:
+    return tmp_path / "vault"
 
 
 def _configure_filesystem_mode(monkeypatch, vault_path: Path) -> None:
@@ -25,8 +25,8 @@ def _configure_filesystem_mode(monkeypatch, vault_path: Path) -> None:
     monkeypatch.setattr(obsidian.audit, "log", lambda *_args, **_kwargs: None)
 
 
-def test_obsidian_filesystem_crud_stays_inside_vault(monkeypatch) -> None:
-    vault_path = _scratch_vault()
+def test_obsidian_filesystem_crud_stays_inside_vault(monkeypatch,tmp_path) -> None:
+    vault_path = _scratch_vault(tmp_path)
     _configure_filesystem_mode(monkeypatch, vault_path)
 
     try:
@@ -58,8 +58,8 @@ def test_obsidian_filesystem_crud_stays_inside_vault(monkeypatch) -> None:
         shutil.rmtree(vault_path, ignore_errors=True)
 
 
-def test_obsidian_blocks_path_traversal(monkeypatch) -> None:
-    vault_path = _scratch_vault()
+def test_obsidian_blocks_path_traversal(monkeypatch,tmp_path) -> None:
+    vault_path = _scratch_vault(tmp_path)
     _configure_filesystem_mode(monkeypatch, vault_path)
 
     try:
@@ -71,8 +71,8 @@ def test_obsidian_blocks_path_traversal(monkeypatch) -> None:
         shutil.rmtree(vault_path, ignore_errors=True)
 
 
-def test_obsidian_mcp_path_is_stubbed_when_enabled(monkeypatch) -> None:
-    vault_path = _scratch_vault()
+def test_obsidian_mcp_path_is_stubbed_when_enabled(monkeypatch,tmp_path) -> None:
+    vault_path = _scratch_vault(tmp_path)
     monkeypatch.setattr(settings.tools, "obsidian_enabled", True)
     monkeypatch.setattr(settings.tools, "obsidian_vault_path", str(vault_path))
     monkeypatch.setattr(settings.safety, "dry_run", False)

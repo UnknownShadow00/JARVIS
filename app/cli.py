@@ -31,6 +31,8 @@ def main(argv: list[str] | None = None) -> int:
             return _wake(args)
         if args.command == "status":
             return _status(args)
+        if args.command == "ready":
+            return _ready(args)
         if args.command == "shutdown":
             return _shutdown(args)
         if args.command == "tasks":
@@ -69,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = subparsers.add_parser("status", help="Show runtime state and resource report.")
     status.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    subparsers.add_parser("ready", help="Check authenticated authority readiness; exits nonzero when unavailable.")
 
     shutdown = subparsers.add_parser("shutdown", help="Unload models and stop JARVIS-owned runtime processes.")
     shutdown.add_argument("--offline",action="store_true",help="Compatibility flag; cannot authorize local host-control effects.")
@@ -166,6 +169,20 @@ def _status(args: argparse.Namespace) -> int:
         print(json.dumps(payload, indent=2))
     else:
         _print_status(payload)
+    return 0
+
+
+def _ready(args: argparse.Namespace) -> int:
+    if not settings.server.api_token.strip():
+        print("Authority readiness requires a configured Bearer credential.", file=sys.stderr)
+        return 1
+    payload = _get("/ready")
+    if (payload is None or payload.get("scheduler_ready") is not True
+            or type(payload.get("synthetic_execution_enabled")) is not bool
+            or payload["synthetic_execution_enabled"] and payload.get("execution_worker_ready") is not True):
+        print("Authority readiness unavailable or refused; preserve state. No retry was attempted.", file=sys.stderr)
+        return 1
+    print(json.dumps(payload, indent=2))
     return 0
 
 
