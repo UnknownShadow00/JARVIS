@@ -43,7 +43,10 @@ CI calls the same complete entrypoint, with read-only repository permissions and
 no persisted checkout credentials. There is no apt/pip/setup-Python or broad
 pytest fallback. The standard hosted image is **not claimed qualified**: absent
 the pre-provisioned exact environment it fails nonzero before tests. Runner/image
-provisioning and remote orchestration qualification are separate operator work;
+provisioning and remote orchestration qualification are separate operator work.
+The operator-owned `JARVIS_QUALIFIED_OFFLINE_RUNNER` repository variable may name
+a disposable prequalified hosted image; unset uses the fail-closed standard image.
+Do not place private application configuration or provider credentials on it;
 do not put untrusted PR code on a trusted self-hosted machine to obtain green CI.
 Local execution of the exact job command is the offline qualification evidence.
 

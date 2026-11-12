@@ -129,6 +129,7 @@ def test_ci_routes_to_complete_gate_without_install_or_broad_pytest():
     body=yaml.load((ROOT/'.github/workflows/tests.yml').read_text(),Loader=yaml.BaseLoader)
     assert body['permissions']=={'contents':'read'}
     steps=body['jobs']['test']['steps']
+    assert body['jobs']['test']['runs-on']=="${{ vars.JARVIS_QUALIFIED_OFFLINE_RUNNER || 'ubuntu-latest' }}"
     assert steps[0]['with']['persist-credentials']=='false'
     commands=[s['run'] for s in steps if 'run' in s]
     assert commands==['python3 -B scripts/offline_acceptance.py --output-dir "$RUNNER_TEMP/jarvis-offline-acceptance"']

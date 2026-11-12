@@ -12,7 +12,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Operator-owned label for a disposable, prequalified hosted image. Never
+    # point PR jobs at a trusted/persistent self-hosted or production machine.
+    # The fallback stays active and fails closed if the bundle is unavailable.
+    runs-on: ${{ vars.JARVIS_QUALIFIED_OFFLINE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
