@@ -135,6 +135,8 @@ def child(seed, mode, scenario_timeout, run_id):
         files = ['test_release_security.py', 'test_ue5_security.py', 'test_baseline_enrollment.py']
     elif mode == 'r3':
         files = ['test_required_inventory_r3.py']
+    elif mode == 'safety':
+        files = ['test_canonical_safety_r2.py']
     elif mode == 'r2':
         files = ['test_scheduler_hardening_r2.py', 'test_gauntlet_protocol_r2.py']
     elif mode.startswith('case:'):
@@ -169,6 +171,7 @@ def main():
     modes.add_argument('--reconciliation', action='store_true')
     modes.add_argument('--r3', action='store_true', help='R3 required inventory regression suite')
     modes.add_argument('--r2', action='store_true', help='R2 scheduler/protocol regression suite')
+    modes.add_argument('--safety', action='store_true', help='Canonical discovery/CI safety regressions')
     modes.add_argument('--probe-case', choices=PROBE_CASES, help='one intentional completion/redaction failure fixture')
     modes.add_argument('--existing', action='store_true', help='replay selected neighboring offline tests separately')
     modes.add_argument('--probe', action='store_true', help='intentional reporting faults; use --scenario-timeout 1; expects exit 1')
@@ -181,7 +184,7 @@ def main():
         parser.error('timeouts must be positive and bounded by 600 seconds')
     if args.output.exists():
         parser.error('output already exists; choose a fresh report path')
-    mode = 'coverage' if args.coverage else 'reconciliation' if args.reconciliation else 'r3' if args.r3 else 'existing' if args.existing else 'probe' if args.probe else 'r2' if args.r2 else 'case:' + args.probe_case if args.probe_case else 'new'
+    mode = 'safety' if args.safety else 'coverage' if args.coverage else 'reconciliation' if args.reconciliation else 'r3' if args.r3 else 'existing' if args.existing else 'probe' if args.probe else 'r2' if args.r2 else 'case:' + args.probe_case if args.probe_case else 'new'
     import uuid
     run_id = uuid.uuid4().hex
     root = Path(__file__).resolve().parents[1]
@@ -192,13 +195,22 @@ def main():
     # Source identity covers every mounted source/test byte; no private config is mounted.
     inputs = [p for folder in ('app', 'tests') for p in (root / folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
     inputs += [root / 'scripts/coverage_modules.json', root / 'scripts/test_enrollment.py', root / 'scripts/test_enrollment.json', root / 'scripts/required_test_inventory.py', root / 'scripts/required_tests.json', root / 'scripts/gauntlet_protocol.py', Path(__file__).resolve(), root / 'config.yaml.example', root / 'pytest.ini']
-    report['source_sha256'] = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(inputs)}
+    inputs += [root / 'conftest.py', root / '.github/workflows/tests.yml', root / 'scripts/offline_acceptance.py', root / 'scripts/offline_contracts.py', root / 'scripts/offline_environment.json', root / 'scripts/historical_packet_inventory.json', root / 'scripts/required_nodes_6341648.json']
     cmd = ['/usr/bin/bwrap', '--unshare-all', '--die-with-parent', '--new-session', '--cap-drop', 'ALL',
            '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin', '--symlink', 'usr/lib', '/lib',
            '--symlink', 'usr/lib64', '/lib64', '--ro-bind', str(deps), '/deps',
            '--ro-bind', str(root / 'app'), '/source/app', '--ro-bind', str(root / 'tests'), '/source/tests',
            '--ro-bind', str(root / 'config.yaml.example'), '/source/config.yaml',
            '--ro-bind', str(root / 'pytest.ini'), '/source/pytest.ini',
+           '--ro-bind', str(root / 'conftest.py'), '/source/conftest.py',
+           '--ro-bind', str(root / '.github/workflows/tests.yml'), '/source/.github/workflows/tests.yml',
+           '--ro-bind', str(root / 'scripts/offline_acceptance.py'), '/source/scripts/offline_acceptance.py',
+           '--ro-bind', str(root / 'scripts/offline_contracts.py'), '/source/scripts/offline_contracts.py',
+           '--ro-bind', str(root / 'scripts/offline_environment.json'), '/source/scripts/offline_environment.json',
+           '--ro-bind', str(root / 'scripts/historical_packet_inventory.json'), '/source/scripts/historical_packet_inventory.json',
+           '--ro-bind', str(root / 'scripts/required_nodes_6341648.json'), '/source/scripts/required_nodes_6341648.json',
+           '--ro-bind', str(root / 'scripts/required_tests.json'), '/source/scripts/required_tests.json',
+           '--ro-bind', str(root / 'scripts/test_enrollment.json'), '/source/scripts/test_enrollment.json',
            '--ro-bind', str(root / 'evals'), '/source/evals',
            '--ro-bind', str(root / 'scripts/sensor_node.py'), '/source/scripts/sensor_node.py',
            '--ro-bind', str(root / 'config.yaml.example'), '/source/config.yaml.example',
@@ -230,6 +242,10 @@ def main():
             resource.setrlimit(kind, (value, value))
     code = 2
     try:
+        trees = [root / name for name in ('app', 'tests', 'evals')]
+        if any(p.is_symlink() for tree in trees for p in (tree, *tree.rglob('*'))) or any(p.is_symlink() for p in inputs):
+            raise InvalidEvidence('unsafe_source_path')
+        report['source_sha256'] = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(inputs)}
         inventory = load_inventory(root / "scripts/required_tests.json", root, mode)
         report["required_count"] = len(inventory["identities"])
         report["inventory_sha256"] = inventory["sha256"]
