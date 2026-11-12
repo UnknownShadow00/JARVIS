@@ -1,0 +1,102 @@
+[
+  {
+    "case": "script_inventory",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "scripts/offline_acceptance.py",
+      "--list-required"
+    ],
+    "command_sha256": "e1e344464c9d5f9357638c288e30466cdb3d03af2df76ef7102eb7f3d21e085a",
+    "exit": 0,
+    "status": "INVENTORY_ONLY_NOT_ACCEPTANCE",
+    "passed": true
+  },
+  {
+    "case": "module_inventory",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "-m",
+      "scripts.offline_acceptance",
+      "--list-required"
+    ],
+    "command_sha256": "ed006b123a70da865e81a257639c5c8b4a9446745a6bb1314decc3a21c584793",
+    "exit": 0,
+    "status": "INVENTORY_ONLY_NOT_ACCEPTANCE",
+    "passed": true
+  },
+  {
+    "case": "reject_partial",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "scripts/offline_acceptance.py",
+      "--coverage",
+      "--output-dir",
+      "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-final-independent-canonical-safety-r2-audit/entrypoint-contracts/not-created"
+    ],
+    "command_sha256": "2918a5389aa23dc82c516d552d35720de7b7e40ff61997448ce52cae0f7c2418",
+    "exit": 2,
+    "status": "BLOCKED",
+    "passed": true
+  },
+  {
+    "case": "reject_private_marker",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "-m",
+      "scripts.offline_acceptance",
+      "-k",
+      "<redacted-synthetic-argument>"
+    ],
+    "command_sha256": "b9b2d57c8f8fdb49cc67bebe073f0dafa19930bcad2186a73bbda354fee01a8c",
+    "exit": 2,
+    "status": "BLOCKED",
+    "passed": true
+  },
+  {
+    "case": "existing_output",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "scripts/offline_acceptance.py",
+      "--output-dir",
+      "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-final-independent-canonical-safety-r2-audit/entrypoint-contracts/existing"
+    ],
+    "command_sha256": "01ff93ae74ded16adcbf57ee1606a81aee8af38362e347d824aeb74986fd177d",
+    "exit": 2,
+    "status": "BLOCKED",
+    "passed": true
+  },
+  {
+    "case": "forbidden_source_output",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "scripts/offline_acceptance.py",
+      "--output-dir",
+      "/tmp/jarvis-final-safety-r2-independent-vbpwlozy/checkout/app/.offline-safety-output-must-not-exist"
+    ],
+    "command_sha256": "653d3f7a983765108e321603d51c0da4b2012cbe660589f3d70b51c56dbef2fe",
+    "exit": 2,
+    "status": "BLOCKED",
+    "passed": true
+  },
+  {
+    "case": "unqualified_bundle",
+    "command": [
+      "/usr/bin/python3",
+      "-B",
+      "-c",
+      "import importlib.util,sys;from pathlib import Path;spec=importlib.util.spec_from_file_location('qualified_fault',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);m.DEPS=Path(sys.argv[2]);sys.argv=[sys.argv[1],'--output-dir',sys.argv[3]];raise SystemExit(m.main())",
+      "/tmp/jarvis-final-safety-r2-independent-vbpwlozy/checkout/scripts/offline_acceptance.py",
+      "/tmp/jarvis-empty-qualified-bundle-ko_kjwl2",
+      "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-final-independent-canonical-safety-r2-audit/entrypoint-contracts/unqualified-output"
+    ],
+    "exit": 1,
+    "status": "BLOCKED",
+    "passed": true
+  }
+]

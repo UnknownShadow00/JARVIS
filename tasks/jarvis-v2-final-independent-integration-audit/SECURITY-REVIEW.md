@@ -1,0 +1,19 @@
+# Independent safeguard review
+
+| Safeguard | Verdict | Evidence and compatibility assessment |
+|---|---|---|
+|Authenticated readiness|PASS|Authority router's async dependency rejects blank expected credentials and requires exact Bearer even when embedded. CLI ready refuses blank before request, sends configured Bearer once, validates strict readiness booleans and refuses errors without start/retry. Fresh12 ready-client cases resolve the original parser omission.|
+|Credential validation/startup|PASS|Existing constant-time exact comparison and remote/nonblank validation remain; transport-backed worker startup checks stripped token before scheduler/background start. Ordinary legacy loopback routes retain their documented token-optional behavior; this is not a claim that every route is universally authenticated.|
+|Storage ancestry|PASS|Descriptor-relative no-follow component traversal and owner/mode checks preserved; create immediately verifies retained identities. Fresh ancestry/storage replacement/failure tests pass. Not an atomic SQLite VFS or same-UID compromise defense.|
+|WebSocket ownership/cleanup|PASS|Bounded send/close on both managers, failed/live peers remain counted until endpoint finally exits; capacity/malformed/binary/origin/auth/cancellation cleanup tested. No premature ownership release is restored from development.|
+|Automatic resource defaults|PASS|ResourceMode enabled/auto-light/auto-deep false; example boot/voice/dictation/resource/tracing activation opt-in. Explicit existing private runtime configurations were neither read nor qualified.|
+|Dictation/privacy|PASS|False default is the reviewed contract, not a hidden app change. Clipboard/type-out authorization negatives and transcript redaction remain active; no LLM/TTS dictation path is introduced.|
+|Simulator/execution separation|PASS|Scoped guard refuses execution-envelope tasks for legacy claim/apply/ack/reconcile. Application execution/authority/transport code otherwise unchanged.|
+|Timestamp overflow|PASS|OverflowError normalized to invalid_time without relaxing timezone/type bounds.|
+|Scheduler ownership/restart|PASS for installed3.11.3 scope|Explicit retained executor/store completion, shielded owner cleanup across cancellation/timeout, partial retry and restart fencing. Real backend tests run; synthetic backend/future/protocol cases identified separately. Native/thread/custom resource qualification remains outside scope.|
+|Sensitive-output protection|PASS|Allowlists for categories and opaque identities; injected private exception/parameter/module markers absent from negative machine JSON while failures/nonzero exits remain visible. No claim of hiding public source-path metadata.|
+|Test completeness/enrollment|PASS|Fixed digest-pinned expected nodes independent of collection; exact module policy; separate session/collection and terminal phases. Fresh import skips, missing/duplicate/substitution/config filters and post-collection execution omissions reject. Proposal utility is never acceptance authority.|
+
+No current critical/high source regression or failing required case was found. Nine app changes relative to canonical are documented restorations/reliability fixes; API authentication and data schemas are preserved. The rehearsal itself changes no app, tests, runners, manifests or dependencies and introduces no new test replacement. Prior accepted replacement/port analyses were inspected, not silently counted as one-to-one coverage of retired legacy implementations.
+
+Risk ranking and mandatory future conditions are in REPORT.md. Main remaining concerns are dependency-version drift under broad lower bounds, exact future merged-tree verification, local evidence custody and disclosed coverage/operational exclusions. None authorizes live qualification or reopening closed interfaces.

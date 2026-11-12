@@ -1,0 +1,154 @@
+[
+  {
+    "file": "tests/test_config_check.py",
+    "function": "test_example_config_matches_schema",
+    "old": "def test_example_config_matches_schema() -> None:\n    example = load_settings(PROJECT_ROOT / 'config.yaml.example')\n    assert example.models.main == 'qwen3-nothink'\n    assert example.voice.stt_model == 'large-v3-turbo'\n    assert example.voice.tts_engine == 'chatterbox'\n    assert example.voice.dictation_enabled is True\n    assert example.voice.dictation_hotkey == 'ctrl+shift+space'\n    assert example.voice.dictation_type_out is False\n    assert example.server.host == '127.0.0.1'\n    assert example.server.remote_access_enabled is False\n    assert example.server.enable_voice_on_startup is False\n    assert example.server.enable_hotkey_listener is False\n    assert example.resource_mode.enabled is True\n    assert example.resource_mode.idle_timeout_minutes == 10\n    assert example.resource_mode.deep_sleep_timeout_minutes == 60\n    assert example.resource_mode.keep_wake_listener_in_light_sleep is True\n    assert example.resource_mode.keep_wake_listener_in_deep_sleep is False\n    assert example.resource_mode.stop_server_on_auto_deep_sleep is True\n    assert example.memory.graphiti_enabled is False\n    assert example.memory.neo4j_uri == 'bolt://localhost:7687'\n    assert example.memory.neo4j_user == 'neo4j'\n    assert example.memory.neo4j_password_env == 'NEO4J_PASSWORD'\n    assert example.tools.obsidian_enabled is False\n    assert example.tools.obsidian_vault_path == './jarvis-vault'\n    assert example.routing.embedding_enabled is False\n    assert example.routing.embedding_model == 'nomic-embed-text'\n    assert example.routing.embedding_top_k == 3",
+    "new": "def test_example_config_matches_schema() -> None:\n    example = load_settings(PROJECT_ROOT / 'config.yaml.example')\n    assert example.models.main == 'qwen3-nothink'\n    assert example.voice.stt_model == 'large-v3-turbo'\n    assert example.voice.tts_engine == 'chatterbox'\n    assert example.voice.dictation_enabled is False\n    assert example.voice.dictation_hotkey == 'ctrl+shift+space'\n    assert example.voice.dictation_type_out is False\n    assert example.server.host == '127.0.0.1'\n    assert example.server.remote_access_enabled is False\n    assert example.server.enable_voice_on_startup is False\n    assert example.server.enable_hotkey_listener is False\n    assert example.resource_mode.enabled is False\n    assert example.resource_mode.idle_timeout_minutes == 10\n    assert example.resource_mode.deep_sleep_timeout_minutes == 60\n    assert example.resource_mode.keep_wake_listener_in_light_sleep is True\n    assert example.resource_mode.keep_wake_listener_in_deep_sleep is False\n    assert example.resource_mode.stop_server_on_auto_deep_sleep is True\n    assert example.memory.graphiti_enabled is False\n    assert example.memory.neo4j_uri == 'bolt://localhost:7687'\n    assert example.memory.neo4j_user == 'neo4j'\n    assert example.memory.neo4j_password_env == 'NEO4J_PASSWORD'\n    assert example.tools.obsidian_enabled is False\n    assert example.tools.obsidian_vault_path == './jarvis-vault'\n    assert example.routing.embedding_enabled is False\n    assert example.routing.embedding_model == 'nomic-embed-text'\n    assert example.routing.embedding_top_k == 3",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_dictation.py",
+    "function": "test_dictation_config_defaults_present",
+    "old": "def test_dictation_config_defaults_present() -> None:\n    loaded = load_settings()\n    assert loaded.voice.dictation_enabled is True\n    assert loaded.voice.dictation_hotkey == 'ctrl+shift+space'\n    assert loaded.voice.dictation_type_out is False",
+    "new": null,
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_dictation.py",
+    "function": "test_dictation_config_defaults_require_opt_in",
+    "old": null,
+    "new": "def test_dictation_config_defaults_require_opt_in() -> None:\n    loaded = load_settings()\n    assert loaded.voice.dictation_enabled is False\n    assert loaded.voice.dictation_hotkey == 'ctrl+shift+space'\n    assert loaded.voice.dictation_type_out is False",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_obsidian_tool.py",
+    "function": "_scratch_vault",
+    "old": "def _scratch_vault() -> Path:\n    return Path('tasks') / f'.obsidian-test-{uuid.uuid4().hex}'",
+    "new": "def _scratch_vault(tmp_path: Path) -> Path:\n    return tmp_path / 'vault'",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_obsidian_tool.py",
+    "function": "test_obsidian_filesystem_crud_stays_inside_vault",
+    "old": "def test_obsidian_filesystem_crud_stays_inside_vault(monkeypatch) -> None:\n    vault_path = _scratch_vault()\n    _configure_filesystem_mode(monkeypatch, vault_path)\n    try:\n        created = obsidian.execute({'action': 'note_create', 'path': 'Projects/JARVIS Log', 'content': 'Initial [[linked]] note.'})\n        appended = obsidian.execute({'action': 'note_append', 'path': 'Projects/JARVIS Log', 'content': 'Second line.'})\n        read = obsidian.execute({'action': 'note_read', 'path': 'Projects/JARVIS Log'})\n        search = obsidian.execute({'action': 'note_search', 'query': 'linked'})\n        assert created == {'created': True, 'path': 'Projects/JARVIS Log.md', 'chars': 24}\n        assert appended == {'appended': True, 'path': 'Projects/JARVIS Log.md', 'chars': 12}\n        assert read['found'] is True\n        assert read['content'] == 'Initial [[linked]] note.\\nSecond line.'\n        assert search['count'] == 1\n        assert search['results'][0]['path'] == 'Projects/JARVIS Log.md'\n        assert (vault_path / 'Projects' / 'JARVIS Log.md').is_file()\n    finally:\n        shutil.rmtree(vault_path, ignore_errors=True)",
+    "new": "def test_obsidian_filesystem_crud_stays_inside_vault(monkeypatch, tmp_path) -> None:\n    vault_path = _scratch_vault(tmp_path)\n    _configure_filesystem_mode(monkeypatch, vault_path)\n    try:\n        created = obsidian.execute({'action': 'note_create', 'path': 'Projects/JARVIS Log', 'content': 'Initial [[linked]] note.'})\n        appended = obsidian.execute({'action': 'note_append', 'path': 'Projects/JARVIS Log', 'content': 'Second line.'})\n        read = obsidian.execute({'action': 'note_read', 'path': 'Projects/JARVIS Log'})\n        search = obsidian.execute({'action': 'note_search', 'query': 'linked'})\n        assert created == {'created': True, 'path': 'Projects/JARVIS Log.md', 'chars': 24}\n        assert appended == {'appended': True, 'path': 'Projects/JARVIS Log.md', 'chars': 12}\n        assert read['found'] is True\n        assert read['content'] == 'Initial [[linked]] note.\\nSecond line.'\n        assert search['count'] == 1\n        assert search['results'][0]['path'] == 'Projects/JARVIS Log.md'\n        assert (vault_path / 'Projects' / 'JARVIS Log.md').is_file()\n    finally:\n        shutil.rmtree(vault_path, ignore_errors=True)",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_obsidian_tool.py",
+    "function": "test_obsidian_blocks_path_traversal",
+    "old": "def test_obsidian_blocks_path_traversal(monkeypatch) -> None:\n    vault_path = _scratch_vault()\n    _configure_filesystem_mode(monkeypatch, vault_path)\n    try:\n        result = obsidian.execute({'action': 'note_create', 'path': '../outside', 'content': 'nope'})\n        assert 'outside the configured vault' in result['error']\n        assert not (vault_path.parent / 'outside.md').exists()\n    finally:\n        shutil.rmtree(vault_path, ignore_errors=True)",
+    "new": "def test_obsidian_blocks_path_traversal(monkeypatch, tmp_path) -> None:\n    vault_path = _scratch_vault(tmp_path)\n    _configure_filesystem_mode(monkeypatch, vault_path)\n    try:\n        result = obsidian.execute({'action': 'note_create', 'path': '../outside', 'content': 'nope'})\n        assert 'outside the configured vault' in result['error']\n        assert not (vault_path.parent / 'outside.md').exists()\n    finally:\n        shutil.rmtree(vault_path, ignore_errors=True)",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_obsidian_tool.py",
+    "function": "test_obsidian_mcp_path_is_stubbed_when_enabled",
+    "old": "def test_obsidian_mcp_path_is_stubbed_when_enabled(monkeypatch) -> None:\n    vault_path = _scratch_vault()\n    monkeypatch.setattr(settings.tools, 'obsidian_enabled', True)\n    monkeypatch.setattr(settings.tools, 'obsidian_vault_path', str(vault_path))\n    monkeypatch.setattr(settings.safety, 'dry_run', False)\n    monkeypatch.setattr(obsidian.audit, 'log', lambda *_args, **_kwargs: None)\n    result = obsidian.execute({'action': 'note_append', 'path': 'Inbox', 'content': 'via mcp'})\n    assert result['dry_run'] is True\n    assert result['server'] == 'obsidian'\n    assert result['configured']['command'] == f'npx obsidian-mcp {vault_path}'\n    assert result['params']['tool'] == 'note_append'",
+    "new": "def test_obsidian_mcp_path_is_stubbed_when_enabled(monkeypatch, tmp_path) -> None:\n    vault_path = _scratch_vault(tmp_path)\n    monkeypatch.setattr(settings.tools, 'obsidian_enabled', True)\n    monkeypatch.setattr(settings.tools, 'obsidian_vault_path', str(vault_path))\n    monkeypatch.setattr(settings.safety, 'dry_run', False)\n    monkeypatch.setattr(obsidian.audit, 'log', lambda *_args, **_kwargs: None)\n    result = obsidian.execute({'action': 'note_append', 'path': 'Inbox', 'content': 'via mcp'})\n    assert result['dry_run'] is True\n    assert result['server'] == 'obsidian'\n    assert result['configured']['command'] == f'npx obsidian-mcp {vault_path}'\n    assert result['params']['tool'] == 'note_append'",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_phase3_integration.py",
+    "function": "test_screenshot_via_chat",
+    "old": "def test_screenshot_via_chat() -> None:\n    with TestClient(app) as client, patch('app.server.check_voice', return_value=False), patch('app.server.is_active', return_value=True), patch('app.server.intent_router.classify', return_value=_intent('screenshot')), patch('app.server.registry.call', return_value=ToolResult(tool='screenshot', output={'path': '/tmp/test.png', 'monitor': 0})), patch('app.server.llm_client.chat', new=AsyncMock(return_value='Screenshot captured, sir.')):\n        response = client.post('/chat', json={'message': 'take a screenshot'})\n    assert response.status_code == 200\n    assert 'sir' in response.json()['reply'].lower()",
+    "new": "def test_screenshot_via_chat() -> None:\n    with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client, patch('app.server.check_voice', return_value=False), patch('app.server.is_active', return_value=True), patch('app.server.intent_router.classify', return_value=_intent('screenshot')), patch('app.server.registry.call', return_value=ToolResult(tool='screenshot', output={'path': '/tmp/test.png', 'monitor': 0})) as call, patch('app.server.llm_client.chat', new=AsyncMock(return_value='Screenshot captured, sir.')):\n        response = client.post('/chat', json={'message': 'take a screenshot'})\n    assert response.status_code == 200\n    assert 'disabled' in response.json()['reply'].lower()\n    call.assert_not_called()\n    assert 'disabled' in response.json()['reply'].lower()",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_phase3_integration.py",
+    "function": "test_mouse_keyboard_confirmation_gate",
+    "old": "def test_mouse_keyboard_confirmation_gate() -> None:\n    with TestClient(app) as client, patch('app.server.check_voice', return_value=False), patch('app.server.is_active', return_value=True), patch('app.server.intent_router.classify', return_value=_intent('mouse_keyboard')), patch('app.server.registry.call', side_effect=ToolError('Level 2. Requires user confirmation')), patch('app.server.llm_client.chat', new=AsyncMock(return_value='Need confirmation, sir.')):\n        response = client.post('/chat', json={'message': 'click on the start button'})\n    assert response.status_code == 200\n    assert isinstance(response.json()['active'], bool)",
+    "new": "def test_mouse_keyboard_confirmation_gate() -> None:\n    with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client, patch('app.server.check_voice', return_value=False), patch('app.server.is_active', return_value=True), patch('app.server.intent_router.classify', return_value=_intent('mouse_keyboard')), patch('app.server.registry.call', side_effect=ToolError('Level 2. Requires user confirmation')) as call, patch('app.server.llm_client.chat', new=AsyncMock(return_value='Need confirmation, sir.')):\n        response = client.post('/chat', json={'message': 'click on the start button'})\n    assert response.status_code == 200\n    assert isinstance(response.json()['active'], bool)\n    call.assert_not_called()\n    assert 'disabled' in response.json()['reply'].lower()",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_phase3_integration.py",
+    "function": "test_vision_via_chat",
+    "old": "def test_vision_via_chat() -> None:\n    with TestClient(app) as client, patch('app.server.check_voice', return_value=False), patch('app.server.is_active', return_value=True), patch('app.server.intent_router.classify', return_value=_intent('vision')), patch('app.server.registry.call', return_value=ToolResult(tool='vision', output={'stub': True, 'source': 'screen'})), patch('app.server.llm_client.chat', new=AsyncMock(return_value='I can see the screen, sir.')):\n        response = client.post('/chat', json={'message': 'what do you see on screen'})\n    assert response.status_code == 200",
+    "new": "def test_vision_via_chat() -> None:\n    with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client, patch('app.server.check_voice', return_value=False), patch('app.server.is_active', return_value=True), patch('app.server.intent_router.classify', return_value=_intent('vision')), patch('app.server.registry.call', return_value=ToolResult(tool='vision', output={'stub': True, 'source': 'screen'})) as call, patch('app.server.llm_client.chat', new=AsyncMock(return_value='I can see the screen, sir.')):\n        response = client.post('/chat', json={'message': 'what do you see on screen'})\n    assert response.status_code == 200\n    call.assert_not_called()\n    assert 'disabled' in response.json()['reply'].lower()",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_phase3_integration.py",
+    "function": "test_ws_listening_broadcast",
+    "old": "def test_ws_listening_broadcast() -> None:\n    intent = SimpleNamespace(intent='respond', confidence=0.9, suggested_tool='', reasoning='')\n    with patch('app.server.start_hotkey_listener'), patch('app.server.register_callback'), patch('app.voice.audio_stream.voice_pipeline.start'), patch('app.voice.audio_stream.voice_pipeline.stop'), patch('app.server.tts.stop'), patch('app.server._process_stream', new=AsyncMock(return_value=None)), patch('app.server._process', new=AsyncMock(return_value=('Hello, sir.', intent))):\n        with TestClient(app) as client, client.websocket_connect('/ws') as ws:\n            ws.send_json({'message': 'hello'})\n            messages = [ws.receive_json(), ws.receive_json()]\n    assert any((msg.get('type') == 'reply' for msg in messages))",
+    "new": "def test_ws_listening_broadcast() -> None:\n    intent = SimpleNamespace(intent='respond', confidence=0.9, suggested_tool='', reasoning='')\n    with patch('app.server.start_hotkey_listener'), patch('app.server.register_callback'), patch('app.voice.audio_stream.voice_pipeline.start'), patch('app.voice.audio_stream.voice_pipeline.stop'), patch('app.server.tts.stop'), patch('app.server._process_stream', new=AsyncMock(return_value=None)), patch('app.server._process', new=AsyncMock(return_value=('Hello, sir.', intent))):\n        with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client, client.websocket_connect('/ws') as ws:\n            ws.send_json({'message': 'hello'})\n            messages = [ws.receive_json(), ws.receive_json()]\n    assert any((msg.get('type') == 'reply' for msg in messages))",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_phase3_integration.py",
+    "function": "authenticated_fixture",
+    "old": null,
+    "new": "@pytest.fixture(autouse=True)\ndef authenticated_fixture(monkeypatch):\n    from app.config import settings\n    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-coverage-client')",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_sensor_endpoints.py",
+    "function": "test_post_sensor_data",
+    "old": "def test_post_sensor_data() -> None:\n    with TestClient(app) as client:\n        response = client.post('/sensors/data', json={'node_id': 'rpi-1', 'readings': {'cpu_temp': 42.0}})\n    assert response.status_code == 200\n    assert response.json()['received'] is True",
+    "new": "def test_post_sensor_data() -> None:\n    with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client:\n        response = client.post('/sensors/data', json={'node_id': 'rpi-1', 'readings': {'cpu_temp': 42.0}})\n    assert response.status_code == 200\n    assert response.json()['received'] is True",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_sensor_endpoints.py",
+    "function": "test_get_sensor_readings",
+    "old": "def test_get_sensor_readings() -> None:\n    with TestClient(app) as client:\n        client.post('/sensors/data', json={'node_id': 'rpi-1', 'readings': {'cpu_temp': 42.0}})\n        response = client.get('/sensors/rpi-1')\n    assert response.status_code == 200\n    assert 'readings' in response.json()",
+    "new": "def test_get_sensor_readings() -> None:\n    with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client:\n        client.post('/sensors/data', json={'node_id': 'rpi-1', 'readings': {'cpu_temp': 42.0}})\n        response = client.get('/sensors/rpi-1')\n    assert response.status_code == 200\n    assert 'readings' in response.json()",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_sensor_endpoints.py",
+    "function": "test_list_sensors",
+    "old": "def test_list_sensors() -> None:\n    with TestClient(app) as client:\n        client.post('/sensors/data', json={'node_id': 'rpi-list-test', 'readings': {'cpu_temp': 42.0}})\n        response = client.get('/sensors')\n    assert response.status_code == 200\n    assert 'nodes' in response.json()",
+    "new": "def test_list_sensors() -> None:\n    with TestClient(app, headers={'Authorization': 'Bearer synthetic-coverage-client'}) as client:\n        client.post('/sensors/data', json={'node_id': 'rpi-list-test', 'readings': {'cpu_temp': 42.0}})\n        response = client.get('/sensors')\n    assert response.status_code == 200\n    assert 'nodes' in response.json()",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_sensor_endpoints.py",
+    "function": "authenticated_fixture",
+    "old": null,
+    "new": "@pytest.fixture(autouse=True)\ndef authenticated_fixture(monkeypatch):\n    from app.config import settings\n    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-coverage-client')",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_tracing.py",
+    "function": "test_tool_trace_records_keys_not_values",
+    "old": "def test_tool_trace_records_keys_not_values(trace_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:\n    monkeypatch.setattr(settings.safety, 'dry_run', False)\n    registry = ToolRegistry()\n    module = ModuleType('test_trace_tool')\n    module.SAFETY_LEVEL = 0\n    module.DESCRIPTION = 'Test-only trace tool'\n    module.execute = lambda params: 'ok'\n    registry._tools['trace_test'] = module\n    registry._tool_modules['trace_test'] = 'test_trace_tool'\n    secret = 'private-tool-value'\n    with start_trace():\n        result = registry.call('trace_test', {'token': secret, 'query': 'private'}, confirmed=True)\n    assert result.output == 'ok'\n    assert secret not in trace_path.read_text(encoding='utf-8')\n    tool_end = next((row for row in _records(trace_path) if row['stage'] == 'tool' and row['event'] == 'end'))\n    assert tool_end['parameter_keys'] == ['query', 'token']",
+    "new": "def test_tool_trace_records_keys_not_values(trace_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:\n    monkeypatch.setattr(settings.safety, 'dry_run', False)\n    registry = ToolRegistry()\n    module = ModuleType('test_trace_tool')\n    module.SAFETY_LEVEL = 0\n    module.DESCRIPTION = 'Test-only trace tool'\n    module.execute = lambda params: (_ for _ in ()).throw(AssertionError('retired tool executed'))\n    registry._tools['trace_test'] = module\n    registry._tool_modules['trace_test'] = 'test_trace_tool'\n    secret = 'private-tool-value'\n    with start_trace():\n        with trace_span('tool', component='test.closed_registry', metadata={'parameter_keys': ['token', 'query'], 'params': {'token': secret}}):\n            with pytest.raises(ToolError, match='real_execution_disabled'):\n                registry.call('trace_test', {'token': secret, 'query': 'private'}, confirmed=True)\n    assert secret not in trace_path.read_text(encoding='utf-8')\n    tool_end = next((row for row in _records(trace_path) if row['stage'] == 'tool' and row['event'] == 'end'))\n    assert tool_end['parameter_keys'] == ['query', 'token']",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_tracing.py",
+    "function": "test_confirmation_continues_original_trace",
+    "old": "@pytest.mark.asyncio\nasync def test_confirmation_continues_original_trace(trace_path: Path) -> None:\n    from app import server\n    from app.tools.registry import ToolResult\n    original_trace = str(uuid.uuid4())\n    server._pending_confirmations['trace123'] = {'tool': 'shell', 'params': {'command': 'echo safe'}, 'trace_id': original_trace}\n    try:\n        with patch.object(server.registry, 'call', return_value=ToolResult(tool='shell', output='safe')):\n            result = await server.confirm_request('trace123')\n    finally:\n        server._pending_confirmations.clear()\n    assert result['confirmed'] is True\n    rows = _records(trace_path)\n    assert rows\n    assert {row['trace_id'] for row in rows} == {original_trace}\n    assert any((row['stage'] == 'confirmation' and row['status'] == 'confirmed' for row in rows))",
+    "new": null,
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  },
+  {
+    "file": "tests/test_tracing.py",
+    "function": "test_retired_confirmation_never_executes_or_confirms",
+    "old": null,
+    "new": "@pytest.mark.asyncio\nasync def test_retired_confirmation_never_executes_or_confirms(trace_path, monkeypatch):\n    from app import server\n    import httpx\n    monkeypatch.setattr(settings.server, 'api_token', 'synthetic-closed-confirmation')\n    secret = 'private-tool-value'\n    server._pending_confirmations['trace123'] = {'tool': 'shell', 'params': {'command': secret}}\n    try:\n        with patch.object(server.registry, 'call', side_effect=AssertionError('retired confirmation executed')) as call:\n            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app), base_url='http://synthetic') as client:\n                response = await client.post('/confirm/trace123', headers={'Authorization': 'Bearer synthetic-closed-confirmation'})\n            assert response.status_code == 404\n            call.assert_not_called()\n    finally:\n        server._pending_confirmations.clear()\n    assert not any((r['stage'] == 'confirmation' and r['status'] == 'confirmed' for r in _records(trace_path)))\n    if trace_path.exists():\n        assert secret not in trace_path.read_text()",
+    "verdict": "ACCEPT",
+    "reason": "Fixture isolation/explicit synthetic identity or documented opt-in/closed-execution contract; unchanged application semantics; negative privacy/auth/no-effect assertions retained."
+  }
+]

@@ -1,0 +1,77 @@
+{
+  "expected": 45,
+  "before": {
+    "report": "acceptance-script/gate22/before-astra.json",
+    "executed": 31,
+    "skips": 0,
+    "status": "PASS",
+    "exit": 0
+  },
+  "after": {
+    "report": "acceptance-script/gate22/astra.json",
+    "executed": 31,
+    "skips": 0,
+    "status": "FAIL",
+    "exit": 1,
+    "child_exit": 0,
+    "missing": 14,
+    "missing_cases": [
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_late_cleanup_error_remains_observable_after_cancellation",
+        "id": "25086943098d051ceca5726fde557b14a6fb8a3dc044e87fddf2156e06be0774"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_real_executor_cleanup_failure_is_observed_and_retryable",
+        "id": "3323830ead58586b739bc22d2ad450a593e62d6e93bc25a2934e38c93e1b24ac"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_real_stop_confirms_cleanup_before_immediate_restart",
+        "id": "360e485ce0878ca647ad88f1b8ecd14474855a6314d724125e1f3ecd15e31a69"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_legacy_claimed_execution_fixture_cannot_apply_or_acknowledge[acknowledge]",
+        "id": "404cc7c6bf1437b4dead23bb17ccfa08ac406a8b42036e81b58eda0f7d9b32f9"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_concurrent_stop_does_not_duplicate_backend_cleanup",
+        "id": "65ea176b3ad12a6ed4fdfbefc0b4102d2e2d67ef7b1b19d865da8c5f2ff71049"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_unverifiable_executor_future_does_not_count_as_cleanup",
+        "id": "728eb4d27d82b4cd1d4d0ed5188d99fe66a282b94519afcaffe2d5778433c667"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_inflight_cleanup_survives_caller_interruption_and_retry[cancel]",
+        "id": "788b0130008c149e9f7275ab0ab9c4eed0668b31c02e5e952845f527f038c92e"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_real_cancellation_suppressing_job_keeps_owner_until_done",
+        "id": "9f30afb90d1795743d55ac72fdac1e8946fc998f50a1acaf2aa08f8743132471"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_combined_durable_and_backend_failure_retains_owner",
+        "id": "ab4651549d35d08285a349808961bc6d14e6d55db03f3124803609c1eb9b1223"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_legacy_claimed_execution_fixture_cannot_apply_or_acknowledge[apply]",
+        "id": "b0491e4d863b24e301e770d61af676f94f3ae97db03571bd76105a554c095229"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_real_partial_store_cleanup_retries_only_unfinished_resources",
+        "id": "beb34da27fd8c2234ae9d2eda6c08b0083c6dd9fe57098202259cccb5f13a37c"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_closed_real_backend_cannot_reopen_stale_cleanup_inventory",
+        "id": "c6445e82cc717f61df938006450ea88d0b2411fabd68f1972c716a732aa64be0"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_inflight_cleanup_survives_caller_interruption_and_retry[timeout]",
+        "id": "c985f9f29cab4fb19360a8fa4a69fed08520cb4ecb06d920031e124c4256736f"
+      },
+      {
+        "nodeid": "tests/test_scheduler_hardening_r2.py::test_unowned_deferred_backend_is_refused_without_losing_handle",
+        "id": "fef2bf0e7451d8404f25e4ce1108749e0b2d6b3608ebd132827b0b6937baeed5"
+      }
+    ]
+  }
+}

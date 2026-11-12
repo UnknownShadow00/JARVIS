@@ -1,0 +1,1912 @@
+{
+  "module_count": 136,
+  "required_distinct_nodes": 886,
+  "modules": [
+    {
+      "path": "tests/__init__.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/application_fixtures.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "6c6e23bff37599e2b3ada1aa34c3b0c50af1fb3764b9e42715e5dfd53f34404d",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/audit_process_actor.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "c5e52b9162592bc4a1e52baaa6c3ec4f839f188c256a1bfd6cd7ea3bcc2e5a0b",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/boot_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_boot_sequence. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "82165bae889fbe59048aa105fcb99559317fb30dfa36f2943611ab998153e8f0",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/conftest.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "e04d3db5257f2e57188c61739bff8fe852057016a4c2360d7213fbd3aaed5ce2",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/direct_responder_test.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "413805de1ab9c4935936f73e6fa5dd228af8a1006d062092e40b04e041ca1e72",
+      "required_nodeids": [
+        "tests/direct_responder_test.py::test_direct_responder"
+      ]
+    },
+    {
+      "path": "tests/e2e/__init__.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/e2e/test_full_loop.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "ff738aaed63769fc2a4f7f967b588ea0c8c27c8ff362177ece11a4e915818f10",
+      "required_nodeids": [
+        "tests/e2e/test_full_loop.py::test_cancel_token_stops_pipeline",
+        "tests/e2e/test_full_loop.py::test_full_loop_timing_mock",
+        "tests/e2e/test_full_loop.py::test_pipeline_imports",
+        "tests/e2e/test_full_loop.py::test_router_returns_respond_intent"
+      ]
+    },
+    {
+      "path": "tests/enrollment_fixtures.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "83af2d34127978170b297fdcb82e6e354af68d52ea283e07a9f66763d74a5a10",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/enrollment_process_actor.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "3f2f1c284e3c12aa4a7191e4bc2b19a7761b04904dce3ab4b9a94179e3c003ed",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/execution_process_actor.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "b3c01101d498170da5b4214105aacebed2d8a9fcec809eb3d6cec8d93d109030",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/fixtures/ancestor_hypothesis.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "81ac40e128089608c989d1ea0c52158ea4cec4aeb509898223a71fa643d2959c",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/fixtures/baseline_api.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "5f168d0c38b00d2289d1a375ed9e12d0849b1c1e8ab5455bff610197b0283add",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/fixtures/reliability_completion_probe.py",
+      "disposition": "negative_fixture",
+      "reason": "Intentional faults run only under explicit networkless probe modes; excluded from positive totals.",
+      "sha256": "90f46f7df5702eea4dcba47ec62d9b45ec7091726c07804626ea81eacd8ade7f",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/fixtures/reliability_gate_probe.py",
+      "disposition": "negative_fixture",
+      "reason": "Intentional faults run only under explicit networkless probe modes; excluded from positive totals.",
+      "sha256": "10bd9e6f58f1a55f1ff5ebb707576a1415c9a0d96745ac89aaa74191c5eca716",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/hardware_smoke_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_tts_speaks, test_sfx_plays, test_vad_records, test_stt_transcribes. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "cb943487074d84ee45a54c38706df355226dff2657a8abe33669fffc0b35e4e0",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/ledger_process_actor.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "3173b38445eda5f1865a46b73c353cec40d8f652648aa7ee735d9aaa38366869",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/ollama_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: . Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "570e88e027b9d429b14922cf65b1b85f1424ca8a765c8244525de927b1c3369e",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/perf/__init__.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/pipeline_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_text_pipeline. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "5ceaaa2b13342abe5c9b35fd17782b7da8eeb775af68a17e53c69db69fcc1c67",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/recovery_process_actor.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "f0004fceb69ff3db576b221204ab3919bb42de1536b251553df5e49a4f54133e",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/router_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_router_classifies_known_queries, test_routes_shell, test_routes_calendar, test_routes_browser. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "c23a00e0eb845646ad9c73826a6f3156d3252d273a66b3e00d9935c6935dec2c",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/safety_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_safety_gates_and_kill_switch. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "1177a4cf42d3f12e2ba907ec14489326716ef0edec7a2762f441273d88ac3ccb",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/sounds_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "SoundsManager.play spawns a thread reaching pygame audio playback; not an offline fixture.",
+      "sha256": "f5c4240295db81463981a05fbcf7c4c802b64a1c1959a44c0521e9b207172a33",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/stress/__init__.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/stress/test_wake_word_stress.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_mock_detection_100_cycles, test_no_memory_growth_100_cycles. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "9cf75b2e4b2a772775c88bf0da2eb90856287b5ceea34dd92c6c8c182e49d610",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/stt_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_stt_cleanup, test_stt_cpu_fallback_after_transcribe_error. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "003b5e56bbf8a2e060eb91219895a19c5aa529bed6168acd4ce17498e5deca16",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/synthetic_authority.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "4a5802be82fd0e7d6e5b387211d2ded5e1c4ff34b870f02ff7d931900c723b6c",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_agent_stubs.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "113b48bfd03c5ad93741e063f5532813f9f6efc64f8a4805f3e74bf16a6ffdc3",
+      "required_nodeids": [
+        "tests/test_agent_stubs.py::test_admission_and_snapshot_share_authority",
+        "tests/test_agent_stubs.py::test_completion_cannot_be_claimed",
+        "tests/test_agent_stubs.py::test_request_id_is_required"
+      ]
+    },
+    {
+      "path": "tests/test_approval_gates.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "6742a79074330c4a4fb0ae86eb97b349925e095544e500a09a7d58044b7fcc9f",
+      "required_nodeids": [
+        "tests/test_approval_gates.py::test_confirm_known_request_id_cannot_dispatch",
+        "tests/test_approval_gates.py::test_confirm_unknown_request_id",
+        "tests/test_approval_gates.py::test_is_confirmation_error_false",
+        "tests/test_approval_gates.py::test_is_confirmation_error_true",
+        "tests/test_approval_gates.py::test_pending_dict_starts_empty"
+      ]
+    },
+    {
+      "path": "tests/test_apps_tool.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_safety_level, test_dry_run, test_unknown_app, test_registered. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "d9a48dd8fdba3bdc9bec5b3257ca576d331304ce60cd1ddd62b00228c73726c0",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_audio2face.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_build_audio_event, test_build_viseme_event, test_manager_not_connected_by_default, test_broadcast_audio_when_not_connected. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "1f4012e807f10ccc70bda152df958c31f3ca93f7a6cb60408be091d4c7e37bd4",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_audit_disaster.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "11dc261fcbb25183a3bc5ea7434867dc3d88aa701a924e53152b62fd971b9bb9",
+      "required_nodeids": [
+        "tests/test_audit_disaster.py::test_actual_restored_page_bit_flip_is_detected",
+        "tests/test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[duplicate]",
+        "tests/test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[missing]",
+        "tests/test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[modified]",
+        "tests/test_audit_disaster.py::test_archive_disaster_rejected_before_target_creation[reordered]",
+        "tests/test_audit_disaster.py::test_attestation_removal_is_detected_even_before_any_restore",
+        "tests/test_audit_disaster.py::test_cached_checkpoint_bytes_are_still_hash_verified",
+        "tests/test_audit_disaster.py::test_default_restore_requires_external_reference_and_explicit_grant",
+        "tests/test_audit_disaster.py::test_expired_external_context_never_creates_an_anchor_directory",
+        "tests/test_audit_disaster.py::test_export_attestation_survives_source_database_loss",
+        "tests/test_audit_disaster.py::test_guard_cannot_be_shared_by_two_authorities",
+        "tests/test_audit_disaster.py::test_incompatible_signed_schema_is_never_executed",
+        "tests/test_audit_disaster.py::test_inconsistent_restored_receipt_and_corrupt_pages_refused",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[attestation-export_before_attestation]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_before_database_commit]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_database_committed]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_intent_durable]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_prepared_durable]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_publication_committed]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_row_inserted]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_schema_created]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_stage_created]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[restore-restore_target_published]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_committed]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_directory_created]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_intent_durable]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover-rollover_link_durable]",
+        "tests/test_audit_disaster.py::test_independent_sigkill_disaster_recovery[rollover_recovery-rollover_recovery_admitted]",
+        "tests/test_audit_disaster.py::test_interrupted_rollover_is_not_silently_reset[rollover_intent_durable]",
+        "tests/test_audit_disaster.py::test_interrupted_rollover_is_not_silently_reset[rollover_link_durable]",
+        "tests/test_audit_disaster.py::test_legacy_export_is_inspectable_but_cannot_be_restored",
+        "tests/test_audit_disaster.py::test_missing_export_attestation_invalidates_restore_history",
+        "tests/test_audit_disaster.py::test_missing_owner_row_fails_closed_with_explicit_code",
+        "tests/test_audit_disaster.py::test_missing_restore_receipt_phase_is_not_reported_committed[final]",
+        "tests/test_audit_disaster.py::test_missing_restore_receipt_phase_is_not_reported_committed[intent]",
+        "tests/test_audit_disaster.py::test_missing_restore_receipt_phase_is_not_reported_committed[prepared]",
+        "tests/test_audit_disaster.py::test_no_replace_publication_preserves_a_racing_target",
+        "tests/test_audit_disaster.py::test_offline_cli_verifies_and_commits_only_explicit_authorized_restore",
+        "tests/test_audit_disaster.py::test_recovery_receipt_is_bound_to_committed_rollover",
+        "tests/test_audit_disaster.py::test_restore_does_not_require_source_database_or_archive_after_preparation",
+        "tests/test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_intent_durable]",
+        "tests/test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_prepared_durable]",
+        "tests/test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_row_inserted]",
+        "tests/test_audit_disaster.py::test_restore_failure_is_quarantined_or_reconciled[restore_target_published]",
+        "tests/test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[existing]",
+        "tests/test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[overlap]",
+        "tests/test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[symlink]",
+        "tests/test_audit_disaster.py::test_restore_paths_and_existing_targets_refused[traversal]",
+        "tests/test_audit_disaster.py::test_restore_publication_storage_failures_preserve_prepared_evidence[disk_full]",
+        "tests/test_audit_disaster.py::test_restore_publication_storage_failures_preserve_prepared_evidence[permission]",
+        "tests/test_audit_disaster.py::test_restore_reconstructs_exact_disabled_artifact",
+        "tests/test_audit_disaster.py::test_restore_succeeds_with_source_database_unavailable",
+        "tests/test_audit_disaster.py::test_restored_unknown_and_cancellation_are_preserved",
+        "tests/test_audit_disaster.py::test_rollover_retains_checkpoint_identities",
+        "tests/test_audit_disaster.py::test_shared_guard_restore_serializes_source_mutations",
+        "tests/test_audit_disaster.py::test_total_generation_capacity_is_conservative",
+        "tests/test_audit_disaster.py::test_trust_reference_cannot_claim_a_different_epoch",
+        "tests/test_audit_disaster.py::test_trust_reference_rejects_rolled_back_checkpoint_generation",
+        "tests/test_audit_disaster.py::test_wrong_key_and_expired_reference_refused",
+        "tests/test_audit_disaster.py::test_wrong_rollover_policy_and_unexpected_generation_refused"
+      ]
+    },
+    {
+      "path": "tests/test_audit_disaster_app.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "4db74ee39626f64e38014ea2dc2e925e8398f0b6452460085e7835d281d52649",
+      "required_nodeids": [
+        "tests/test_audit_disaster_app.py::test_disaster_report_never_claims_execution_from_restore",
+        "tests/test_audit_disaster_app.py::test_missing_preparation_blocks_operator_health",
+        "tests/test_audit_disaster_app.py::test_operator_status_exposes_rollover_and_verified_receipt_state"
+      ]
+    },
+    {
+      "path": "tests/test_audit_integration_fixes.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "d29390c1aa2c9f9bd75571c97021e8ce4ebeb47a6d26475a0365c62b5d139221",
+      "required_nodeids": [
+        "tests/test_audit_integration_fixes.py::test_cli_post_auth_and_status_failure_never_falls_back[401]",
+        "tests/test_audit_integration_fixes.py::test_cli_post_auth_and_status_failure_never_falls_back[403]",
+        "tests/test_audit_integration_fixes.py::test_cli_post_auth_and_status_failure_never_falls_back[500]",
+        "tests/test_audit_integration_fixes.py::test_cli_timeout_has_unknown_outcome_and_never_falls_back",
+        "tests/test_audit_integration_fixes.py::test_cli_unreachable_requires_explicit_offline_control",
+        "tests/test_audit_integration_fixes.py::test_dictation_never_touches_desktop_or_logs_transcript",
+        "tests/test_audit_integration_fixes.py::test_effectful_resource_http_is_inert_even_with_bearer[/resource/shutdown]",
+        "tests/test_audit_integration_fixes.py::test_effectful_resource_http_is_inert_even_with_bearer[/resource/sleep/deep]",
+        "tests/test_audit_integration_fixes.py::test_effectful_resource_http_is_inert_even_with_bearer[/resource/sleep/light]",
+        "tests/test_audit_integration_fixes.py::test_effectful_resource_http_is_inert_even_with_bearer[/resource/wake]",
+        "tests/test_audit_integration_fixes.py::test_malformed_websocket_closes_and_removes_manager_entry[value0]",
+        "tests/test_audit_integration_fixes.py::test_malformed_websocket_closes_and_removes_manager_entry[value1]",
+        "tests/test_audit_integration_fixes.py::test_malformed_websocket_closes_and_removes_manager_entry[value2]",
+        "tests/test_audit_integration_fixes.py::test_malformed_websocket_closes_and_removes_manager_entry[value3]",
+        "tests/test_audit_integration_fixes.py::test_no_server_or_offline_flag_can_start_or_mutate_local_resources[args0]",
+        "tests/test_audit_integration_fixes.py::test_no_server_or_offline_flag_can_start_or_mutate_local_resources[args1]",
+        "tests/test_audit_integration_fixes.py::test_no_server_or_offline_flag_can_start_or_mutate_local_resources[args2]",
+        "tests/test_audit_integration_fixes.py::test_only_positive_native_child_lease_allows_signal[False]",
+        "tests/test_audit_integration_fixes.py::test_only_positive_native_child_lease_allows_signal[True]",
+        "tests/test_audit_integration_fixes.py::test_stop_requires_configured_identity",
+        "tests/test_audit_integration_fixes.py::test_untracked_same_entrypoint_child_is_never_terminated",
+        "tests/test_audit_integration_fixes.py::test_vad_active_capture_cancellation_is_checked_each_frame",
+        "tests/test_audit_integration_fixes.py::test_vad_continuous_speech_respects_frame_and_callback_queue_bounds"
+      ]
+    },
+    {
+      "path": "tests/test_authority_enrollment.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "b1de37070761fa851f8d014d2928c84533e4048511ba71930ea44270a2803edf",
+      "required_nodeids": [
+        "tests/test_authority_enrollment.py::test_branch_cannot_reuse_an_original_operation_uuid",
+        "tests/test_authority_enrollment.py::test_branch_continuity_proposal_is_readonly_and_preserves_unknown",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[activate]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[copy]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[database]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[digest]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[duplicate]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[expired]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[generation]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[head]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[key]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[marker]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[phase]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[registry]",
+        "tests/test_authority_enrollment.py::test_branch_invalid_or_stale_state_is_refused[restore]",
+        "tests/test_authority_enrollment.py::test_branch_replacement_between_verification_and_id_read_is_refused",
+        "tests/test_authority_enrollment.py::test_deleted_final_after_owner_open_blocks_dispatch",
+        "tests/test_authority_enrollment.py::test_enroll_genesis_receipt_restart_verification",
+        "tests/test_authority_enrollment.py::test_enrolled_store_requires_external_witness",
+        "tests/test_authority_enrollment.py::test_enrollment_durable_admission_expiry_and_duplicate",
+        "tests/test_authority_enrollment.py::test_enrollment_identity_and_phase_corruption_refused[database]",
+        "tests/test_authority_enrollment.py::test_enrollment_identity_and_phase_corruption_refused[final]",
+        "tests/test_authority_enrollment.py::test_enrollment_identity_and_phase_corruption_refused[key]",
+        "tests/test_authority_enrollment.py::test_enrollment_identity_and_phase_corruption_refused[marker]",
+        "tests/test_authority_enrollment.py::test_enrollment_identity_and_phase_corruption_refused[prepared]",
+        "tests/test_authority_enrollment.py::test_enrollment_identity_and_phase_corruption_refused[witness]",
+        "tests/test_authority_enrollment.py::test_enrollment_publication_storage_errors_preserve_recovery[13]",
+        "tests/test_authority_enrollment.py::test_enrollment_publication_storage_errors_preserve_recovery[28]",
+        "tests/test_authority_enrollment.py::test_external_reservation_replacement_refused[anchor]",
+        "tests/test_authority_enrollment.py::test_external_reservation_replacement_refused[domain_collision]",
+        "tests/test_authority_enrollment.py::test_external_reservation_replacement_refused[policy]",
+        "tests/test_authority_enrollment.py::test_external_reservation_replacement_refused[target]",
+        "tests/test_authority_enrollment.py::test_finalized_genesis_physical_binding_is_verified[physical_rewrite]",
+        "tests/test_authority_enrollment.py::test_finalized_genesis_physical_binding_is_verified[symlink]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[checkpoint_before_publication]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[checkpoint_published]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_before_database_commit]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_before_publication]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_database_committed]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_database_created]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_final_durable]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_genesis_intent_durable]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_genesis_published]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_intent_durable]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_prepared_durable]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_stage_created]",
+        "tests/test_authority_enrollment.py::test_independent_sigkill_enrollment[enrollment_target_published]",
+        "tests/test_authority_enrollment.py::test_invalid_actor_does_not_create_an_intent",
+        "tests/test_authority_enrollment.py::test_invalid_new_store_admission_is_refused[existing]",
+        "tests/test_authority_enrollment.py::test_invalid_new_store_admission_is_refused[explicit]",
+        "tests/test_authority_enrollment.py::test_invalid_new_store_admission_is_refused[history]",
+        "tests/test_authority_enrollment.py::test_invalid_new_store_admission_is_refused[permit]",
+        "tests/test_authority_enrollment.py::test_invalid_new_store_admission_is_refused[scope]",
+        "tests/test_authority_enrollment.py::test_invalid_new_store_admission_is_refused[trust]",
+        "tests/test_authority_enrollment.py::test_missing_database_final_never_recreates",
+        "tests/test_authority_enrollment.py::test_plain_authority_never_creates_or_completes_store[absent]",
+        "tests/test_authority_enrollment.py::test_plain_authority_never_creates_or_completes_store[schema]",
+        "tests/test_authority_enrollment.py::test_plain_authority_never_creates_or_completes_store[zero]",
+        "tests/test_authority_enrollment.py::test_unmarked_schema_requires_explicit_legacy_capability"
+      ]
+    },
+    {
+      "path": "tests/test_authority_http_security.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "aaedb0c963b6c1d4563463c4d7bbba5ac2bc57a4ab05ec02e62ffce45b343c24",
+      "required_nodeids": [
+        "tests/test_authority_http_security.py::test_anonymous_health_does_not_grant_task_access",
+        "tests/test_authority_http_security.py::test_arbitrary_host_origin_cannot_replace_credentials",
+        "tests/test_authority_http_security.py::test_configured_token_rejects_missing_invalid_and_malformed_identity[Bearer ]",
+        "tests/test_authority_http_security.py::test_configured_token_rejects_missing_invalid_and_malformed_identity[Bearer wrong]",
+        "tests/test_authority_http_security.py::test_configured_token_rejects_missing_invalid_and_malformed_identity[None]",
+        "tests/test_authority_http_security.py::test_configured_token_rejects_missing_invalid_and_malformed_identity[synthetic-authority-http-regression-token]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[DELETE-/schedule/jobs/{uuid}?request_id={uuid}-None]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[GET-/execution/status-None]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[GET-/ready-None]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[GET-/requests/{uuid}-None]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[GET-/schedule/jobs-None]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[GET-/tasks-None]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[POST-/execution/tasks-body8]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[POST-/schedule/jobs-body4]",
+        "tests/test_authority_http_security.py::test_every_privileged_route_refuses_unconfigured_identity[POST-/tasks-body2]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[Bearer -False]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[Bearer -True]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[Bearer wrong-False]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[Bearer wrong-True]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[None-False]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[None-True]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[synthetic-authority-http-regression-token-False]",
+        "tests/test_authority_http_security.py::test_explicit_admission_does_not_grant_anonymous_http_authority[synthetic-authority-http-regression-token-True]",
+        "tests/test_authority_http_security.py::test_stock_startup_still_requires_real_admission_context[]",
+        "tests/test_authority_http_security.py::test_stock_startup_still_requires_real_admission_context[synthetic-authority-http-regression-token]",
+        "tests/test_authority_http_security.py::test_valid_identity_preserves_read_cancel_receipt_and_idempotency[False]",
+        "tests/test_authority_http_security.py::test_valid_identity_preserves_read_cancel_receipt_and_idempotency[True]",
+        "tests/test_authority_http_security.py::test_whitespace_configuration_never_grants_authority[ ]",
+        "tests/test_authority_http_security.py::test_whitespace_configuration_never_grants_authority[\\t]"
+      ]
+    },
+    {
+      "path": "tests/test_baseline_enrollment.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "d17a4ef0cced22c544a105421dab9e4c0a9154e1d086c14084c64626e3414c1e",
+      "required_nodeids": [
+        "tests/test_baseline_enrollment.py::test_module_policy[add]",
+        "tests/test_baseline_enrollment.py::test_module_policy[change]",
+        "tests/test_baseline_enrollment.py::test_module_policy[none]",
+        "tests/test_baseline_enrollment.py::test_module_policy[remove]",
+        "tests/test_baseline_enrollment.py::test_module_policy[tamper]",
+        "tests/test_baseline_enrollment.py::test_public_example_requires_explicit_activation"
+      ]
+    },
+    {
+      "path": "tests/test_boot_events.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "ca118b5afac2a83be69fb81b06d5b6338d16173f47f9265353f97cb3ee25e925",
+      "required_nodeids": [
+        "tests/test_boot_events.py::test_boot_event_shape",
+        "tests/test_boot_events.py::test_boot_works_no_clients",
+        "tests/test_boot_events.py::test_morning_report_called"
+      ]
+    },
+    {
+      "path": "tests/test_boot_integration.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "baef39c74471c6542913400321a966c61a16a4afbcf4aadda9db6bb3aa31edd8",
+      "required_nodeids": [
+        "tests/test_boot_integration.py::test_boot_ollama_timeout",
+        "tests/test_boot_integration.py::test_boot_sequence_completes",
+        "tests/test_boot_integration.py::test_boot_skips_electron_gracefully",
+        "tests/test_boot_integration.py::test_morning_report_contains_sir"
+      ]
+    },
+    {
+      "path": "tests/test_browser_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "a1a827e533c62d8d4ae921b3562d1cc0667bffb4ee326e25a576c1268b40785a",
+      "required_nodeids": [
+        "tests/test_browser_tool.py::test_dry_run",
+        "tests/test_browser_tool.py::test_missing_url",
+        "tests/test_browser_tool.py::test_open_url",
+        "tests/test_browser_tool.py::test_registered",
+        "tests/test_browser_tool.py::test_safety_level",
+        "tests/test_browser_tool.py::test_search_action",
+        "tests/test_browser_tool.py::test_unknown_action"
+      ]
+    },
+    {
+      "path": "tests/test_calendar_tool.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_safety_level, test_dry_run, test_no_ics_files, test_execute_with_ics. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "743f360c86b7f8c8c5acdcd253d5ba98feb54e23fb6d6b1e14dca8a4ce2b4937",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_cancel_token.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "dfed99695ed07bd8c654c613af0fd6c2c0d870cfbfa99a190d633ece0356d7ff",
+      "required_nodeids": [
+        "tests/test_cancel_token.py::test_stop_endpoint",
+        "tests/test_cancel_token.py::test_token_cancel_sets_flag",
+        "tests/test_cancel_token.py::test_token_not_cancelled_initially",
+        "tests/test_cancel_token.py::test_token_reset_clears_flag"
+      ]
+    },
+    {
+      "path": "tests/test_ci_config.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_workflow_file_exists, test_workflow_has_pytest, test_workflow_excludes_only_manual_or_hardware_markers, test_workflow_installs_portaudio_before_python_dependencies. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "d10a3295ee9e437cb7c7aabcce5dcb9d4a96ef0f7cf3d5ece8dccda35e3828e6",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_comms_stubs.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_discord_send_disabled, test_discord_status_disabled, test_telegram_send_disabled, test_telegram_status_disabled. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "424b8709bed47bc7bf27e54d820d77e0731bd1d8e06d32589b4b91736a5dff89",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_complexity_router.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_deep_reasoning_uses_thinking_model, test_trivial_response_uses_router_model. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "67919217d761c6f8d1f58bd0e4e808ec57933cb3014d0123c1a13a7051f138db",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_computer_safety.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "82868e17d4df19eb4aef740a777cb13b8a1c93ee6f75d502e0a98398bc99b098",
+      "required_nodeids": [
+        "tests/test_computer_safety.py::test_dry_run_blocks_level1",
+        "tests/test_computer_safety.py::test_level0_always_allowed",
+        "tests/test_computer_safety.py::test_level2_requires_confirmation",
+        "tests/test_computer_safety.py::test_level2_with_confirmation",
+        "tests/test_computer_safety.py::test_level3_blocked"
+      ]
+    },
+    {
+      "path": "tests/test_computer_use_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "f25601afa8be7f4c97876defa7ec6517e41c69a7721361fa0d0470ade79cac1b",
+      "required_nodeids": [
+        "tests/test_computer_use_tool.py::test_dry_run",
+        "tests/test_computer_use_tool.py::test_missing_task",
+        "tests/test_computer_use_tool.py::test_no_package",
+        "tests/test_computer_use_tool.py::test_safety_level"
+      ]
+    },
+    {
+      "path": "tests/test_computer_verifier.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_verify_no_expectation, test_verify_with_expectation, test_verify_capture_fails. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "d7b96ee14f4878a0029c250cccf9afe47f59486562d97be2d4d750862c755550",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_config_check.py",
+      "disposition": "required",
+      "reason": "Two stale enabled assertions now require disabled defaults; remote/token/CORS checks unchanged.",
+      "sha256": "a84f732554912c7686d3fad757aad48f049873c4ad7012eef8c4b98aa0740c2d",
+      "required_nodeids": [
+        "tests/test_config_check.py::test_all_pass",
+        "tests/test_config_check.py::test_builtin_wake_model_is_available",
+        "tests/test_config_check.py::test_custom_wake_model_path_missing",
+        "tests/test_config_check.py::test_example_config_matches_schema",
+        "tests/test_config_check.py::test_loopback_host_allows_optional_api_token[-127.0.0.1]",
+        "tests/test_config_check.py::test_loopback_host_allows_optional_api_token[-::1]",
+        "tests/test_config_check.py::test_loopback_host_allows_optional_api_token[-localhost]",
+        "tests/test_config_check.py::test_loopback_host_allows_optional_api_token[test-token-127.0.0.1]",
+        "tests/test_config_check.py::test_loopback_host_allows_optional_api_token[test-token-::1]",
+        "tests/test_config_check.py::test_loopback_host_allows_optional_api_token[test-token-localhost]",
+        "tests/test_config_check.py::test_non_loopback_host_allowed_with_remote_access_and_api_token",
+        "tests/test_config_check.py::test_non_loopback_host_rejected_without_api_token",
+        "tests/test_config_check.py::test_non_loopback_host_requires_remote_access_flag",
+        "tests/test_config_check.py::test_ollama_base_url_can_be_overridden_for_container",
+        "tests/test_config_check.py::test_ollama_unreachable",
+        "tests/test_config_check.py::test_piper_binary_missing",
+        "tests/test_config_check.py::test_piper_model_missing",
+        "tests/test_config_check.py::test_remote_access_flag_requires_api_token_even_on_loopback"
+      ]
+    },
+    {
+      "path": "tests/test_dictation.py",
+      "disposition": "required",
+      "reason": "False default is documented RC1 opt-in contract; keep clipboard/type-out/audit redaction negatives unchanged.",
+      "sha256": "4a351d87c38dbc1026424207d1b49012d3414efc277f72143ae504c2fb33aaf0",
+      "required_nodeids": [
+        "tests/test_dictation.py::test_dictation_config_defaults_require_opt_in",
+        "tests/test_dictation.py::test_dictation_gracefully_degrades_without_optional_dependencies",
+        "tests/test_dictation.py::test_dictation_refuses_clipboard_without_raw_audit",
+        "tests/test_dictation.py::test_dictation_type_out_requires_flag_and_live_mode",
+        "tests/test_dictation.py::test_push_to_talk_manager_tracks_dictation_hotkey",
+        "tests/test_dictation.py::test_voice_pipeline_dictation_skips_brain_and_tts"
+      ]
+    },
+    {
+      "path": "tests/test_discord_bot.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_send_disabled, test_send_no_discord_lib, test_send_no_token, test_send_success. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "6dd69cd86f7bdd804162b5680301889b5485aa02e1e79c5e35154fcb7c63d105",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_enrollment_app.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "03849df9558d2c32441651e2c3db332184eecd2d6b61f57c0a36a4eaafbb4700",
+      "required_nodeids": [
+        "tests/test_enrollment_app.py::test_authenticated_operator_diagnostics_show_verified_enrollment",
+        "tests/test_enrollment_app.py::test_default_runtime_missing_store_is_unavailable_and_never_created",
+        "tests/test_enrollment_app.py::test_missing_custody_receipt_blocks_public_admission",
+        "tests/test_enrollment_app.py::test_reporter_labels_enrollment_without_claiming_execution"
+      ]
+    },
+    {
+      "path": "tests/test_error_recovery.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "1274f5241d8dbdee119ded4d867e5a74b12822e803df9c57738f1ec39ab8b4fe",
+      "required_nodeids": [
+        "tests/test_error_recovery.py::test_error_phrases_defined",
+        "tests/test_error_recovery.py::test_error_recovery_imports",
+        "tests/test_error_recovery.py::test_speak_error_no_raise"
+      ]
+    },
+    {
+      "path": "tests/test_evals_adapter.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "ff01aae9ca300c692f3dac8337bec218d0578fcb6e7781ae4364451159960cd1",
+      "required_nodeids": [
+        "tests/test_evals_adapter.py::test_destructive_shell_is_blocked_before_execution",
+        "tests/test_evals_adapter.py::test_deterministic_adapter_intercepts_every_selected_tool",
+        "tests/test_evals_adapter.py::test_evaluation_request_cannot_contain_golden_metadata",
+        "tests/test_evals_adapter.py::test_report_generation_is_machine_readable",
+        "tests/test_evals_adapter.py::test_runner_passes_only_real_request_data_to_adapter"
+      ]
+    },
+    {
+      "path": "tests/test_evals_grading.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "2ac345b90d8418d34c344de53a876255ff7c7b398738b12cdd17b436598d9fd2",
+      "required_nodeids": [
+        "tests/test_evals_grading.py::test_aggregate_report_keeps_metrics_separate",
+        "tests/test_evals_grading.py::test_exact_parameter_matching_rejects_extra_fields",
+        "tests/test_evals_grading.py::test_must_not_detects_prohibited_selection_and_execution",
+        "tests/test_evals_grading.py::test_parameter_matching_supports_subset_normalization_optional_and_absent"
+      ]
+    },
+    {
+      "path": "tests/test_evals_schema.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "f5425d2cf50bc776fb6158720e7b3ac5aa1ed4ccf4ed962e971838a8e79ce6de",
+      "required_nodeids": [
+        "tests/test_evals_schema.py::test_duplicate_ids_are_rejected",
+        "tests/test_evals_schema.py::test_golden_suite_has_exactly_twenty_unique_scenarios",
+        "tests/test_evals_schema.py::test_malformed_scenarios_are_rejected[<lambda>-missing fields]",
+        "tests/test_evals_schema.py::test_malformed_scenarios_are_rejected[<lambda>-unknown fields]",
+        "tests/test_evals_schema.py::test_malformed_scenarios_are_rejected[<lambda>-unsupported context.origin]",
+        "tests/test_evals_schema.py::test_malformed_scenarios_are_rejected[<lambda>-version must be 1]",
+        "tests/test_evals_schema.py::test_origin_provenance_is_representable"
+      ]
+    },
+    {
+      "path": "tests/test_execution_pipeline.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "8f3c9a521bf64589ef1df62f2bf6b68ceb954909fe6f9c54c4c253c5ac2b1b89",
+      "required_nodeids": [
+        "tests/test_execution_pipeline.py::test_admission_body_stream_bound_precedes_json",
+        "tests/test_execution_pipeline.py::test_admission_empty_chunk_and_read_deadline[slow_body]",
+        "tests/test_execution_pipeline.py::test_admission_empty_chunk_and_read_deadline[too_many_chunks]",
+        "tests/test_execution_pipeline.py::test_audit_failure_prevents_dispatch",
+        "tests/test_execution_pipeline.py::test_cancellation_after_claim_before_dispatch",
+        "tests/test_execution_pipeline.py::test_cancellation_after_result_preserves_completion",
+        "tests/test_execution_pipeline.py::test_cancellation_before_dispatch",
+        "tests/test_execution_pipeline.py::test_capacity_replay_and_release",
+        "tests/test_execution_pipeline.py::test_complete_pipeline_and_stable_operation_identity",
+        "tests/test_execution_pipeline.py::test_concurrent_same_operation_admits_once",
+        "tests/test_execution_pipeline.py::test_disabled_and_real_registration",
+        "tests/test_execution_pipeline.py::test_expiry_before_claim",
+        "tests/test_execution_pipeline.py::test_failed_dispatch_stays_unknown",
+        "tests/test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change0]",
+        "tests/test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change1]",
+        "tests/test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change2]",
+        "tests/test_execution_pipeline.py::test_inconsistent_authorization_never_dispatches[change3]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes0-invalid_identifier]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes1-invalid_identifier]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes10-invalid_time]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes2-invalid_execution_payload]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes3-invalid_text]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes4-invalid_text]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes5-invalid_execution_timeout]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes6-invalid_execution_timeout]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes7-invalid_execution_timeout]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes8-stale_execution_request]",
+        "tests/test_execution_pipeline.py::test_invalid_admission_is_atomic[changes9-stale_execution_request]",
+        "tests/test_execution_pipeline.py::test_invalid_unicode_rejected_before_commit[changes0]",
+        "tests/test_execution_pipeline.py::test_invalid_unicode_rejected_before_commit[changes1]",
+        "tests/test_execution_pipeline.py::test_lock_contention_poison_and_reopen",
+        "tests/test_execution_pipeline.py::test_pagination_and_direct_lookup",
+        "tests/test_execution_pipeline.py::test_policy_denies_without_dispatch[proxmox.console]",
+        "tests/test_execution_pipeline.py::test_policy_denies_without_dispatch[shell.exec]",
+        "tests/test_execution_pipeline.py::test_policy_denies_without_dispatch[synthetic.echo; id]",
+        "tests/test_execution_pipeline.py::test_policy_denies_without_dispatch[synthetic.fail]",
+        "tests/test_execution_pipeline.py::test_polling_does_not_read_completed_history",
+        "tests/test_execution_pipeline.py::test_precommit_result_rollback_and_lost_publication_ack",
+        "tests/test_execution_pipeline.py::test_public_mutations_cannot_reserve_internal_phase_receipts",
+        "tests/test_execution_pipeline.py::test_real_api_worker_receipts_and_restart",
+        "tests/test_execution_pipeline.py::test_replay_conflict_and_expired_replay",
+        "tests/test_execution_pipeline.py::test_revoked_policy_checked_at_dispatch",
+        "tests/test_execution_pipeline.py::test_scheduled_cancellation_policy_and_stopped_admission",
+        "tests/test_execution_pipeline.py::test_scheduler_callback_creates_authorized_execution",
+        "tests/test_execution_pipeline.py::test_scope_boundary",
+        "tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_claim]",
+        "tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_execute]",
+        "tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_publish]",
+        "tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[after_record]",
+        "tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[publish_before_commit]",
+        "tests/test_execution_pipeline.py::test_sigkill_independent_process_recovery[record_before_commit]",
+        "tests/test_execution_pipeline.py::test_stale_owner_fenced",
+        "tests/test_execution_pipeline.py::test_synthetic_failure_and_hash",
+        "tests/test_execution_pipeline.py::test_timeout_after_dispatch_stays_unknown",
+        "tests/test_execution_pipeline.py::test_untrusted_response_fails_closed[None]",
+        "tests/test_execution_pipeline.py::test_untrusted_response_fails_closed[bad1]",
+        "tests/test_execution_pipeline.py::test_untrusted_response_fails_closed[bad2]",
+        "tests/test_execution_pipeline.py::test_untrusted_response_fails_closed[bad3]",
+        "tests/test_execution_pipeline.py::test_untrusted_response_fails_closed[bad4]",
+        "tests/test_execution_pipeline.py::test_worker_failure_is_visible_and_stops"
+      ]
+    },
+    {
+      "path": "tests/test_files_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "0d23c8d0b235508a3efff68cf693a05d09332ce46966c123ca04475dc4eaa962",
+      "required_nodeids": [
+        "tests/test_files_tool.py::test_dry_run",
+        "tests/test_files_tool.py::test_list_allowed_root",
+        "tests/test_files_tool.py::test_read_missing_file",
+        "tests/test_files_tool.py::test_registered",
+        "tests/test_files_tool.py::test_safety_level"
+      ]
+    },
+    {
+      "path": "tests/test_gauntlet_protocol_r2.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "89ed8c2a98522715a2c244ad1ee46887c6a3364c0c908b1cea5eb1b17008a3b4",
+      "required_nodeids": [
+        "tests/test_gauntlet_protocol_r2.py::test_caught_timeout_never_passes",
+        "tests/test_gauntlet_protocol_r2.py::test_complete_protocol_accepts_and_counts_completed_calls",
+        "tests/test_gauntlet_protocol_r2.py::test_empty_collection_never_passes",
+        "tests/test_gauntlet_protocol_r2.py::test_exception_category_has_no_sensitive_text_or_dynamic_type[error0]",
+        "tests/test_gauntlet_protocol_r2.py::test_exception_category_has_no_sensitive_text_or_dynamic_type[error1]",
+        "tests/test_gauntlet_protocol_r2.py::test_exception_category_has_no_sensitive_text_or_dynamic_type[error2]",
+        "tests/test_gauntlet_protocol_r2.py::test_exception_category_has_no_sensitive_text_or_dynamic_type[error3]",
+        "tests/test_gauntlet_protocol_r2.py::test_invalid_durations_fail_with_structured_evidence_error[-1]",
+        "tests/test_gauntlet_protocol_r2.py::test_invalid_durations_fail_with_structured_evidence_error[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]",
+        "tests/test_gauntlet_protocol_r2.py::test_invalid_durations_fail_with_structured_evidence_error[nan]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[count]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[duplicate_case]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[extra_payload]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[missing_case]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[missing_marker]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[wrong_order]",
+        "tests/test_gauntlet_protocol_r2.py::test_malformed_or_mismatched_evidence_is_rejected[wrong_run]",
+        "tests/test_gauntlet_protocol_r2.py::test_missing_session_completion_never_passes[collected]",
+        "tests/test_gauntlet_protocol_r2.py::test_missing_session_completion_never_passes[finished]",
+        "tests/test_gauntlet_protocol_r2.py::test_missing_session_completion_never_passes[started]",
+        "tests/test_gauntlet_protocol_r2.py::test_nonpassing_phase_never_passes[failed]",
+        "tests/test_gauntlet_protocol_r2.py::test_nonpassing_phase_never_passes[skipped]",
+        "tests/test_gauntlet_protocol_r2.py::test_nonzero_process_exit_never_passes",
+        "tests/test_gauntlet_protocol_r2.py::test_parameter_values_do_not_enter_identifiers_even_as_hash_input",
+        "tests/test_gauntlet_protocol_r2.py::test_session_failure_never_passes_even_with_passing_phases[collection_error]",
+        "tests/test_gauntlet_protocol_r2.py::test_session_failure_never_passes_even_with_passing_phases[internal_error]",
+        "tests/test_gauntlet_protocol_r2.py::test_session_failure_never_passes_even_with_passing_phases[interrupted]",
+        "tests/test_gauntlet_protocol_r2.py::test_session_failure_never_passes_even_with_passing_phases[unexpected_report]",
+        "tests/test_gauntlet_protocol_r2.py::test_successful_exit_without_complete_phases_never_passes[phases0]",
+        "tests/test_gauntlet_protocol_r2.py::test_successful_exit_without_complete_phases_never_passes[phases1]",
+        "tests/test_gauntlet_protocol_r2.py::test_successful_exit_without_complete_phases_never_passes[phases2]"
+      ]
+    },
+    {
+      "path": "tests/test_gesture.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_start_no_mediapipe, test_stop. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "d004e04a10d43fea6f5ce94571f20fbc3c655beb597aa4da536b602c4474b412",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_graphiti_client.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_graphiti_disabled_path_returns_stubs, test_graphiti_enabled_path_uses_env_password_and_mocks, test_graphiti_server_endpoints_503_when_disabled, test_graphiti_server_endpoints_use_client_when_enabled. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "26e62fde14724c2372515a8bf485e958d6dd7cc3ded5dbcc7cf9016c34ee8e24",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_headless_wake.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "953cbf9d23fc2e7ae51649be5f6a03348b2e16aa47e8557ab860d3c8fa1068d4",
+      "required_nodeids": [
+        "tests/test_headless_wake.py::test_audit_logger_continues_after_rotation_and_preserves_important_events",
+        "tests/test_headless_wake.py::test_audit_logger_shutdown_is_clean_and_idempotent",
+        "tests/test_headless_wake.py::test_audit_rotation_bounds_backups_and_keeps_valid_json",
+        "tests/test_headless_wake.py::test_immediate_empty_wake_result_is_backed_off_instead_of_spinning",
+        "tests/test_headless_wake.py::test_listener_stop_interrupts_retry_wait",
+        "tests/test_headless_wake.py::test_missing_audio_dependency_is_rate_limited_and_recovery_is_observable",
+        "tests/test_headless_wake.py::test_normal_blocking_timeout_has_no_additional_retry_delay",
+        "tests/test_headless_wake.py::test_unavailable_retry_uses_exponential_backoff",
+        "tests/test_headless_wake.py::test_wake_detection_still_wakes_manager_and_thread_exits"
+      ]
+    },
+    {
+      "path": "tests/test_health_check.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "515fe8c061e4e4c7fa9afbe550c16cb8b9aafc8ab6bec2c578a82cf4a186ff63",
+      "required_nodeids": [
+        "tests/test_health_check.py::test_builtin_wake_model_is_available",
+        "tests/test_health_check.py::test_custom_wake_model_path_missing",
+        "tests/test_health_check.py::test_detailed_readiness_contains_required_sections",
+        "tests/test_health_check.py::test_ollama_down",
+        "tests/test_health_check.py::test_ollama_up",
+        "tests/test_health_check.py::test_piper_found",
+        "tests/test_health_check.py::test_piper_missing",
+        "tests/test_health_check.py::test_server_readiness_route",
+        "tests/test_health_check.py::test_server_route"
+      ]
+    },
+    {
+      "path": "tests/test_hologram_files.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_hologram_index_exists, test_hologram_app_exists, test_hologram_has_threejs. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "e366c628b7d51830cd199c80139a39e6a1cb777783abfebf0a224afb847fce8e",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_install_script.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_install_script_exists, test_install_script_has_smoke_test, test_powershell_wrapper_exists. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "947ba78971d124c771dc8730a3409733e9a65f0c0889d7a6d20205bc1bc35aac",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_llm_client_payload.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_no_think_payload_defaults, test_deep_payload_can_enable_thinking. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "4ee1bc264a5da52213bc423e717244866b2c85f27aad4edb180e9faaa672bc4c",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_loopback_boundary.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "4b1ffa132747838ae177c168a132feba53754b10c97be3ef6e3318266e7c68bc",
+      "required_nodeids": [
+        "tests/test_loopback_boundary.py::test_all_active_compose_published_ports_bind_host_loopback",
+        "tests/test_loopback_boundary.py::test_browser_client_defaults_are_loopback",
+        "tests/test_loopback_boundary.py::test_default_server_and_browser_origins_are_loopback[config_path0]",
+        "tests/test_loopback_boundary.py::test_default_server_and_browser_origins_are_loopback[config_path1]",
+        "tests/test_loopback_boundary.py::test_explicit_authenticated_remote_mode_preserves_future_origin_support",
+        "tests/test_loopback_boundary.py::test_local_mode_rejects_unsafe_cors_origins[origins0-must not contain a wildcard]",
+        "tests/test_loopback_boundary.py::test_local_mode_rejects_unsafe_cors_origins[origins1-only localhost/loopback origins]",
+        "tests/test_loopback_boundary.py::test_sensor_node_default_target_is_loopback"
+      ]
+    },
+    {
+      "path": "tests/test_memory_client.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_add_disabled, test_search_disabled, test_get_all_disabled, test_add_enabled_no_mem0. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "971d519742fbae17dfb11779046ca487bef19b531d066593ce232811d73cd564",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_memory_stubs.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_memory_add_disabled, test_memory_search_disabled, test_memory_get_all, test_rag_index. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "b4c18a9ca280d5f48ad9c2cf787fe0c9575340f02f92038616481f98e19f1784",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_morning_report.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_compose_returns_string, test_compose_contains_sir, test_compose_contains_time. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "2451f0630b30d137937694f20d15ea9d9e7c4db35779c94e803dd3b8f1b60cdb",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_mouse_keyboard.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "bc54aee4d4043fc1ab2daf545b38eb425e8540451c8d8841eabce0c31adf47f4",
+      "required_nodeids": [
+        "tests/test_mouse_keyboard.py::test_dry_run",
+        "tests/test_mouse_keyboard.py::test_execute_unknown_action",
+        "tests/test_mouse_keyboard.py::test_move_calls_pyautogui",
+        "tests/test_mouse_keyboard.py::test_registered",
+        "tests/test_mouse_keyboard.py::test_safety_level",
+        "tests/test_mouse_keyboard.py::test_type_calls_pyautogui"
+      ]
+    },
+    {
+      "path": "tests/test_obsidian_tool.py",
+      "disposition": "required",
+      "reason": "Use absolute tmp_path vault matching module project-root resolution; retain CRUD/traversal/MCP-stub assertions.",
+      "sha256": "4c1bdb9116997bd116c64fc8496abbfe82ff555279c3c0f62419234714a0e53e",
+      "required_nodeids": [
+        "tests/test_obsidian_tool.py::test_obsidian_blocks_path_traversal",
+        "tests/test_obsidian_tool.py::test_obsidian_filesystem_crud_stays_inside_vault",
+        "tests/test_obsidian_tool.py::test_obsidian_is_registered_and_configured",
+        "tests/test_obsidian_tool.py::test_obsidian_mcp_path_is_stubbed_when_enabled",
+        "tests/test_obsidian_tool.py::test_obsidian_route_and_action_tag_params"
+      ]
+    },
+    {
+      "path": "tests/test_operator_app.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "84aad167b90a8be9b2fe3dddbb393e5c23d3d24db36e0ec144f626f344a056f5",
+      "required_nodeids": [
+        "tests/test_operator_app.py::test_guard_corruption_blocks_application_readiness",
+        "tests/test_operator_app.py::test_operator_cli_consumes_actual_api_and_reports_unavailable",
+        "tests/test_operator_app.py::test_operator_report_does_not_claim_admission_is_completion",
+        "tests/test_operator_app.py::test_operator_route_requires_explicit_token_and_has_no_mutations",
+        "tests/test_operator_app.py::test_quiesced_cli_key_descriptor_does_not_rewrite_store"
+      ]
+    },
+    {
+      "path": "tests/test_operator_ledger.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "5d6e8acf21f4276234d3e96e63550a7713f224b14d851f6c7640eda55a4c003f",
+      "required_nodeids": [
+        "tests/test_operator_ledger.py::test_archive_mutation_has_verified_export_and_preserves_all_rows",
+        "tests/test_operator_ledger.py::test_archive_preparation_preserves_unknown_held_and_receipts",
+        "tests/test_operator_ledger.py::test_archive_refuses_a_snapshot_that_does_not_cover_new_completed_task",
+        "tests/test_operator_ledger.py::test_authenticated_but_malformed_export_metadata_refused[checkpoint-value1]",
+        "tests/test_operator_ledger.py::test_authenticated_but_malformed_export_metadata_refused[events-value2]",
+        "tests/test_operator_ledger.py::test_authenticated_but_malformed_export_metadata_refused[files-value0]",
+        "tests/test_operator_ledger.py::test_authenticated_schedule_disable_preserves_completed_history",
+        "tests/test_operator_ledger.py::test_authenticated_synthetic_publication_preserves_identity_and_replays",
+        "tests/test_operator_ledger.py::test_bad_permits_cannot_mutate[changes0]",
+        "tests/test_operator_ledger.py::test_bad_permits_cannot_mutate[changes1]",
+        "tests/test_operator_ledger.py::test_bad_permits_cannot_mutate[changes2]",
+        "tests/test_operator_ledger.py::test_checkpoint_damage_fails_closed[gap]",
+        "tests/test_operator_ledger.py::test_checkpoint_damage_fails_closed[hmac]",
+        "tests/test_operator_ledger.py::test_checkpoint_damage_fails_closed[missing]",
+        "tests/test_operator_ledger.py::test_checkpoint_damage_fails_closed[truncated]",
+        "tests/test_operator_ledger.py::test_checkpoint_initialization_rejects_symlink_before_creating_children",
+        "tests/test_operator_ledger.py::test_checkpoint_publication_io_failure_and_storage_exhaustion",
+        "tests/test_operator_ledger.py::test_checkpoint_staging_inventory_has_a_hard_bound",
+        "tests/test_operator_ledger.py::test_cross_scope_diagnostics_refused",
+        "tests/test_operator_ledger.py::test_duplicate_does_not_advance_checkpoint",
+        "tests/test_operator_ledger.py::test_export_path_alias_cannot_reach_checkpoints",
+        "tests/test_operator_ledger.py::test_export_requires_admission_and_immutable_manifest",
+        "tests/test_operator_ledger.py::test_export_storage_bounds_fail_closed_without_deletion[free_space]",
+        "tests/test_operator_ledger.py::test_export_storage_bounds_fail_closed_without_deletion[manifest_enospc]",
+        "tests/test_operator_ledger.py::test_export_storage_bounds_fail_closed_without_deletion[quota]",
+        "tests/test_operator_ledger.py::test_guard_cannot_be_omitted_or_enroll_existing_store",
+        "tests/test_operator_ledger.py::test_guarded_pipeline_readiness_and_read_only_diagnostics",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[bootstrap-checkpoint_intent_durable]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[export-export_before_audit_publication]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[export-export_data_durable]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[export-export_row_written]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-checkpoint_intent_durable]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-checkpoint_published]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[mutation-ledger_database_committed]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[reconcile-before_commit]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[reconcile-ledger_database_committed]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[retention-checkpoint_intent_durable]",
+        "tests/test_operator_ledger.py::test_independent_process_crashes_preserve_evidence[retention-ledger_database_committed]",
+        "tests/test_operator_ledger.py::test_ledger_bound_and_checkpoint_staging_bounds_fail_closed",
+        "tests/test_operator_ledger.py::test_operator_permit_payload_and_lifetime_are_strict",
+        "tests/test_operator_ledger.py::test_physical_database_corruption_is_rejected_before_startup",
+        "tests/test_operator_ledger.py::test_readonly_offline_diagnosis_does_not_take_ownership",
+        "tests/test_operator_ledger.py::test_rollback_against_external_checkpoint_rejected",
+        "tests/test_operator_ledger.py::test_schedule_bulk_stop_does_not_rewrite_terminal_records",
+        "tests/test_operator_ledger.py::test_stale_permit_and_unsafe_action_refused",
+        "tests/test_operator_ledger.py::test_state_tamper_rejected_before_dispatch",
+        "tests/test_operator_ledger.py::test_unknown_without_evidence_cannot_be_recovered_as_success",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[created_at]",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[event]",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[invalid_identity]",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[nested_execution]",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[outbox]",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[owner_order]",
+        "tests/test_operator_ledger.py::test_unprotected_corruption_is_explained_without_completion[receipt]"
+      ]
+    },
+    {
+      "path": "tests/test_perf_baseline.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_baseline_file_exists, test_baseline_has_benchmarks. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "06378f7f2df976667794ae5c27b59674ba6b643cf5dedbc8fc094d60f834a540",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_phase3_integration.py",
+      "disposition": "required",
+      "reason": "Disposable admitted Authority/synthetic Bearer; retired chat tool effects must be disabled and mocked call must never run.",
+      "sha256": "48fbcdc47721a034dae4367e614ceeccb15d7c390ec6565d83a3c2aed0697d9f",
+      "required_nodeids": [
+        "tests/test_phase3_integration.py::test_mouse_keyboard_confirmation_gate",
+        "tests/test_phase3_integration.py::test_screenshot_via_chat",
+        "tests/test_phase3_integration.py::test_vision_via_chat",
+        "tests/test_phase3_integration.py::test_ws_listening_broadcast"
+      ]
+    },
+    {
+      "path": "tests/test_phase8_integrations.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_boot_prefetch_context, test_project_indexer_disabled_stub, test_project_indexer_indexes_configured_text_path, test_mcp_client_rejects_unlisted_server. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "3f8e4b89d80a8ab08769d50cfa87e6a545854feb9f0b9e6ea505bec6c59d17cf",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_planner.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_task_plan_fields, test_fallback_mode, test_llm_mode_valid_json, test_llm_mode_bad_json. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "f4a17236d36d121a3ed5600b2a6bbe11538d9abdd6a47e97c03152cb1bffcf01",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_pre_server_readiness.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_build_checks_includes_expected_commands, test_build_checks_can_skip_full_tests, test_main_returns_nonzero_when_a_check_fails, test_main_returns_zero_when_checks_pass. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "c78b33325a86931f4b688dc3755738f1235671a2e958f3c1e0e17974c0cb49a1",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_procedural_memory.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_list_skills_reads_markdown_bullets, test_add_skill_deduplicates, test_prompt_context_limits_entries. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "9f51876201823c57dfe026adf076d61a7c9ef3fcba02cadc66ea8b5349aeec1d",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_prompts_memory.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_build_prompt_includes_procedural_memory. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "a25b2fc5d89a4eaa6659f485a2eacf12277b569e4ea8bf5e0bb0446afa019f98",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_ptt_and_killswitch.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "63320d3d24bcf965096010e0c43c2c1bb4e6ef837f27b58c7f44d8001f043e10",
+      "required_nodeids": [
+        "tests/test_ptt_and_killswitch.py::test_double_trigger_idempotent",
+        "tests/test_ptt_and_killswitch.py::test_ptt_bypasses_model",
+        "tests/test_ptt_and_killswitch.py::test_ptt_during_listen_window_records_audio",
+        "tests/test_ptt_and_killswitch.py::test_ptt_plays_listening_sound",
+        "tests/test_ptt_and_killswitch.py::test_reset_restores_active",
+        "tests/test_ptt_and_killswitch.py::test_trigger_fires_callbacks",
+        "tests/test_ptt_and_killswitch.py::test_trigger_sets_inactive"
+      ]
+    },
+    {
+      "path": "tests/test_push_to_talk.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_ptt_manager_instantiates, test_ptt_not_active_by_default, test_ptt_callback_registration. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "5e83cab1b21b2bd6969402c7e7268be66f5099d9315a98bdab4f6f8b6fe96cdc",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_pwa_glasses.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_glasses_toggle_in_html, test_glasses_mode_in_js. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "4130b57904e4ca03ce7099c5996fe66f5ad9656b11aae9940454e7d35a3e4efd",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_pwa_serve.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_pwa_mount_exists, test_pwa_files_exist, test_pwa_manifest_is_scoped_to_pwa_mount, test_pwa_does_not_store_or_transport_api_credentials. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "704fbc4efc61999622971e8c4ff46805f53340cdc0d3a668845f573f6bcd6570",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_rag_client.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_index_no_chromadb, test_query_no_chromadb, test_index_with_chromadb, test_query_with_chromadb. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "5344f0fcb428fac65ac0dfc82dd9758895a4e785096bf501e28b867b95471fe6",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_readiness_report.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_readiness_report_returns_zero_when_required_checks_pass, test_readiness_report_returns_nonzero_when_required_check_fails. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "5fc4b6f5e12b4acc19c68cfb98f217083c00f7613b1eaf664e61890f14b0fedd",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_ready_client.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "abf71bc5fc68336c1d6a4e6a91f0f544c315d08cc7ee4ee3ffad8b806950b6a6",
+      "required_nodeids": [
+        "tests/test_ready_client.py::test_ready_requires_nonblank_identity_before_request[ ]",
+        "tests/test_ready_client.py::test_ready_requires_nonblank_identity_before_request[\\t]",
+        "tests/test_ready_client.py::test_ready_requires_nonblank_identity_before_request[]",
+        "tests/test_ready_client.py::test_ready_transport_failure_does_not_retry_or_start",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[200-payload0-0]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[200-payload1-0]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[200-payload2-1]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[200-payload3-1]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[200-payload4-1]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[200-payload5-1]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[401-payload6-1]",
+        "tests/test_ready_client.py::test_ready_uses_bearer_and_preserves_failure[503-payload7-1]"
+      ]
+    },
+    {
+      "path": "tests/test_recovery_decisions.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "ca8fcdb35b708f611e6b0a02000027c7990da528e90405b1bc6bbd974c60d845",
+      "required_nodeids": [
+        "tests/test_recovery_decisions.py::test_authorization_expiring_during_validation_never_publishes_intent",
+        "tests/test_recovery_decisions.py::test_checkpoint_key_cannot_forge_operator_authorization_on_restart",
+        "tests/test_recovery_decisions.py::test_concurrent_proposals_and_decisions",
+        "tests/test_recovery_decisions.py::test_conflicting_concurrent_renewals_only_one_commits",
+        "tests/test_recovery_decisions.py::test_decision_states_and_revocation[APPROVED]",
+        "tests/test_recovery_decisions.py::test_decision_states_and_revocation[PENDING]",
+        "tests/test_recovery_decisions.py::test_decision_states_and_revocation[REJECTED]",
+        "tests/test_recovery_decisions.py::test_empty_generation_witness_stays_valid_after_generation_grows",
+        "tests/test_recovery_decisions.py::test_enospc_preserves_admission_and_exact_retry",
+        "tests/test_recovery_decisions.py::test_expired_decision_remains_historical_and_can_be_revoked",
+        "tests/test_recovery_decisions.py::test_expired_witness_is_visible_and_blocks_fresh_mutation",
+        "tests/test_recovery_decisions.py::test_forged_receipts[commit]",
+        "tests/test_recovery_decisions.py::test_forged_receipts[event]",
+        "tests/test_recovery_decisions.py::test_forged_receipts[wrong_digest]",
+        "tests/test_recovery_decisions.py::test_forged_receipts[wrong_key]",
+        "tests/test_recovery_decisions.py::test_forged_receipts[wrong_request]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_during_partial_witness_publication[final]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_during_partial_witness_publication[intent]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_hot_sqlite_journal_requires_authenticated_recovery[None]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_hot_sqlite_journal_requires_authenticated_recovery[external_ahead]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_hot_sqlite_journal_requires_authenticated_recovery[foreign_custody]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_hot_sqlite_journal_requires_authenticated_recovery[missing_prior_anchor]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_initialization_publication[recovery_database_published]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_initialization_publication[recovery_initial_before_schema_commit]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_initialization_publication[recovery_initial_schema_committed]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_initialization_publication[recovery_initial_stage_created]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-decide]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-propose]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_before_sql_commit-renew]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_intent_durable-decide]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_intent_durable-propose]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_intent_durable-renew]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_receipt_durable-decide]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_receipt_durable-propose]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_receipt_durable-renew]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_sql_committed-decide]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_sql_committed-propose]",
+        "tests/test_recovery_decisions.py::test_independent_sigkill_registry_reconciliation[recovery_sql_committed-renew]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[expired]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[forged]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[future]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[missing]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[outlives]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[wrong_checkpoint]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[wrong_key]",
+        "tests/test_recovery_decisions.py::test_invalid_authorization_fails_before_admission[wrong_operator_scope]",
+        "tests/test_recovery_decisions.py::test_predecessor_expiring_during_derive_never_publishes",
+        "tests/test_recovery_decisions.py::test_proposal_context_expiring_during_derive_never_publishes",
+        "tests/test_recovery_decisions.py::test_readonly_inspection_has_identical_storage_bytes",
+        "tests/test_recovery_decisions.py::test_registry_capacity_is_bounded_without_deletion",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[corrupt_database]",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[external_ahead]",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[missing_anchor]",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[missing_database]",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[missing_row]",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[stale_guard]",
+        "tests/test_recovery_decisions.py::test_registry_corruption_rollback_and_incomplete_history[unknown_custody]",
+        "tests/test_recovery_decisions.py::test_replay_identical_only_and_branch_duplicate",
+        "tests/test_recovery_decisions.py::test_replay_projects_predecessor_expiry_at_each_admission",
+        "tests/test_recovery_decisions.py::test_restore_proposal_decision_receipt_restart",
+        "tests/test_recovery_decisions.py::test_signed_decision_cannot_be_rebound_to_changed_proposal",
+        "tests/test_recovery_decisions.py::test_sqlite_disk_full_transaction_rolls_back_and_reconciles",
+        "tests/test_recovery_decisions.py::test_stale_custody_lock_before_commit_is_fenced",
+        "tests/test_recovery_decisions.py::test_witness_expiring_during_expensive_derive_never_publishes",
+        "tests/test_recovery_decisions.py::test_witness_renewal_new_generation_restart_and_stale_substitution",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[expired]",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[missing_anchor]",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[missing_custody]",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[rollback]",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[stale_external]",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[wrong_generation]",
+        "tests/test_recovery_decisions.py::test_witness_renewal_trust_attacks[wrong_key]"
+      ]
+    },
+    {
+      "path": "tests/test_release_security.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "18fc0eacc013a688be9881b897963842863fb89341445123eaaabec0a2751783",
+      "required_nodeids": [
+        "tests/test_release_security.py::test_actual_admitted_lifespan_refuses_anonymous_read_cancel",
+        "tests/test_release_security.py::test_baseline_anonymous_read_cancel_reproduced_then_fixed",
+        "tests/test_release_security.py::test_component_symlink_refused",
+        "tests/test_release_security.py::test_connection_accept_bound_and_cancellation_cleanup[ConnectionManager]",
+        "tests/test_release_security.py::test_connection_accept_bound_and_cancellation_cleanup[UE5ConnectionManager]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[execution-create]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[execution-status]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[operator-diagnostics]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[ready]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[receipt]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[schedule-create]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[schedule-read]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[schedule-remove]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[task-cancel]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[task-read]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[tasks-create]",
+        "tests/test_release_security.py::test_empty_token_authority_access_refused_even_embedded[tasks-read]",
+        "tests/test_release_security.py::test_genesis_refuses_untrusted_ancestry_before_creating_any_child",
+        "tests/test_release_security.py::test_main_websocket_audit_failure_cleans_registration",
+        "tests/test_release_security.py::test_omitted_resource_options_do_not_enable_automatic_host_controls",
+        "tests/test_release_security.py::test_original_ancestor_sqlite_swap_chain_is_refused",
+        "tests/test_release_security.py::test_parent_replaced_with_same_leaf_inodes_fences_writer",
+        "tests/test_release_security.py::test_slow_send_cannot_free_connection_capacity[ConnectionManager]",
+        "tests/test_release_security.py::test_slow_send_cannot_free_connection_capacity[UE5ConnectionManager]",
+        "tests/test_release_security.py::test_transport_lifespan_rejects_blank_identity_before_background_work[ ]",
+        "tests/test_release_security.py::test_transport_lifespan_rejects_blank_identity_before_background_work[\\t]",
+        "tests/test_release_security.py::test_transport_lifespan_rejects_blank_identity_before_background_work[]",
+        "tests/test_release_security.py::test_ue5_all_exit_cleanup[failure0]",
+        "tests/test_release_security.py::test_ue5_all_exit_cleanup[failure1]",
+        "tests/test_release_security.py::test_websocket_binary_and_oversize_cleanup[x-/ue5]",
+        "tests/test_release_security.py::test_websocket_binary_and_oversize_cleanup[x-/ws]",
+        "tests/test_release_security.py::test_websocket_binary_and_oversize_cleanup[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-/ue5]",
+        "tests/test_release_security.py::test_websocket_binary_and_oversize_cleanup[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-/ws]",
+        "tests/test_release_security.py::test_writable_ancestor_refused_before_sqlite[466]",
+        "tests/test_release_security.py::test_writable_ancestor_refused_before_sqlite[504]",
+        "tests/test_release_security.py::test_writable_ancestor_refused_before_sqlite[511]"
+      ]
+    },
+    {
+      "path": "tests/test_reliability_gauntlet.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "3b2c9d168267530e5591b6715e7c58d106bc8f72a2b09e179a8a2e2807491d84",
+      "required_nodeids": [
+        "tests/test_reliability_gauntlet.py::test_audit_write_failure_at_each_phase_rolls_back_and_recovers[claim]",
+        "tests/test_reliability_gauntlet.py::test_audit_write_failure_at_each_phase_rolls_back_and_recovers[dispatch]",
+        "tests/test_reliability_gauntlet.py::test_audit_write_failure_at_each_phase_rolls_back_and_recovers[publish]",
+        "tests/test_reliability_gauntlet.py::test_audit_write_failure_at_each_phase_rolls_back_and_recovers[record]",
+        "tests/test_reliability_gauntlet.py::test_cancel_and_revoke_between_claim_and_dispatch",
+        "tests/test_reliability_gauntlet.py::test_completion_replay_after_cancel_is_receipt_only",
+        "tests/test_reliability_gauntlet.py::test_damaged_store_refuses_reopen_without_creating_replacement[missing]",
+        "tests/test_reliability_gauntlet.py::test_damaged_store_refuses_reopen_without_creating_replacement[truncated]",
+        "tests/test_reliability_gauntlet.py::test_extreme_expiry_is_http_400_without_admission[0001-01-01T00:00:00+23:00]",
+        "tests/test_reliability_gauntlet.py::test_extreme_expiry_is_http_400_without_admission[9999-12-31T23:59:59-23:00]",
+        "tests/test_reliability_gauntlet.py::test_interrupted_phase_reopen_and_repeated_recovery[after_claim]",
+        "tests/test_reliability_gauntlet.py::test_interrupted_phase_reopen_and_repeated_recovery[after_execute]",
+        "tests/test_reliability_gauntlet.py::test_interrupted_phase_reopen_and_repeated_recovery[after_publish]",
+        "tests/test_reliability_gauntlet.py::test_interrupted_phase_reopen_and_repeated_recovery[after_record]",
+        "tests/test_reliability_gauntlet.py::test_interrupted_phase_reopen_and_repeated_recovery[before_execute]",
+        "tests/test_reliability_gauntlet.py::test_legacy_simulation_keeps_its_own_recovery_protocol[False]",
+        "tests/test_reliability_gauntlet.py::test_legacy_simulation_keeps_its_own_recovery_protocol[True]",
+        "tests/test_reliability_gauntlet.py::test_lost_admission_ack_replay_keeps_single_task[after_commit_before_ack]",
+        "tests/test_reliability_gauntlet.py::test_lost_admission_ack_replay_keeps_single_task[after_effect_sql]",
+        "tests/test_reliability_gauntlet.py::test_lost_admission_ack_replay_keeps_single_task[before_commit]",
+        "tests/test_reliability_gauntlet.py::test_pending_limit_includes_unknown_until_operator_resolution",
+        "tests/test_reliability_gauntlet.py::test_revoked_execution_cannot_complete_via_legacy_simulator",
+        "tests/test_reliability_gauntlet.py::test_scheduler_durable_stop_failure_requires_explicit_retry",
+        "tests/test_reliability_gauntlet.py::test_scheduler_retains_failed_shutdown_for_retry",
+        "tests/test_reliability_gauntlet.py::test_simulator_cannot_discard_recorded_execution_evidence",
+        "tests/test_reliability_gauntlet.py::test_simulator_cannot_resolve_execution_unknown_after_restart",
+        "tests/test_reliability_gauntlet.py::test_simulator_cannot_take_execution_protocol_task[acknowledge]",
+        "tests/test_reliability_gauntlet.py::test_simulator_cannot_take_execution_protocol_task[apply]",
+        "tests/test_reliability_gauntlet.py::test_simulator_cannot_take_execution_protocol_task[claim]",
+        "tests/test_reliability_gauntlet.py::test_simulator_cannot_take_execution_protocol_task[reconcile]",
+        "tests/test_reliability_gauntlet.py::test_time_normalization_overflow_is_domain_error[0001-01-01T00:00:00+23:00]",
+        "tests/test_reliability_gauntlet.py::test_time_normalization_overflow_is_domain_error[9999-12-31T23:59:59-23:00]"
+      ]
+    },
+    {
+      "path": "tests/test_reporter.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "fe18e150fc716df1d768571bd3eeb6d25370a16059c472006721ebf3cfbcbf44",
+      "required_nodeids": [
+        "tests/test_reporter.py::ReporterCompatibility::test_cancelled_keeps_state_and_flag",
+        "tests/test_reporter.py::ReporterCompatibility::test_claimed_cancellation_is_not_confirmed_prevention",
+        "tests/test_reporter.py::ReporterCompatibility::test_disabled_comms_send_report_does_not_send_anything",
+        "tests/test_reporter.py::ReporterCompatibility::test_discord_only_uses_synthetic_send_and_keeps_truthful_state",
+        "tests/test_reporter.py::ReporterCompatibility::test_empty_is_a_snapshot_not_general_health",
+        "tests/test_reporter.py::ReporterCompatibility::test_legacy_unknown_cannot_disappear_in_morning_report",
+        "tests/test_reporter.py::ReporterCompatibility::test_pending_is_admitted_held_and_reporting_is_read_only",
+        "tests/test_reporter.py::ReporterCompatibility::test_recovered_unknown_retains_cancellation_uncertainty",
+        "tests/test_reporter.py::ReporterCompatibility::test_simulation_completion_is_named_without_real_execution_claim",
+        "tests/test_reporter.py::ReporterCompatibility::test_unavailable_never_falls_back_to_empty_legacy_memory"
+      ]
+    },
+    {
+      "path": "tests/test_required_inventory_r3.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "8b2ebb18393ffa7584db987b0ea02f62280d4fb2137534b87ffce4e8f177a671",
+      "required_nodeids": [
+        "tests/test_required_inventory_r3.py::test_inventory_tampering_refuses[bad_schema]",
+        "tests/test_required_inventory_r3.py::test_inventory_tampering_refuses[duplicate]",
+        "tests/test_required_inventory_r3.py::test_inventory_tampering_refuses[source]",
+        "tests/test_required_inventory_r3.py::test_inventory_tampering_refuses[wrong_baseline]",
+        "tests/test_required_inventory_r3.py::test_legitimate_full_suite",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[astra14]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[duplicate]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[empty]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[exit0_missing]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[ignore]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[interrupt]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[marker]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[module]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[no_collection_finish]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[parameter]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[skip]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[substitution]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[truncated]",
+        "tests/test_required_inventory_r3.py::test_required_collection_and_execution_never_shrink[xfail]"
+      ]
+    },
+    {
+      "path": "tests/test_resource_manager.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "96022d1eae1f8f1c3393ea7bae45311e5bccc3f04c532c96bd2204c2919e3332",
+      "required_nodeids": [
+        "tests/test_resource_manager.py::test_classify_jarvis_process_matches_runtime_workers",
+        "tests/test_resource_manager.py::test_deep_sleep_stops_wake_listener_and_processes",
+        "tests/test_resource_manager.py::test_light_sleep_unloads_services_and_keeps_wake_listener",
+        "tests/test_resource_manager.py::test_resource_report_sums_loaded_model_vram_and_process_memory",
+        "tests/test_resource_manager.py::test_unload_ollama_model_uses_keep_alive_zero",
+        "tests/test_resource_manager.py::test_wake_starts_required_services_and_optionally_preloads"
+      ]
+    },
+    {
+      "path": "tests/test_restic_scripts.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Backup administration shell/exclusion tests; outside runtime reconciliation. Script guard rejects absent RESTIC_REPOSITORY, but no backup command is executed in this task.",
+      "sha256": "fb6ec4992db5be9a092a742d76160d36c5fdbe73f1d8b7adfb0bc668199e4bb3",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_safety_levels.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "208f88ce237cfcce443eca7bd1b01cbb356a417bd32f9d7e26c88fcaf20aca2c",
+      "required_nodeids": [
+        "tests/test_safety_levels.py::test_compatibility_exports_and_getters_are_metadata_only",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-False-0]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-False-1]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-False-2]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-False-3]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-True-0]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-True-1]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-True-2]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[False-True-3]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-False-0]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-False-1]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-False-2]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-False-3]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-True-0]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-True-1]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-True-2]",
+        "tests/test_safety_levels.py::test_legacy_flags_cannot_invoke_real_tools[True-True-3]"
+      ]
+    },
+    {
+      "path": "tests/test_scheduler.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "edc54512ddff0b66b5021e9c5670a4a9e0354e975d16c30eeb0c4471a9ab016b",
+      "required_nodeids": [
+        "tests/test_scheduler.py::test_schedule_removal_retains_receipt",
+        "tests/test_scheduler.py::test_schedule_retry_preserves_original_nominal"
+      ]
+    },
+    {
+      "path": "tests/test_scheduler_hardening_r2.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "c9b415a916e7273eadde8da3f27e80a5eaf3004a78a7d5b5a014492db93f16ba",
+      "required_nodeids": [
+        "tests/test_scheduler_hardening_r2.py::test_closed_real_backend_cannot_reopen_stale_cleanup_inventory",
+        "tests/test_scheduler_hardening_r2.py::test_combined_durable_and_backend_failure_retains_owner",
+        "tests/test_scheduler_hardening_r2.py::test_concurrent_stop_does_not_duplicate_backend_cleanup",
+        "tests/test_scheduler_hardening_r2.py::test_inflight_cleanup_survives_caller_interruption_and_retry[cancel]",
+        "tests/test_scheduler_hardening_r2.py::test_inflight_cleanup_survives_caller_interruption_and_retry[timeout]",
+        "tests/test_scheduler_hardening_r2.py::test_late_cleanup_error_remains_observable_after_cancellation",
+        "tests/test_scheduler_hardening_r2.py::test_legacy_claimed_execution_fixture_cannot_apply_or_acknowledge[acknowledge]",
+        "tests/test_scheduler_hardening_r2.py::test_legacy_claimed_execution_fixture_cannot_apply_or_acknowledge[apply]",
+        "tests/test_scheduler_hardening_r2.py::test_real_cancellation_suppressing_job_keeps_owner_until_done",
+        "tests/test_scheduler_hardening_r2.py::test_real_executor_cleanup_failure_is_observed_and_retryable",
+        "tests/test_scheduler_hardening_r2.py::test_real_partial_store_cleanup_retries_only_unfinished_resources",
+        "tests/test_scheduler_hardening_r2.py::test_real_stop_confirms_cleanup_before_immediate_restart",
+        "tests/test_scheduler_hardening_r2.py::test_unowned_deferred_backend_is_refused_without_losing_handle",
+        "tests/test_scheduler_hardening_r2.py::test_unverifiable_executor_future_does_not_count_as_cleanup"
+      ]
+    },
+    {
+      "path": "tests/test_scheduler_reliability.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "38678e8a27a92385a213b28d170c0dd4bc1e40d760495a3b18f8f2f08937321f",
+      "required_nodeids": [
+        "tests/test_scheduler_reliability.py::test_nominal_callback_deduplicates_and_stop_fences_retained_callback"
+      ]
+    },
+    {
+      "path": "tests/test_screenshot.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "e653636981114fa7c504a73bbd54753d540874a4b9f0d5672c0c1ebccc97d8b8",
+      "required_nodeids": [
+        "tests/test_screenshot.py::test_capture_creates_file",
+        "tests/test_screenshot.py::test_dry_run",
+        "tests/test_screenshot.py::test_execute_success",
+        "tests/test_screenshot.py::test_mss_not_installed",
+        "tests/test_screenshot.py::test_safety_level"
+      ]
+    },
+    {
+      "path": "tests/test_screenshot_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "085b672b47fa6b935e2be9f59c36bb8f6d35dd4c5094c67eefd118df73f0569a",
+      "required_nodeids": [
+        "tests/test_screenshot_tool.py::test_capture_imports_error",
+        "tests/test_screenshot_tool.py::test_dry_run",
+        "tests/test_screenshot_tool.py::test_registered",
+        "tests/test_screenshot_tool.py::test_safety_level"
+      ]
+    },
+    {
+      "path": "tests/test_secure_transport.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "a272beed2ad03678eeb9ef5f2d868e63df6537c8dcce126a2e8b3959b4794236",
+      "required_nodeids": [
+        "tests/test_secure_transport.py::test_actual_ipc_signed_evidence_single_writer_and_public_metadata",
+        "tests/test_secure_transport.py::test_authenticated_recovery_records_existing_signed_report_without_invoking",
+        "tests/test_secure_transport.py::test_cancel_and_deadline_during_handoff_remain_conservative[transport_before_reserve]",
+        "tests/test_secure_transport.py::test_cancel_and_deadline_during_handoff_remain_conservative[transport_computed]",
+        "tests/test_secure_transport.py::test_cancel_and_deadline_during_handoff_remain_conservative[transport_reply_received]",
+        "tests/test_secure_transport.py::test_cancel_and_deadline_during_handoff_remain_conservative[transport_reported]",
+        "tests/test_secure_transport.py::test_cancel_and_deadline_during_handoff_remain_conservative[transport_reserved]",
+        "tests/test_secure_transport.py::test_configured_transport_readiness_matches_before_first_grant",
+        "tests/test_secure_transport.py::test_diagnostics_rejects_empty_or_orphan_transport_history[execution_transport_grant]",
+        "tests/test_secure_transport.py::test_diagnostics_rejects_empty_or_orphan_transport_history[execution_transport_report]",
+        "tests/test_secure_transport.py::test_diagnostics_rejects_empty_or_orphan_transport_history[execution_transport_reservation]",
+        "tests/test_secure_transport.py::test_disabled_by_default_sealed_types_and_independent_keys",
+        "tests/test_secure_transport.py::test_duplicate_concurrent_submissions_and_dispatch",
+        "tests/test_secure_transport.py::test_expired_queued_permit_is_terminal_and_does_not_stall_next_task",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[after_claim]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[after_publish]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[after_record]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[before_execute]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[publish_before_commit]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[publish_database_committed]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[record_before_commit]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[record_database_committed]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[reserve_before_commit]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[reserve_database_committed]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_before_reserve]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_computed]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_reply_received]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_reported]",
+        "tests/test_secure_transport.py::test_independent_process_crash_reconciles_without_duplicate_execution[transport_reserved]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[capability]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[checkpoint]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[endpoint]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[expiry]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[forged]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[goal]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[id]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[payload]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[scope]",
+        "tests/test_secure_transport.py::test_invalid_transport_grants_never_admit_or_invoke[wrong_operator_key]",
+        "tests/test_secure_transport.py::test_late_computation_does_not_commit_invalid_report",
+        "tests/test_secure_transport.py::test_no_arbitrary_or_real_destination[/run/g6k-pve-broker/request.sock]",
+        "tests/test_secure_transport.py::test_no_arbitrary_or_real_destination[https://example.invalid]",
+        "tests/test_secure_transport.py::test_no_arbitrary_or_real_destination[proxmox.inspect]",
+        "tests/test_secure_transport.py::test_no_arbitrary_or_real_destination[synthetic.local.echo-v2]",
+        "tests/test_secure_transport.py::test_operator_promoted_evidence_cannot_auto_publish_on_restart",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[duplicate_json]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[generation]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[operation_id]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[oversized]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[partial_frame]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[request_signature]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[response_payload]",
+        "tests/test_secure_transport.py::test_protocol_forgery_and_bounded_frames[response_signature]",
+        "tests/test_secure_transport.py::test_real_offline_cli_reconciles_and_explicitly_publishes_with_identical_replay",
+        "tests/test_secure_transport.py::test_recovery_permit_expiring_during_verification_rolls_back",
+        "tests/test_secure_transport.py::test_recovery_witness_failure_blocks_each_boundary",
+        "tests/test_secure_transport.py::test_restart_wrong_independent_key_refuses_historical_completion[operator]",
+        "tests/test_secure_transport.py::test_restart_wrong_independent_key_refuses_historical_completion[request]",
+        "tests/test_secure_transport.py::test_restart_wrong_independent_key_refuses_historical_completion[response]",
+        "tests/test_secure_transport.py::test_second_allowlisted_endpoint_runs_only_pure_hash"
+      ]
+    },
+    {
+      "path": "tests/test_self_suppression.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "aea052dfd663c778f769ca11b281b7651005a303ebbc8256bba9229d6e72518e",
+      "required_nodeids": [
+        "tests/test_self_suppression.py::test_concurrent_speaking_and_listening",
+        "tests/test_self_suppression.py::test_contains_hey_jarvis_suppressed",
+        "tests/test_self_suppression.py::test_long_reply_suppressed",
+        "tests/test_self_suppression.py::test_overlap_silence_suppressed",
+        "tests/test_self_suppression.py::test_short_reply_suppressed",
+        "tests/test_self_suppression.py::test_suppression_allows_detection_when_silent",
+        "tests/test_self_suppression.py::test_suppression_blocks_detection_while_speaking",
+        "tests/test_self_suppression.py::test_suppression_does_not_affect_push_to_talk",
+        "tests/test_self_suppression.py::test_suppression_flag_exists",
+        "tests/test_self_suppression.py::test_suppression_resets_after_tts"
+      ]
+    },
+    {
+      "path": "tests/test_sensor_endpoints.py",
+      "disposition": "required",
+      "reason": "Explicit disposable admitted Authority and matching synthetic Bearer; no auth bypass.",
+      "sha256": "f8efaea4478fbceb2eeae35d6acf8aecfdbc4079ba87120caada467dd8c4d530",
+      "required_nodeids": [
+        "tests/test_sensor_endpoints.py::test_get_sensor_readings",
+        "tests/test_sensor_endpoints.py::test_list_sensors",
+        "tests/test_sensor_endpoints.py::test_post_sensor_data"
+      ]
+    },
+    {
+      "path": "tests/test_sensor_store.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "aa86b8cf4d1f01216190feca054854e0329b5513f770dad05b4af7de96583ba6",
+      "required_nodeids": [
+        "tests/test_sensor_store.py::test_add_and_get_reading",
+        "tests/test_sensor_store.py::test_get_unknown_node",
+        "tests/test_sensor_store.py::test_list_nodes",
+        "tests/test_sensor_store.py::test_max_readings"
+      ]
+    },
+    {
+      "path": "tests/test_server_auth.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "81dfa2eab96a1e081f0f8d36fce7e8cae0c7b91077919524e5419e978c1b2219",
+      "required_nodeids": [
+        "tests/test_server_auth.py::test_confirmation_route_requires_authentication",
+        "tests/test_server_auth.py::test_empty_token_cannot_access_authority",
+        "tests/test_server_auth.py::test_env_override_sets_api_token",
+        "tests/test_server_auth.py::test_health_exempt",
+        "tests/test_server_auth.py::test_malformed_header_rejected",
+        "tests/test_server_auth.py::test_missing_token_rejected",
+        "tests/test_server_auth.py::test_ue5_ws_rejected_without_token",
+        "tests/test_server_auth.py::test_ue5_ws_rejects_untrusted_origin",
+        "tests/test_server_auth.py::test_valid_token_accepted",
+        "tests/test_server_auth.py::test_wrong_token_rejected",
+        "tests/test_server_auth.py::test_ws_accepted_with_bearer_header",
+        "tests/test_server_auth.py::test_ws_missing_origin_allowed_for_native_client",
+        "tests/test_server_auth.py::test_ws_rejected_with_query_token",
+        "tests/test_server_auth.py::test_ws_rejected_with_wrong_token",
+        "tests/test_server_auth.py::test_ws_rejected_without_token",
+        "tests/test_server_auth.py::test_ws_trusted_origin_accepted",
+        "tests/test_server_auth.py::test_ws_untrusted_origin_rejected_with_valid_token"
+      ]
+    },
+    {
+      "path": "tests/test_server_integration.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "0f63f1a614948c6e535eb989f1e3e9e455941b9cb2932e027f9ade13aa9701ee",
+      "required_nodeids": [
+        "tests/test_server_integration.py::test_chat_browser_tool",
+        "tests/test_server_integration.py::test_chat_dry_run",
+        "tests/test_server_integration.py::test_chat_missing_message",
+        "tests/test_server_integration.py::test_chat_respond_intent",
+        "tests/test_server_integration.py::test_chat_retrieve_memory_intent_adds_context",
+        "tests/test_server_integration.py::test_chat_vision_intent_calls_vision_tool",
+        "tests/test_server_integration.py::test_health_returns_200",
+        "tests/test_server_integration.py::test_health_tools_route",
+        "tests/test_server_integration.py::test_lifespan_does_not_start_voice_or_hotkey_by_default",
+        "tests/test_server_integration.py::test_procedural_memory_routes",
+        "tests/test_server_integration.py::test_resource_management_routes",
+        "tests/test_server_integration.py::test_schedule_job_routes",
+        "tests/test_server_integration.py::test_task_routes"
+      ]
+    },
+    {
+      "path": "tests/test_shell_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "72e5ef2e0c1c7e6df2af6665ac6aa3daa2a20260a454648f7d2322e3a0be92c4",
+      "required_nodeids": [
+        "tests/test_shell_tool.py::test_dry_run",
+        "tests/test_shell_tool.py::test_missing_command",
+        "tests/test_shell_tool.py::test_registered",
+        "tests/test_shell_tool.py::test_safety_level"
+      ]
+    },
+    {
+      "path": "tests/test_storage_ancestry_security.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "2a644ea1ef3750c467507b58cd2bb4bf045c2f1965c37913b1da9c6184d261ad",
+      "required_nodeids": [
+        "tests/test_storage_ancestry_security.py::test_creation_race_refuses_competing_leaf_without_following_it",
+        "tests/test_storage_ancestry_security.py::test_private_nested_creation_is_descriptor_relative_and_owner_only",
+        "tests/test_storage_ancestry_security.py::test_symlink_ancestor_cannot_redirect_creation",
+        "tests/test_storage_ancestry_security.py::test_unsafe_ancestor_refused_before_creating_descendants[466]",
+        "tests/test_storage_ancestry_security.py::test_unsafe_ancestor_refused_before_creating_descendants[504]",
+        "tests/test_storage_ancestry_security.py::test_unsafe_ancestor_refused_before_creating_descendants[511]"
+      ]
+    },
+    {
+      "path": "tests/test_switch_models.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Model-switch administration test copies, reads and rewrites repository config.yaml and launches switch_models.py. Keep excluded from read-only acceptance; no real configuration/credential access authorized.",
+      "sha256": "4657ef81d9539d299ba7d5ebf9976ca6871619bebe233731ee56de2228cab0ae",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_system_stats_tool.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_safety_level, test_dry_run, test_returns_expected_keys, test_registered. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "daf64d602091b9ab834b00a6c5c10ee65dcc9706e700c675939bf5bb3ebc8179",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_tailscale.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_tailscale_not_installed, test_tailscale_parse_success, test_tailscale_timeout, test_network_status_endpoint. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "e92f480fc92d52eb794187f82db4b1660fc9cd301d6b83687e1bed57e66f8a4a",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_task_queue_callers.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "d3f543c17ddb667e09a74ad1ee1c91ca29f49f4f6686a90cda58c086d3136cb7",
+      "required_nodeids": [
+        "tests/test_task_queue_callers.py::test_public_caller_cannot_select_scope_or_complete"
+      ]
+    },
+    {
+      "path": "tests/test_task_queue_persistence.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "4dfe8163dd57ba41de7776788faf06b4b8b9b372aef2916fc95d01ec81eb9669",
+      "required_nodeids": [
+        "tests/test_task_queue_persistence.py::test_cancel_retains_history_and_original_receipt",
+        "tests/test_task_queue_persistence.py::test_conflicting_retry_does_not_change_task",
+        "tests/test_task_queue_persistence.py::test_identical_admission_survives_reopen"
+      ]
+    },
+    {
+      "path": "tests/test_task_queue_store_safety.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "8cb638e85e201c84e6f6f2924d869606f8a83f96fc3fd13bd93067084951965a",
+      "required_nodeids": [
+        "tests/test_task_queue_store_safety.py::test_legacy_store_refused_and_preserved[Scheduler-[]]",
+        "tests/test_task_queue_store_safety.py::test_legacy_store_refused_and_preserved[Scheduler-[{\"task_id\":\"old\"}]]",
+        "tests/test_task_queue_store_safety.py::test_legacy_store_refused_and_preserved[Scheduler-{malformed]",
+        "tests/test_task_queue_store_safety.py::test_legacy_store_refused_and_preserved[TaskQueue-[]]",
+        "tests/test_task_queue_store_safety.py::test_legacy_store_refused_and_preserved[TaskQueue-[{\"task_id\":\"old\"}]]",
+        "tests/test_task_queue_store_safety.py::test_legacy_store_refused_and_preserved[TaskQueue-{malformed]",
+        "tests/test_task_queue_store_safety.py::test_missing_authority_not_created"
+      ]
+    },
+    {
+      "path": "tests/test_telegram_bot.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_send_disabled, test_send_no_lib, test_send_no_token, test_send_success. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "96488dc3cb5ab8d33cb21d2106b99a77ea4cf6d1f52bca7d769f3fb08d63c737",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_tool_embeddings.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_embedding_selector_ranks_tools_with_mocked_ollama, test_router_flag_off_keeps_existing_route, test_router_flag_on_can_replace_ambiguous_tool. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "243ba48ec5d8ac1e5b232c0b20507e9a8cc3d4599f7962547cb552f59be70d80",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_tool_readiness_smoke.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_run_smoke_all_passes, test_main_returns_nonzero_for_failure, test_main_returns_zero_for_pass. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "1de3f20554174423dcb40ce75b7eb8bf5b575c8494baa8acdda66664a5c19ef7",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_tracing.py",
+      "disposition": "required",
+      "reason": "Registry and confirmation execution are retired: assert refusal/no execution; preserve parameter redaction in real trace_span and absence of confirmed events.",
+      "sha256": "cedb6cbeea1edb01b6542b6ac7ad915ee855e172a97a6d6b65739233400f4266",
+      "required_nodeids": [
+        "tests/test_tracing.py::test_audit_entry_includes_active_trace_and_remains_backward_compatible",
+        "tests/test_tracing.py::test_chat_entry_point_creates_one_request_trace",
+        "tests/test_tracing.py::test_concurrent_requests_do_not_leak_trace_ids",
+        "tests/test_tracing.py::test_different_requests_get_different_trace_ids",
+        "tests/test_tracing.py::test_failing_span_records_error_and_propagates_original_exception",
+        "tests/test_tracing.py::test_jsonl_records_have_required_schema_fields",
+        "tests/test_tracing.py::test_parent_child_relationship_and_non_negative_durations",
+        "tests/test_tracing.py::test_retired_confirmation_never_executes_or_confirms",
+        "tests/test_tracing.py::test_small_max_size_rotates_trace_file",
+        "tests/test_tracing.py::test_span_metadata_drops_secret_values_and_unknown_fields",
+        "tests/test_tracing.py::test_tool_trace_records_keys_not_values",
+        "tests/test_tracing.py::test_trace_id_is_generated_stable_and_uuid4",
+        "tests/test_tracing.py::test_trace_write_failure_warns_but_does_not_break_processing",
+        "tests/test_tracing.py::test_tracing_overhead_is_small_for_local_noop_spans"
+      ]
+    },
+    {
+      "path": "tests/test_tts_chatterbox.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_chatterbox_unavailable_fallback, test_piper_fallback_strips_paralinguistics, test_chatterbox_available_generates, test_get_chatterbox_caches_model. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "9bbff699098924651f1af428ce611c5e9b7560e40994faf716b089326414a91c",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_ue5_bridge.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_build_emotion_neutral, test_build_emotion_success, test_parse_emotion_found, test_parse_emotion_missing. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "3fbfd62ea8c6cfd7ebe2b632f79a33b36c8d1e75395372531a7cf3ea34d5c071",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_ue5_security.py",
+      "disposition": "required",
+      "reason": "Reviewed offline reconciliation acceptance suite; exact nodes in required_tests.json.",
+      "sha256": "b28e133e4e7cf92725ad9b70bfff6383f9a2a4457aaed7ba5db72336b15da7b7",
+      "required_nodeids": [
+        "tests/test_ue5_security.py::test_audit_exception_cannot_orphan_connection[ue5_ws_connect]",
+        "tests/test_ue5_security.py::test_audit_exception_cannot_orphan_connection[ue5_ws_disconnect]",
+        "tests/test_ue5_security.py::test_binary_frames_close_cleanly[\\xff\\x00]",
+        "tests/test_ue5_security.py::test_binary_frames_close_cleanly[]",
+        "tests/test_ue5_security.py::test_binary_frames_close_cleanly[x]",
+        "tests/test_ue5_security.py::test_cancellation_and_receive_exception_always_cleanup[CancelledError]",
+        "tests/test_ue5_security.py::test_cancellation_and_receive_exception_always_cleanup[RuntimeError]",
+        "tests/test_ue5_security.py::test_cancellation_during_accept_releases_pending_capacity",
+        "tests/test_ue5_security.py::test_close_exception_cannot_retain_registration",
+        "tests/test_ue5_security.py::test_connection_bound_refuses_growth_and_reclaims_capacity",
+        "tests/test_ue5_security.py::test_connection_registration_failure_always_cleanup",
+        "tests/test_ue5_security.py::test_malformed_frames_close_cleanly[frame0]",
+        "tests/test_ue5_security.py::test_malformed_frames_close_cleanly[frame1]",
+        "tests/test_ue5_security.py::test_malformed_frames_close_cleanly[frame2]",
+        "tests/test_ue5_security.py::test_oversized_text_is_bounded[\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9\\xe9]",
+        "tests/test_ue5_security.py::test_oversized_text_is_bounded[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx]",
+        "tests/test_ue5_security.py::test_repeated_hostile_sessions_leave_no_persistent_entries_or_secrets",
+        "tests/test_ue5_security.py::test_sibling_chat_registration_cleanup_uses_same_lifetime_scope[audit]",
+        "tests/test_ue5_security.py::test_sibling_chat_registration_cleanup_uses_same_lifetime_scope[registration]",
+        "tests/test_ue5_security.py::test_slow_close_cannot_retain_registration",
+        "tests/test_ue5_security.py::test_valid_connection_preserves_broadcast_and_other_entries",
+        "tests/test_ue5_security.py::test_valid_text_and_peer_disconnect_cleanup[1000]",
+        "tests/test_ue5_security.py::test_valid_text_and_peer_disconnect_cleanup[1006]",
+        "tests/test_ue5_security.py::test_valid_utf8_frame_at_byte_limit_is_preserved"
+      ]
+    },
+    {
+      "path": "tests/test_vad_timeout.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_no_speech_returns_empty, test_result_type_is_bytes, test_short_timeout_exits_fast. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "d8d71fdfd7efd84e2fe8a79b1b097cad486e5a08258a57d7b878cf3bb648b467",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_vision.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "3617a0263abab92c3042e979b8fd24a09f28ec4a1a8a0ca06bd3e67dd6610dca",
+      "required_nodeids": [
+        "tests/test_vision.py::test_dry_run",
+        "tests/test_vision.py::test_safety_level",
+        "tests/test_vision.py::test_screen_analysis",
+        "tests/test_vision.py::test_unknown_source",
+        "tests/test_vision.py::test_webcam_not_implemented"
+      ]
+    },
+    {
+      "path": "tests/test_vision_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "cc3fb8ddb1207c037bfe6242944138a4447aeb9b7c8efb2318495e4c6273deac",
+      "required_nodeids": [
+        "tests/test_vision_tool.py::test_dry_run",
+        "tests/test_vision_tool.py::test_registered",
+        "tests/test_vision_tool.py::test_safety_level",
+        "tests/test_vision_tool.py::test_unknown_source"
+      ]
+    },
+    {
+      "path": "tests/test_vision_vlm.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "c2283bf2818ae0483c99eddff03928d81e272ca25471f83312de04233c95663a",
+      "required_nodeids": [
+        "tests/test_vision_vlm.py::test_dry_run_screen",
+        "tests/test_vision_vlm.py::test_screen_calls_ollama",
+        "tests/test_vision_vlm.py::test_unknown_source",
+        "tests/test_vision_vlm.py::test_webcam_no_opencv"
+      ]
+    },
+    {
+      "path": "tests/test_wake_diag.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_script_compiles, test_has_main_guard, test_csv_columns, test_summary_keys. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "214a2c10a59c497824aa8787412495f2c41e64d803b29c85903586c5f9cee1a8",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/test_web_search_tool.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "cf2e0db89d4f1f7bf12a6d5af6b45354ca47f426ed36a6c8a0643203e2d5193d",
+      "required_nodeids": [
+        "tests/test_web_search_tool.py::test_dry_run",
+        "tests/test_web_search_tool.py::test_fetch_bad_url",
+        "tests/test_web_search_tool.py::test_no_ddgs",
+        "tests/test_web_search_tool.py::test_registered",
+        "tests/test_web_search_tool.py::test_safety_level"
+      ]
+    },
+    {
+      "path": "tests/test_yolo_detector.py",
+      "disposition": "excluded_offline_scope",
+      "reason": "Unchanged feature scope: test_dry_run, test_no_ultralytics, test_detect_with_mocked_model, test_detect_error. Its subsystem is not changed; registry/host-control/credential boundaries are now exercised by required coverage modules. No execution in this task.",
+      "sha256": "b2b10beb59ba02dcc104d6756c1d42e4d17980abe76930f05a1625541a58baaf",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/transport_fixtures.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "98ba8ec1e719695f212ef39aa63e8d8fed4e4668a5baab8118be4aff0550bb2c",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/transport_process_actor.py",
+      "disposition": "support",
+      "reason": "Fixture/support module; reviewed source is available to explicitly selected tests, not independently collected.",
+      "sha256": "6648dfbcc66671162f65e9049305650a964d1bd208cb19b3814d501787a444ad",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/tts_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_speak_stream_yields_sentences. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "aec3965fac33957857d1c073dfbb5e12e7605b6c70f1cd84432bd620c9b069a9",
+      "required_nodeids": []
+    },
+    {
+      "path": "tests/vad_test.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "0ccd3d10e2bbcb6034f7668c059571c5eeeef3db519ad3b6d1ce4baadb1308b5",
+      "required_nodeids": [
+        "tests/vad_test.py::test_vad_wav_packaging"
+      ]
+    },
+    {
+      "path": "tests/voice_pipeline_test.py",
+      "disposition": "required",
+      "reason": "Offline source reviewed: pure checks or existing explicit mocks/interceptors bound to disposable namespace; assertions unchanged.",
+      "sha256": "371cb9b8595ad50f931e92b2816b8891bc04bff2139a07a8ee8788b7a00a1f7a",
+      "required_nodeids": [
+        "tests/voice_pipeline_test.py::test_voice_pipeline_stop_is_responsive"
+      ]
+    },
+    {
+      "path": "tests/wake_word_test.py",
+      "disposition": "excluded_live_or_hardware",
+      "reason": "Unchanged legacy live smoke: test_wake_word_score_and_suppression_flag. Calls provider/audio/runtime paths without complete fixture interception; acceptance selection forbids this module.",
+      "sha256": "68d7dde8533491b952b450c5e8df8b81fee2c2aec24fdc3a8898712347d9cf89",
+      "required_nodeids": []
+    }
+  ],
+  "policy_identical_to_approved_source": true
+}
