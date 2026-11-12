@@ -4,7 +4,7 @@ import json
 from gauntlet_protocol import InvalidEvidence, case_identifiers
 
 
-INVENTORY_SHA256 = "8b2e3618c17d10bc1243793405c985c50d0ff967a7e6e371c603e2c13039c065"
+INVENTORY_SHA256 = "897b0aaf9772804fd401a08588d1a908645995ad238068e97a2bc94e82127cd4"
 
 
 def load_inventory(path, root, mode, *, verify_sources=True, expected_digest=INVENTORY_SHA256):

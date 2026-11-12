@@ -3,7 +3,7 @@ import hashlib
 import json
 from gauntlet_protocol import InvalidEvidence
 
-ENROLLMENT_SHA256 = '54b44473166f3cd674c5dd5022870c334c378029e68cf2112470f27d2cb7b28b'
+ENROLLMENT_SHA256 = '3ed3fa9ee13dd04bcc10e0c6f1d508f3da31f751e33042edd559f930a16cc95d'
 
 def check_enrollment(root, path, expected_digest=ENROLLMENT_SHA256):
     try:

@@ -143,6 +143,9 @@ def test_new_ci_entrypoint_requires_review(tmp_path, entry):
     entry.check_ci_inventory(tmp_path)
     (folder/'unsafe.yml').write_text('run: pytest tests/')
     with pytest.raises(ValueError):entry.check_ci_inventory(tmp_path)
+    # A newly enrolled suite must never be ignored by a fixed CI mode list.
+    (tmp_path/'scripts/required_tests.json').write_text(json.dumps({'suites':{'new_unreviewed_mode':{'nodeids':[]}}}))
+    with pytest.raises(ValueError, match='unreviewed_positive_suite'):entry.required_nodes(tmp_path)
 
 
 def test_symlink_ci_directory_fails_before_read(tmp_path, entry):

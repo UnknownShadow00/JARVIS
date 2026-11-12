@@ -69,6 +69,9 @@ def public_hashes(root):
 def required_nodes(root):
     from required_test_inventory import load_inventory
     body = json.loads((root/'scripts/required_tests.json').read_text())
+    positive = {name for name in body['suites'] if name != 'probe' and not name.startswith('case:')}
+    if positive != set(MODES):
+        raise ValueError('unreviewed_positive_suite')
     nodes = []
     for mode in MODES:
         loaded = load_inventory(root/'scripts/required_tests.json', root, mode)
