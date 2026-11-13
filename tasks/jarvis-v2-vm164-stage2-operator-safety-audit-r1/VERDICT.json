@@ -1,0 +1,66 @@
+{
+  "kind": "OFFLINE_INDEPENDENT_SAFETY_AUDIT",
+  "verdict": "REJECT",
+  "ready_for_human_authorization": false,
+  "decisions": {
+    "proposed_commands": "FAIL",
+    "privilege_separation_design": "PASS_DESIGN_ONLY_PENDING_HOST_AND_ENVIRONMENT_PROOF",
+    "test_case_completeness": "FAIL",
+    "bounded_cleanup": "FAIL"
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "severity": "HIGH",
+      "title": "NSS and policy commands lack an explicit prior local-only gate"
+    },
+    {
+      "id": "F02",
+      "severity": "HIGH",
+      "title": "Privileged reads/decompression and command budgets are incompletely bounded"
+    },
+    {
+      "id": "F03",
+      "severity": "MEDIUM",
+      "title": "Malformed occupancy string bypasses collision admission"
+    },
+    {
+      "id": "F04",
+      "severity": "MEDIUM",
+      "title": "Cleanup proof omits mandatory epoch/current identity validation"
+    },
+    {
+      "id": "F05",
+      "severity": "MEDIUM",
+      "title": "Rearm-a and callback boot outcome contract gaps"
+    },
+    {
+      "id": "F06",
+      "severity": "MEDIUM",
+      "title": "Manager environment isolation prerequisite incomplete"
+    },
+    {
+      "id": "F07",
+      "severity": "MEDIUM",
+      "title": "Reviewed result structural bindings incomplete"
+    }
+  ],
+  "tests": {
+    "original": {
+      "passed": 71,
+      "failed": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "independent": {
+      "passed": 20,
+      "failed": 10,
+      "errors": 0,
+      "skips": 0
+    }
+  },
+  "stage2_authorized": false,
+  "host_operations": false,
+  "live_qualification": false,
+  "expiration_guaranteed": false
+}

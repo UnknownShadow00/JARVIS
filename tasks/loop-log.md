@@ -1729,3 +1729,15 @@ Next: Independent Astra High R2 review of source and exact reproducers; no integ
 - Files changed: tasks/jarvis-v2-final-independent-canonical-safety-r2-audit/ (new isolated report and evidence); tasks/loop-log.md (append only).
 - Result: PASS within qualified offline scope; APPROVE FOR EXPLICIT HUMAN CANONICAL MERGE AUTHORIZATION. 922 distinct passes; zero required failures/errors/skips/missing/incomplete; two complete entrypoints and negative contracts verified. No merge or deployment authorized/performed.
 - Next: Human review of the independent report and exact-source authorization wording; immediately revalidate canonical HEAD, tree, environment and evidence before any separately authorized development update. Remote CI remains separately unqualified.
+
+## [2026-11-12T23:53:26Z] Task Completed
+- Task: Prepared the offline VM164 Stage 2 operator packet R1 with exact supervised argv/procedure, UID privilege-denial gates, finite session limits, failure recovery, evidence/result formats and review criteria; Stage 2 remains NOT AUTHORIZED.
+- Files changed: tasks/jarvis-v2-vm164-stage2-operator-preparation-r1/ (required reports, command catalogue, source, tests, templates, evidence, MANIFEST.json and SEAL.json); tasks/loop-log.md (append only).
+- Result: PASS_OFFLINE_OPERATOR_PREPARATION_ONLY; 71 tests passed, 0 failures/errors/skips; integrity verification passed; all 96 sealed R3 files unchanged; no network, Proxmox, host activation/installation, credential or VM operations. Manifest SHA256 181620771c9d84aa7874af20b30a632d4e0e53e095678ba1001f34cffb38ba32.
+- Next: Separate finite operator authorization and independent fresh host/UID/clock review are required before any Stage 2 action; reboot/reexec, physical wake and VM/root-expiration qualification remain blocked/out of scope.
+
+## [2026-11-13T04:57:08Z] Task Completed
+- Task: Completed the separate offline independent VM164 Stage 2 operator safety audit; verdict REJECT pending a corrected version and re-review, with no Stage 2 authority inferred.
+- Files changed: tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/ (audit report, twelve-case review, independent probes, exact test evidence, proposed first read-only action, verdict and integrity manifests); tasks/loop-log.md (append only).
+- Result: PASS audit completion; FAIL authorization readiness. Original suite 71 passed/0 failed/0 errors/0 skips; independent probes 20 passed/10 failed/0 errors/0 skips. Both integrity verifiers passed; all 29 preparation and 96 R3 files unchanged. Audit manifest SHA256 6d7d7ba4a7fd1ca9510b9e6520f604e16fdb2b0aa4c82d2e6ebb27e683ef45fb. No host, network, credential or VM actions.
+- Next: Correct F01–F07 in a new preparation revision, rerun independent safeguards, and obtain separate finite human authorization only after re-review; current Stage 2 remains NOT AUTHORIZED.
