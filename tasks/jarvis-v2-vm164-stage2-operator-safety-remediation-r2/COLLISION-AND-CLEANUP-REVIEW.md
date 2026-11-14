@@ -1,0 +1,19 @@
+# Collision and cleanup transitions
+
+Before any creation, require a new 128-bit lowercase-hex nonce and one of the twelve fixed case names. Prefix alone never proves ownership. `collision.absent` requires complete raw show for the exact timer, service and absent-dependency name, same boot, fresh sample, explicit UnitPath list, no namespace inventory entries, and ENOENT for every corresponding path in every system unit directory. Names, aliases, jobs, fragments, sources, symlinks, masks and generated/transient paths are part of review. Missing/unsupported fields or permission errors are not absence. Never dump a foreign unit's environment or stop a collision.
+
+`packet.name_array` rejects string/dict/null/noncanonical/duplicate inventory entries. The pure `plan` builder is not an authorization API. The future offline renderer first requires the raw collision gate; `results.validate` requires the same proof bound to that case's creation time. The name is consumed and its full pending ownership record appended before systemd-run. Do not retry after an uncertain return.
+
+Collision trial: create the owned pair once, retain a valid waiting observation, submit identical argv once more, require nonzero native refusal, then independently read both definitions again. Before/after raw properties, next deadline, invocation identity, boot and generation must agree. A second callback, changed property, accepted duplicate, timeout or missing evidence fails. No foreign unit is used.
+
+Cleanup first revalidates complete raw properties/capture receipts and expected source, argv, base, pair, generation, boot and current finite authority. For a proved active timer emit only:
+
+`["/usr/bin/systemctl","--system","--no-ask-password","stop","<EXACT_OWNED_BASE>.timer"]`
+
+Re-read and record its state. Then, if needed for the active service or the previously active timer, emit only the identical stop argv with `.service`. Each command has a 5-second cap plus 2-second reserve and a fresh window check. `cleanup_argv` is a pure proposal function, never an executor. A terminal inactive/failed pair with complete empty-cgroup proof emits no commands. Repetition is idempotent; an interrupted timer-then-service sequence proposes only the still-needed service stop.
+
+No wildcard stop, reset-failed, daemon-reload/reexec, manager restart, disable, remove, unlink, VM action, kill-all, user-policy change or evidence deletion is supplied. Failed units/journals and the inert callback remain available for review. No stop is issued for the absent dependency or a foreign collision. Transitional, not-found/unloaded or incomplete records do not become successful cleanup: retain evidence and use separately reviewed exact recovery if the strict supported proof cannot be obtained.
+
+A closed result needs retained raw show, MainPID=ControlPID=0, no queued jobs, final inactive/failed states, exact cgroup path and complete empty population/process evidence. If a cgroup disappears, independent absence corroboration is required; one failed file open does not prove emptiness. Preserve the post-first-stop checkpoint, final observation and duplicate-cleanup no-op proof. Unit and cgroup layouts are host-specific prerequisites.
+
+Stop new trials at minute 35, start final cleanup by minute 40, finish within the same explicit expiration. On failure use this same exact owned scope while the original window still allows a full command budget. After expiration, R2 emits no stop commands. Record unresolved state; further cleanup requires a NEW, finite, separately signed recovery authorization listing exact previously owned names/boot/argv and readback/stop-only operations. It cannot restart qualification, mutate foreign units or silently widen privilege. This document does not grant that recovery authority.

@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/tests/replay_after.py", line 95, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ~~~~^^
+  File "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/tests/replay_after.py", line 69, in main
+    report['original_integrity']={'preparation':load('v1',R1/'src/verify_packet.py').verify(),'r3':load('v3',R3/'tools/verify_packet.py').verify()}
+                                                                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3/tools/verify_packet.py", line 79, in verify
+    prior=predecessors();source=source_and_archive()
+  File "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3/tools/verify_packet.py", line 21, in predecessors
+    if p.is_symlink() or sha(p.read_bytes())!=h:raise ValueError('predecessor_changed:'+n)
+                             ~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 778, in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 772, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-trusted-bootstrap-r1/AUTHORIZATION-REQUEST.md'

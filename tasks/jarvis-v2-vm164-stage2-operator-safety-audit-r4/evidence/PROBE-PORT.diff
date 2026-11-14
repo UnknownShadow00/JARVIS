@@ -1,0 +1,23 @@
+--- independent-original
++++ R4-port
+@@ -51,7 +51,7 @@
+  def test_receipt_wrong_operation(self):
+   r=seed();r['cases']['success']['final']['capture_receipts']['timer']['operation']='install';reject(self,r)
+  def test_final_start_timestamp_text_before_authorization(self):
+-  r=seed();o=r['cases']['success']['final'];o['service']['ExecStart']=o['service']['ExecStart'].replace('start_time=[]','start_time=[Mon 2020-01-01 00:00:00 UTC]');sync(o);reject(self,r)
++  r=seed();o=r['cases']['success']['final'];o['service']['ExecStart']=__import__('re').sub(r'start_time=\[[^\]]*\]', 'start_time=[Wed 2020-01-01 00:00:00 UTC]', o['service']['ExecStart']);sync(o);reject(self,r)
+  def test_callback_before_guard(self):
+   r=seed();row=r['cases']['success'];guard=row['events'][0];guard['payload']['boottime_us']+=500000
+   lines=[json.loads(s) for s in row['raw_journal'].splitlines()]
+@@ -63,8 +63,9 @@
+   row['journal_receipt']['raw_stdout']=row['completion_journal_receipt']['raw_stdout']=row['raw_journal'];reject(self,r)
+  def test_later_namespace_must_allow_retained_owned_unit(self):
+   r=seed();row=r['cases']['exit7'];proof=row['collision_preflight'];prior=r['cases']['success']['plan']['timer']
+-  proof['namespace_inventory']=[prior];proof['captures']['loaded']['raw_stdout']=prior+' loaded inactive elapsed JARVIS previous owned timer\n'
+-  try:collision.absent(r['session'],'exit7',proof)
++  assert prior in proof['namespace_inventory']
++  retained={name:sha(canonical(item['anchor'])) for name,item in proof['history'].items()}
++  try:collision.absent(r['session'],'exit7',proof,retained=retained)
+   except ValueError as e:
+    OBSERVED.append(dict(test=self.id(),blocked=str(e),reason='An earlier owned retained timer is required by final closure, not a target name collision'))
+    self.fail('Required retained earlier generation prevents the second trial: '+str(e))

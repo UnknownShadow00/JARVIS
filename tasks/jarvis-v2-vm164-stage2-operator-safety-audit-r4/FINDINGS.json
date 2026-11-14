@@ -1,0 +1,65 @@
+[
+  {
+    "id": "R4-A01",
+    "severity": "MEDIUM",
+    "blocks_authorization": true,
+    "title": "Guard execution can predate creation, waiting and timer firing",
+    "source": [
+      "src/lifecycle.py:78",
+      "src/lifecycle.py:86",
+      "src/lifecycle.py:107",
+      "src/proof.py:107"
+    ],
+    "tests": [
+      "fresh_adversaries.NewGaps.test_guard_exceeds_reviewed_start_timeout",
+      "fresh_adversaries.NewGaps.test_guard_started_before_timer_creation",
+      "fresh_adversaries.NewGaps.test_guard_started_before_timer_trigger",
+      "fresh_adversaries.NewGaps.test_guard_started_during_never_invoked_waiting",
+      "fresh_adversaries.NewGaps.test_stale_guard_accepted_for_completed_case_anchor"
+    ],
+    "reproduction": "Set both completion/final ExecCondition start_time to D-60s, D-28.5s, D-1s or D-6s, retaining guard completion at D+5ms, main start at D+10ms and guard output at D+1ms. Full validation accepts. A separate first-case verified_anchor accepts the D-60s start.",
+    "root_cause": "The parser brackets guard output by its own interval and orders guard end before main start, but never orders guard start after creation, last never-invoked waiting capture, or trigger; it does not constrain the guard duration to the proposed start budget.",
+    "impact": "Mutually exclusive NEW/WAITING/EXECUTING states can describe one accepted generation; a stale guard can yield an admissible completed-case anchor.",
+    "required_fix": "One causal state graph must bind guard launch after timer creation/last never-invoked capture/qualified trigger, with conservative same-domain bounds and a qualified finite start-duration rule. Share that gate for per-case admission, retention and final closure."
+  },
+  {
+    "id": "R4-A02",
+    "severity": "MEDIUM",
+    "blocks_authorization": true,
+    "title": "Plain journal records bypass invocation and sender attribution",
+    "source": [
+      "src/binding.py:188",
+      "src/binding.py:207",
+      "src/proof.py:244",
+      "src/lifecycle.py:96"
+    ],
+    "tests": [
+      "fresh_adversaries.NewGaps.test_plain_exit_conflicting_unit_fields",
+      "fresh_adversaries.NewGaps.test_plain_exit_malformed_invocation",
+      "fresh_adversaries.NewGaps.test_plain_exit_prior_generation_invocation"
+    ],
+    "reproduction": "Append a correctly timed exit0 plain row labelled as UID65534 service output but with malformed or prior-generation _SYSTEMD_INVOCATION_ID, or _SYSTEMD_UNIT=foreign.service plus UNIT=current-owned-service. Full validation accepts after matching the raw receipt and resealing.",
+    "root_cause": "Only JSON MESSAGE records become bound invocation events. Plain records take an OR over unit fields and ignore present invocation identity; journal_consistency checks message/code/status and UID only.",
+    "impact": "A favorable exit message can coexist with contradictory raw generation/unit attribution and still produce PASS_CONSISTENCY_ONLY/PASS_SYNTHETIC_ONLY.",
+    "required_fix": "Define supported manager-versus-service journal record classes using documented fields. Reject contradictory present attribution, malformed invocation IDs and unrelated senders; do not require a service invocation field universally on legitimate PID1 manager records."
+  },
+  {
+    "id": "R4-A03",
+    "severity": "MEDIUM",
+    "blocks_authorization": true,
+    "title": "Retained journal completeness excludes plain diagnostic records",
+    "source": [
+      "src/retention.py:19",
+      "src/retention.py:44",
+      "src/binding.py:188"
+    ],
+    "tests": [
+      "fresh_adversaries.NewGaps.test_retained_journal_loses_diagnostic_at_admission",
+      "fresh_adversaries.NewGaps.test_retained_journal_loses_required_diagnostic"
+    ],
+    "reproduction": "Remove the required ModuleNotFoundError plain row from retained missingdep history in rearm-b admission. Preserve original completed case, existing anchor and ledger. Both collision.absent and complete result validation accept the truncated fresh full-journal readback.",
+    "root_cause": "Anchor events_sha256 hashes selected JSON payload events only. No anchor binds the immutable raw journal prefix/cursors/plain rows, and retained validation does not require previously proved diagnostic rows.",
+    "impact": "A current claimed complete journal can omit known historical raw evidence without triggering FAIL/BLOCKED, despite the independently sealed anchor.",
+    "required_fix": "Bind complete immutable journal evidence (including plain records and cursor/record identity) into prior anchors; require monotone preservation across subsequent full captures, with an explicit fail-closed policy for journal rotation/truncation. Do not delete or silently reseal missing records."
+  }
+]

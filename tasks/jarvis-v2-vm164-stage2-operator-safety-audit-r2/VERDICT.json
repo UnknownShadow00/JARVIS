@@ -1,0 +1,82 @@
+{
+  "kind": "INDEPENDENT_STAGE2_R2_AUDIT_VERDICT",
+  "verdict": "REJECT",
+  "ready_for_human_authorization": false,
+  "authorization_granted": false,
+  "stage2_authorized": false,
+  "live_qualification": false,
+  "expiration_guaranteed": false,
+  "decisions": {
+    "A_NSS_sudo_locality": "PASS_OFFLINE_DESIGN",
+    "B_bounded_reads_and_timeout_semantics": "FAIL_PARTIAL_FIX",
+    "C_collision": "FAIL_PARTIAL_FIX",
+    "D_cleanup": "FAIL_PARTIAL_FIX",
+    "E_rearm_a": "FAIL_PARTIAL_FIX",
+    "F_environment": "PASS_CONDITIONAL_OFFLINE_DESIGN",
+    "G_complete_bindings": "FAIL_PARTIAL_FIX",
+    "twelve_case_procedure": "FAIL"
+  },
+  "findings": [
+    {
+      "id": "R2-A01",
+      "severity": "MEDIUM",
+      "title": "Unbound receipt/capture chronology"
+    },
+    {
+      "id": "R2-A02",
+      "severity": "MEDIUM",
+      "title": "Cancellation/window timing inconsistency"
+    },
+    {
+      "id": "R2-A03",
+      "severity": "MEDIUM",
+      "title": "Stale or timed-out collision admission"
+    },
+    {
+      "id": "R2-A04",
+      "severity": "MEDIUM",
+      "title": "Inconsistent states/exits and hidden later invocation"
+    },
+    {
+      "id": "R2-A05",
+      "severity": "MEDIUM",
+      "title": "Raw cleanup and full-result seal gaps"
+    },
+    {
+      "id": "R2-A06",
+      "severity": "LOW",
+      "title": "Mandatory R21 root-path inspection rejected"
+    }
+  ],
+  "reviewed_source_sha256": "3a95bf671008ff46e5e45287c3be58076491c6fed6764cd10c18b906f2bcabea",
+  "reviewed_manifest_sha256": "9ce5adc1cb8e76e479339efcc73c7f2848f9154bd545258701694e063314e4d6",
+  "independent_probes": {
+    "tests": 51,
+    "passed": 35,
+    "failed": 16,
+    "errors": 0,
+    "skips": 0
+  },
+  "preservation": {
+    "jarvis-v2-vm164-stage2-operator-safety-remediation-r2": {
+      "files": 67,
+      "unchanged": true
+    },
+    "jarvis-v2-vm164-stage2-operator-preparation-r1": {
+      "files": 29,
+      "unchanged": true
+    },
+    "jarvis-v2-vm164-stage2-operator-safety-audit-r1": {
+      "files": 15,
+      "unchanged": true
+    },
+    "jarvis-v2-vm164-trusted-bootstrap-host-enforcement-r3": {
+      "files": 96,
+      "unchanged": true
+    }
+  },
+  "first_host_action_now": "NONE",
+  "next_action": "New offline remediation revision and independent re-review; preserve failed evidence",
+  "first_future_action_file": "FIRST-SUPERVISED-ACTION.json",
+  "first_future_action_requires_new_separate_authorization": true
+}

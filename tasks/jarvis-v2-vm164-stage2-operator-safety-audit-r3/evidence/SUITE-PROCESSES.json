@@ -1,0 +1,58 @@
+[
+  {
+    "phase": "baseline",
+    "argv": [
+      "python3",
+      "-I",
+      "-B",
+      "-S",
+      "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/tests/replay_after.py",
+      "baseline"
+    ],
+    "exit": 1,
+    "stdout": "",
+    "stderr": "t__.py\", line 778, in read_bytes\n    with self.open(mode='rb', buffering=0) as f:\n         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/pathlib/__init__.py\", line 772, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-trusted-bootstrap-r1/AUTHORIZATION-REQUEST.md'\n"
+  },
+  {
+    "phase": "r2",
+    "argv": [
+      "python3",
+      "-I",
+      "-B",
+      "-S",
+      "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/tests/replay_after.py",
+      "r2"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"audit30_r2\": {\n    \"tests\": 30,\n    \"passed\": 30,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skips\": 0\n  },\n  \"design_original\": {\n    \"tests\": 3,\n    \"passed\": 0,\n    \"failed\": 3,\n    \"errors\": 0,\n    \"skips\": 0\n  },\n  \"design_r2\": {\n    \"tests\": 3,\n    \"passed\": 3,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skips\": 0\n  },\n  \"regression92\": {\n    \"tests\": 92,\n    \"passed\": 92,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skips\": 0\n  },\n  \"r3_integrity\": {\n    \"status\": \"DEFERRED_TO_FINAL_SEAL\"\n  },\n  \"published_synthetic12\": {\n    \"status\": \"PASS_SYNTHETIC_ONLY\",\n    \"authorization_granted\": false,\n    \"authenticity_verified\": false,\n    \"live_qualification\": false\n  }\n}\n",
+    "stderr": ""
+  },
+  {
+    "phase": "negative",
+    "argv": [
+      "python3",
+      "-I",
+      "-B",
+      "-S",
+      "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/tests/replay_after.py",
+      "negative"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"independent\": {\n    \"tests\": 51,\n    \"passed\": 51,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skips\": 0\n  }\n}\n",
+    "stderr": ""
+  },
+  {
+    "phase": "adversarial",
+    "argv": [
+      "python3",
+      "-I",
+      "-B",
+      "-S",
+      "/tmp/jarvis-stage2-r3-independent-n9ga60w1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/tests/replay_after.py",
+      "adversarial"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"adversarial\": {\n    \"tests\": 92,\n    \"passed\": 92,\n    \"failed\": 0,\n    \"errors\": 0,\n    \"skips\": 0\n  }\n}\n",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,247 @@
+test_interrupted_cleanup_only_stops_owned_service (independent.AdditionalAdmission.test_interrupted_cleanup_only_stops_owned_service) ... ok
+test_renderer_must_reject_stale_collision_proof (independent.AdditionalAdmission.test_renderer_must_reject_stale_collision_proof) ... FAIL
+test_active_unit_not_closed (independent.Controls.test_active_unit_not_closed) ... ok
+test_ambiguous_nss_blocked (independent.Controls.test_ambiguous_nss_blocked) ... ok
+test_boot_missing_or_wrong_rejected (independent.Controls.test_boot_missing_or_wrong_rejected) ... ok
+test_byte_tampering_rejected (independent.Controls.test_byte_tampering_rejected) ... ok
+test_collision_inventory_malformed_rejected (independent.Controls.test_collision_inventory_malformed_rejected) ... ok
+test_command_reserve_prevents_expiry_overrun (independent.Controls.test_command_reserve_prevents_expiry_overrun) ... ok
+test_duplicate_cleanup_no_mutation (independent.Controls.test_duplicate_cleanup_no_mutation) ... ok
+test_every_external_operation_has_cap (independent.Controls.test_every_external_operation_has_cap) ... ok
+test_evidence_leaf_symlink_rejected (independent.Controls.test_evidence_leaf_symlink_rejected) ... ok
+test_exact_expiry_blocks (independent.Controls.test_exact_expiry_blocks) ... ok
+test_fired_rearm_a_complete_binding_rejected (independent.Controls.test_fired_rearm_a_complete_binding_rejected) ... ok
+test_first_action_matches_audit_and_no_execution (independent.Controls.test_first_action_matches_audit_and_no_execution) ... ok
+test_foreign_cleanup_target_rejected (independent.Controls.test_foreign_cleanup_target_rejected) ... ok
+test_gzip_bomb_blocked (independent.Controls.test_gzip_bomb_blocked) ... ok
+test_gzip_concatenated_bomb_blocked (independent.Controls.test_gzip_concatenated_bomb_blocked) ... ok
+test_gzip_trailer_corruption_and_truncation (independent.Controls.test_gzip_trailer_corruption_and_truncation) ... ok
+test_memory_failure_and_deadline_block (independent.Controls.test_memory_failure_and_deadline_block) ... ok
+test_missing_cleanup_receipt_rejected (independent.Controls.test_missing_cleanup_receipt_rejected) ... ok
+test_missing_clock_receipt_rejected (independent.Controls.test_missing_clock_receipt_rejected) ... ok
+test_missing_elapsed_time_rejected (independent.Controls.test_missing_elapsed_time_rejected) ... ok
+test_missing_environment_review_blocks (independent.Controls.test_missing_environment_review_blocks) ... ok
+test_missing_policy_prerequisites_block (independent.Controls.test_missing_policy_prerequisites_block) ... ok
+test_network_nss_backends_blocked (independent.Controls.test_network_nss_backends_blocked) ... ok
+test_no_nss_sudo_or_vm_program_in_catalogue (independent.Controls.test_no_nss_sudo_or_vm_program_in_catalogue) ... ok
+test_oversize_regular_file_before_data_read (independent.Controls.test_oversize_regular_file_before_data_read) ... ok
+test_partial_stream_and_early_eof (independent.Controls.test_partial_stream_and_early_eof) ... ok
+test_published_twelve_case_positive_control (independent.Controls.test_published_twelve_case_positive_control) ... ok
+test_resource_caps_in_future_python_inspection (independent.Controls.test_resource_caps_in_future_python_inspection) ... ok
+test_stale_rearm_b_guard_generation_rejected (independent.Controls.test_stale_rearm_b_guard_generation_rejected) ... ok
+test_success_exit7_rejected (independent.Controls.test_success_exit7_rejected) ... ok
+test_timeout_never_success (independent.Controls.test_timeout_never_success) ... ok
+test_untrusted_environment_rejected (independent.Controls.test_untrusted_environment_rejected) ... ok
+test_wrong_effective_uid_rejected (independent.Controls.test_wrong_effective_uid_rejected) ... ok
+test_wrong_timer_pair_rejected (independent.Controls.test_wrong_timer_pair_rejected) ... ok
+test_canceled_service_failure_must_not_be_expected_cancellation (independent.RemainingGaps.test_canceled_service_failure_must_not_be_expected_cancellation) ... FAIL
+test_changed_privilege_review_requires_new_external_seal (independent.RemainingGaps.test_changed_privilege_review_requires_new_external_seal) ... FAIL
+test_collision_proof_timeout_must_fail (independent.RemainingGaps.test_collision_proof_timeout_must_fail) ... FAIL
+test_creation_receipt_after_deadline_must_fail (independent.RemainingGaps.test_creation_receipt_after_deadline_must_fail) ... FAIL
+test_duplicate_after_firing_must_not_pass_waiting_collision (independent.RemainingGaps.test_duplicate_after_firing_must_not_pass_waiting_collision) ... FAIL
+test_execstart_exit_disagreement_must_fail (independent.RemainingGaps.test_execstart_exit_disagreement_must_fail) ... FAIL
+test_failedtimer_later_service_invocation_must_fail (independent.RemainingGaps.test_failedtimer_later_service_invocation_must_fail) ... FAIL
+test_journal_timestamp_before_session_must_fail (independent.RemainingGaps.test_journal_timestamp_before_session_must_fail) ... FAIL
+test_late_callback_after_authorization_expiry_must_fail (independent.RemainingGaps.test_late_callback_after_authorization_expiry_must_fail) ... FAIL
+test_metadata_command_must_support_required_root_path (independent.RemainingGaps.test_metadata_command_must_support_required_root_path) ... FAIL
+test_missing_raw_cgroup_capture_must_fail (independent.RemainingGaps.test_missing_raw_cgroup_capture_must_fail) ... FAIL
+test_old_cancellation_journal_must_not_prove_no_late_firing (independent.RemainingGaps.test_old_cancellation_journal_must_not_prove_no_late_firing) ... FAIL
+test_service_failed_state_cannot_be_success (independent.RemainingGaps.test_service_failed_state_cannot_be_success) ... FAIL
+test_stale_show_receipt_must_not_prove_current_cleanup (independent.RemainingGaps.test_stale_show_receipt_must_not_prove_current_cleanup) ... FAIL
+test_stop_receipt_after_deadline_must_fail_cancellation (independent.RemainingGaps.test_stop_receipt_after_deadline_must_fail_cancellation) ... FAIL
+
+======================================================================
+FAIL: test_renderer_must_reject_stale_collision_proof (independent.AdditionalAdmission.test_renderer_must_reject_stale_collision_proof)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 220, in test_renderer_must_reject_stale_collision_proof
+    with self.assertRaises(ValueError):render.main()
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_canceled_service_failure_must_not_be_expected_cancellation (independent.RemainingGaps.test_canceled_service_failure_must_not_be_expected_cancellation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 165, in test_canceled_service_failure_must_not_be_expected_cancellation
+    expect_block(self,r,'unexpected canceled-service resources failure')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: unexpected canceled-service resources failure -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_changed_privilege_review_requires_new_external_seal (independent.RemainingGaps.test_changed_privilege_review_requires_new_external_seal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 195, in test_changed_privilege_review_requires_new_external_seal
+    self.fail('External evidence seal does not cover changed privilege-review identity')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: External evidence seal does not cover changed privilege-review identity
+
+======================================================================
+FAIL: test_collision_proof_timeout_must_fail (independent.RemainingGaps.test_collision_proof_timeout_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 203, in test_collision_proof_timeout_must_fail
+    with self.assertRaises(ValueError):collision.absent(r['session'],'success',proof)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_creation_receipt_after_deadline_must_fail (independent.RemainingGaps.test_creation_receipt_after_deadline_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 168, in test_creation_receipt_after_deadline_must_fail
+    expect_block(self,r,'timer creation after its deadline and both waiting captures')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: timer creation after its deadline and both waiting captures -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_duplicate_after_firing_must_not_pass_waiting_collision (independent.RemainingGaps.test_duplicate_after_firing_must_not_pass_waiting_collision)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 172, in test_duplicate_after_firing_must_not_pass_waiting_collision
+    expect_block(self,r,'duplicate issued after firing using old before/after waiting snapshots')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: duplicate issued after firing using old before/after waiting snapshots -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_execstart_exit_disagreement_must_fail (independent.RemainingGaps.test_execstart_exit_disagreement_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 186, in test_execstart_exit_disagreement_must_fail
+    expect_block(self,r,'ExecStart exit7 disagrees with ExecMainStatus0')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: ExecStart exit7 disagrees with ExecMainStatus0 -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_failedtimer_later_service_invocation_must_fail (independent.RemainingGaps.test_failedtimer_later_service_invocation_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 189, in test_failedtimer_later_service_invocation_must_fail
+    expect_block(self,r,'failedtimer service later executed but earlier no-invocation snapshot retained')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: failedtimer service later executed but earlier no-invocation snapshot retained -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_journal_timestamp_before_session_must_fail (independent.RemainingGaps.test_journal_timestamp_before_session_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 177, in test_journal_timestamp_before_session_must_fail
+    expect_block(self,r,'trusted journal timestamp zero inconsistent with fresh callback clocks')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: trusted journal timestamp zero inconsistent with fresh callback clocks -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_late_callback_after_authorization_expiry_must_fail (independent.RemainingGaps.test_late_callback_after_authorization_expiry_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 180, in test_late_callback_after_authorization_expiry_must_fail
+    expect_block(self,r,'callback after UTC/BOOTTIME expiration and after final capture')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: callback after UTC/BOOTTIME expiration and after final capture -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_metadata_command_must_support_required_root_path (independent.RemainingGaps.test_metadata_command_must_support_required_root_path)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 210, in test_metadata_command_must_support_required_root_path
+    try:exec(compile(body,'<synthetic metadata path validation>','exec'),{'sys':types.SimpleNamespace(argv=['synthetic','/']),'need':__import__('common').need})
+        ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<synthetic metadata path validation>", line 2, in <module>
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r2/src/common.py", line 9, in need
+    raise ValueError('BLOCKED: ' + reason)
+ValueError: BLOCKED: canonical path
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 211, in test_metadata_command_must_support_required_root_path
+    except ValueError:self.fail('R21 rejects / although procedure requires it to inspect /')
+                      ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: R21 rejects / although procedure requires it to inspect /
+
+======================================================================
+FAIL: test_missing_raw_cgroup_capture_must_fail (independent.RemainingGaps.test_missing_raw_cgroup_capture_must_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 199, in test_missing_raw_cgroup_capture_must_fail
+    expect_block(self,r,'all twelve cgroups are summaries without raw command receipts')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: all twelve cgroups are summaries without raw command receipts -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_old_cancellation_journal_must_not_prove_no_late_firing (independent.RemainingGaps.test_old_cancellation_journal_must_not_prove_no_late_firing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 158, in test_old_cancellation_journal_must_not_prove_no_late_firing
+    expect_block(self,r,'empty journal captured before cancellation but declared complete through closure')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: empty journal captured before cancellation but declared complete through closure -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_service_failed_state_cannot_be_success (independent.RemainingGaps.test_service_failed_state_cannot_be_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 183, in test_service_failed_state_cannot_be_success
+    expect_block(self,r,'failed service with contradictory success exit fields')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: failed service with contradictory success exit fields -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_stale_show_receipt_must_not_prove_current_cleanup (independent.RemainingGaps.test_stale_show_receipt_must_not_prove_current_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 154, in test_stale_show_receipt_must_not_prove_current_cleanup
+    expect_block(self,r,'final show receipts 879 seconds older than claimed observation')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: final show receipts 879 seconds older than claimed observation -> PASS_SYNTHETIC_ONLY
+
+======================================================================
+FAIL: test_stop_receipt_after_deadline_must_fail_cancellation (independent.RemainingGaps.test_stop_receipt_after_deadline_must_fail_cancellation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 162, in test_stop_receipt_after_deadline_must_fail_cancellation
+    expect_block(self,r,'actual stop receipts late despite earlier claimed cancel_boot_us')
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS-v2-stage2-r2-provenance-baseline-r1/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r2/tests/test_independent.py", line 46, in expect_block
+    test.fail('Unsafe/inconsistent synthetic record accepted: '+label+' -> '+outcome['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe/inconsistent synthetic record accepted: actual stop receipts late despite earlier claimed cancel_boot_us -> PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 51 tests in 2.614s
+
+FAILED (failures=16)

@@ -1,0 +1,278 @@
+{
+  "kind": "INERT_CATALOG_NOT_AUTHORIZATION",
+  "read": {
+    "R01-clock": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import datetime,json,time\nfrom pathlib import Path\nb1=time.clock_gettime_ns(time.CLOCK_BOOTTIME)//1000\nm=time.clock_gettime_ns(time.CLOCK_MONOTONIC)//1000\nb2=time.clock_gettime_ns(time.CLOCK_BOOTTIME)//1000\nprint(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),\n 'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),\n 'b1_us':b1,'monotonic_us':m,'b2_us':b2,'offset_low_us':b1-m,'offset_high_us':b2-m}))\n"
+    ],
+    "R02-host-identity": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport json,sys\nraw=read_protected('/etc/hostname',4096,time.monotonic()+8)\nprint(json.dumps(dict(node=raw.decode('ascii').strip(),uname=list(os.uname()),python=sys.version,uid=os.getuid(),euid=os.geteuid())))\n"
+    ],
+    "R02-hash-resolved-file": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport json,sys\npath=sys.argv[1]\nfd=open_protected(path)\ntry:\n raw=read_fd(fd,33554432,time.monotonic()+8)\n s=os.fstat(fd)\n print(json.dumps(dict(path=path,sha256=sha(raw),bytes=len(raw),uid=s.st_uid,gid=s.st_gid,mode=oct(stat.S_IMODE(s.st_mode)),dev=s.st_dev,ino=s.st_ino,nlink=s.st_nlink)))\nfinally:os.close(fd)\n",
+      "/MANDATORY/REVIEWED/RESOLVED/REGULAR/FILE"
+    ],
+    "R03-packages": [
+      "/usr/bin/dpkg-query",
+      "--show",
+      "--showformat=${Package}\t${Version}\n",
+      "pve-manager",
+      "qemu-server",
+      "pve-qemu-kvm",
+      "systemd"
+    ],
+    "R04-systemd-version": [
+      "/usr/bin/systemd-run",
+      "--version"
+    ],
+    "R05-python-version": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "--version"
+    ],
+    "R10-nobody-processes": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport json\nend=time.monotonic()+8;rows=[];count=0\nwith os.scandir('/proc') as entries:\n for entry in entries:\n  tick(end)\n  if not entry.name.isdecimal():continue\n  count+=1;need(count<=8192,'process scan limit')\n  try:\n   fd=os.open('/proc/'+entry.name+'/status',os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n   with os.fdopen(fd,'rb') as stream:raw=read_stream(stream,65536,end)\n  except FileNotFoundError:continue\n  fields={}\n  for line in raw.decode('utf-8').splitlines():\n   if ':' in line:\n    k,v=line.split(':',1);need(k not in fields,'duplicate proc field');fields[k]=v.strip()\n  need(all(k in fields for k in ('Uid','Gid','Groups','Name')),'incomplete proc fields')\n  if '65534' in fields['Uid'].split():rows.append(dict(pid=int(entry.name),**{k:fields[k] for k in ('Name','Uid','Gid','Groups')}))\nprint(json.dumps(dict(nobody_processes=rows,complete=True)))\n"
+    ],
+    "R11-loaded-units": [
+      "/usr/bin/systemctl",
+      "--system",
+      "--no-pager",
+      "--plain",
+      "--no-legend",
+      "list-units",
+      "--all",
+      "jarvis-vm164-r3-stage2-*"
+    ],
+    "R12-unit-files": [
+      "/usr/bin/systemctl",
+      "--system",
+      "--no-pager",
+      "--no-legend",
+      "list-unit-files",
+      "jarvis-vm164-r3-stage2-*"
+    ],
+    "R14-numeric-acl": [
+      "/usr/bin/getfacl",
+      "--numeric",
+      "--absolute-names",
+      "--all-effective",
+      "--",
+      "/MANDATORY/APPROVED/METADATA/PATH"
+    ],
+    "R16-manager": [
+      "/usr/bin/systemctl",
+      "--system",
+      "--no-pager",
+      "show",
+      "--all",
+      "--property=Version,Architecture,Virtualization,SystemState"
+    ],
+    "R17-unit-paths": [
+      "/usr/bin/systemctl",
+      "--system",
+      "--no-pager",
+      "show",
+      "--all",
+      "--property=UnitPath"
+    ],
+    "R19-policy-or-manual-read": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport sys,json\nend=time.monotonic()+8\nraw=read_protected(sys.argv[1],int(sys.argv[2]),end,sys.argv[3])\nsys.stdout.buffer.write(raw)\n",
+      "/MANDATORY/APPROVED/NONSECRET/REGULAR/FILE",
+      "1048576",
+      "MANDATORY_SOURCE_SHA256"
+    ],
+    "R20-manual-gzip-read": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport sys,json\nend=time.monotonic()+8\nraw=read_protected(sys.argv[1],int(sys.argv[2]),end,sys.argv[3])\nraw=gunzip_bounded(raw,8388608,end)\nsys.stdout.buffer.write(raw)\n",
+      "/MANDATORY/APPROVED/REGULAR/MANUAL.gz",
+      "1048576",
+      "MANDATORY_SOURCE_SHA256"
+    ],
+    "R21-no-follow-metadata": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport json,sys\npath=sys.argv[1]\nneed(path.startswith('/') and all(x not in ('','.','..') for x in path.split('/')[1:]),'canonical path')\n# Local-mounted path prerequisite, no arbitrary credential content read.\nparts=path.split('/')[1:];fd=os.open('/',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\ntry:\n for part in parts[:-1]:\n  s=os.fstat(fd);need(s.st_uid==s.st_gid==0 and not s.st_mode&0o022,'ancestor custody')\n  new=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd);os.close(fd);fd=new\n try:\n  s=os.stat(parts[-1],dir_fd=fd,follow_symlinks=False)\n  print(json.dumps(dict(path=path,absent=False,uid=s.st_uid,gid=s.st_gid,mode=oct(stat.S_IMODE(s.st_mode)),type=stat.S_IFMT(s.st_mode),dev=s.st_dev,ino=s.st_ino,nlink=s.st_nlink,size=s.st_size,symlink=os.readlink(parts[-1],dir_fd=fd) if stat.S_ISLNK(s.st_mode) else None)))\n except FileNotFoundError:print(json.dumps(dict(path=path,absent=True,errno='ENOENT')))\nfinally:os.close(fd)\n",
+      "/MANDATORY/APPROVED/METADATA/PATH"
+    ],
+    "R22-owned-cgroup": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-S",
+      "-c",
+      "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\n\"\"\"Strict, non-executing data primitives. Errors never echo supplied values.\"\"\"\nimport datetime as dt\nimport hashlib\nimport json\nimport re\n\ndef need(ok, reason):\n    if not ok:\n        raise ValueError('BLOCKED: ' + reason)\n\ndef integer(x, minimum=0, maximum=10**16):\n    need(type(x) is int and minimum <= x <= maximum, 'integer schema')\n    return x\n\ndef text(x):\n    need(type(x) is str and 0 < len(x) <= 128 and re.fullmatch('[A-Za-z0-9_.:-]+', x), 'identifier schema')\n    return x\n\ndef digest(x):\n    need(type(x) is str and re.fullmatch('[0-9a-f]{64}', x), 'digest required')\n    return x\n\ndef boot(x):\n    need(type(x) is str and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', x), 'boot UUID required')\n    return x\n\ndef utc(x):\n    need(type(x) is str and re.fullmatch(r'\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ', x), 'explicit UTC required')\n    return dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)\n\ndef canonical(x):\n    return json.dumps(x, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()\n\ndef sha(raw):\n    return hashlib.sha256(raw).hexdigest()\n\ndef exact(x, keys):\n    need(type(x) is dict and set(x) == set(keys), 'missing or extra fields')\n\ndef unique(rows):\n    result = {}\n    for k, v in rows:\n        need(k not in result, 'duplicate JSON key')\n        result[k] = v\n    return result\n\ndef decode(raw, limit=8*1024*1024):\n    need(type(raw) is bytes and len(raw) <= limit, 'JSON input bound')\n    try:\n        return json.loads(raw, object_pairs_hook=unique,\n                          parse_constant=lambda _: need(False, 'nonfinite JSON'))\n    except (UnicodeError, json.JSONDecodeError, RecursionError, MemoryError) as exc:\n        raise ValueError('BLOCKED: malformed JSON') from None\n\n\"\"\"Bounded file/stream primitives; never opens a host path at import time.\"\"\"\nimport zlib\nimport gzip\nimport io\nimport os\nimport stat\nimport time\n\nMAX_INPUT = 32*1024*1024\nMAX_OUTPUT = 8*1024*1024\n\ndef tick(deadline, clock=time.monotonic):\n    need(type(deadline) in (int, float) and clock() < deadline, 'read deadline exceeded')\n\ndef read_stream(stream, limit, deadline, *, expected_size=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    if expected_size is not None:\n        integer(expected_size, 0, limit)\n    chunks = []\n    total = 0\n    try:\n        while True:\n            tick(deadline, clock)\n            chunk = stream.read(min(65536, limit + 1 - total))\n            need(type(chunk) is bytes, 'partial or invalid stream read')\n            if not chunk:\n                break\n            total += len(chunk)\n            need(total <= limit, 'input oversized')\n            chunks.append(chunk)\n        tick(deadline, clock)\n        need(expected_size is None or total == expected_size, 'truncated or changed input')\n        return b''.join(chunks)\n    except MemoryError:\n        raise ValueError('BLOCKED: allocation failure') from None\n\ndef identity(s):\n    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,\n            s.st_uid, s.st_gid, s.st_mode, s.st_nlink)\n\ndef read_fd(fd, limit, deadline, *, owner=0, expected_sha=None, clock=time.monotonic):\n    integer(limit, 1, MAX_INPUT)\n    before = os.fstat(fd)\n    need(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'single-link regular file required')\n    need(before.st_uid == owner and (owner != 0 or before.st_gid == 0) and not before.st_mode & 0o022, 'file custody')\n    integer(before.st_size, 0, limit)  # before any data allocation\n    with os.fdopen(os.dup(fd), 'rb', closefd=True) as stream:\n        data = read_stream(stream, limit, deadline, expected_size=before.st_size, clock=clock)\n    need(identity(before) == identity(os.fstat(fd)), 'file changed during read')\n    if expected_sha is not None:\n        need(sha(data) == digest(expected_sha), 'source digest mismatch')\n    return data\n\ndef open_protected(path):\n    \"\"\"Every component no-follow, root-owned and nonwritable. Caller closes FD.\"\"\"\n    need(type(path) is str and path.startswith('/') and len(path) <= 4096, 'absolute path')\n    parts = path.split('/')[1:]\n    need(parts and all(p not in ('', '.', '..') for p in parts), 'canonical path')\n    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)\n    try:\n        for part in parts[:-1]:\n            s = os.fstat(fd)\n            need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)\n            os.close(fd)\n            fd = nxt\n        s = os.fstat(fd)\n        need(s.st_uid == s.st_gid == 0 and not s.st_mode & 0o022, 'ancestor custody')\n        return os.open(parts[-1], os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=fd)\n    finally:\n        os.close(fd)\n\ndef read_protected(path, limit, deadline, expected_sha=None):\n    fd = open_protected(path)\n    try:\n        return read_fd(fd, limit, deadline, expected_sha=expected_sha)\n    finally:\n        os.close(fd)\n\ndef gunzip_bounded(raw, limit, deadline, *, clock=time.monotonic):\n    \"\"\"CRC/trailer validation through bounded GzipFile reads, including all members.\"\"\"\n    integer(limit, 1, MAX_OUTPUT)\n    need(type(raw) is bytes and 18 <= len(raw) <= 1024*1024, 'compressed input bound')\n    # Concatenated valid members are allowed only within the aggregate limits.\n    limit = min(limit, len(raw)*128)\n    try:\n        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode='rb') as stream:\n            return read_stream(stream, limit, deadline, clock=clock)\n    except (OSError, EOFError, MemoryError, zlib.error) as exc:\n        raise ValueError('BLOCKED: invalid compressed input') from None\n\nimport json,re,sys\nname=sys.argv[1]\nneed(re.fullmatch(r'jarvis-vm164-r3-stage2-[0-9a-f]{32}-(success|exit7|missingexec|missingdep|timeout|late|inactive|failedtimer|collision|cancel|rearm-a|rearm-b)',name),'namespace')\npath='/sys/fs/cgroup/system.slice/'+name+'.service';end=time.monotonic()+3\ntry:\n fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\nexcept FileNotFoundError:\n print(json.dumps(dict(path=path,absent=True,complete=False,requires_independent_absence_corroboration=True)))\nelse:\n try:\n  values={}\n  for leaf in ('cgroup.events','cgroup.procs'):\n   f=os.open(leaf,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)\n   with os.fdopen(f,'rb') as stream:values[leaf]=read_stream(stream,65536,end).decode('ascii')\n  print(json.dumps(dict(path=path,absent=False,raw=values,complete=True)))\n finally:os.close(fd)\n",
+      "MANDATORY_EXACT_OWNED_BASE"
+    ]
+  },
+  "retired": [
+    "R06-account",
+    "R07-numeric-account",
+    "R08-group",
+    "R09-memberships",
+    "R15-sudo-policy"
+  ],
+  "install": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "-c",
+    "import resource\nresource.setrlimit(resource.RLIMIT_AS,(134217728,134217728))\nresource.setrlimit(resource.RLIMIT_CPU,(3,3))\nresource.setrlimit(resource.RLIMIT_NOFILE,(64,64))\nimport hashlib,json,os,stat,sys\nPIN='a0ba1ef999c58c771e679f3765eac41bb52671968930726a2a4de96a98a301fa'\ndef check(fd,directory):\n s=os.fstat(fd)\n if s.st_uid!=0 or s.st_gid!=0 or s.st_mode&0o022:raise ValueError('root custody')\n if directory and not stat.S_ISDIR(s.st_mode):raise ValueError('directory required')\n if directory and 'system.posix_acl_default' in os.listxattr(fd):raise ValueError('default ACL blocks')\n return s\ndef descend(parts):\n fd=os.open('/',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)\n check(fd,True)\n try:\n  for part in parts:\n   new=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)\n   os.close(fd);fd=new;check(fd,True)\n  return fd\n except BaseException:os.close(fd);raise\nif os.getuid()!=0 or os.geteuid()!=0 or os.getegid()!=0:raise ValueError('existing authorized administrator required')\nsource=sys.argv[1]\nif not source.startswith('/') or any(p in ('','.', '..') for p in source.split('/')[1:]):raise ValueError('absolute canonical staged path required')\nparts=source.split('/')[1:];parent=descend(parts[:-1])\ntry:\n fd=os.open(parts[-1],os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=parent)\n try:\n  s=check(fd,False)\n  if not stat.S_ISREG(s.st_mode) or s.st_nlink!=1 or s.st_size>16384:raise ValueError('source type/size/link')\n  raw=os.read(fd,16385);after=os.fstat(fd)\n  if (s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns):raise ValueError('source race')\n  if len(raw)!=s.st_size or hashlib.sha256(raw).hexdigest()!=PIN:raise ValueError('source hash')\n finally:os.close(fd)\nfinally:os.close(parent)\nopt=descend(['opt'])\ntry:\n # Exclusive mkdir refuses any existing file, directory or symlink. Never adopt or repair it.\n os.mkdir('jarvis-vm164-r3-stage2',0o755,dir_fd=opt)\n d=os.open('jarvis-vm164-r3-stage2',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=opt)\n try:\n  check(d,True);os.fchmod(d,0o755)\n  f=os.open('canary.py',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o400,dir_fd=d)\n  try:\n   view=memoryview(raw)\n   while view:\n    n=os.write(f,view)\n    if n<=0:raise OSError('short write')\n    view=view[n:]\n   os.fchmod(f,0o444);os.fsync(f);s=os.fstat(f)\n   if s.st_uid!=0 or s.st_gid!=0 or s.st_nlink!=1:raise ValueError('created custody')\n  finally:os.close(f)\n  os.fsync(d)\n finally:os.close(d)\n os.fsync(opt)\nfinally:os.close(opt)\nprint(json.dumps({'created':'/opt/jarvis-vm164-r3-stage2/canary.py','sha256':PIN,'bytes':len(raw)}))\n# Any failure leaves partial artifacts intact for evidence and blocks all activation.\n",
+    "/MANDATORY/ROOT_CONTROLLED/STAGED_CALLBACK"
+  ],
+  "collision_readback": [
+    "/usr/bin/systemctl",
+    "--system",
+    "--no-pager",
+    "show",
+    "--all",
+    "--property=Id,Names,LoadState,ActiveState,SubState,Job,FragmentPath,SourcePath,Transient",
+    "MANDATORY_EXACT_NAME"
+  ],
+  "service_properties": [
+    "Type=exec",
+    "User=65534",
+    "Group=65534",
+    "SupplementaryGroups=",
+    "Restart=no",
+    "TimeoutStartSec=5s",
+    "TimeoutStopSec=2s",
+    "KillMode=control-group",
+    "SendSIGKILL=yes",
+    "UMask=0077",
+    "MemoryMax=128M",
+    "TasksMax=16",
+    "CPUQuota=10%",
+    "LimitNOFILE=64",
+    "LimitCORE=0",
+    "StandardInput=null",
+    "StandardOutput=journal",
+    "StandardError=journal",
+    "NoNewPrivileges=yes",
+    "CapabilityBoundingSet=",
+    "AmbientCapabilities=",
+    "RestrictSUIDSGID=yes",
+    "PrivateNetwork=yes",
+    "PrivateDevices=yes",
+    "PrivateTmp=yes",
+    "ProtectSystem=strict",
+    "ProtectHome=yes",
+    "RestrictNamespaces=yes",
+    "InaccessiblePaths=-/etc/pve -/var/lib/pve-cluster -/run -/root -/home",
+    "SetLoginEnvironment=no",
+    "PassEnvironment=",
+    "EnvironmentFile=",
+    "PAMName=",
+    "Environment=LANG=C.UTF-8 LC_ALL=C.UTF-8 PATH=/usr/sbin:/usr/bin:/sbin:/bin",
+    "UnsetEnvironment=LD_PRELOAD LD_LIBRARY_PATH LD_AUDIT PYTHONPATH PYTHONHOME PYTHONSTARTUP",
+    "ExecStartPre=",
+    "ExecStartPost=",
+    "ExecStop=",
+    "ExecStopPost=",
+    "LoadCredential=",
+    "LoadCredentialEncrypted=",
+    "ImportCredential=",
+    "SetCredential=",
+    "OnFailure=",
+    "OnSuccess="
+  ],
+  "timer_properties": [
+    "WakeSystem=yes",
+    "AccuracySec=1us",
+    "RandomizedDelaySec=0",
+    "RemainAfterElapse=yes",
+    "Persistent=no"
+  ],
+  "operation_caps": {
+    "read": {
+      "timeout_s": 10,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "manual": {
+      "timeout_s": 10,
+      "stdout_limit": 8388608,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "install": {
+      "timeout_s": 20,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "create": {
+      "timeout_s": 5,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "duplicate": {
+      "timeout_s": 5,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "show": {
+      "timeout_s": 5,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "journal": {
+      "timeout_s": 10,
+      "stdout_limit": 8388608,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "cgroup": {
+      "timeout_s": 5,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    },
+    "stop": {
+      "timeout_s": 5,
+      "stdout_limit": 1048576,
+      "stderr_limit": 65536,
+      "kill_reap_reserve_s": 2
+    }
+  },
+  "namespace": "jarvis-vm164-r3-stage2-<32_LOWER_HEX_NONCE>-<EXACT_CASE>",
+  "case_renderer": "src/packet.py:plan",
+  "host_execution_implemented": false
+}

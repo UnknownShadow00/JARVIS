@@ -1,0 +1,22 @@
+{
+  "kind": "PROPOSED_FIRST_READ_ONLY_ACTION_NOT_AUTHORIZED",
+  "allowed_now": false,
+  "prerequisites": [
+    "Corrected packet independently re-reviewed",
+    "Separate finite human authorization",
+    "Existing local pve administrator console identity confirmed",
+    "Approved evidence recorder active",
+    "Both UTC/BOOTTIME authorization bounds valid and command budget available"
+  ],
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "-c",
+    "import datetime,json,time\nfrom pathlib import Path\nb1=time.clock_gettime_ns(time.CLOCK_BOOTTIME)//1000\nm=time.clock_gettime_ns(time.CLOCK_MONOTONIC)//1000\nb2=time.clock_gettime_ns(time.CLOCK_BOOTTIME)//1000\nprint(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),\n 'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),\n 'b1_us':b1,'monotonic_us':m,'b2_us':b2,'offset_low_us':b1-m,'offset_high_us':b2-m}))\n"
+  ],
+  "expected_effect": "Read boot ID and paired BOOTTIME/MONOTONIC clocks only",
+  "capture": "Raw stdout/stderr, exit status, exact argv and trusted console receipt time",
+  "then": "Validate evidence; no installation, NSS/policy call or timer activation follows automatically"
+}

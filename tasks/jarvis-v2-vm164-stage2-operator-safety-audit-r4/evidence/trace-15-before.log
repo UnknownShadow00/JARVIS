@@ -1,0 +1,282 @@
+test_duplicate_impossible_exit_code (fresh_probes.Extra.test_duplicate_impossible_exit_code) ... FAIL
+
+======================================================================
+FAIL: test_duplicate_impossible_exit_code (fresh_probes.Extra.test_duplicate_impossible_exit_code)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 153, in test_duplicate_impossible_exit_code
+    r=seed();r['cases']['collision']['receipts'][1]['exit_code']=999;reject(self,r)
+                                                                     ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.560s
+
+FAILED (failures=1)
+test_duplicate_signal_exit_masquerades_as_refusal (fresh_probes.Extra.test_duplicate_signal_exit_masquerades_as_refusal) ... FAIL
+
+======================================================================
+FAIL: test_duplicate_signal_exit_masquerades_as_refusal (fresh_probes.Extra.test_duplicate_signal_exit_masquerades_as_refusal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 151, in test_duplicate_signal_exit_masquerades_as_refusal
+    r=seed();rc=r['cases']['collision']['receipts'][1];rc['exit_code']=-9;rc['signal']=None;reject(self,r)
+                                                                                            ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.558s
+
+FAILED (failures=1)
+test_raw_clock_utc_precedes_capture_request (fresh_probes.Extra.test_raw_clock_utc_precedes_capture_request) ... FAIL
+
+======================================================================
+FAIL: test_raw_clock_utc_precedes_capture_request (fresh_probes.Extra.test_raw_clock_utc_precedes_capture_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 159, in test_raw_clock_utc_precedes_capture_request
+    reject(self,r)
+    ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.557s
+
+FAILED (failures=1)
+test_callback_before_guard (fresh_probes.Fresh.test_callback_before_guard) ... FAIL
+
+======================================================================
+FAIL: test_callback_before_guard (fresh_probes.Fresh.test_callback_before_guard)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 63, in test_callback_before_guard
+    row['journal_receipt']['raw_stdout']=row['completion_journal_receipt']['raw_stdout']=row['raw_journal'];reject(self,r)
+                                                                                                            ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.558s
+
+FAILED (failures=1)
+test_command_receipt_untrusted_environment (fresh_probes.Fresh.test_command_receipt_untrusted_environment) ... FAIL
+
+======================================================================
+FAIL: test_command_receipt_untrusted_environment (fresh_probes.Fresh.test_command_receipt_untrusted_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 50, in test_command_receipt_untrusted_environment
+    r=seed();r['cases']['success']['receipts'][0]['environment']={'PYTHONPATH':'SYNTHETIC_UNTRUSTED','PATH':'/SYNTHETIC'};reject(self,r)
+                                                                                                                          ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.557s
+
+FAILED (failures=1)
+test_completion_exit_after_capture (fresh_probes.Fresh.test_completion_exit_after_capture) ... FAIL
+
+======================================================================
+FAIL: test_completion_exit_after_capture (fresh_probes.Fresh.test_completion_exit_after_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 40, in test_completion_exit_after_capture
+    r=seed();o=r['cases']['success']['completion'];o['service']['ExecMainExitTimestampMonotonic']=str(o['sample']['boot_us']+100000000);sync(o);reject(self,r)
+                                                                                                                                                ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.557s
+
+FAILED (failures=1)
+test_completion_exit_before_start (fresh_probes.Fresh.test_completion_exit_before_start) ... FAIL
+
+======================================================================
+FAIL: test_completion_exit_before_start (fresh_probes.Fresh.test_completion_exit_before_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 42, in test_completion_exit_before_start
+    r=seed();o=r['cases']['success']['completion'];o['service']['ExecMainExitTimestampMonotonic']='1';sync(o);reject(self,r)
+                                                                                                              ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.560s
+
+FAILED (failures=1)
+test_completion_invocation_substitution (fresh_probes.Fresh.test_completion_invocation_substitution) ... FAIL
+
+======================================================================
+FAIL: test_completion_invocation_substitution (fresh_probes.Fresh.test_completion_invocation_substitution)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 36, in test_completion_invocation_substitution
+    r=seed();o=r['cases']['success']['completion'];o['service']['InvocationID']='9'*32;sync(o);reject(self,r)
+                                                                                               ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.560s
+
+FAILED (failures=1)
+test_completion_start_before_authorization (fresh_probes.Fresh.test_completion_start_before_authorization) ... FAIL
+
+======================================================================
+FAIL: test_completion_start_before_authorization (fresh_probes.Fresh.test_completion_start_before_authorization)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 38, in test_completion_start_before_authorization
+    r=seed();o=r['cases']['success']['completion'];o['service']['ExecMainStartTimestampMonotonic']='1';sync(o);reject(self,r)
+                                                                                                               ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.559s
+
+FAILED (failures=1)
+test_final_start_timestamp_text_before_authorization (fresh_probes.Fresh.test_final_start_timestamp_text_before_authorization) ... FAIL
+
+======================================================================
+FAIL: test_final_start_timestamp_text_before_authorization (fresh_probes.Fresh.test_final_start_timestamp_text_before_authorization)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 54, in test_final_start_timestamp_text_before_authorization
+    r=seed();o=r['cases']['success']['final'];o['service']['ExecStart']=o['service']['ExecStart'].replace('start_time=[]','start_time=[Mon 2020-01-01 00:00:00 UTC]');sync(o);reject(self,r)
+                                                                                                                                                                              ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.557s
+
+FAILED (failures=1)
+test_later_namespace_must_allow_retained_owned_unit (fresh_probes.Fresh.test_later_namespace_must_allow_retained_owned_unit) ... FAIL
+
+======================================================================
+FAIL: test_later_namespace_must_allow_retained_owned_unit (fresh_probes.Fresh.test_later_namespace_must_allow_retained_owned_unit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 67, in test_later_namespace_must_allow_retained_owned_unit
+    try:collision.absent(r['session'],'exit7',proof)
+        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/trace_probes.py", line 46, in call
+    answer=fn(*args,**kwargs)
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/src/collision.py", line 25, in absent
+    need(proof.get('unit_paths_complete') is True and proof.get('namespace_inventory')==[],'namespace occupied/incomplete')
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r3-verified/src/common.py", line 9, in need
+    raise ValueError('BLOCKED: ' + reason)
+ValueError: BLOCKED: namespace occupied/incomplete
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 70, in test_later_namespace_must_allow_retained_owned_unit
+    self.fail('Required retained earlier generation prevents the second trial: '+str(e))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Required retained earlier generation prevents the second trial: BLOCKED: namespace occupied/incomplete
+
+----------------------------------------------------------------------
+Ran 1 test in 0.006s
+
+FAILED (failures=1)
+test_receipt_wrong_operation (fresh_probes.Fresh.test_receipt_wrong_operation) ... FAIL
+
+======================================================================
+FAIL: test_receipt_wrong_operation (fresh_probes.Fresh.test_receipt_wrong_operation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 52, in test_receipt_wrong_operation
+    r=seed();r['cases']['success']['final']['capture_receipts']['timer']['operation']='install';reject(self,r)
+                                                                                                ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.556s
+
+FAILED (failures=1)
+test_waiting_control_process_present (fresh_probes.Fresh.test_waiting_control_process_present) ... FAIL
+
+======================================================================
+FAIL: test_waiting_control_process_present (fresh_probes.Fresh.test_waiting_control_process_present)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 44, in test_waiting_control_process_present
+    r=seed();o=r['cases']['success']['waiting'][0];o['service']['ControlPID']='12345';sync(o);reject(self,r)
+                                                                                              ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.556s
+
+FAILED (failures=1)
+test_waiting_executed_trailer (fresh_probes.Fresh.test_waiting_executed_trailer) ... FAIL
+
+======================================================================
+FAIL: test_waiting_executed_trailer (fresh_probes.Fresh.test_waiting_executed_trailer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 46, in test_waiting_executed_trailer
+    r=seed();o=r['cases']['success']['waiting'][0];o['service']['ExecStart']=o['service']['ExecStart'].replace('pid=0 ; code=(null) ; status=0','pid=12345 ; code=exited ; status=7');sync(o);reject(self,r)
+                                                                                                                                                                                              ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.557s
+
+FAILED (failures=1)
+test_waiting_failure_exit_status (fresh_probes.Fresh.test_waiting_failure_exit_status) ... FAIL
+
+======================================================================
+FAIL: test_waiting_failure_exit_status (fresh_probes.Fresh.test_waiting_failure_exit_status)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 48, in test_waiting_failure_exit_status
+    r=seed();o=r['cases']['success']['waiting'][0];o['service'].update(ExecMainCode='1',ExecMainStatus='7');sync(o);reject(self,r)
+                                                                                                                    ~~~~~~^^^^^^^^
+  File "/tmp/jarvis-r4-independent-7k0bs7qf/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r4/tests/test_astra39_original.py", line 31, in reject
+    test.fail('Contradictory complete/resealed evidence was accepted: '+result['status'])
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Contradictory complete/resealed evidence was accepted: PASS_SYNTHETIC_ONLY
+
+----------------------------------------------------------------------
+Ran 1 test in 0.557s
+
+FAILED (failures=1)

@@ -1,0 +1,287 @@
+[
+  {
+    "historical_test_id": "fresh_probes.Extra.test_duplicate_impossible_exit_code",
+    "group": "R3-A04",
+    "original_root_cause": "command_receipt checks only that exit_code has int type. The collision predicate treats any nonzero value as refusal. A signal-shaped or impossible normal process return is therefore accepted as expected manager refusal.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: integer schema"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_collision_signal_plus_expected_diagnostic",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "PASS",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Extra.test_duplicate_signal_exit_masquerades_as_refusal",
+    "group": "R3-A04",
+    "original_root_cause": "command_receipt checks only that exit_code has int type. The collision predicate treats any nonzero value as refusal. A signal-shaped or impossible normal process return is therefore accepted as expected manager refusal.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: integer schema"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_collision_unrelated_manager_error",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "PASS",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Extra.test_raw_clock_utc_precedes_capture_request",
+    "group": "R3-A03",
+    "original_root_cause": "Membership in an invocation interval does not order guard before payload. ExecStart textual timestamps are matched but not interpreted or reconciled. Raw-clock UTC and receipt-start UTC are each checked against the same rounded second, not against each other or the precise BOOTTIME anchor.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: raw clock UTC outside actual capture"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_guard_started_before_timer_creation",
+    "variation_verdict": "FAIL_UNSAFE_ACCEPTANCE",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_callback_before_guard",
+    "group": "R3-A03",
+    "original_root_cause": "Membership in an invocation interval does not order guard before payload. ExecStart textual timestamps are matched but not interpreted or reconciled. Raw-clock UTC and receipt-start UTC are each checked against the same rounded second, not against each other or the precise BOOTTIME anchor.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: guard sample outside guard execution"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_guard_started_before_timer_trigger",
+    "variation_verdict": "FAIL_UNSAFE_ACCEPTANCE",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_command_receipt_untrusted_environment",
+    "group": "R3-A05",
+    "original_root_cause": "The proposed envelope has a minimal environment, but command_receipt only checks argv digest, status/output and elapsed time. Receipt environment is not required or compared and operation is not matched in observation/cgroup/collision paths. Open receipt schemas silently ignore contradictory fields.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: receipt environment not allowlisted"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_wrong_receipt_environment",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "PASS",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_completion_exit_after_capture",
+    "group": "R3-A01",
+    "original_root_cause": "case_order applies terminal() to completion but execution_interval() only to final. Completion journal events are compared with the final event list, and plain exits with final.service; completion.service invocation and execution interval are never cross-bound to those events or final.service.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: execution not bracketed"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_plain_exit_malformed_invocation",
+    "variation_verdict": "FAIL_UNSAFE_ACCEPTANCE",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_completion_exit_before_start",
+    "group": "R3-A01",
+    "original_root_cause": "case_order applies terminal() to completion but execution_interval() only to final. Completion journal events are compared with the final event list, and plain exits with final.service; completion.service invocation and execution interval are never cross-bound to those events or final.service.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: missing or reversed execution clocks"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_plain_exit_prior_generation_invocation",
+    "variation_verdict": "FAIL_UNSAFE_ACCEPTANCE",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_completion_invocation_substitution",
+    "group": "R3-A01",
+    "original_root_cause": "case_order applies terminal() to completion but execution_interval() only to final. Completion journal events are compared with the final event list, and plain exits with final.service; completion.service invocation and execution interval are never cross-bound to those events or final.service.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: invocation binding"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_successful_callback_failed_service",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_completion_start_before_authorization",
+    "group": "R3-A01",
+    "original_root_cause": "case_order applies terminal() to completion but execution_interval() only to final. Completion journal events are compared with the final event list, and plain exits with final.service; completion.service invocation and execution interval are never cross-bound to those events or final.service.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: execution not bracketed"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_main_wall_mono_conflict",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_final_start_timestamp_text_before_authorization",
+    "group": "R3-A03",
+    "original_root_cause": "Membership in an invocation interval does not order guard before payload. ExecStart textual timestamps are matched but not interpreted or reconciled. Raw-clock UTC and receipt-start UTC are each checked against the same rounded second, not against each other or the precise BOOTTIME anchor.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: completion/final execution identity or timestamps changed"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_changed_clock_domain",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_later_namespace_must_allow_retained_owned_unit",
+    "group": "R3-A06",
+    "original_root_cause": "Every creation requires the entire Stage2 wildcard namespace and unit-file inventory to be empty. The same procedure retains elapsed/failed units, disallows deleting/resetting them, and requires all twelve final observations LoadState=loaded. The synthetic positive supplies empty wildcard output at every later creation without reconciling earlier retained units.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      null
+    ],
+    "unsafe_rejected": false,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_retained_journal_loses_diagnostic_at_admission",
+    "variation_verdict": "FAIL_UNSAFE_ACCEPTANCE",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_receipt_wrong_operation",
+    "group": "R3-A05",
+    "original_root_cause": "The proposed envelope has a minimal environment, but command_receipt only checks argv digest, status/output and elapsed time. Receipt environment is not required or compared and operation is not matched in observation/cgroup/collision paths. Open receipt schemas silently ignore contradictory fields.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: receipt operation/argv"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_receipt_unexpected_field",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "PASS",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_waiting_control_process_present",
+    "group": "R3-A02",
+    "original_root_cause": "waiting() checks service ActiveState/Result/InvocationID/MainPID but omits ControlPID, ExecMainCode/Status, execution timestamps and command trailers. Generic verify_pair validates numeric/shape only for these fields.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: waiting execution/process contradiction"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_guard_started_during_never_invoked_waiting",
+    "variation_verdict": "FAIL_UNSAFE_ACCEPTANCE",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_waiting_executed_trailer",
+    "group": "R3-A02",
+    "original_root_cause": "waiting() checks service ActiveState/Result/InvocationID/MainPID but omits ControlPID, ExecMainCode/Status, execution timestamps and command trailers. Generic verify_pair validates numeric/shape only for these fields.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: waiting executable already ran"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_post_stop_leaked_process",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  },
+  {
+    "historical_test_id": "fresh_probes.Fresh.test_waiting_failure_exit_status",
+    "group": "R3-A02",
+    "original_root_cause": "waiting() checks service ActiveState/Result/InvocationID/MainPID but omits ControlPID, ExecMainCode/Status, execution timestamps and command trailers. Generic verify_pair validates numeric/shape only for these fields.",
+    "before": "FAIL reproduced on exact R3",
+    "exact_correction_verdict": "PASS",
+    "after_reasons": [
+      "BLOCKED: waiting execution/process contradiction"
+    ],
+    "unsafe_rejected": true,
+    "legitimate_control": "Full twelve-case R4 fixture passes; A06 requires newly complete raw prefix/ledger. No real-host legitimacy assertion.",
+    "new_variation": "test_timer_never_fired",
+    "variation_verdict": "PASS_BLOCKED",
+    "group_reaudit_verdict": "FAIL",
+    "input_evidence": [
+      "evidence/TRACE-15-BEFORE.json",
+      "evidence/TRACE-15-AFTER.json"
+    ]
+  }
+]

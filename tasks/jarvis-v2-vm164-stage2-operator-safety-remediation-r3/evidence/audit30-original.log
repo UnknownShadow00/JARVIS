@@ -1,0 +1,125 @@
+test_all_payloads_in_nonvm_scope (audit30_original.Controls.test_all_payloads_in_nonvm_scope) ... ok
+test_callback_has_no_actuation_imports (audit30_original.Controls.test_callback_has_no_actuation_imports) ... ok
+test_changed_owned_argv_denied (audit30_original.Controls.test_changed_owned_argv_denied) ... ok
+test_every_creation_explicit_uid_gid_type (audit30_original.Controls.test_every_creation_explicit_uid_gid_type) ... ok
+test_expired_window_denied (audit30_original.Controls.test_expired_window_denied) ... ok
+test_foreign_list_collision_denied (audit30_original.Controls.test_foreign_list_collision_denied) ... ok
+test_identity_unknown_denied (audit30_original.Controls.test_identity_unknown_denied) ... ok
+test_installer_exclusive_creation_no_remove (audit30_original.Controls.test_installer_exclusive_creation_no_remove) ... ok
+test_interrupted_cleanup_scoped_service_only (audit30_original.Controls.test_interrupted_cleanup_scoped_service_only) ... ok
+test_no_guarantee_upgrade (audit30_original.Controls.test_no_guarantee_upgrade) ... ok
+test_oversize_window_denied (audit30_original.Controls.test_oversize_window_denied) ... ok
+test_privileged_group_denied (audit30_original.Controls.test_privileged_group_denied) ... ok
+test_retained_failed_states_no_mutation (audit30_original.Controls.test_retained_failed_states_no_mutation) ... ok
+test_root_denied (audit30_original.Controls.test_root_denied) ... ok
+test_twelve_names_distinct_and_bounded (audit30_original.Controls.test_twelve_names_distinct_and_bounded) ... ok
+test_unambiguous_historical_suspend_conversion (audit30_original.Controls.test_unambiguous_historical_suspend_conversion) ... ok
+test_unfilled_results_not_reviewed (audit30_original.Controls.test_unfilled_results_not_reviewed) ... ok
+test_unknown_clock_domain_denied (audit30_original.Controls.test_unknown_clock_domain_denied) ... ok
+test_wake_onboot_accuracy_no_jitter (audit30_original.Controls.test_wake_onboot_accuracy_no_jitter) ... ok
+test_wrong_boot_denied_for_creation (audit30_original.Controls.test_wrong_boot_denied_for_creation) ... ok
+test_callback_outcome_missing_host_boot_must_be_rejected (audit30_original.GapProbes.test_callback_outcome_missing_host_boot_must_be_rejected) ... FAIL
+test_cleanup_mismatched_current_name_must_be_rejected (audit30_original.GapProbes.test_cleanup_mismatched_current_name_must_be_rejected) ... FAIL
+test_cleanup_missing_boot_binding_must_be_rejected (audit30_original.GapProbes.test_cleanup_missing_boot_binding_must_be_rejected) ... FAIL
+test_collision_input_string_must_be_rejected (audit30_original.GapProbes.test_collision_input_string_must_be_rejected) ... FAIL
+test_expected_negative_not_valid_for_ordinary_success (audit30_original.GapProbes.test_expected_negative_not_valid_for_ordinary_success) ... FAIL
+test_manual_decompression_has_streaming_bound (audit30_original.GapProbes.test_manual_decompression_has_streaming_bound) ... FAIL
+test_policy_read_has_preallocation_bound (audit30_original.GapProbes.test_policy_read_has_preallocation_bound) ... FAIL
+test_rearm_a_firing_must_not_be_accepted_as_expected (audit30_original.GapProbes.test_rearm_a_firing_must_not_be_accepted_as_expected) ... FAIL
+test_reviewed_record_requires_case_names_and_observations (audit30_original.GapProbes.test_reviewed_record_requires_case_names_and_observations) ... FAIL
+test_reviewed_record_requires_operator_and_authorization (audit30_original.GapProbes.test_reviewed_record_requires_operator_and_authorization) ... FAIL
+
+======================================================================
+FAIL: test_callback_outcome_missing_host_boot_must_be_rejected (audit30_original.GapProbes.test_callback_outcome_missing_host_boot_must_be_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 130, in test_callback_outcome_missing_host_boot_must_be_rejected
+    with self.assertRaises(ValueError):p.outcome('success',callback_row=row,result='success',code=1,status=0,deadline=8_150_000_000)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_cleanup_mismatched_current_name_must_be_rejected (audit30_original.GapProbes.test_cleanup_mismatched_current_name_must_be_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 126, in test_cleanup_mismatched_current_name_must_be_rejected
+    with self.assertRaises(ValueError):p.cleanup_argv('b'*32,'success',o,c)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_cleanup_missing_boot_binding_must_be_rejected (audit30_original.GapProbes.test_cleanup_missing_boot_binding_must_be_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 123, in test_cleanup_missing_boot_binding_must_be_rejected
+    with self.assertRaises(ValueError):p.cleanup_argv('b'*32,'success',o,c)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_collision_input_string_must_be_rejected (audit30_original.GapProbes.test_collision_input_string_must_be_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 119, in test_collision_input_string_must_be_rejected
+    with self.assertRaises((ValueError,TypeError)):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (<class 'ValueError'>, <class 'TypeError'>) not raised
+
+======================================================================
+FAIL: test_expected_negative_not_valid_for_ordinary_success (audit30_original.GapProbes.test_expected_negative_not_valid_for_ordinary_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 143, in test_expected_negative_not_valid_for_ordinary_success
+    with self.assertRaises(ValueError):results.validate(r)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_manual_decompression_has_streaming_bound (audit30_original.GapProbes.test_manual_decompression_has_streaming_bound)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 150, in test_manual_decompression_has_streaming_bound
+    self.assertFalse(any(isinstance(n,ast.Attribute) and n.attr=='decompress' for n in ast.walk(tree)), 'whole gzip decompression precedes size guard')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false : whole gzip decompression precedes size guard
+
+======================================================================
+FAIL: test_policy_read_has_preallocation_bound (audit30_original.GapProbes.test_policy_read_has_preallocation_bound)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 147, in test_policy_read_has_preallocation_bound
+    self.assertFalse(any(isinstance(n,ast.Attribute) and n.attr=='read_bytes' for n in ast.walk(tree)), 'whole-file allocation precedes size guard')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false : whole-file allocation precedes size guard
+
+======================================================================
+FAIL: test_rearm_a_firing_must_not_be_accepted_as_expected (audit30_original.GapProbes.test_rearm_a_firing_must_not_be_accepted_as_expected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 134, in test_rearm_a_firing_must_not_be_accepted_as_expected
+    with self.assertRaises(ValueError):p.outcome('rearm-a',callback_row=row,result='success',code=1,status=0,deadline=8_150_000_000)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_reviewed_record_requires_case_names_and_observations (audit30_original.GapProbes.test_reviewed_record_requires_case_names_and_observations)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 139, in test_reviewed_record_requires_case_names_and_observations
+    with self.assertRaises(ValueError):results.validate(r)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_reviewed_record_requires_operator_and_authorization (audit30_original.GapProbes.test_reviewed_record_requires_operator_and_authorization)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r1/tests/test_independent.py", line 136, in test_reviewed_record_requires_operator_and_authorization
+    with self.assertRaises(ValueError):results.validate(reviewed_record())
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 30 tests in 0.003s
+
+FAILED (failures=10)

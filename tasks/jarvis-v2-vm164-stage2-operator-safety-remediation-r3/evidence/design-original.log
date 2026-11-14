@@ -1,0 +1,35 @@
+test_all_command_budget_categories (design.Design.test_all_command_budget_categories) ... FAIL
+test_explicit_environment_contract (design.Design.test_explicit_environment_contract) ... FAIL
+test_no_unproved_nss_or_sudo_calls (design.Design.test_no_unproved_nss_or_sudo_calls) ... FAIL
+
+======================================================================
+FAIL: test_all_command_budget_categories (design.Design.test_all_command_budget_categories)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r2/tests/test_design.py", line 9, in test_all_command_budget_categories
+    self.assertTrue({'read','manual','install','create','duplicate','show','journal','cgroup','stop'}<=set(CAT.get('operation_caps',{})))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_explicit_environment_contract (design.Design.test_explicit_environment_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r2/tests/test_design.py", line 13, in test_explicit_environment_contract
+    self.assertIn(prop,props)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: 'SetLoginEnvironment=no' not found in []
+
+======================================================================
+FAIL: test_no_unproved_nss_or_sudo_calls (design.Design.test_no_unproved_nss_or_sudo_calls)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-remediation-r2/tests/test_design.py", line 7, in test_no_unproved_nss_or_sudo_calls
+    for argv in CAT['read'].values():self.assertNotIn(argv[0].rsplit('/',1)[-1],('getent','id','sudo'))
+                                     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'getent' unexpectedly found in ('getent', 'id', 'sudo')
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+FAILED (failures=3)

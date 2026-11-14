@@ -1,0 +1,12 @@
+# Independent state-machine challenges
+
+**FAIL.**42 new distinct methods:32PASS/10FAIL/0ERROR/0SKIP. Three positive controls establish reachable valid full validation, a valid plain exit row, and per-case anchoring.29 negative controls reject the expected unsafe state. Ten unsafe acceptance cases remain, distributed across three findings.
+
+The central causal omission is guard start. In the synthetic rearm-b case the create request is D−30s, waiting captures D−29s and D−28s, guard completion D+5ms, main start D+10ms and guard output D+1ms. Moving both raw ExecCondition start timestamps to D−60s yields a guard predating the unit; D−28.5s contradicts the later untouched waiting record; D−1s precedes the alleged trigger. Every complete resealed record passes. D−6s also escapes the proposed5s start-bound validation; actual systemd accounting must still be separately established. The first-case anchor API independently accepts the D−60s stale guard, so the defect can occur before the next generation is admitted.
+
+Fresh boundaries reject callback execution at/after expiry, callback completion beyond expiry, acknowledged cancellation with a running process, a fired canceled generation, stale success against failedtimer, absent timer trigger, contradictory service result, active historical owner, missing raw show/cgroup state, duplicated cursor, malformed JSON-event invocation, partial cleanup, clock-domain drift, wrong receipt environment/epoch, missing/unknown receipt fields, reversed stop sequence and malformed/foreign collision errors. Failure means an assertion expecting rejection did not occur; a BLOCKED result counts as a passing negative test.
+
+Plain journal attribution and retained raw-prefix loss expose different paths that still accept contradictions. The formal tests preserve matching raw/decoded receipts and recompute synthetic seals so rejection cannot be credited merely to stale checksums. Every mutation and actual return/error is recorded in INDEPENDENT-OBSERVED.json. No seal is represented as independent real-world custody.
+
+Recommend simplifying the qualification acceptance design before another host-authorization request: use one typed causal record per generation, one validation function shared by admission and closure, and explicit immutable raw-record retention. Consider a separately reviewed smaller Stage2 sequence if full retained-prefix capture cannot fit the budget. Do not silently reduce the twelve-case scope, delete evidence or add another patchwork of summary-specific exceptions.
+

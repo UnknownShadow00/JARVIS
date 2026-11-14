@@ -1,0 +1,16 @@
+--- test_execstart_exit_disagreement_must_fail original
++++ test_execstart_exit_disagreement_must_fail R3 input
+@@ -1,3 +1,3 @@
+ def test_execstart_exit_disagreement_must_fail(self):
+- r=seed();o=r['cases']['success']['final'];o['service']['ExecStart']=o['service']['ExecStart'].replace('code=(null) ; status=0','code=exited ; status=7');sync_show(o,'service')
++ r=seed();o=r['cases']['success']['final'];o['service']['ExecStart']=o['service']['ExecStart'].replace('code=exited ; status=0','code=exited ; status=7');sync_show(o,'service')
+  expect_block(self,r,'ExecStart exit7 disagrees with ExecMainStatus0')
+--- test_missing_raw_cgroup_capture_must_fail original
++++ test_missing_raw_cgroup_capture_must_fail R3 input
+@@ -1,4 +1,6 @@
+ def test_missing_raw_cgroup_capture_must_fail(self):
+  r=seed()
++ for row in r['cases'].values():
++  row['final']['cgroup'].pop('raw',None);row['final']['cgroup'].pop('receipt',None)
+  self.assertTrue(all('raw' not in x['final']['cgroup'] for x in r['cases'].values()))
+  expect_block(self,r,'all twelve cgroups are summaries without raw command receipts')

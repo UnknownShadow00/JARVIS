@@ -1,0 +1,28 @@
+{
+  "baseline": {
+    "runner_exit": 1,
+    "after_tests": "71 pass; original audit 20 pass / 10 fail",
+    "exception": "ValueError: predecessor_symlink_changed",
+    "cause": "Inherited core.symlinks=false created five tracked 120000 links as plain text."
+  },
+  "r2": {
+    "runner_exit": 1,
+    "after_tests": "audit30 pass; design-original 3 expected fail; design-r2 3 pass; regression92 91 pass / 1 wrapper-induced fail",
+    "exception": "AssertionError: unexpected canonical dependency: /opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/cases",
+    "cause": "Added wrapper resolved descriptor-relative path against canonical cwd; no canonical dependency actually read.",
+    "additional_failure": "regression92.Extended.test_artifact_loading_hash_and_symlink"
+  },
+  "negative": {
+    "runner_exit": 1,
+    "tests": 51,
+    "passed": 34,
+    "failed": 17,
+    "errors": 0,
+    "skips": 0,
+    "additional_failure": "test_evidence_leaf_symlink_rejected",
+    "cause": "Same descriptor-relative guard misclassification."
+  },
+  "unit_test_errors": 0,
+  "runner_interruptions": 2,
+  "historical_source_modified": false
+}

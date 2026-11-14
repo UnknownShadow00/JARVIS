@@ -1,0 +1,30 @@
+# Complete twelve-case operator review
+
+**FAIL readiness for the complete procedure.** Numeric User/Group65534, Type=exec, paired exact unit names, fixed non-VM payloads, generation-bound ExecCondition, minimal environment, no capabilities/privilege escalation, private network/devices/tmp, protected system/home, finite resource/runtime/start/stop budgets and timer properties are explicitly rendered. No host executor is supplied or run. Read-only preflight and separately authorized exclusive callback placement are kept distinct. Unknown systemd257 serialization, WakeSystem/clock convention or privilege proof blocks.
+
+Exact argv authority is the pinned source's plan/timer_argv, COMMAND-CATALOG.json and observation_commands. Each actual nonce/deadline/path/hash must be freshly supplied and independently compared; no fixture value can be an operator input. Common timer settings are WakeSystem=yes, AccuracySec=1us, RandomizedDelaySec=0, RemainAfterElapse=yes, Persistent=no. Services use Type=exec/User=Group=65534, RuntimeMaxSec10s (timeout3s), TimeoutStartSec5s/TimeoutStopSec2s, KillMode=control-group. Client caps: read/manual/journal10s, install20s, create/duplicate/show/cgroup/stop5s, each with2s reserve and output bounds. These requests do not prove support or observed behavior on pve.
+
+Every case requires fresh approved session/boot/identity/custody, local-only policy/environment proof, exact new-target absence, owned generation and recorder. Each has90s completion including cleanup/evidence; whole grant≤45min. Raw show/clock/journal/process receipts, expected exits, exact stop pair and final empty cgroup are mandatory. Stop on unexpected results; preserve all failures. The following table reviews the specified case, not live qualification:
+
+| Case | Exact payload/extra construction in pinned source | Required result | Review |
+|---|---|---|---|
+| success | python3 -I -B -S fixed public canary, approved flag/hash, mode success | guard+canary exit0 within D..D+1s | Non-VM scope PASS; evidence FAIL A01–A03/A05 |
+| exit7 | same, mode failure | expected exited7/exit-code | Scope PASS; later admission blocked A06; shared evidence gaps |
+| missingexec | one exact owned absent-executable-nonce path | guard then203/EXEC, no canary | Safe scoped failure design; creation refusal must remain BLOCKED, not substitute; A06/shared proof gaps |
+| missingdep | isolated Python encoded import of owned absent module | guard thenexit1 and matching ModuleNotFoundError | No packages or VM action; A06/shared proof gaps |
+| timeout | encoded identity print and sleep30, RuntimeMaxSec3s | timeout, matching signal15/9, empty group | Harmless bounded target; signal/result matrix needs actual host proof; A06/shared gaps |
+| late | encoded sleep2 then runpy of unchanged canary | expected late-detection only, inside original grant | Post-expiry negative now rejected; ordering A03 and A06 block full readiness |
+| inactive | ordinary payload canceled while waiting | two stop receipts, effective inactivity byD−5s, no invocation throughD+2s | Original cancellation checks PASS; waiting proof A02 and A06 remain |
+| failedtimer | exact Requires/After=N-absent.service, never create dependency | actual loaded failed/resources timer, no service invocation | Other/refused/unobserved behavior remains BLOCKED; A06 blocks later admission |
+| collision | same creation argv submitted once again during waiting | genuine nonzero refusal, unchanged pair, one eventual invocation | FAIL A04 invalid exit treated as refusal; A02/A06 also apply |
+| cancel | ordinary payload plus exact timer/service stops | request/ack/effective inactivity and no callback | Original and fresh canceled-callback negatives block correctly; A02/A06 remain |
+| rearm-a | same canceled-generation contract | no callback through rearm B closure | Original false positives fixed; retained namespace A06 prevents complete flow |
+| rearm-b | distinct name/generation/deadline, normal payload, A fence | one new invocation only after A proof | Fresh generation fence checked; A06 contradicts keeping A loaded; shared result gaps |
+
+Every case ultimately needs exact pair cleanup, raw cgroup or three-part absence proof and fresh loaded final state. No unit deletion/reset-failed is included. This creates A06: the blanket empty wildcard namespace prerequisite for every new case is incompatible with retaining earlier owned units for final closure. It is a protocol contradiction, not uncertainty to be delegated to live experimentation. Similarly, hashes on each fixture case do not reconcile cross-case retained state.
+
+No unsupported property is declared proven solely from memory or synthetic output. Existing offline interfaces and the explicit source support the intended narrow design, but exact systemd257 transient transaction/normalization/Job, result, ExecCondition, missing executable, failed dependency, environment and timestamp serialization remain host prerequisites. A failure to observe a required case is INCOMPLETE/BLOCKED and cannot be replaced with another test. No reboot, suspend, manager reexec or service-manager restart may be used to test semantics.
+
+The proposed45-minute boundary is explicit and has no extension. Creation ends byminute35; closure starts byminute40 and must finish beforeexpiry. A separate finite recovery decision is needed after an expired/failed session, scoped to exact owned readback/stop only. The operator may not act on this audit's proposals now.
+
+Exact first future action remains the byte-identical FIRST-SUPERVISED-ACTION.json argv: `/usr/bin/python3 -I -B -S -c` followed by the complete fixed CLOCK_CODE string in that JSON. It reads only boot ID and paired BOOTTIME/MONOTONIC/UTC. Prerequisites: corrected independent acceptance, new separate finite human grant, existing trusted local console and interpreter/loader/library custody, reviewed bounded recorder, local mounts and valid clock/window budgets. Require exit0, expected boot UUID, complete raw output and≤1000us bracket. No timer, installation or policy query follows automatically. This action was not executed.

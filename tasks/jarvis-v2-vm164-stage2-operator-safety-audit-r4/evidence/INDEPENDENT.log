@@ -1,0 +1,167 @@
+test_callback_at_exact_expiry (fresh_adversaries.Boundaries.test_callback_at_exact_expiry) ... ok
+test_callback_finishes_after_expiry (fresh_adversaries.Boundaries.test_callback_finishes_after_expiry) ... ok
+test_canceled_generation_fired (fresh_adversaries.Boundaries.test_canceled_generation_fired) ... ok
+test_cancellation_while_callback_running (fresh_adversaries.Boundaries.test_cancellation_while_callback_running) ... ok
+test_changed_clock_domain (fresh_adversaries.Boundaries.test_changed_clock_domain) ... ok
+test_collision_signal_plus_expected_diagnostic (fresh_adversaries.Boundaries.test_collision_signal_plus_expected_diagnostic) ... ok
+test_collision_unrelated_manager_error (fresh_adversaries.Boundaries.test_collision_unrelated_manager_error) ... ok
+test_collision_wrong_unit_error (fresh_adversaries.Boundaries.test_collision_wrong_unit_error) ... ok
+test_duplicate_retained_unit (fresh_adversaries.Boundaries.test_duplicate_retained_unit) ... ok
+test_duplicated_journal_cursor (fresh_adversaries.Boundaries.test_duplicated_journal_cursor) ... ok
+test_failed_timer_with_stale_success (fresh_adversaries.Boundaries.test_failed_timer_with_stale_success) ... ok
+test_guard_completes_after_callback (fresh_adversaries.Boundaries.test_guard_completes_after_callback) ... ok
+test_historical_owner_still_active (fresh_adversaries.Boundaries.test_historical_owner_still_active) ... ok
+test_main_wall_mono_conflict (fresh_adversaries.Boundaries.test_main_wall_mono_conflict) ... ok
+test_malformed_payload_invocation (fresh_adversaries.Boundaries.test_malformed_payload_invocation) ... ok
+test_missing_prior_anchor (fresh_adversaries.Boundaries.test_missing_prior_anchor) ... ok
+test_missing_raw_completion_show (fresh_adversaries.Boundaries.test_missing_raw_completion_show) ... ok
+test_missing_receipt_units (fresh_adversaries.Boundaries.test_missing_receipt_units) ... ok
+test_partial_cleanup_readback (fresh_adversaries.Boundaries.test_partial_cleanup_readback) ... ok
+test_plain_exit_contradictory_status (fresh_adversaries.Boundaries.test_plain_exit_contradictory_status) ... ok
+test_plain_exit_wrong_boot (fresh_adversaries.Boundaries.test_plain_exit_wrong_boot) ... ok
+test_post_stop_leaked_process (fresh_adversaries.Boundaries.test_post_stop_leaked_process) ... ok
+test_receipt_unexpected_field (fresh_adversaries.Boundaries.test_receipt_unexpected_field) ... ok
+test_receipt_wrong_epoch (fresh_adversaries.Boundaries.test_receipt_wrong_epoch) ... ok
+test_reordered_stop_receipts (fresh_adversaries.Boundaries.test_reordered_stop_receipts) ... ok
+test_successful_callback_failed_service (fresh_adversaries.Boundaries.test_successful_callback_failed_service) ... ok
+test_timer_never_fired (fresh_adversaries.Boundaries.test_timer_never_fired) ... ok
+test_wrong_receipt_environment (fresh_adversaries.Boundaries.test_wrong_receipt_environment) ... ok
+test_wrong_retained_generation (fresh_adversaries.Boundaries.test_wrong_retained_generation) ... ok
+test_bound_plain_exit (fresh_adversaries.Controls.test_bound_plain_exit) ... ok
+test_complete_twelve (fresh_adversaries.Controls.test_complete_twelve) ... ok
+test_standalone_completion (fresh_adversaries.Controls.test_standalone_completion) ... ok
+test_guard_exceeds_reviewed_start_timeout (fresh_adversaries.NewGaps.test_guard_exceeds_reviewed_start_timeout) ... FAIL
+test_guard_started_before_timer_creation (fresh_adversaries.NewGaps.test_guard_started_before_timer_creation) ... FAIL
+test_guard_started_before_timer_trigger (fresh_adversaries.NewGaps.test_guard_started_before_timer_trigger) ... FAIL
+test_guard_started_during_never_invoked_waiting (fresh_adversaries.NewGaps.test_guard_started_during_never_invoked_waiting) ... FAIL
+test_plain_exit_conflicting_unit_fields (fresh_adversaries.NewGaps.test_plain_exit_conflicting_unit_fields) ... FAIL
+test_plain_exit_malformed_invocation (fresh_adversaries.NewGaps.test_plain_exit_malformed_invocation) ... FAIL
+test_plain_exit_prior_generation_invocation (fresh_adversaries.NewGaps.test_plain_exit_prior_generation_invocation) ... FAIL
+test_retained_journal_loses_diagnostic_at_admission (fresh_adversaries.NewGaps.test_retained_journal_loses_diagnostic_at_admission) ... FAIL
+test_retained_journal_loses_required_diagnostic (fresh_adversaries.NewGaps.test_retained_journal_loses_required_diagnostic) ... FAIL
+test_stale_guard_accepted_for_completed_case_anchor (fresh_adversaries.NewGaps.test_stale_guard_accepted_for_completed_case_anchor) ... FAIL
+
+======================================================================
+FAIL: test_guard_exceeds_reviewed_start_timeout (fresh_adversaries.NewGaps.test_guard_exceeds_reviewed_start_timeout)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 63, in test_guard_exceeds_reviewed_start_timeout
+    r=seed();guardstart(r,-6000000);reject(self,r)
+                                    ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_guard_started_before_timer_creation (fresh_adversaries.NewGaps.test_guard_started_before_timer_creation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 57, in test_guard_started_before_timer_creation
+    r=seed();guardstart(r,-60000000);reject(self,r)
+                                     ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_guard_started_before_timer_trigger (fresh_adversaries.NewGaps.test_guard_started_before_timer_trigger)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 61, in test_guard_started_before_timer_trigger
+    r=seed();guardstart(r,-1000000);reject(self,r)
+                                    ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_guard_started_during_never_invoked_waiting (fresh_adversaries.NewGaps.test_guard_started_during_never_invoked_waiting)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 59, in test_guard_started_during_never_invoked_waiting
+    r=seed();guardstart(r,-28500000);reject(self,r)
+                                     ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_plain_exit_conflicting_unit_fields (fresh_adversaries.NewGaps.test_plain_exit_conflicting_unit_fields)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 69, in test_plain_exit_conflicting_unit_fields
+    r=seed();add_exit(r,_SYSTEMD_UNIT='foreign.service',UNIT=r['cases']['rearm-b']['plan']['service']);reject(self,r)
+                                                                                                       ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_plain_exit_malformed_invocation (fresh_adversaries.NewGaps.test_plain_exit_malformed_invocation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 65, in test_plain_exit_malformed_invocation
+    r=seed();add_exit(r,_SYSTEMD_INVOCATION_ID='INVALID');reject(self,r)
+                                                          ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_plain_exit_prior_generation_invocation (fresh_adversaries.NewGaps.test_plain_exit_prior_generation_invocation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 67, in test_plain_exit_prior_generation_invocation
+    r=seed();add_exit(r,_SYSTEMD_INVOCATION_ID=r['cases']['success']['completion']['service']['InvocationID']);reject(self,r)
+                                                                                                               ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_retained_journal_loses_diagnostic_at_admission (fresh_adversaries.NewGaps.test_retained_journal_loses_diagnostic_at_admission)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 74, in test_retained_journal_loses_diagnostic_at_admission
+    reject(self,r,lambda:collision.absent(r['session'],'rearm-b',proof,retained=ledger))
+    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: True
+
+======================================================================
+FAIL: test_retained_journal_loses_required_diagnostic (fresh_adversaries.NewGaps.test_retained_journal_loses_required_diagnostic)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 71, in test_retained_journal_loses_required_diagnostic
+    r=seed();remove_plain_history(r);reject(self,r)
+                                     ~~~~~~^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'status': 'PASS_SYNTHETIC_ONLY', 'authorization_granted': False, 'authenticity_verified': False, 'live_qualification': False}
+
+======================================================================
+FAIL: test_stale_guard_accepted_for_completed_case_anchor (fresh_adversaries.NewGaps.test_stale_guard_accepted_for_completed_case_anchor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 78, in test_stale_guard_accepted_for_completed_case_anchor
+    reject(self,r,lambda:retention.verified_anchor(row,raw,sha(raw),r['session'],r['clock_domain'],{}))
+    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/apps/IT TRAINING PROJECT CODE/projects/JARVIS/tasks/jarvis-v2-vm164-stage2-operator-safety-audit-r4/tests/fresh_adversaries.py", line 26, in reject
+    test.fail('Unsafe resealed synthetic evidence accepted: '+str(value))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unsafe resealed synthetic evidence accepted: {'name': 'jarvis-vm164-r3-stage2-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-success', 'anchor': {'plan_binding_sha256': 'e440baf8de95bf4df42c66cc5d7896f66d0b0feaad5e0d0abdca29f162ef0cd3', 'completion_sha256': 'c0f979093c3ac0cab2a2c5b167ac88c952a27de0be45b29dfb6b3662cbe3efe5', 'terminal_facts_sha256': 'a42bd4bf582588ca50128a0d6a75392610522ec10bf405d9d6b9d4d6ad41aa1d', 'events_sha256': 'defe0addcc8b62ce8d241ebebe9bd0959af7609ffb27b0108d6c8f19d130b71f', 'completed_boot_us': 8170001000, 'status': 'EXPECTED_OBSERVATION', 'failures': [], 'cancellation_sha256': '74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b', 'stops_sha256': '0babbd708b51bee8e91cd79734c3b7456c20eefd5eb2e62241862354de42766f'}, 'anchor_sha256': 'cab22acb409e4fa80c8bf75298fa95f1fe57e8da4de32a455d65073fca962b28'}
+
+----------------------------------------------------------------------
+Ran 42 tests in 105.967s
+
+FAILED (failures=10)
