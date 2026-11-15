@@ -1783,3 +1783,21 @@ Next: Independent Astra High R2 review of source and exact reproducers; no integ
 - Files changed: New isolated R6 packet with parser, bindings, negative tests, reports and evidence; completion log only canonically
 - Result: PASS_OFFLINE_STAGE2_SAFETY_R6_PENDING_INDEPENDENT_REVIEW;529 final distinct tests pass; no live qualification
 - Next: Independent Astra review; host capture schema remains unqualified and Stage2 NOT AUTHORIZED
+
+## [2026-11-14T23:06:59.847360+00:00] Task Completed
+- Task: Approved JARVIS initial cleanup execution-time gates and separate deletion-first decision
+- Files changed: New jarvis-approved-wave1 report/evidence packet; append-only tasks/loop-log.md
+- Result: BLOCKED: all six candidates stopped on incomplete all-user process visibility; no deletion or migration; actual reclamation0bytes; additional143leaves freshly verified but NOT approved
+- Next: Complete authorized read-only runtime visibility to resume existing initial approval; separate owner decision for additional13.982258GiB
+
+## [2026-11-14T23:27:38.226067+00:00] Task Completed
+- Task: Repair and test JARVIS Wave1 process scanner; rerun complete approved-target dry-run
+- Files changed: Persistent scanner/tests/dry-run reports in /home/nexus/audit-reports/jarvis-wave1-scanner-repair-20261114T231904Z; append-only tasks/loop-log.md
+- Result: Scanner33/33PASS;39zombies correctly exempted; runtime gate FAIL on95unreadable living processes; all six candidates retained,0bytes reclaimed
+- Next: Complete fresh read-only visibility in authorized root-inspection context, then resume existing Wave1 approval; no extra targets authorized
+
+## [2026-11-15T00:24:18.488545+00:00] Task Completed
+- Task: Prepare reviewed standalone authenticated Wave1 cleanup operator runner
+- Files changed: /home/nexus/audit-reports/JARVIS-Wave1-Operator-Packet-r1/reports, runner, fixture tests, SHA256SUMS; append-only project loop log
+- Result:72/72offline tests pass; no live runner/cleanup executed; strict symlink rule blocks approved H004 inventory's5links, so operator must stop on failed all-target dry-run
+- Next: Verify checksum and run authenticated operator dry-run; execute existing approval only if every guard passes; no additional targets authorized
