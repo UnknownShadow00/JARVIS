@@ -1801,3 +1801,15 @@ Next: Independent Astra High R2 review of source and exact reproducers; no integ
 - Files changed: /home/nexus/audit-reports/JARVIS-Wave1-Operator-Packet-r1/reports, runner, fixture tests, SHA256SUMS; append-only project loop log
 - Result:72/72offline tests pass; no live runner/cleanup executed; strict symlink rule blocks approved H004 inventory's5links, so operator must stop on failed all-target dry-run
 - Next: Verify checksum and run authenticated operator dry-run; execute existing approval only if every guard passes; no additional targets authorized
+
+## [2026-11-16T01:39:43.348440+00:00] Task Completed
+- Task: JARVIS Wave1 operator runner R2 narrow sparse-worktree-config and H004 committed-symlink safety correction; no real deletion.
+- Files changed: /home/nexus/audit-reports/JARVIS-Wave1-Operator-Packet-r2/ (versioned runner, pinned dry-run launcher, tests, independent evidence review, reports and SHA256SUMS); project tasks/loop-log.md append only.
+- Result: PASS_OFFLINE_R2_CORRECTION_PENDING_AUTHENTICATED_ALL_TARGET_DRY_RUN;124/124 tests pass,0 failures/errors/skips; original R1 15 files and174 predecessor files unchanged;214 active R6 manifest entries verified; all6 approved targets retained. Runner SHA256 4916a980ef90d4e48c444a1528ca9c2191eba1fe8e5b4c343e361acd695f58bd. No configuration rewrite, package/VM/source/privileged operation.
+- Next: Operator runs the checksum-pinned authenticated R2 all-target dry-run and reviews complete fresh PASS evidence; cleanup is not execution-ready until that gate passes. Stop on any runtime/mount/Git/config/link/identity/dependency failure; scope remains D001,D002,H001-H004 only.
+
+## [2026-11-16T03:53:28.354296+00:00] Task Completed
+- Task: Prepare dedicated codex-jarvis least-privilege account, isolated development runtime and fixed read-only privileged inspection package; no privileged installation invoked.
+- Files changed: /home/nexus/audit-reports/JARVIS-Codex-Account-Setup-r1/ (installer/verifier/rollback, root-helper source, exact sudoers, private runtime/workspace launchers, regression tests, reviewed pins, sealed installation archive, reports and SHA256SUMS); project tasks/loop-log.md append only.
+- Result: PASS_NONPRIVILEGED_PREPARATION_PENDING_OPERATOR_INSTALLATION;127/127 security-fixture tests pass with0 failures/errors/skips; disposable unchanged JARVIS full gate922 distinct positives+415 repeats and all17 jobs pass.1200 source files,11286 public dependency files,3 Codex executables, original R1/R2 packets, Git registrations and214 R6 manifest entries preserved. Account/group/privileged paths not created; no ACL/sudoers/systemd/VM/cleanup-target/canonical-history change. Archive SHA256 74472dda2afd7568f3cae4207e3910ee361b5cab50aad84379176b684d2e4117.
+- Next: Operator runs the exact checksum-pinned root-staging installation command and automated real-UID/policy/custody/visibility verification; provision fresh private authentication separately, then launch a new dedicated-account terminal. Existing Codex remains nexus UID1000. No general root access, canonical promotion, deployment, privileged maintenance or cleanup execution is authorized.
