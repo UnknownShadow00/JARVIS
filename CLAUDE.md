@@ -700,3 +700,7 @@ lights, complexity routing live, Kanban multi-agent dashboard.
 
 > Update this section at the end of every Claude Code session.
 > Format: what was built, last test run, blockers, next session starting point.
+
+## Completed development handoffs
+
+For owner-reviewed, passing offline gauntlet reports, use the optional HDD publishing command in scripts/ARCHIVE_GAUNTLET.md. Keep the original JSON at its existing path.

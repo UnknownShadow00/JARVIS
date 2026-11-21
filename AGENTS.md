@@ -13,3 +13,7 @@ Proxmox Phase 2 is planning and non-destructive validation only until separate
 operator authorization: no new ACLs/tokens, guest changes, package installation,
 console input, guest-agent execution, power operations or privileged qualification.
 Keep VM164 without a NIC. VM162, VM163 and the AI server are outside this task.
+
+## Completed development handoffs
+
+For owner-reviewed, passing offline gauntlet reports, use the optional HDD publishing command in scripts/ARCHIVE_GAUNTLET.md. Keep the original JSON at its existing path.
