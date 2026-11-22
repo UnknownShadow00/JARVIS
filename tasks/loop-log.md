@@ -1885,3 +1885,39 @@ Next: Independent Astra High R2 review of source and exact reproducers; no integ
 - Files changed: tasks/loop-log.md (required administrative entry only).
 - Result: Live metadata at the documented VM200 address returned Ollama 0.35.1, 21 tags referencing 13 primary blobs, and no resident model. Historical GPU compute verified by dated evidence; fresh guest telemetry blocked by missing trusted SSH host identity. Nexus app, model and disk metadata verified. Windows hardware remains operator-reported. No inference or infrastructure action.
 - Next: Verify VM200 public host key and GPU/mount telemetry through the authenticated console; qualify an existing 14B alias through a restricted authenticated connection using disposable state.
+
+## [2026-11-21T06:59:53Z] Task Completed
+- Task: Audited the JARVIS V2 application, Aurora, Nexus infrastructure, provider options and integrations against the ChatGPT/Codex-first vision; produced the owner comparison package.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-V2-master-audit-20261121T063635Z/ (01_EXECUTIVE_SUMMARY.md, 02_COMPLETE_FEATURE_MATRIX.csv, 03_ARCHITECTURE_AND_DEPENDENCIES.md, 04_SOURCE_CODE_AND_TECH_DEBT.md, 05_WINDOWS_AURORA_AUDIT.md, 06_NEXUS_BACKEND_AUDIT.md, 07_AI_PROVIDER_AND_INTEGRATION_AUDIT.md, 08_PLUGIN_MCP_APP_INVENTORY.csv, 09_INFRASTRUCTURE_AND_STORAGE.md, 10_SECURITY_AND_RELIABILITY.md, 11_TEST_COVERAGE_AND_VERIFICATION.md, 12_FIX_UPGRADE_REPLACE_BUILD_BACKLOG.csv, 13_UNVERIFIED_ITEMS_AND_ACCESS_BLOCKERS.md, 14_CHATGPT_HANDOFF.md, 15_EVIDENCE_INDEX.csv, MANIFEST.json); /mnt/nexus-archive/shared/audits/JARVIS-V2-master-audit-20261121T063635Z.zip; tasks/loop-log.md (append only).
+- Result: PASS for the bounded audit and packaging. Verified 15 reports plus manifest, all member sizes and SHA-256 hashes, ZIP CRCs, and independent unzip/hash readback. ZIP 92871 bytes, SHA-256 de231e82ee521f94d3b2dbfa62f6fcbebdd0ada775a885ef2433b73d1402a0bd. Windows, current VM200/PVE, full recovery and provider entitlement remain unverified.
+- Next: Owner reviews 14_CHATGPT_HANDOFF.md and the evidence gaps with ChatGPT before deciding development priorities or authorizing live validation.
+
+## [2026-11-22 00:26:28 UTC] Task Completed
+- Task: Phase 1A isolated Codex integration preflight, offline protocol and replay tests, and verified evidence receipt.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A-20261122T002618Z-zpt1o23e/JARVIS-Phase-1A-Codex-Integration-Receipt.zip (created); tasks/loop-log.md (appended).
+- Result: Offline handshake and replay fixture passed. Live acceptance blocked by missing isolated subscription authentication; zero of two real turns used. No production code or services changed.
+- Next: Supply a separately confined, subscription-authorized worker for the two bounded live turns.
+
+## [2026-11-22 01:15:30 UTC] Task Completed
+- Task: Phase 1A.2 worker, authentication and egress preflight; reuse Phase 1A offline probes and package qualification results.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A.2-20261122T011521Z-_ruwve80/JARVIS-Phase-1A.2-Qualification.zip (created); tasks/loop-log.md (administrative entry appended).
+- Result: Offline stdio and fixture checks passed. Live qualification blocked before device login; no approved live worker/egress verified, zero of two turns used.
+- Next: Identify the isolated worker and approve its exact access policy before manual device login.
+
+## [2026-11-22 01:26:37 UTC] Task Completed
+- Task: Phase 1A.3 VM161 worker provisioning attempt and verified operator handoff.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A.3-20261122T012628Z-t2pkshf6/JARVIS-Phase-1A.3-Provisioning.zip (created); tasks/loop-log.md (administrative entry appended).
+- Result: Official CLI and companions verified. Authorized useradd returned exit 1, interactive sudo authentication required. Worker not created; no login or live turns.
+- Next: VM161 administrator runs the authorized account step in a private terminal; obtain separate worker runtime installation approval before staging.
+
+## [2026-11-22T02:44:49+00:00] Task Completed
+- Task: Prepare the Phase 1A.5 offline containment evidence and connection-readiness decision.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A.5-20261122T024438Z-fwe71z7i/JARVIS-Worker-Containment.zip and tasks/loop-log.md.
+- Result: Offline restricted-profile wire and isolation checks passed in the disposable lab. Login readiness remains blocked on the UID 1002 replay and the dedicated connected broker boundary. Zero live turns.
+- Next: Administrator runs the pinned worker replay and identifies an approved broker gateway and isolated route.
+
+## [2026-11-22T03:01:43+00:00] Task Completed
+- Task: Qualify a disposable VM161 restricted network connection for the Codex worker and provide the administrator replay.
+- Files changed: Phase 1A.6 test fixtures and evidence under /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A.6-20261122T025150Z-vbv5k9cm, verified JARVIS-Restricted-Connection.zip, and tasks/loop-log.md.
+- Result: Prior UID 1002 containment receipt verified. The connected lab passed TLS, egress denials, actual Rust transport and synthetic tool/custody tests. No authentication or live turns. The actual worker connection requires an administrator replay.
+- Next: Run the hash-pinned verify command as nexus and inspect the resulting UID 1002 receipt before manual device login.
