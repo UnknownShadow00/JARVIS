@@ -1921,3 +1921,21 @@ Next: Independent Astra High R2 review of source and exact reproducers; no integ
 - Files changed: Phase 1A.6 test fixtures and evidence under /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A.6-20261122T025150Z-vbv5k9cm, verified JARVIS-Restricted-Connection.zip, and tasks/loop-log.md.
 - Result: Prior UID 1002 containment receipt verified. The connected lab passed TLS, egress denials, actual Rust transport and synthetic tool/custody tests. No authentication or live turns. The actual worker connection requires an administrator replay.
 - Next: Run the hash-pinned verify command as nexus and inspect the resulting UID 1002 receipt before manual device login.
+
+## [2026-11-23T16:48:44-06:00] Task Completed
+- Task: Reviewed the Phase 1A attended subscription runner, validated the checkpoint and historical containment receipts, and reproduced a pre-dispatch subscription-limit handling defect offline.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A-Authentication-20261122-htpvy3k_/JARVIS-Phase-1A-Live-Qualification-Review-20261123.zip, tasks/loop-log.md
+- Result: Live qualification blocked before authentication. The reviewed quota check continued after an explicit workspace usage limit. Zero live turns used. The evidence ZIP and member hashes verified.
+- Next: Correct and verify the subscription check before the attended login and two live tests. Hold Phase 1B production integration.
+
+## [2026-11-23T21:55:43-06:00] Task Completed
+- Task: Fixed Phase 1A account-update handling in a private review candidate and qualified it offline against the pinned schema and runtime.
+- Files changed: /mnt/nexus-archive/shared/audits/JARVIS-Phase-1A-Account-Refresh-tkmbjd3b/CORRECTED_DRIVER/, REGRESSION_TESTS/, EVIDENCE/, REVIEW.md, TEST_RESULTS.md, ATTENDED_LOGIN_HANDOFF.md, SHA256SUMS, JARVIS-Phase-1A-Account-Refresh-Review.zip, and tasks/loop-log.md.
+- Result: PASS. All 121 existing and 33 new cases passed again from the verified ZIP. Zero live turns or device logins. Historical notification reason unavailable in the preflight receipt.
+- Next: Owner reviews the candidate before running the existing-login-only attended command. Both authorized live turns remain unused.
+
+## [2026-11-23T22:47:57-06:00] Task Completed
+- Task: Implemented and qualified the Phase 1B Codex text-task backend in the isolated archive-HDD staging worktree.
+- Files changed: Staging commit 92f3e81ed4a94012b3c3c02ffddbaced2d64d37f contains 31 paths listed in FILES_CHANGED.csv. Review ZIP at /mnt/nexus-archive/shared/audits/JARVIS-Phase-1B-t3u227_k/JARVIS-Phase-1B-Staging-Review.zip. The active checkout received this administrative append only.
+- Result: PASS for 58 Phase 1B cases, one pinned-runtime loopback gate, 922 existing cases, 415 repeat executions and 59 controls. Verified ZIP SHA-256 3f5aa5b4737ae61e73e185c32f70e8427179c576e0c9148334574687aecfc266. Zero live provider calls or deployments.
+- Next: Independent review, followed by separate owner approval for worker IPC, protected trust provisioning and a bounded live staging canary.
